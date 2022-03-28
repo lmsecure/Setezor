@@ -1,0 +1,17 @@
+
+
+class CoreConfig:
+    iface = ''
+
+
+class DBConnectionConfig:
+    db_path = ':memory:'
+
+
+class NmapConfig:
+    default_ports = ''
+    default_source_path = ''
+
+
+class ScapyConfig:
+    default_source_path = ''
