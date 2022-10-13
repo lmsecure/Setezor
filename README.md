@@ -1,12 +1,12 @@
 # **LMS.NetMap**
 
 ### Table of contents
-[Desctiprion](#description)
-[Features](#features)
-[Before run](#before-run)
-[Usage](#usage)
-[Database schema](#database-schema)
-[Features in new version](#features-in-new-version)
+1. [Desctiprion](#description)
+1. [Features](#features)
+1. [Before run](#before-run)
+1. [Usage](#usage)
+1. [Database schema](#database-schema)
+1. [Features in new version](#features-in-new-version)
 
 ### Description
 **LMS.NetMap** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
