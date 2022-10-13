@@ -51,7 +51,15 @@ pip3 install -r requirements.txt
 ```
 
 ### Usage
+#### Native
 `python3 app.py`
+Приложение будет доступно по адресу `http://localhost:8008`
+#### Docker
+Имеется возможность поднять прилложение в `docker`-контейнере:
+``` bash
+docker-compose up --build
+```
+Приложение будет доступно по адресу `http://localhost:8001`
 
 ### Database schema
 ![schema](docs/db_schema_full.png)
