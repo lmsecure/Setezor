@@ -3,7 +3,7 @@ from functools import wraps
 from exceptions.loggers import get_logger
 
 
-def exception_decorator(logger_name, default_return=None, logger_level='debug'):
+def exception_decorator(logger_name: str, default_return=None, logger_level='debug'):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

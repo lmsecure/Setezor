@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}
+    Information
+{% endblock title %}
+{% block scripts %}
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" type="text/css" />
+    <link href="https://unpkg.com/gijgo@1.9.13/css/gijgo.css" rel="stylesheet" type="text/css" />
+    <style>
+        .form-row { display: flex; margin-bottom: 29px; }
+        .form-row:last-child { margin-bottom: 0px; }
+        .margin-top-10 { margin-top: 10px; }
+        .float-left { float: left; }
+        .float-right { float: right; }
+        .display-inline { display: inline; }
+        .display-inline-block { display: inline-block; }
+        .width-200 { width: 200px; }
+        .clear-both { clear: both; }
+        .gj-display-none { display: none; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://unpkg.com/gijgo@1.9.13/js/gijgo.js" type="text/javascript"></script>
+{% endblock %} 
+
+{% block content %}
+<nav>
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+        {% for tab in tabs %}
+        <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.tabname}}" data-bs-toggle="tab" 
+        data-bs-target="#tab-content-{{tab.tabname}}" type="button" role="tab" aria-controls="tab-content-{{tab.tabname}}">{{ tab.tabname }}</button>
+        {% endfor %}
+    </div>
+</nav>
+<div class="tab-content" id="nav-tabContent">
+        {% for tab in tabs %}
+        <div class="tab-pane fade {% if loop.index0 == 0 %}show active{% endif %}" id="tab-content-{{tab.tabname}}" role="tabpanel" aria-labelledby="infotabs-{{tab.tabname}}">
+
+            <div class="margin-top-10">
+                <!-- <div class="float-left">
+                    <form class="display-inline">
+                        <input id="{{tab.tabname.lower()}}-txtName" type="text" placeholder="Name..." class="gj-textbox-md display-inline-block width-200" />
+                        <input id="{{tab.tabname.lower()}}-txtNationality" type="text" placeholder="Nationality..." class="gj-textbox-md display-inline-block width-200" />
+                        <button id="{{tab.tabname.lower()}}-search" type="button" class="gj-button-md">Search</button>
+                        <button id="{{tab.tabname.lower()}}-clear" type="button" class="gj-button-md">Clear</button>
+                    </form>
+                </div> -->
+                <div class="float-right">
+                    <button id="{{tab.tabname.lower()}}-add" type="button" class="gj-button-md">Add New Record</button>
+                </div>
+            </div>
+            <div class="clear-both"></div>
+            <div class="margin-top-10">
+                <table id="{{tab.tabname}}-table"></table>
+            </div>
+        
+            <div id="{{tab.tabname.lower()}}-add-dialog" class="gj-display-none">
+                <div data-role="body">
+                    {% for header in tab.headers[1:] %}
+                        <div class="form-row">
+                            <input type="text" class="gj-textbox-md" id="{{tab.tabname.lower()}}-{{header}}-add" placeholder="{{header}}">
+                        </div>
+                    {% endfor %}
+                </div>
+                <div data-role="footer">
+                    <button type="button" id="{{tab.tabname.lower()}}-save" class="gj-button-md">Save</button>
+                    <button type="button" id="{{tab.tabname.lower()}}-add-cancel" class="gj-button-md">Cancel</button>
+                </div>
+            </div>
+            <div id="{{tab.tabname.lower()}}-edit-dialog" class="gj-display-none">
+                <div data-role="body">
+                    {% for header in tab.headers %}
+                        <div class="form-row">
+                            <input type="{% if loop.index0 == 0 %}hidden{% else %}text{% endif %}" class="gj-textbox-md" id="{{tab.tabname.lower()}}-{{header}}-edit" placeholder="{{header}}">
+                        </div>
+                    {% endfor %}
+                </div>
+                <div data-role="footer">
+                    <button type="button" id="{{tab.tabname.lower()}}-edit" class="gj-button-md">Save</button>
+                    <button type="button" id="{{tab.tabname.lower()}}-edit-cancel" class="gj-button-md">Cancel</button>
+                </div>
+            </div>
+            <script type="text/javascript">
+                $(document).ready(function () {
+                    var grid, add_dialog, edit_dialog;
+                    function Edit(e) {
+                            {% for header in tab.headers %}
+                            $('#{{tab.tabname.lower()}}-{{header}}-edit').val(e.data.record.{{header}});{% endfor %}
+                        edit_dialog.open('Edit {{tab.tabname}} object');
+                    };
+                    function SaveAdd() {
+                        var record = {
+                                {% for header in tab.headers %}
+                                    {{header}}: $('#{{tab.tabname.lower()}}-{{header}}-add').val(),{% endfor %}
+                        };
+                        $.ajax({ url: '/api/{{tab.tabname.lower()}}/from_table', data: { record: record }, method: 'POST' })
+                            .done(function (data) {
+                                create_toast('INFO', data.message, 'info');
+                                add_dialog.close();
+                                grid.reload();
+                            })
+                            .fail(function (data) {
+                                create_toast('INFO', data.responseJSON.message, 'error');
+                                add_dialog.close();
+                            });
+                    };
+                    function SaveEdit() {
+                        var record = {
+                                {% for header in tab.headers %}
+                                    {{header}}: $('#{{tab.tabname.lower()}}-{{header}}-edit').val(),{% endfor %}
+                        };
+                        $.ajax({ url: '/api/{{tab.tabname.lower()}}/from_table', data: { record: record }, method: 'PUT' })
+                            .done(function (data) {
+                                create_toast('INFO', data.message, 'info');
+                                edit_dialog.close();
+                                grid.reload();
+                            })
+                            .fail(function (data) {
+                                create_toast('INFO', data.responseJSON.message, 'error');
+                                edit_dialog.close();
+                            });
+                    };
+                    function Delete(e) {
+                        if (confirm('Are you sure?')) {
+                            $.ajax({ url: '/api/{{tab.tabname.lower()}}/', data: { id: e.data.id }, method: 'DELETE' })
+                                .done(function (data) {
+                                    create_toast('INFO', data.message, 'info');
+                                    grid.reload();
+                                })
+                                .fail(function (data) {
+                                    create_toast('INFO', data.responseJSON.message, 'error');
+                                });
+                        }
+                    }
+                    grid = $('#{{tab.tabname}}-table').grid({
+                        dataSource: '/api/{{tab.tabname.lower()}}/all',
+                        primaryKey: '{{tab.headers[0]}}',
+                        // inlineEditing: { mode: 'command' },
+                        columns: [
+                            {% for header in tab.headers %}{field: '{{header}}', editor: true, sortable: true},{% endfor %}
+                            { width: 64, tmpl: '<span id="{{tab.tabname.lower()}}" class="material-icons gj-cursor-pointer">edit</span>', align: 'center', events: { 'click': Edit } },
+                            { width: 64, tmpl: '<span id="{{tab.tabname.lower()}}" class="material-icons gj-cursor-pointer">delete</span>', align: 'center', events: { 'click': Delete } }
+                            
+                        ],
+                        pager: { limit: 5 }
+                    });
+                    add_dialog = $('#{{tab.tabname.lower()}}-add-dialog').dialog({
+                        autoOpen: false,
+                        resizable: false,
+                        modal: true,
+                        width: 360
+                    });
+                    edit_dialog = $('#{{tab.tabname.lower()}}-edit-dialog').dialog({
+                        autoOpen: false,
+                        resizable: false,
+                        modal: true,
+                        width: 360
+                    });
+                    $('#{{tab.tabname.lower()}}-add').on('click', function () {
+                        {% for header in tab.headers %}
+                            $('#{{tab.tabname.lower()}}-{{header}}-add').val('');{% endfor %}
+                            add_dialog.open('Add {{tab.tabname}} object');
+                    });
+                    $('#{{tab.tabname.lower()}}-save').on('click', SaveAdd);
+                    $('#{{tab.tabname.lower()}}-edit').on('click', SaveEdit);
+                    $('#{{tab.tabname.lower()}}-add-cancel').on('click', function () {
+                        add_dialog.close();
+                    });
+                    $('#{{tab.tabname.lower()}}-edit-cancel').on('click', function () {
+                        edit_dialog.close();
+                    });
+                    $('#{{tab.tabname.lower()}}-search').on('click', function () {
+                        grid.reload({ page: 1, name: $('#txtName').val(), nationality: $('#txtNationality').val() });
+                    });
+                    $('#{{tab.tabname.lower()}}-clear').on('click', function () {
+                        $('#txtName').val('');
+                        $('#txtNationality').val('');
+                        grid.reload({ name: '', nationality: '' });
+                    });
+                });
+            </script>
+        </div>
+
+        {% endfor %}
+</div>
+
+{% endblock content %}
+
+

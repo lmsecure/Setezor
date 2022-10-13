@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% block title %}
+Projects
+{% endblock title %}
+{% block scripts %}
+<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.14.0-beta2/css/bootstrap-select.min.css" integrity="sha512-mR/b5Y7FRsKqrYZou7uysnOdCIJib/7r5QeJMFvLNHNhtye3xJp1TdJVPLtetkukFn227nKpXD9OjUc09lx97Q==" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css"/>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.14.0-beta2/js/bootstrap-select.min.js" integrity="sha512-FHZVRMUW9FsXobt+ONiix6Z0tIkxvQfxtCSirkKc5Sb4TKHmqq1dZa8DphF0XqKb3ldLu/wgMa8mT6uXiLlRlw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock scripts %}
+{% block content %}
+<div class="d-flex h-100 bd-highlight mb-3">
+    <div class="p-2 bd-highlight" id="div_left_bar">
+        <div class="d-flex align-items-start">
+            <div class="nav flex-column nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+            <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-nmap" type="button" role="tab" aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
+            <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill" data-bs-target="#v-pills-scapy" type="button" role="tab" aria-controls="v-pills-scapy" aria-selected="false">SCAPY</button>
+            <!-- <button class="nav-link" id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button" role="tab" aria-controls="v-pills-messages" aria-selected="false">Not implement</button>
+            <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">Not implement</button> -->
+            </div>
+            <div class="tab-content" id="v-pills-tabContent">
+                <div class="tab-pane fade show active" id="v-pills-nmap" role="tabpanel" aria-labelledby="v-pills-nmap-tab">
+                    <h3>Nmap scanning</h3>
+                    <div class="input-group p-2">
+                        <input id="ip_target" type="text" class="form-control" placeholder="IP address or range" oninput="craft_nmap_command()">
+                    </div>
+                    <div class="p-2 w-100">
+                        <select id="nmap_options" class="selectpicker" multiple aria-label="Default select example" placeholder="Choose nmap options" data-live-search="true" onchange="craft_nmap_command()">
+                            <option value="-sn">-sn</option>
+                            <option value="-sS">-sS</option>
+                            <option value="--traceroute">--traceroute</option>
+                            <option value="-sV">-sV</option>
+                            <option value="-Pn">-Pn</option>
+                        </select>
+                    </div>
+                    <div class="p-2">
+                        <input id="nmap_command" type="text" class="form-control" placeholder="Nmap command" value="">
+                    </div>
+                    <div class="p-2 d-inline-block">
+                        <button type="button" class="btn btn-primary" onclick="ajax_and_toast('/api/task/', 'post', {task_type: 'nmap_scan', args: {command: document.getElementById('nmap_command').value, 
+                        to_log: {command: document.getElementById('nmap_command').value, task_type: 'nmap_scan'}}}, 'Task started', 'info', 'Task Nmap scan started')">Start scan</button>
+                        <button type="button" class="btn btn-primary" onclick="upload_binary_file('.xml', 'nmap_log', 'Nmap log')">Parse xml log</button>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="v-pills-scapy" role="tabpanel" aria-labelledby="v-pills-scapy-tab">
+                    <div class="p-2 d-inline-block">
+                        <button type="button" class="btn btn-primary" onclick="ajax_and_toast('/api/task/', 'post', {task_type: 'scapy_scan', args: {timeout: 30, 
+                            to_log: {task_type: 'scapy_scan', timeout: 30}}}, 'Task started', 'info', 'Task Scapy scan started')">Start scan</button>
+                        <button type="button" class="btn btn-primary" onclick="upload_binary_file('.pcap', 'scapy_log', 'Scapy log')">Parse pcap log</button>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">...</div>
+                <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">...</div>
+            </div>
+        </div>   
+    </div>
+    <div class="ms-auto p-2 bd-highlight fixed-end" id="div_node_info">
+        <h3>Selected node information</h3>
+        <div class="table-responsive-sm">
+            <table id="node_info" class="table table-striped table-hover"></table>
+        </div>
+    </div>
+    <div class="p-2 bd-highlight fixed-end" id="div_network">
+        <div>
+            <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask()">Cluster/Decluster</button>
+            <button class="btn btn-primary" id="full_screen_network" onclick="fullscreen_network()">
+
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+        </div>
+        <div id="netwrok_container">
+            <div id="network_topology">
+                <div class="vis-network" style="position: relative; overflow: hidden; touch-action: pan-y; user-select: none; width: 100%; height: 100%;" tabindex="0">
+                    <canvas style="position: relative; touch-action: none; user-select: none; width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var cluster = false;
+    var width = $(window).width();
+    var left_bar_width = 383;
+    var div_network_width = (width - left_bar_width) / 3;
+    var div_node_info_width = width - left_bar_width - div_network_width;
+    $('#div_left_bar').css('min-width', left_bar_width);
+    $('#div_network').css('max-width', div_network_width ? div_network_width > 400 : 401);
+    $('#div_network').css('min-width', 400);
+    $('#div_node_info').css('max-width', div_node_info_width);
+    var network;
+    var data;
+    function fullscreen_network () {
+        var div_left_bar = document.getElementById("div_left_bar")
+        var div_node_info = document.getElementById("div_node_info")
+        var div_network = document.getElementById("div_network")
+        var netwrok_container = document.getElementById("netwrok_container")
+        var network_topology = document.getElementById("network_topology")
+        if (div_left_bar.style.display != "none" && div_node_info.style.display != "none") {
+            div_network.className = "bd-highlight w-100"
+            div_left_bar.style.display = "none";
+            div_node_info.style.display = "none";
+            netwrok_container.style.cssText = "position: relative;width: 100%;height: 100%;"
+            network_topology.style.cssText = "position: relative;top: 0px;right: 0px;bottom: 0px;left: 0px;"
+        } else {
+            div_network.className = "p-2 bd-highlight fixed-end"
+            div_left_bar.style.display = '';
+            div_node_info.style.display = '';
+            netwrok_container.style.cssText = ""
+            network_topology.style.cssText = "width: 400px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+        }
+    }
+    function tik_tak() {
+        var request = ajax_request('/api/task/last_finished', 'get')
+        if (request != undefined) {
+            var last_tasks = request.data
+            if (last_tasks.length > 0) {
+                data = ajax_request('/api/l3link/nodes_and_edges', 'get').data;
+                network.setData(data);
+                last_tasks.forEach(function(task){
+                    if (task.status.toLowerCase() == 'finished') {
+                        create_toast('Task finished', `Task with id ${task.id} finished`, 'info')
+                    } else {
+                        create_toast('Task failed', `Task with id ${task.id} failed`, 'error')
+                    }
+                    
+                })
+            }
+        }
+        setTimeout(tik_tak, 5000)
+    };
+    function get_nodes_and_edges () {
+        data = ajax_request('/api/l3link/nodes_and_edges', 'get').data;
+    }
+    redrawAll("network_topology", true);
+    function redrawAll(elem_name, to_update_data) {
+        
+        var container = document.getElementById(elem_name);
+        container.style.cssText = "width: 600px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+        var options = {
+            nodes: {
+            shape: "dot",
+            scaling: {
+                min: 10,
+                max: 30,
+            },
+            font: {
+                size: 12,
+                face: "Tahoma",
+            },
+            },
+            edges: {
+                color: { inherit: true },
+                width: 0.15,
+                smooth: {
+                    type: "continuous",
+                },
+            },
+            interaction: {
+                hideEdgesOnDrag: true,
+                tooltipDelay: 200,
+            },
+            physics: {
+                stabilization: false,
+                barnesHut: {
+                    gravitationalConstant: -30000,
+                    springConstant: 0.005,
+                    springLength: 200,
+                },
+          },
+        };
+        
+        if (to_update_data == true) {
+            get_nodes_and_edges()
+        }
+        network = new vis.Network(container, data, options);
+        };
+    network.on ("doubleClick", function (params) {
+        if (params.nodes.length == 1) {
+            if (network.isCluster(params.nodes[0]) == true) {
+                network.openCluster(params.nodes[0]);
+            } 
+            else {
+                network.moveTo({position: network.getPosition(params.nodes[0]), scale: 2})
+            }
+        }
+    });
+    network.on ("click", function (params) {
+        var info = document.getElementById('node_info');
+        info.innerHTML = '';
+        if (params.nodes.length == 1) {
+            if (network.isCluster(params.nodes[0]) == true) {
+                var ip_ids = Object.keys(network.body.nodes[params.nodes[0]].containedNodes);
+                console.log(ip_ids)
+                create_node_table(ajax_request('/api/port/by_ip_id', 'get', {ip_ids: JSON.stringify(ip_ids)}))
+            } else {
+                create_node_table(ajax_request('/api/port/by_ip_id', 'get', {ip_ids: JSON.stringify([params.nodes[0]])}))
+            }
+        }
+
+    });
+    function cluster_by_netmask() {
+        if (cluster != true) {
+            var unique_groups = [...new Set(data.nodes.map(item => item.group))];
+            var cluster_options_by_data;
+            for (var i = 0; i < unique_groups.length; i++) {
+                var group = unique_groups[i]
+                cluster_options_by_data = {
+                    joinCondition: function (childOptions) {
+                        return childOptions.group == group;
+                    }, 
+                    processProperties: function (
+                        clusterOptions,
+                        childNodes,
+                        childEdges
+                    ) {
+                    var totalMass = 0;
+                    for (var i = 0; i < childNodes.length; i++) {
+                        totalMass += childNodes[i].mass;
+                    }
+                    clusterOptions.mass = 1;
+                    return clusterOptions;
+                    },
+                    clusterNodeProperties: {
+                        id: group,
+                        borderWidth: 3,
+                        shape: "dot",
+                        label: group + ".0/24"
+                    }
+                }
+                network.cluster(cluster_options_by_data)
+            }
+            cluster = true
+        } else {
+            for (const [key, node] of Object.entries(network.body.nodes)) {
+                if (network.isCluster(key) == true) {
+                    network.openCluster(key)
+                }
+            }
+            cluster = false
+        }
+    };
+    function create_node_table(ports_data) {
+        function generateTableHead(table, data) {
+            let thead = table.createTHead();
+            let row = thead.insertRow();
+            for (let key of data) {
+                let th = document.createElement("th");
+                let text = document.createTextNode(key);
+                th.appendChild(text);
+                row.appendChild(th);
+            }
+            }
+
+        function generateTable(table, data) {
+            tbody = table.createTBody();
+            for (let element of data) {
+                let row = tbody.insertRow();
+                for (key of element) {
+                let cell = row.insertCell();
+                let text = document.createTextNode(key);
+                cell.appendChild(text);
+                }
+            }
+        }
+        let table = document.getElementById("node_info");
+        generateTableHead(table, ports_data.headers);
+        generateTable(table, ports_data.data);
+    }
+    setTimeout(tik_tak, 5000)
+
+
+
+</script>
+{% endblock content %}

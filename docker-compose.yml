@@ -1,0 +1,8 @@
+version: "3.3"
+services:
+  netmapper:
+    build: .
+    ports:
+      - "8001:8008"
+    command: echo `pwd && ls`; python3 app.py
+
