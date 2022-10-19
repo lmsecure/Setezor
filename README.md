@@ -2,6 +2,7 @@
 
 ### Table of contents
 1. [Desctiprion](#description)
+1. [Screenshots](#screenshots)
 1. [Features](#features)
 1. [Before run](#before-run)
 1. [Usage](#usage)
@@ -10,6 +11,12 @@
 
 ### Description
 **LMS.NetMap** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
+
+### Screenshots
+![Projects page](docs/screenshots/scr1.png)
+![Topology page](docs/screenshots/scr2.png)
+![Topology fullscreen page](docs/screenshots/scr3.png)
+![Info page](docs/screenshots/scr4.png)
 
 ### Features
 - активное сканирование (nmap)
@@ -57,7 +64,7 @@ python3 app.py
 ```
 Приложение будет доступно по адресу `http://localhost:8008`
 #### Docker
-Имеется возможность поднять прилложение в `docker`-контейнере:
+Имеется возможность поднять приложение в `docker`-контейнере:
 ``` bash
 docker-compose up --build
 ```
