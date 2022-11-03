@@ -37,7 +37,7 @@
 ``` bash
 sudo groupadd nmap
 sudo usermod -aG nmap $USER
-newgrp docker
+newgrp nmap
 ```
 #### Packages requirements
 1. cryptography==2.8

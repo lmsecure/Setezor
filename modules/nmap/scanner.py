@@ -49,6 +49,10 @@ class NmapScanner:
         return args
     
     def _check_results(self, args: list, result: str, error: str, logs_path: str):
+        if isinstance(error, bytes):
+            error = error.decode()
+        if isinstance(result, bytes):
+            result = result.decode()
         if not error or re.match(r'^\[sudo\] password for [^\n]+?$', error):
             if logs_path:
                 self.save_source_data(path=logs_path, command=' '.join(args), scan_xml=result)
