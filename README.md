@@ -52,7 +52,8 @@ newgrp nmap
 1. Jinja2==3.1.2
 1. sqlalchemy_schemadisplay==1.3
 1. aiojobs==1.0.0
-Чтобы установить пакеты. выполните: 
+
+Чтобы установить пакеты, выполните: 
 ``` bash
 pip3 install -r requirements.txt
 ```
