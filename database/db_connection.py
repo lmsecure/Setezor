@@ -17,6 +17,7 @@ class DBConnection:
         self.engine = create_engine(f'sqlite:///{db_path}?check_same_thread=False')
         if create_tabels:
             Base.metadata.create_all(self.engine)
+        Base.metadata.reflect(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 

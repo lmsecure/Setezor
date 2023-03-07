@@ -15,6 +15,7 @@ class Queries:
         """
         self.db = DBConnection(db_path)
         self.object = qf.ObjectQueries(session_maker=self.db.create_session())
+        self.object_types = qf.ObjectTypeQueries(session_maker=self.db.create_session())
         self.mac = qf.MACQueries(objects=self.object, session_maker=self.db.create_session())
         self.ip = qf.IPQueries(mac=self.mac, session_maker=self.db.create_session())
         self.l3link = qf.L3LinkQueries(ip=self.ip, session_maker=self.db.create_session())

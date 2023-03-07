@@ -25,7 +25,7 @@ class LLMNRPacket(AbstractPacket):
             res.update({'parent_mac': pkt['Ether'].src, 'parent_ip': pkt['IP'].src})
             res.update({'child_mac': pkt['Ether'].dst, 'child_ip': pkt['IP'].dst})
         except:
-            logger.error('Cannot parse package %s by "%s"', str(pkt), LLMNRPacket.__name__)
+            logger.error('Cannot parse package %s by "%s"', pkt.summary(), LLMNRPacket.__name__)
         return res
 
     @staticmethod

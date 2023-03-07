@@ -34,7 +34,7 @@ class NmapParser:
         '''
         if data is None:
             return []
-        return [data] if isinstance(data, dict) else data
+        return [data] if not isinstance(data, list) else data
 
     @staticmethod
     def parse_addresses(address: list or dict) -> list:
@@ -64,7 +64,7 @@ class NmapParser:
         """        
         hostnames = NmapParser.to_list(hostnames)
         if hostnames:
-            return [', '.join([i.get('hostname').get('name') for i in hostnames])]
+            return [', '.join([j.get('name') for i in hostnames for j in NmapParser.to_list(i.get('hostname'))])]
         else:
             return [None]
 

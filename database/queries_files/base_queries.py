@@ -7,6 +7,8 @@ from abc import abstractmethod, ABC
 from database.models import IP
 import pandas as pd
 from functools import wraps
+from sqlalchemy.inspection import inspect
+from datetime import datetime
 
 class Mock:
     def __getattribute__(self, item):
@@ -59,8 +61,7 @@ class BaseQueries(ABC):
         if ret:
             return obj.__getattribute__(ret)
         return obj
-        
-        
+
     @session_provide
     def write_many(self, session: Session, data: list, to_update: bool=True):
         """Делает множественную запись объектов по такому же принципу
@@ -85,7 +86,7 @@ class BaseQueries(ABC):
         pass
     
     @session_provide
-    def get_or_create(self, session, to_update: bool=False, **kwargs):
+    def get_or_create(self, session: Session, to_update: bool=False, **kwargs):
         """Получает объект из базы, если его не существует - создает
 
         Args:
@@ -124,10 +125,14 @@ class BaseQueries(ABC):
         """
         source_query = session.query(self.model)
         if sort_by and direction:
-            sorting_expression = self.model.__table__.c.get(sort_by)
+            if self.is_field_foreign_key(session=session, field_name=sort_by):
+                sorting_field, relationship = self.foreign_key_order(sort_by)
+                source_query = source_query.join(relationship)
+            else:
+                sorting_field = self.model.__table__.c.get(sort_by)
             if direction == 'desc':
-                sorting_expression = sorting_expression.desc()
-            source_query = source_query.order_by(sorting_expression)
+                sorting_field = sorting_field.desc()
+            source_query = source_query.order_by(sorting_field)
         if limit:
             source_query = source_query.limit(limit)
         if page:
@@ -140,7 +145,15 @@ class BaseQueries(ABC):
         elif result_format == 'pandas':
             return pd.DataFrame(res_list)
         else:
-            return res_list
+            return source_query
+        
+    def foreign_key_order(self, field_name: str):
+        pass
+        
+    @session_provide
+    def is_field_foreign_key(self, session: Session, field_name):
+        table_foreign_keys = [i.get('constrained_columns')[0] for i in inspect(session.get_bind()).get_foreign_keys(self.model.__tablename__)]
+        return field_name in table_foreign_keys
         
     @session_provide
     def delete_by_id(self, session: Session, id: int):
@@ -154,11 +167,12 @@ class BaseQueries(ABC):
         if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
             return
         obj = obj_query.first()
-        obj_args = [f'{i}={obj.__getattribute__(i)}' for i in self.get_headers() if obj.__getattribute__(i)]
+        obj_args = [f'{i.get("name")}={obj.__getattribute__(i.get("name"))}' for i in self.get_headers() if obj.__getattribute__(i.get('name'))]
         self.logger.info('Delete %s with args: %s ', self.model.__name__, ", ".join(obj_args))
         id = session.delete(obj)
         session.flush()
-            
+    
+    @abstractmethod
     def get_headers(self, *args, **kwargs) -> list:
         """Возвращает все название колонок из таблицы текущей сущности
 
@@ -191,6 +205,7 @@ class BaseQueries(ABC):
     @session_provide
     def update_by_id(self, session: Session, id: int, to_update: dict, merge_mode='merge'):
         id = int(id)
+        to_update = {k: v for k,v in to_update.items() if v}
         obj_query = session.query(self.model).filter(self.model.get_column(self.model, 'id') == id)
         if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
             self.logger('Cannot update not exists object "%s" with id "%s"', self.model.__name__, id)
@@ -223,6 +238,28 @@ class BaseQueries(ABC):
         self.logger.info('Update "%s" object with id "%s" to new data %s', self.model.__name__, ','.join([str(i.id) for i in obj_query.all()]), new_to_update)
         session.flush()
 
+
     @session_provide
     def get_records_count(self, session: Session):
         return session.query(func.count(self.model.__table__.c.get('id'))).scalar()
+    
+    @session_provide
+    def simple_create(self, session: Session, **kwargs):
+        try:
+            entity = self.model(**kwargs)
+            session.add(entity)
+            session.flush()
+        except:
+            raise Exception('Cannot create "%s" entity with params: %s. Expected params %s ', self.__class__.__name__, kwargs, self.model.__table__.c.keys())
+    
+    @session_provide
+    def simple_update_by_id(self, session: Session, id: int, to_update: dict, merge_mode='merge'):
+        id = int(id)
+        to_update = {k: datetime.fromtimestamp(v) if k in ['created', 'started', 'finished'] else v for k,v in to_update.items() if v}
+        obj_query = session.query(self.model).filter(self.model.get_column(self.model, 'id') == id)
+        if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
+            self.logger('Cannot update not exists object "%s" with id "%s"', self.model.__name__, id)
+            return None
+        obj = obj_query.update(to_update)
+        self.logger.info('Update "%s" object with id "%s" to new data %s', self.model.__name__, ','.join([str(i.id) for i in obj_query.all()]), to_update)
+        session.flush()

@@ -17,5 +17,7 @@ async def info_page(request: Request) -> Response:
         Response: отрендеренный шаблон страницы
     """    
     db = await get_db_by_session(request)
-    context = {'tabs': [{'tabname': i.model.__name__, 'headers': i.get_headers()} for i in [db.object, db.mac, db.ip, db.l3link, db.port, db.screenshot, db.task]]}
+    context = {'tabs': [{'name': i.model.__name__.lower(), 
+                         'base_url': f'/api/{i.model.__name__.lower()}',
+                         'columns': i.model.get_headers_for_table()} for i in [db.object, db.mac, db.ip, db.l3link, db.port, db.task]]}
     return aiohttp_jinja2.render_template('info_tables.html', request=request, context=context)

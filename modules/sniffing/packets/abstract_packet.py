@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod, abstractstaticmethod
 from scapy.packet import Packet
 from scapy.plist import PacketList
+import asyncio
 
 
 
@@ -24,7 +25,8 @@ class AbstractPacket(ABC):
         """        
         pass
     
-    def parse_packet_list(self, pkt_list: PacketList) -> list:
+    @classmethod
+    def parse_packet_list(cls, pkt_list: PacketList) -> list:
         """Метод парсинга захваченных пакетов
 
         Args:
@@ -35,9 +37,9 @@ class AbstractPacket(ABC):
         """        
         result = []
         for pkt in pkt_list:
-            if self.is_packet_type(pkt):
-                parsed_packet = self.parse_packet(pkt)
-                if parsed_packet:
+            if cls.is_packet_type(pkt):
+                parsed_packet = cls.parse_packet(pkt)
+                if parsed_packet and parsed_packet not in result:
                     result.append(parsed_packet)
         return result
 

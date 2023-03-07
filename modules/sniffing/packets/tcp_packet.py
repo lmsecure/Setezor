@@ -25,7 +25,7 @@ class TCPPacket(AbstractPacket):
             res.update({'parent_mac': pkt['Ether'].src, 'parent_ip': pkt['IP'].src})
             res.update({'child_mac': pkt['Ether'].dst, 'child_ip': pkt['IP'].dst, })
         except:
-            logger.error('Cannot parse package %s by "%s"', str(pkt), TCPPacket.__name__)
+            logger.error('Cannot parse package %s by "%s"', pkt.summary(), TCPPacket.__name__)
         return res
 
     @staticmethod

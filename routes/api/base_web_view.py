@@ -1,9 +1,9 @@
 from aiohttp.web import Response, Request, json_response
 from abc import ABC, abstractmethod
-import re
 from database.queries_files.base_queries import BaseQueries
-
-from routes.session import get_db_by_session
+from functools import wraps
+from routes.session import get_db_by_session, notify_client
+import json
 
 
 class BaseView(ABC):
@@ -27,7 +27,7 @@ class BaseView(ABC):
         Args:
             method (_type_): тип HTTP метода
             path (_type_): конечное uri ендпоинта
-        """        
+        """
         def wrapped(func):
             def route_wrapper(obj):
                 def wr1(*args, **kwargs):
@@ -47,9 +47,11 @@ class BaseView(ABC):
             Response: json ответ
         """
         db_entity = await self.get_db_queries(request=request)
-        params = await request.post()
-        params = {re.search(r'\[(.+?)\]', k).group(1): v for k, v in params.items()}
-        db_entity.write(**params)
+        params = await request.json()
+        params.pop('id')
+        db_entity.simple_create(**params)
+        await notify_client(request=request, message={'title': 'Record created', 'type': 'info',
+                                                      'text': f'Create "{self.queries_path.capitalize()}" with params {json.dumps(params, ensure_ascii=False)}'})
         return json_response(status=200, data={'message': 'Added'})
     
     @route('POST', '/')
@@ -67,7 +69,7 @@ class BaseView(ABC):
             Response: json ответ
         """
         db_entity = await self.get_db_queries(request=request)
-        params = await request.post()
+        params = await request.json()
         db_entity.delete_by_id(id=int(params.get('id')))
         return json_response(status=200, data={'message': 'Deleted'})    
     
@@ -86,10 +88,9 @@ class BaseView(ABC):
             Response: json ответ
         """
         db_entity = await self.get_db_queries(request=request)
-        params = await request.post()
-        params = {re.search(r'\[(.+?)\]', k).group(1): v for k, v in params.items()}
-        index = params.get('id')
-        db_entity.update_by_id(id=index, to_update=params, merge_mode='replace')
+        params = await request.json()
+        id = params.pop('id')
+        db_entity.simple_update_by_id(id=id, to_update=params, merge_mode='replace')
         return json_response(status=200, data={'message': 'Updated'})
     
     @route('GET', '/all')
@@ -102,14 +103,15 @@ class BaseView(ABC):
         Returns:
             Response: json ответ
         """
-        sort_by = request.rel_url.query.get('sortBy')
-        direction = request.rel_url.query.get('direction')
-        page = int(request.rel_url.query.get('page'))
-        limit = int(request.rel_url.query.get('limit'))
+        sort_by = request.rel_url.query.get('sort[0][field]')
+        direction = request.rel_url.query.get('sort[0][dir]')
+        page = int(request.rel_url.query.get('page', 0))
+        size = int(request.rel_url.query.get('size', 0))
         db_entity = await self.get_db_queries(request=request)
-        res = db_entity.get_all(page=page, limit=limit, sort_by=sort_by, direction=direction)
+        res = db_entity.get_all(page=page, limit=size, sort_by=sort_by, direction=direction)
+        res = [{k: v for k,v in i.items()} for i in res]
         total = db_entity.get_records_count()
-        return json_response(status=200, data={'records': res, 'total': total})
+        return json_response(status=200, data={'data': res, 'last_page': int(total / size) + 1})
     
     async def get_db_queries(self, request: Request) -> BaseQueries:
         """Метод получения объекта запросов к базу по сущности (self.queries_path)

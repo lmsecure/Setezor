@@ -1,7 +1,9 @@
 from sqlalchemy.orm.session import Session
 from database.models import MAC
-from database.queries_files.base_queries import BaseQueries
-from database.queries_files.object_queries import ObjectQueries
+from .base_queries import BaseQueries
+from .object_queries import ObjectQueries
+from mac_vendor_lookup import AsyncMacLookup
+import asyncio
 
 
 class MACQueries(BaseQueries):
@@ -21,7 +23,7 @@ class MACQueries(BaseQueries):
         self.object = objects
         
     @BaseQueries.session_provide
-    def create(self, session: Session, mac: str, **kwargs):
+    def create(self, session: Session, mac: str, obj=None, **kwargs):
         """Метод создания объекта mac адреса
 
         Args:
@@ -30,10 +32,27 @@ class MACQueries(BaseQueries):
 
         Returns:
             _type_: объект mac адреса
-        """        
-        new_mac_obj = self.model(mac=mac)
+        """
+        # try:
+        #     loop = asyncio.get_running_loop()
+        #     vendor = loop.run_until_complete(AsyncMacLookup().lookup(mac=mac))
+        # except:
+        vendor = None
+        if not obj:
+            obj = self.object.create(session=session, **kwargs)
+        new_mac_obj = self.model(mac=mac, vendor=vendor, _obj=obj)
         session.add(new_mac_obj)
         session.flush()
         self.logger.debug('Created "%s" object with kwargs %s', self.model.__name__, {'mac': mac})
         mac_obj = new_mac_obj
         return mac_obj
+    
+    def get_headers(self) -> list:
+        return [{'name': 'id', 'type': '', 'required': False},
+                {'name': 'mac', 'type': '', 'required': True},
+                {'name': 'object', 'type': '', 'required': False},
+                {'name': 'vendor', 'type': '', 'required': False},]
+        
+    def foreign_key_order(self, field_name: str):
+        if field_name == 'object':
+            return self.object.model.object_type, self.model._obj

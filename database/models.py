@@ -1,19 +1,10 @@
 from asyncio.log import logger
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from exceptions.loggers import LoggerNames, get_logger
-from exceptions.exception_logger import exception_decorator
-
-# class Base(object):
-#     @classmethod
-#     def __table_cls__(cls, *args, **kwargs):
-#         t = Table(*args, **kwargs)
-#         t.decl_class = cls
-#         return t
-
-# Base = declarative_base(cls=Base)
+from datetime import datetime
 
 
 class BaseModel:
@@ -21,24 +12,6 @@ class BaseModel:
     """
 
     logger = get_logger(LoggerNames.db)
-
-    @exception_decorator(LoggerNames.db)
-    def __eq__(self, other):
-        if other is None:
-            return {}
-        if isinstance(other, self.__class__):
-            fields = [i for i in self.__dir__() if i[0] != '_' and i not in ['id', 'metadata'] and not isinstance(self.__getattribute__(i), self.__class__)]
-            diff = {}
-            for i in fields:
-                if self.__getattribute__(i) != other.__getattribute__(i) and other.__getattribute__(i):
-                    diff.update({i: other.__getattribute__(i)})
-            logger.debug(f"Find difference in {self.__class__.__name__} objects\n" +
-                         f"OLD: {', '.join([f'{i}: {self.__getattribute__(i)}' for i in fields])}\n" +
-                         f"NEW: {', '.join([f'{i}: {other.__getattribute__(i)}' for i in fields])}\n" +
-                         f"DIFF: {diff}")
-            return diff
-        else:
-            self.logger.debug(f'Not instanced classes "{self.__class__}" vs "{other.__class__}"')
             
     def to_dict(self) -> dict:
         """преобразует объект в словарь
@@ -46,7 +19,7 @@ class BaseModel:
         Returns:
             dict: 
         """
-        return {i: self.__getattribute__(i) for i in self.__table__.c.keys()}
+        return {i: self.__getattribute__(i).timestamp() if isinstance(self.__getattribute__(i), datetime) else self.__getattribute__(i) for i in self.__table__.c.keys()}
     
     def get_column(self, column_name):
         return self.__table__.c.get(column_name)
@@ -63,9 +36,23 @@ class Object(Base):
     object_type = Column(String(100))
     os = Column(String(150))
     status = Column(String(30))
-    _mac = relationship('MAC', back_populates='_obj')
+    _mac = relationship('MAC', back_populates='_obj', cascade="all, delete-orphan")
+    
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'os', 'title': 'OS', 'editor': 'input'},
+                {'field': 'object_type', 'title': 'Object type', 'editor': 'input'},#, 'formatter': ''},
+                {'field': 'status', 'title': 'Status'},]
 
-
+class ObjectType(Base):
+    """Модель для справочника по типам устройств
+    """
+    __tablename__ = 'object_types'
+    id = Column(Integer, primary_key=True)
+    object_type = Column(String(50), nullable=False)
+    
+    
 class MAC(Base):
     """Модель для таблицы с мак-адресами
     """
@@ -73,17 +60,17 @@ class MAC(Base):
 
     id = Column(Integer, primary_key=True)
     mac = Column(String(17))
-    object = Column(Integer, ForeignKey('objects.id'))
+    object = Column(Integer, ForeignKey('objects.id'), nullable=False)
+    vendor = Column(String)
     _obj = relationship(Object.__name__, back_populates='_mac')
-    _ip = relationship('IP', back_populates='_mac')
+    _ip = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
     
-    def to_dict(self) -> dict:
-        """преобразует объект в словарь, подменяя индексы на значения
-
-        Returns:
-            dict: 
-        """
-        return {'id': self.id, 'mac': self.mac, } # FixMe 'object': self._obj.id} 
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'object', 'title': 'Object', 'editor': 'list', 'editor_entity': 'object', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+                {'field': 'mac', 'title': 'MAC', 'editor': 'input', 'validator': 'required'},
+                {'field': 'vendor', 'title': 'Vendor', 'editor': 'input'},]
 
 
 class IP(Base):
@@ -96,15 +83,21 @@ class IP(Base):
     _mac = relationship('MAC', back_populates='_ip')
     ip = Column(String(15), nullable=False)
     domain_name = Column(String(100))
-    _host_ip = relationship('Port', back_populates='_ip')
+    _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan')
+    _child_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip', cascade='all, delete-orphan')
+    _parent_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip', cascade='all, delete-orphan')
     
-    def to_dict(self) -> dict:
-        """преобразует объект в словарь, подменяя индексы на значения
-
-        Returns:
-            dict: 
-        """
-        return {'id': self.id, 'ip': self.ip, 'mac': self._mac.mac, 'domain_name': self.domain_name}
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'mac', 'title': 'MAC', 'editor': 'list', 'editor_entity': 'mac', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+                {'field': 'ip', 'title': 'IP', 'editor': 'input', 'validator': 'required'},]
+    
+    def to_vis_node(self) -> dict:
+        node = {'id': self.id, 'label': self.ip, 'group': '.'.join(self.ip.split('.')[:-1]), 'shape': 'dot', 'value': 1, }
+        if obj_type:= self._mac._obj.object_type:
+            node.update({'shape': 'image', 'image': f'/static/assets/{obj_type}.svg'})
+        return node
 
 
 class L3Link(Base):
@@ -114,17 +107,18 @@ class L3Link(Base):
 
     id = Column(Integer, primary_key=True)
     child_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _child_ip = relationship('IP', foreign_keys=child_ip)
+    _child_ip = relationship('IP', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip')
     parent_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _parent_ip = relationship('IP', foreign_keys=parent_ip)
+    _parent_ip = relationship('IP', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip')
     
-    def to_dict(self) -> dict:
-        """преобразует объект в словарь, подменяя индексы на значения
-
-        Returns:
-            dict: 
-        """
-        return {'id': self.id, 'child_ip': self._child_ip.ip, 'parent_ip': self._parent_ip.ip}
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'child_ip', 'title': 'Child IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+                {'field': 'parent_ip', 'title': 'Parent IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},]
+    
+    def to_vis_edge(self) -> dict:
+        return {'from': self._parent_ip.id, 'to': self._child_ip.id}
 
 
 class Port(Base):
@@ -146,14 +140,19 @@ class Port(Base):
     os_type = Column(String(100))
     cpe = Column(String(200))
     
-    def to_dict(self) -> dict:
-        """преобразует объект в словарь, подменяя индексы на значения
-
-        Returns:
-            dict: 
-        """
-        return {'id': self.id, 'ip': self._ip.ip, 'port': self.port, 'protocol': self.protocol, 'service_name': self.service_name, 'state': self.state,
-                'product': self.product, 'extra_info': self.extra_info, 'version': self.version, 'os_type': self.os_type, 'cpe': self.cpe}
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'ip', 'title': 'IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+                {'field': 'port', 'title': 'Port', 'editor': 'input', 'validator': 'required'},
+                {'field': 'protocol', 'title': 'Protocol', 'editor': 'input'},
+                {'field': 'service_name', 'title': 'Service name', 'editor': 'input'},
+                {'field': 'state', 'title': 'State', 'editor': 'input'},
+                {'field': 'product', 'title': 'Product', 'editor': 'input'},
+                {'field': 'extra_info', 'title': 'Extra info', 'editor': 'input'},
+                {'field': 'version', 'title': 'Version', 'editor': 'input'},
+                {'field': 'os_type', 'title': 'OS', 'editor': 'input'},
+                {'field': 'cpe', 'title': 'CPE', 'editor': 'input'},]
 
 
 class Task(Base):
@@ -163,11 +162,22 @@ class Task(Base):
     
     id = Column(Integer, primary_key=True)
     status = Column(String(10))
-    created = Column(DateTime, server_default=func.now())
-    started = Column(DateTime)
-    finished = Column(DateTime)
+    # task_type
+    created = Column(TIMESTAMP, server_default=func.now())
+    started = Column(TIMESTAMP)
+    finished = Column(TIMESTAMP)
     params = Column(Text)
-    comment = Column(String)    
+    comment = Column(String)
+    
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'status', 'title': 'Status', 'editor': 'input', 'validator': 'required'},
+                {'field': 'created', 'title': 'Created', 'editor': 'datetime'},
+                {'field': 'started', 'title': 'Started', 'editor': 'datetime'},
+                {'field': 'finished', 'title': 'Finished', 'editor': 'datetime'},
+                {'field': 'params', 'title': 'Params', 'editor': 'input'},
+                {'field': 'comment', 'title': 'Comment', 'editor': 'input'},]
     
 
 class Screenshot(Base):
@@ -182,11 +192,3 @@ class Screenshot(Base):
     task = Column(Integer, ForeignKey('tasks.id'))
     _task = relationship('Task', backref='_screenshot')
     domain = Column(String)
-    
-    def to_dict(self) -> dict:
-        """преобразует объект в словарь, подменяя индексы на значения
-
-        Returns:
-            dict: 
-        """
-        return {'id': self.id, 'port': self.port, 'screenshot_path': self.screenshot_path, 'task': self.task, 'domain': self.domain}

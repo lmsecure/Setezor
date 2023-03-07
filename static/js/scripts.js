@@ -1,4 +1,31 @@
 var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107"};
+function create_websocket(endpoint) {
+    var sock = new WebSocket('ws://' + window.location.host + endpoint);
+    sock.onmessage = function (message) {
+        data = JSON.parse(message.data)
+        if (window.location.pathname == '/network/' && data.command != undefined) {
+            get_nodes_and_edges(true)
+        } else {
+            create_toast(data.title, data.text, data.type)
+        }
+    };
+    sock.onerror = function (error) {console.log(error)}
+    sock.onopen = function (event) {console.log('connection is open')}
+    sock.onclose = function (event) {console.log('connection is close')}
+    return sock
+}
+var message_sock = create_websocket('/api/websocket/message')
+
+function redirect_fetch(url, method, body) {
+    fetch(url, {method: method, redirect: 'follow', body: body == undefined ? null: body})
+    .then(response => {
+        console.log(response)
+        if (response.redirected) {window.location.href = response.url }
+    })
+    .catch(function(err) {
+        console.log(err)
+    })
+}
 function create_toast(title, message, level="info", time="just now") {
     var toast_holder = document.getElementById("toast_holder")
     var toast = document.createElement("div")
@@ -22,30 +49,17 @@ function create_html_toast(title, message, time, level) {
                 ${message}
             </div>`
 };
-function upload_binary_file(file_ext, task_type, task_title) {
-    let input = document.createElement('input');
-    input.type = "file";
-    input.multiple = true;
-    input.accept = file_ext
-    input.onchange = e => { 
-        for (var file of e.target.files)
-        {
-            var reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = readerEvent => {
-                ajax_request('/api/task/', 'post', {task_type: task_type, args: {log_file: readerEvent.target.result, to_log: {task_type: task_type,  filename: file.name}}});
-                create_toast('Task started', `Task ${task_title} parse started`)
-            }
-        }
-    }
-    input.click();           
-};
-function ajax_request(url, type, data, success_func, error_func) {
+function ajax_request(url, type, data, success_func, error_func, async=false) {
     var response = $.ajax({
                     url:   url,
-                    async: false,
+                    async: async,
                     dataType: 'json',
-                    data:  type.toLowerCase() == 'post'? JSON.stringify(data) : data,
+                    data:  ['post', 'put'].includes(type.toLowerCase()) ? JSON.stringify(data) : data,
+                    statusCode: {
+                        302: function(some) {
+                            console.log(some)
+                        }
+                    },
                     success: function (json) {
                         if (success_func != undefined){
                             success_func()
@@ -55,12 +69,12 @@ function ajax_request(url, type, data, success_func, error_func) {
                         
                     },
                     error: function (XMLHttpRequest, textStatus, errorThrown) {
-                        if (error_func != undefined){
-                            error_func()
-                        } else {
-                            create_toast('Request to server ERROR', `Request to server to ${url} finished with error. Details: textStatus: ${textStatus}`, 'error')
-                        }
-                        throw `ERROR: request to ${url}`
+                        // if (error_func != undefined){
+                        //     error_func()
+                        // } else {
+                        //     create_toast('Request to server ERROR', `Request to server to ${url} finished with error. Details: textStatus: ${textStatus}`, 'error')
+                        // }
+                        // throw `ERROR: request to ${url}`
                     },
                     type: type
                 });
@@ -84,4 +98,28 @@ function craft_nmap_command () {
         }
     }
     document.getElementById('nmap_command').value = "nmap -oX - " + nmap_options.join(" ") + " " + ip_target
+};
+function create_modal(element_id, title, content, ok_text, ok_func) {
+    var modal_elem = document.getElementById(element_id)
+    modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">${title}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">${ok_text}</button>
+                </div>
+            </div>
+        </div>
+    </div>`
+    var modal = new bootstrap.Modal(modal_elem.children[0])
+    var ok_button_elem = modal_elem.getElementsByClassName('btn btn-primary')[0]
+    ok_button_elem.onclick = function() {ok_func(); modal.hide()}
+    return modal
 };

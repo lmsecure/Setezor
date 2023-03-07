@@ -8,20 +8,21 @@ from exceptions.snanners_exceptions import (
     NmapParserError,
     NmapSaverError
 )
-from exceptions.exception_logger import exception_decorator
 from exceptions.loggers import LoggerNames, get_logger
 from tools.shell_tools import create_shell_subprocess, create_async_shell_subprocess
 from time import time
+import os
 
 
 logger = get_logger(__package__, handlers=[])
+
 
 class NmapScanner:
     '''
     Класс-обертка над утилитой nmap
     '''
-
-    start_command = ['nmap', '-oX', '-']
+    
+    start_command = ['nmap', '--privileged', '-oX', '-']
     superuser_permision = ['sudo', '-S']
     
     def run(self, extra_args: str, _password: str, logs_path: str=None) -> dict:
@@ -59,7 +60,7 @@ class NmapScanner:
             result_dict = self.parse_xml(result)
             return result_dict
         logger.error('Nmap sync scan failed with error\n%s', error)
-        raise NmapCommandError(error)
+        raise Exception(error)
     
     async def async_run(self, extra_args: str, _password: str, logs_path: str=None) -> dict:
         """Асинхронная реализация запуска nmap с заданными параметрами
@@ -77,7 +78,7 @@ class NmapScanner:
         args = self._prepare_args(extra_args=extra_args)
         time1 = time()
         result, error = await (await create_async_shell_subprocess(self.superuser_permision + args if _password else args)).communicate(_password)
-        logger.debug('Finish sync nmap scan after %.2f seconds', time() - time1)
+        logger.debug('Finish async nmap scan after %.2f seconds', time() - time1)
         return self._check_results(args=args, result=result, error=error, logs_path=logs_path)
         
 
@@ -107,7 +108,7 @@ class NmapScanner:
             return json.loads(json_result)
         except:
             logger.error('Failed parse xml file with error\n%s', traceback.format_exc())
-            raise NmapParserError()
+            raise Exception('Error with parsing nmap xml-file')
 
     @staticmethod
     def save_source_data(path: str, scan_xml: str, command: str) -> bool:
@@ -127,9 +128,9 @@ class NmapScanner:
         full_path = f'{path}/{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {command.replace("/", "_")}.xml'
         logger.info('Save scan_data to file by path "%s"', full_path)
         try:
-            with open(full_path, 'wb') as f:
+            with open(full_path, 'wb' if isinstance(scan_xml, bytes) else 'w') as f:
                 f.write(scan_xml)
             return True
         except:
             logger.error('Failed save source scan to path "%s" with error\n%s', full_path, traceback.format_exc())
-            raise NmapSaverError(full_path)
+            raise Exception('Failed save source scan to path "%s"' % full_path)

@@ -1,7 +1,7 @@
-from routes.pages.info import info_routes
-from routes.pages.screenshots import screenshot_routes
-from routes.pages.network import network_routes
-from routes.pages.project import project_routes
+from .info import info_routes
+from .screenshots import screenshot_routes
+from .network import network_routes
+from .project import project_routes
 from aiohttp.web import UrlDispatcher
 
 

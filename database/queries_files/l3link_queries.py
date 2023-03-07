@@ -1,8 +1,8 @@
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import or_
 from database.models import L3Link, IP
-from database.queries_files.base_queries import BaseQueries
-from database.queries_files.ip_queries import IPQueries
+from .base_queries import BaseQueries
+from .ip_queries import IPQueries
 from copy import deepcopy
 
 
@@ -93,7 +93,7 @@ class L3LinkQueries(BaseQueries):
             if exist:
                 
                 if to_update:
-                    self.update_by_id(id=exist.id, to_update={'child_ip': child_ip, 'parent_ip': parent_ip})
+                    self.update_by_id(session=session, id=exist.id, to_update={'child_ip': child_obj.id, 'parent_ip': parent_obj.id})
                 self.logger.debug('Get "%s" with kwargs %s', self.model.__name__, {'child_ip': child_ip, 'parent_ip': parent_ip, 'child_mac': child_mac, 
                                                                                'parent_mac': parent_mac, 'child_name': child_name, 'parent_name': parent_name, 
                                                                                'start_ip': start_ip})
@@ -103,21 +103,29 @@ class L3LinkQueries(BaseQueries):
                             parent_ip=parent_ip, parent_mac=parent_mac, parent_name=parent_name, start_ip=start_ip)
 
     @BaseQueries.session_provide
-    def get_nodes_and_edges(self, session: Session) -> dict:
-        """метод генерации вершин и ребер для построения топологии сети на веб-морде
+    def get_vis_edges(self, session: Session) -> dict:
+        """метод генерации ребер для построения топологии сети на веб-морде
 
         Args:
             session (Session): сессия коннекта к базе
 
         Returns:
-            dict: словарь вершин и ребер
+            dict: словарь ребер
         """        
-        l3links = session.query(self.model).all()
-        ips = session.query(self.ip.model).all()
-        edges = [{'from': i._parent_ip.id, 'to': i._child_ip.id} for i in l3links]
-        nodes = [{'id': i.id, 'label': i.ip, 'value': 10, 'group': '.'.join(i.ip.split('.')[:-1])} for i in ips]
-        return {'edges': edges, 'nodes': nodes}
+        return [edge.to_vis_edge() for edge in session.query(self.model).all()]
     
     @BaseQueries.session_provide
-    def update_by_id(self, session: Session, id: int, to_update: dict, merge_mode='merge'):
-        pass
+    def update_by_id(self, session: Session, id: int, to_update: dict, merge_mode='replace'):
+        l3link_obj = session.query(self.model).filter(self.model.id == id).update(to_update)
+        session.flush()
+        
+    def get_headers(self) -> list:
+        return [{'name': 'id', 'type': '', 'required': False},
+                {'name': 'child_ip', 'type': '', 'required': True},
+                {'name': 'parent_ip', 'type': '', 'required': True}]
+        
+    def foreign_key_order(self, field_name: str):
+        if field_name == 'child_ip':
+            return self.ip.model.ip, self.model._child_ip
+        elif field_name == 'parent_ip':
+            return self.ip.model.ip, self.model._parent_ip

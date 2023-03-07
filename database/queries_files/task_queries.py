@@ -5,7 +5,7 @@ from tasks.task_status import TaskStatus
 import json
 from datetime import datetime, timedelta
 from sqlalchemy.sql import and_, or_
-from database.queries_files.base_queries import BaseQueries
+from .base_queries import BaseQueries
 import pandas as pd
 
 
@@ -90,3 +90,21 @@ class TaskQueries(BaseQueries):
             list: массив незавершенных задач
         """        
         return [i.to_dict() for i in session.query(self.model).filter(and_(self.model.status != TaskStatus.finished, self.model.status != TaskStatus.failed)).all()]
+
+    def get_headers(self) -> list:
+        return [{'name': 'id', 'type': '', 'required': False},
+                {'name': 'status', 'type': '', 'required': True},
+                {'name': 'created', 'type': 'date', 'required': False},
+                {'name': 'started', 'type': 'date', 'required': False},
+                {'name': 'finished', 'type': 'date', 'required': False},
+                {'name': 'params', 'type': '', 'required': False},
+                {'name': 'comment', 'type': '', 'required': False},]
+        
+    @BaseQueries.session_provide
+    def simple_create(self, session: Session, status: str, created: float=None, started: float=None, finished: float=None, params: str=None, comment: str=None):
+        created = datetime.fromtimestamp(created) if created else None
+        started = datetime.fromtimestamp(started) if started else None
+        finished = datetime.fromtimestamp(finished) if finished else None
+        task = self.model(status=status, created=created, started=started, finished=finished, params=params, comment=comment)
+        session.add(task)
+        session.flush()

@@ -21,12 +21,12 @@ class NetBOISPacket(AbstractPacket):
         Returns:
             dict: распарсенный пакет
         """        
-        res = {}
-        try:
-            res.update({'parent_mac': pkt['Dot3'].src})
-            res.update({'child_mac': pkt['Dot3'].dst})
-        except:
-            logger.error('Cannot parse package %s by "%s"', str(pkt), NetBOISPacket.__name__)
+        res = None
+        # try:
+        #     res.update({'parent_mac': pkt['Dot3'].src})
+        #     res.update({'child_mac': pkt['Dot3'].dst})
+        # except:
+        #     logger.error('Cannot parse package %s by "%s"', str(pkt), NetBOISPacket.__name__)
         return res
 
     @staticmethod

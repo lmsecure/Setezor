@@ -1,23 +1,22 @@
 import os
-from exceptions.loggers import get_logger
+from .structure import Folders, Files
 
 
 class FilesStructure:
     """Класс для работы с файлов структурой проекта
     """    
     
-    def __init__(self, folders: dict, files: dict):
+    def __init__(self, folders: Folders, files: Files):
         self.folders = folders
         self.files = files
-        self.logger = get_logger(self.__module__, handlers=[])
         
     def create_project_structure(self) -> None:
         """Метод создания файловой структуры проекта
         """        
-        for key, value in self.folders.items():
-            self.__create_folder_in_project_folder(value)
-        for key, value in self.files.items():
-            self.__create_file_in_project_folder(value)
+        for folder in self.folders:
+            self.__create_folder_in_project_folder(folder)
+        for file in self.files:
+            self.__create_file_in_project_folder(file)
     
     def check_project_structure(self) -> bool:
         """метод проверки файловой структуры проекта
@@ -26,7 +25,7 @@ class FilesStructure:
             bool: результат проверки
         """        
         not_exists = []
-        for key, value in {**self.folders, **self.files}.items():
+        for value in [*self.folders, *self.files]:
             if not os.path.exists(value):
                 not_exists.append(value)
         return not bool(not_exists), not_exists
@@ -41,7 +40,6 @@ class FilesStructure:
         if not self.__check_path_in_project_folder(path):
             f = open(path, 'w')
             f.close()
-            self.logger.debug('Created in project file')
         
     def __create_folder_in_project_folder(self, path: str):
         """Метод создания папки
@@ -51,7 +49,6 @@ class FilesStructure:
         """        
         if not self.__check_path_in_project_folder(path):
             os.makedirs(path, exist_ok=True)
-            self.logger.debug('Created in project folder "%s"', path)
         
     def __check_path_in_project_folder(self, path: str):
         """Метод проверки существования папки или файла по пути

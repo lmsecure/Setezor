@@ -1,8 +1,8 @@
 from sqlalchemy.orm.session import Session
 from database.models import Task, Screenshot
-from database.queries_files.base_queries import BaseQueries
-from database.queries_files.task_queries import TaskQueries
-from database.queries_files.port_queries import PortQueries
+from .base_queries import BaseQueries
+from .task_queries import TaskQueries
+from .port_queries import PortQueries
 
 
 class ScreenshotQueries(BaseQueries):
@@ -37,13 +37,18 @@ class ScreenshotQueries(BaseQueries):
         Returns:
             _type_: объект скриншота
         """        
-        port_obj = None
         domain_obj = None
-        if ip and port:
-            port_obj = self.port.create(session, ip, port)
+        port_obj = self.port.get_or_create(session=session, ip=ip, port=port)
         task_obj = session.query(self.task.model).filter(self.task.model.id == task_id).first()
-        screenshot_obj = self.model(screenshot_path=path, task_id=task_obj.id, port_id=port_obj.id, domain=domain_obj)
+        screenshot_obj = self.model(screenshot_path=path, task=task_obj.id, port=port_obj.id, domain=domain_obj)
         session.add(screenshot_obj)
         session.flush()
         self.logger.debug('Created "%s" object with kwargs %s', self.model.__name__, {'path': path, 'task_id': task_id, 'ip': ip, 'port': port, 'domain': domain})
         return screenshot_obj
+
+    def get_headers(self) -> list:
+        return [{'name': 'id', 'type': '', 'required': False},
+                {'name': 'port', 'type': '', 'required': False},
+                {'name': 'screenshot_path', 'type': '', 'required': True},
+                {'name': 'task', 'type': '', 'required': False},
+                {'name': 'domain', 'type': '', 'required': False},]

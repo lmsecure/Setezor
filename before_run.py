@@ -1,6 +1,7 @@
 from collections import namedtuple
 import pkg_resources
 import sys
+import os
 from tools.shell_tools import create_shell_subprocess
 
 
@@ -13,6 +14,9 @@ def check_nmap():
         if err:
             raise
         else:
+            res, err = create_shell_subprocess('nmap --traceroute localhost'.split()).communicate()
+            if err:
+                print('You NMAP capabilities is limited. Some NMAP function will not worked. please run:\n\tsudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/bin/nmap')
             return True
     except:
         print('\tPlease install "nmap"')
@@ -21,7 +25,7 @@ def check_nmap():
 def check_requirements_file():
     result = True
     local_modules = sorted([Package(i.key, i.version) for i in pkg_resources.working_set])
-    requirements = [Package(i.key, i.specs[0][1])for i in pkg_resources.parse_requirements(open('requirements.txt', 'r').read())]
+    requirements = [Package(i.key, i.specs[0][1]) for i in pkg_resources.parse_requirements(open(os.path.join(os.getcwd(), 'requirements.txt'), 'r').read())]
     not_installed = [r for r in requirements if all([r.name != m.name for m in local_modules])]
     diff_version = [(r.name, r.version, m.version) for r in requirements for m in local_modules if r.name == m.name and r.version != m.version]
     if not_installed:

@@ -1,7 +1,8 @@
 from aiohttp.web import Request, HTTPFound, middleware, HTTPException, Application
 
 
-async def handle_404(reqeust: Request):
+async def handle_404(request: Request):
+    # FixMe check what user want to get if file then return 404
     return HTTPFound('/projects/')
 
 def create_error_middleware(overrides):

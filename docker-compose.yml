@@ -1,8 +1,20 @@
-version: "3.3"
+version: "2"
 services:
-  netmapper:
+  lms.netmap:
     build: .
+    volumes:
+      - ./projects:/lms.netmap/projects
+      - ./logs:/lms.netmap/logs
     ports:
       - "8001:8008"
     command: echo `pwd && ls`; python3 app.py
-
+    networks:
+      - lms.netmap_network
+networks:
+  lms.netmap_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.50.0/28
+        # gateway: "172.16.50.1"

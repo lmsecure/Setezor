@@ -21,7 +21,7 @@ class IPQueries(BaseQueries):
         self.mac = mac
         
     @BaseQueries.session_provide
-    def create(self, session: Session, ip: str, mac: str=None, domain_name: str=None):
+    def create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, **kwargs):
         """Метод создания объекта IP адреса
 
         Args:
@@ -32,8 +32,11 @@ class IPQueries(BaseQueries):
 
         Returns:
             _type_: объект ip адреса
-        """        
-        mac_obj = self.mac.get_or_create(session=session, mac=mac)
+        """
+        # if mac:
+        #     mac_obj = self.mac.get_or_create(session=session, mac=mac)
+        # else:
+        mac_obj = self.mac.create(session=session, mac=mac if mac else '', **kwargs)
         new_ip_obj = self.model(ip=ip, _mac=mac_obj, domain_name=domain_name)
         session.add(new_ip_obj)
         session.flush()
@@ -44,9 +47,39 @@ class IPQueries(BaseQueries):
     def get_or_create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, to_update: bool=False, **kwargs):
         ip_obj = session.query(self.model).filter(self.model.__table__.c.get('ip') == ip).first()
         if ip_obj:
-            if to_update:
-                self.update_by_id(id=ip_obj.id, to_update={'ip': ip, 'mac': mac, 'domain_name': domain_name})
             self.logger.debug('Get "%s" with kwargs %s', self.model.__name__, {'ip': ip})
             return ip_obj
         else:
             return self.create(session=session, ip=ip, mac=mac, domain_name=domain_name)
+        
+    @BaseQueries.session_provide
+    def get_by_id(self, session: Session, id: int, return_format:str = 'dict'):
+        ip_obj = session.query(self.model).get(id)
+        if return_format == 'dict':
+            return ip_obj.to_dict()
+        elif return_format == 'vis':
+            return ip_obj.to_vis_node()
+        else:
+            return ip_obj
+        
+    @BaseQueries.session_provide
+    def get_vis_nodes(self, session: Session) -> dict:
+        """метод генерации ребер для построения топологии сети на веб-морде
+
+        Args:
+            session (Session): сессия коннекта к базе
+
+        Returns:
+            dict: словарь ребер
+        """        
+        return [nodes.to_vis_node() for nodes in session.query(self.model).all()]
+    
+    def get_headers(self) -> list:
+        return [{'name': 'id', 'type': '', 'required': False},
+                {'name': 'mac', 'type': '', 'required': False},
+                {'name': 'ip', 'type': '', 'required': True},
+                {'name': 'domain_name', 'type': '', 'required': False},]
+        
+    def foreign_key_order(self, field_name: str):
+        if field_name == 'mac':
+            return self.mac.model.mac, self.model._mac

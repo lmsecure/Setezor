@@ -5,3 +5,4 @@ from .object_queries import ObjectQueries
 from .port_queries import PortQueries
 from .screenshot_queries import ScreenshotQueries
 from .task_queries import TaskQueries
+from .object_type_queries import ObjectTypeQueries

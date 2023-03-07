@@ -26,7 +26,7 @@ class ARPPacket(AbstractPacket):
             res.update({'parent_mac': pkt['ARP'].hwsrc, 'parent_ip': pkt['ARP'].psrc})
             res.update({'child_mac': pkt['ARP'].hwdst, 'child_ip': pkt['ARP'].pdst})
         except:
-            logger.error('Cannot parse package %s by "%s"', str(pkt), ARPPacket.__name__)
+            logger.error('Cannot parse package %s by "%s"', pkt.summary(), ARPPacket.__name__)
         return res
 
     @staticmethod
@@ -39,4 +39,4 @@ class ARPPacket(AbstractPacket):
         Returns:
             bool: _description_
         """        
-        return ARP in pkt.layers()
+        return ARP in pkt.layers() # haslayer()
