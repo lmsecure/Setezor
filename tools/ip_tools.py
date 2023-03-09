@@ -1,19 +1,17 @@
 import os
 import re
 from tools.shell_tools import create_shell_subprocess
+import socket
+import fcntl
+import struct
 
 
 def get_self_ip(iface: str):
-        res, err = create_shell_subprocess(f'ifconfig {iface}'.split()).communicate()
-        if err:
-            pass  # Todo: raise exception
-        ip = re.findall(r'inet (\d+\.\d+\.\d+\.\d+)', res)
-        mac = re.findall(
-            r'ether ([0-9a-fA-F]{2}\:[0-9a-fA-F]{2}\:[0-9a-fA-F]{2}\:[0-9a-fA-F]{2}\:[0-9a-fA-F]{2}\:[0-9a-fA-F]{2})',
-            res)
-        my_ip = ip[0] if ip else None
-        my_mac = mac[0] if mac else None
-        return {'ip': my_ip, 'mac': my_mac}
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', iface.encode()[:15]))[20:24])
+    except:
+        raise Exception('Can not get IP address for iface %s' % iface)
     
     
 def get_self_interfaces():

@@ -2,10 +2,15 @@
 
 ### Table of contents
 [Desctiprion](#description)
+
 [Features](#features)
-[Before run](#before-run)
+
+[Requirements](#requirements)
+
 [Usage](#usage)
+
 [Database schema](#database-schema)
+
 [Features in new version](#features-in-new-version)
 
 ### Screenshots
@@ -47,15 +52,12 @@
     - удаление записи.
 1. **Использование REST API**. Для работы с серверной частью используется REST API, поэтому есть возможность написать свой интерфейс (tui, gui native, mobile) или интегрировать в свой проект.
 
-### Before run
-Перед запуском приложения происходит проверка софта. Если какие-то пакеты не установлены - приложение упадет с ошибкой. Если не совпадают версии - будет соответствующее уведомление и приложение запустится.
-### Software requirements
+### Requirements
+#### Software requirements
 1. python3
 1. nmap
-1. scapy (для того, чтобы пассивное сканирование со scapy не требовало прав root, выполните `sudo setcap cap_net_raw=eip /usr/bin/pythonX.X`)
-1. для запуска `nmap`с параметрами, требующих `root` необходимо дать прав командой `sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/bin/nmap`.
 
-### Packages requirements
+#### Packages requirements
 
 ```
 aiohttp==3.8.1
@@ -76,14 +78,53 @@ sqlalchemy_schemadisplay==1.3
 xmltodict==0.12.0
 xlsxwriter==3.0.8
 ```
-
-Чтобы установить пакеты. выполните: 
-``` bash
+### Usage
+#### From github repo
+1. Склонировать репозиторий с github 
+```bash
+git clone https://github.com/lmsecure/LMS.NetMap.git
+cd LMS.NetMap
+```
+2. Установить необходимое ПО
+```bash
+sudo apt install nmap python3.8
+```
+2.1. Рекомендуется использовать `venv`
+```bash
+sudo apt install -y python3-venv
+python3 -m venv venv
+source venv/bin/activate
+```
+3. Установить зависимые пакеты. 
+```bash
 pip3 install -r requirements.txt
 ```
+4. Выдать права на работу с сокетами для `nmap` и `python3.8`
+```bash
+sudo setcap cap_net_raw=eip /usr/bin/python3.8
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
+```
+5. Запустить приложение
+```bash
+python3 app.py
+```
+После запуска перейти `http://localhost:8008`
+#### From dockerhub image
+1. Скачать docker образ
+```bash
+docker pull lmsecure/lms.netmap
+```
+2. Создать рабочую папку. Она будет нужна для хранения логов и пользовательских данных
+```bash
+mkdir ~/lms.netmap
+cd ~/lms.netmap
+```
+3. Запустить docker контейнер
+```bash
+docker run -p 8008:8008 -v ~/lms.netmap/projects:/lms.netmap/projects -v ~/lms.netmap/logs:/lms.netmap/logs -d lmsecure/lms.netmap:latest
+```
+После запуска перейти `http://localhost:8008`
 
-### Usage
-`python3 app.py`
 
 ### Database schema
 ![schema](docs/db_schema_full.png)

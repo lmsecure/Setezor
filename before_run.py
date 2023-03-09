@@ -14,7 +14,7 @@ def check_nmap():
         if err:
             raise
         else:
-            res, err = create_shell_subprocess('nmap --traceroute localhost'.split()).communicate()
+            res, err = create_shell_subprocess('nmap --traceroute --privileged localhost'.split()).communicate()
             if err:
                 print('You NMAP capabilities is limited. Some NMAP function will not worked. please run:\n\tsudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/bin/nmap')
             return True
