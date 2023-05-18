@@ -14,10 +14,10 @@
 [Features in new version](#features-in-new-version)
 
 ### Screenshots
-![Projects page](docs/screenshots/scr1.png)
-![Topology page](docs/screenshots/scr2.png)
-![Topology fullscreen page](docs/screenshots/scr3.png)
-![Info page](docs/screenshots/scr4.png)
+![Projects page](src/docs/screenshots/scr1.png)
+![Topology page](src/docs/screenshots/scr2.png)
+![Topology fullscreen page](src/docs/screenshots/scr3.png)
+![Info page](src/docs/screenshots/scr4.png)
 
 ### Description
 **LMS.NetMap** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
@@ -147,7 +147,7 @@ docker run -p 8008:8008 -v ~/lms.netmap/projects:/lms.netmap/projects -v ~/lms.n
 
 
 ### Database schema
-![schema](docs/db_schema_full.png)
+![schema](src/docs/db_schema_full.png)
 
 ### Features in new version
 1. Возможность скармливать логи других инструментов:
