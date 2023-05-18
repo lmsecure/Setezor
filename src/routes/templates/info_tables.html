@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% block title %}
+    Information
+{% endblock title %}
+{% block scripts %}
+
+    <link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css"/>
+    <script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+    <script src="/static/js/luxon.min.js" type="text/javascript"></script>
+    <script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
+{% endblock %} 
+
+{% block content %}
+<nav>
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+        {% for tab in tabs %}
+        <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}" data-bs-toggle="tab" 
+        data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab" aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}</button>
+        {% endfor %}
+    </div>
+</nav>
+<div class="tab-content" id="nav-tabContent">
+       {% for tab in tabs %}
+            <div class="tab-pane fade{% if loop.index0 == 0 %} show active{% endif %}" id="tab-content-{{tab.name}}" role="tabpanel" aria-labelledby="infotabs-{{name}}">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-primary" id="{{tab.name}}-add-row" onclick="{{tab.name}}addRow()"><i class="bi bi-plus-square"></i></button>
+                    <button class="btn btn-primary" id="{{tab.name}}-reload-data" onclick="{{tab.name}}_table.dataLoader.reloadData()"><i class="bi bi-arrow-clockwise"></i></button>
+                </div>
+                <div id="{{tab.name}}-table"></div>
+                <div id="{{tab.name}}ModalDelete"></div>
+                <script>
+                    function buttons_formatter(cell, formatterParams, onRendered){
+                        return `<div class='btn btn-primary btn-sm' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="{{tab.name}}editEvent(this)">Edit</div>
+                        <div class='btn btn-danger btn-sm' id="{{tab.name}}-delete-${cell.getRow().getData().id}" onclick="{{tab.name}}deleteEvent(this)">Delete</div>
+                        <div class='btn btn-success btn-sm' id="{{tab.name}}-save-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}saveEvent(this)">Save</div>
+                        <div class='btn btn-warning btn-sm' id="{{tab.name}}-cancel-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}cancelEvent(this)">Cancel</div>
+                        <div class='btn btn-success btn-sm' id="{{tab.name}}-create-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}createRowEvent(this)">Create</div>
+                        <div class='btn btn-warning btn-sm' id="{{tab.name}}-cancel-create-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}cancelCreateEvent(this)">Cancel</div>`;
+                    }
+                    function {{tab.name}}addRow() {
+                        rowIndex = ""
+                        {{tab.name}}_table.addRow({id: rowIndex}, true);
+                        {{tab.name}}_table.validate(rowIndex)
+                        document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = "none"
+                        document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = "none"
+                        document.getElementById("{{tab.name}}-create-" + rowIndex).style.display = ""
+                        document.getElementById("{{tab.name}}-cancel-create-" + rowIndex).style.display = ""
+                        {{tab.name}}_table.selectRow(rowIndex)
+
+                    }
+                    function {{tab.name}}editEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        document.getElementById("{{tab.name}}-cancel-" + rowIndex).style.display = ""
+                        document.getElementById("{{tab.name}}-save-" + rowIndex).style.display = ""
+                        document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = "none"
+                        element.style.display = "none"
+                        {{tab.name}}_table.selectRow(rowIndex)
+                    }
+                    function {{tab.name}}saveEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        if ({{tab.name}}_table.getRow(rowIndex).getCells().every(element => element.isValid() === true)) {
+                            document.getElementById("{{tab.name}}-cancel-" + rowIndex).style.display = "none"
+                            document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = ""
+                            document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = ""
+                            element.style.display = "none"
+                            fetch("{{tab.base_url}}/from_table", {method: 'PUT', body: JSON.stringify({{tab.name}}_table.getRow(rowIndex).getData())})
+                            {{tab.name}}_table.deselectRow(rowIndex)
+                            {{tab.name}}_table.dataLoader.reloadData()
+                        } else {
+                            {{tab.name}}_table.validate()
+                        }
+                    }
+                    function {{tab.name}}cancelEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = ""
+                        document.getElementById("{{tab.name}}-save-" + rowIndex).style.display = "none"
+                        document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = ""
+                        element.style.display = "none"
+                        var row = {{tab.name}}_table.getRow(rowIndex)
+                        var cells = row.getCells()
+                        for (i = 0; i < cells.length; i++) {
+                            if (cells[i].getOldValue() != null){
+                                cells[i].restoreOldValue();
+                            }
+                        }
+                        {{tab.name}}_table.deselectRow()
+                    }
+                    function {{tab.name}}deleteEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        {{tab.name}}_table.getRow(rowIndex).delete()
+                        create_modal("{{tab.name}}ModalDelete", "Row deletion", "Are you sure? Deleteion can have cascade effect.", "Delete", 
+                                     function () {fetch("{{tab.base_url}}/", {method: "DELETE", body: JSON.stringify({id: rowIndex})})})
+                                    .show()
+                        
+                        //Add confim modal "are you sure?"
+                    }
+                    function {{tab.name}}createRowEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        if ({{tab.name}}_table.getRow(rowIndex).getCells().every(element => element.isValid() === true)) {
+                            fetch("{{tab.base_url}}/from_table", {method: "POST", body: JSON.stringify({{tab.name}}_table.getRow(rowIndex).getData())})
+                            {{tab.name}}_table.dataLoader.reloadData()
+                        } else {
+                            {{tab.name}}_table.validate()
+                        }
+                    }
+                    function {{tab.name}}cancelCreateEvent(element) {
+                        var rowIndex = element.id.split("-").at(-1)
+                        {{tab.name}}_table.getRow(rowIndex).delete()
+                    }
+                    function isRowSelected(cell){
+                      return cell.getRow().isSelected()
+                    }
+                    function getForiegnKeys(url) {
+                            var response = ''
+                            $.ajax({url: url,
+                                type: 'GET',
+                                async: false,
+                                success: function(json) {response = json}})
+                        return response
+                    }
+                    {% for col in tab.columns %}{% if col.editor_entity%}
+                    var foriegnData{{col.field}} = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %}{% endfor %}
+                    function foriegnKeyReplace(data) {
+                        var foriegnData = data;
+                        function wrapped(cell) {
+                            var value = cell.getValue()
+                            var finded = foriegnData.find(obj => { return obj.value == value})
+                            if (finded === undefined) {
+                                return ''
+                            } else {
+                                return finded.label
+                            }
+                        }
+                        return wrapped
+                    }
+                    function datetimeFormatter(cell){
+                        try {
+                            res = luxon.DateTime.fromSeconds(cell.getValue()).toFormat('dd.MM.yyyy HH:mm:ss.S')
+                            if (res === 'Invalid DateTime') { throw 'Datetime Error'}
+                            return res
+                        } catch (error) {
+                            return ''
+                        }
+                    }
+                    function datetimeEditor(cell, onRendered, success, cancel) {
+                        try {
+                            var cellValue = luxon.DateTime.fromSeconds(cell.getValue()).toFormat('dd.MM.yyyy hh:mm:ss')
+                            if (cellValue === 'Invalid DateTime') { throw 'Datetime Error'}
+                        } catch (error) {
+                            var cellValue = ""
+                        }
+                        input = document.createElement("input");
+                        var mask = new Inputmask("99.99.9999 99:99:99")
+                        mask.mask(input)
+                        input.setAttribute("type", "text");
+                        input.style.padding = "4px";
+                        input.style.width = "100%";
+                        input.style.boxSizing = "border-box";
+                        input.value = cellValue;
+                        onRendered(function(){
+                            input.focus();
+                            input.style.height = "100%";
+                        });
+                        function onChange(){
+                            try {
+                                v = luxon.DateTime.fromFormat(input.value, 'dd.MM.yyyy hh:mm:ss').toSeconds()
+                                success(v);
+                            } catch {
+                                cancel()
+                            }
+                        }
+                        input.addEventListener("blur", onChange);
+                        input.addEventListener("change", onChange)
+                        return input;
+                    }
+                    var headerMenu = function(){
+                        var menu = [];
+                        var columns = this.getColumns();
+                        for(let column of columns){
+                            if (column.getDefinition().field) {
+                                let icon = document.createElement("i");
+                                icon.classList.add("bi");
+                                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                                let label = document.createElement("span");
+                                let title = document.createElement("span");
+                                title.textContent = " " + column.getDefinition().title;
+                                label.appendChild(icon);
+                                label.appendChild(title);
+                                menu.push({
+                                    label:label,
+                                    action:function(e){
+                                        e.stopPropagation();
+                                        column.toggle();
+                                        if(column.isVisible()){
+                                            icon.classList.remove("bi-square");
+                                            icon.classList.add("bi-check-square");
+                                        }else{
+                                            icon.classList.remove("bi-check-square");
+                                            icon.classList.add("bi-square");
+                                        }
+                                        {{tab.name}}_table.redraw()
+                                    }
+                                });
+                            }
+                        }
+                    return menu;
+                    };
+                    var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table',{
+                        layout: "fitColumns",
+                        ajaxURL: "{{tab.base_url}}/all",
+                        selectable: false,
+                        sortMode: "remote",
+                        pagination: true,
+                        paginationMode: "remote",
+                        paginationSize: 10,
+                        paginationInitialPage: 1,
+                        paginationSizeSelector: [5, 10, 25, 50, 100],
+                        validationMode: 'highlight',
+                        columns: [
+                            {% for col in tab.columns %}
+                            {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
+                            {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %}{% endif %}
+                            {% if col.formatter %}, editorParams: {values: foriegnData{{col.field}}, itemFormatter:function(label, value, item, element){label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>`}}, formatter: {{col.formatter}}(foriegnData{{col.field}}){% endif %}
+                            {% if col.validator%}, validator: "{{col.validator}}"{% endif %}{{'}'}},{% endfor %}
+                            {% if  tab.name != 'task' %} {{'{'}}title:"Actions",formatter: buttons_formatter, headerSort:false{{'}'}} {% endif %}
+                        ]
+                    })
+                </script>
+            </div>
+    {% endfor %}
+</div>
+
+{% endblock content %}

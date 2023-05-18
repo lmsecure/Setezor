@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}
+Projects
+{% endblock title %}
+{% block scripts %}
+    <link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css"/>
+    <script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+    <script src="/static/js/vis-network.min.js"></script>
+    <script src="/static/js/canvas2svg.js"></script>
+    <script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
+    <script type="module">
+        import Tags from "/static/js/tags.js";
+        Tags.init('select')
+    </script>
+   
+{% endblock scripts %}
+{% block content %}
+<div class="d-flex h-100 bd-highlight mb-3">
+    <div class="p-2 bd-highlight" id="div_left_bar">
+        {% from 'network/tools.html' import tools %}
+        {{tools()}}
+    </div>
+    <div class="p-2 bd-highlight" id="div_node_info">
+        {% from 'network/info.html' import info%}
+        {{info(table)}}
+    </div>
+    <div class="p-2 bd-highlight fixed-end" id="div_network">
+        {% from 'network/net_map.html' import net_map %}
+        {{net_map(device_types)}}
+    </div>
+    
+</div>
+<script>
+    var width = $(window).width();
+    var left_bar_width = 420;
+    var div_network_width = (width - left_bar_width) / 3;
+    var div_node_info_width = width - left_bar_width - div_network_width - 120;
+    $('#div_left_bar').css('min-width', left_bar_width);
+    $('#div_network').css('max-width', div_network_width ? div_network_width > 400 : 401);
+    $('#div_network').css('min-width', 400);
+    $('#div_node_info').css('max-width', div_node_info_width);
+    
+</script>
+{% endblock content %}

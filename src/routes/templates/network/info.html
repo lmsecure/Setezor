@@ -1,0 +1,71 @@
+{% macro info(table)%}
+<h3>Selected node information</h3>
+<div id="node_info">
+</div>
+<script>
+    function getForiegnKeys(url) {
+        var response = ''
+        $.ajax({url: url,
+            type: 'GET',
+            async: false,
+            success: function(json) {response = json}})
+    return response
+}
+{% for col in table %}{% if col.editor_entity%}
+var foriegnData{{col.field}} = getForiegnKeys("/api/{{col.editor_entity}}/all_short")
+function foriegnKeyReplace{{col.field}}(cell) {
+        var value = cell.getValue()
+        var finded = foriegnData{{col.field}}.find(obj => { return obj.value == value})
+        if (finded === undefined) {
+            return ''
+        } else {
+            return finded.label
+        }
+}{% endif %}{% endfor %}
+var headerMenu = function(){
+    var menu = [];
+    var columns = this.getColumns();
+    for(let column of columns){
+        if (column.getDefinition().field) {
+            let icon = document.createElement("i");
+            icon.classList.add("bi");
+            icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+            let label = document.createElement("span");
+            let title = document.createElement("span");
+            title.textContent = " " + column.getDefinition().title;
+            label.appendChild(icon);
+            label.appendChild(title);
+            menu.push({
+                label:label,
+                action:function(e){
+                    e.stopPropagation();
+                    column.toggle();
+                    if(column.isVisible()){
+                        icon.classList.remove("bi-square");
+                        icon.classList.add("bi-check-square");
+                    }else{
+                        icon.classList.remove("bi-check-square");
+                        icon.classList.add("bi-square");
+                    }
+                    portsTable.redraw()
+                }
+            });
+        }
+    }
+return menu;
+};
+var portsTable = new Tabulator("#node_info",{
+    //responsiveLayout: true,
+    layout: "fitDataStretch",
+    pagination: "local",
+    paginationSize: 5,
+    paginationSizeSelector: [5, 10, 20],
+    paginationCounter: "rows",
+    movableColumns: true,
+    selectable: true,
+    columns: [{% for col in table %}
+        {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu{% if col.formatter %}, formatter: {{col.formatter}}{{col.field}}{% endif %}{{'}'}},{% endfor %}
+    ]
+})
+</script>
+{% endmacro %}

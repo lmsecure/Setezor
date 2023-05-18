@@ -1,0 +1,377 @@
+{% macro net_map(device_types) %}
+<div class="btn-group" role="group">
+    <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
+            if (cluster) {
+                this.textContent = 'Decluster'
+            } else {
+                this.textContent = 'Cluster'
+            }">Cluster</button>
+    <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top" title="Fullscreen mode" 
+            onclick="fullscreen_network()"><i class="bi bi-arrows-fullscreen"></i></button>
+    <button class="btn btn-primary" data-bs-toggle="tooltip" data-bs-toggle="top" title="Import from JSON"
+            onclick="openFile()"><i class="bi bi-upload"></i></button>
+    <input id="inp" type='file' style="display:none" onchange="readFile(event)"/>
+    <div class="btn-group" role="group">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+            <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
+        </ul>
+    </div>
+    <button class="btn btn-primary" id="updateNetwork"  data-bs-toggle="tooltip" data-bs-toggle="top" title="Update network"
+            onclick="get_nodes_and_edges(true);"><i class="bi bi-arrow-clockwise"></i></button>
+
+</div>
+<div id="netwrok_container">
+    <div id="network_topology">
+        <div class="vis-network" style="position: relative; overflow: hidden; touch-action: pan-y; user-select: none; width: 100%; height: 100%;" tabindex="0">
+            <canvas style="position: relative; touch-action: none; user-select: none; width: 100%; height: 100%;"></canvas>
+        </div>
+    </div>
+</div>
+<div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
+    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+        <li><a class="dropdown-item" href="#" id="deviceTypeDD" data-bs-toggle="dropdown" aria-expanded="false">Device type &raquo;</a>
+            <ul class="dropdown-menu dropdown-submenu" aria-labelledby="deviceTypeDD">
+                {% for device_type in device_types %}
+                <li><a class="dropdown-item" href="#" onclick="set_device_type(this)" value="{{device_type.value}}">{{device_type.label}}</a></li>
+                {% endfor %}
+            </ul>
+        </li> 
+        <!-- <li><a class="dropdown-item" href="#" id="ScanDD" data-bs-toggle="dropdown" aria-expanded="false">Scan &raquo;</a>
+            <ul class="dropdown-menu dropdown-submenu" aria-labelledby="ScanDD">
+                <li><a class="dropdown-item disabled" href="#">Nmap</a></li>
+                <li><a class="dropdown-item disabled" href="#">Scapy</a></li>
+            </ul>
+        </li> -->
+    </ul>
+</div>
+<script>
+
+    // disable default context menu
+    document.onkeydown = keyboardDown;
+    document.onkeyup = keyboardUp;
+    document.oncontextmenu = function(e){
+        var evt = new Object({keyCode:93});
+        stopEvent(e);
+        keyboardUp(evt);
+    }
+    function stopEvent(event){
+        if(event.preventDefault != undefined)
+            event.preventDefault();
+        if(event.stopPropagation != undefined)
+            event.stopPropagation();
+    };
+    function keyboardDown(e){
+    };
+    function keyboardUp(e){
+    };
+    var dd_div = $('#nodeDropdownMenu')
+    dd_div.on('mouseleave', function() {
+        dd_div.hide();
+    });
+    var cluster = false;
+    var network;
+    var networkData = {nodes: new vis.DataSet(), edges: new vis.DataSet()}
+    function set_device_type (elem) {
+        var value = elem.attributes.value.value
+        var node_id = network.getSelectedNodes()[0]
+        var request = ajax_and_toast('/api/object/', 'put', {ip_id: node_id, to_update: {object_type: value}}, 'Device type setted', 'info', `To node with id "${node_id}" set device type "${value}"`)
+        networkData.nodes.update(ajax_request(`/api/ip/vis/${node_id}`, 'get').node)
+    }
+    function fullscreen_network () {
+        var div_left_bar = document.getElementById("div_left_bar")
+        var div_node_info = document.getElementById("div_node_info")
+        var div_network = document.getElementById("div_network")
+        var netwrok_container = document.getElementById("netwrok_container")
+        var network_topology = document.getElementById("network_topology")
+        if (div_left_bar.style.display != "none" && div_node_info.style.display != "none") {
+            div_network.className = "bd-highlight w-100"
+            div_left_bar.style.display = "none";
+            div_node_info.style.display = "none";
+            netwrok_container.style.cssText = "position: relative;width: 100%;height: 100%;"
+            network_topology.style.cssText = "position: relative;top: 0px;right: 0px;bottom: 0px;left: 0px;"
+        } else {
+            div_network.className = "p-2 bd-highlight fixed-end"
+            div_left_bar.style.display = '';
+            div_node_info.style.display = '';
+            netwrok_container.style.cssText = ""
+            network_topology.style.cssText = "width: 400px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+        }
+    }
+    function get_nodes_and_edges (update=false) {
+        var nodes = ajax_request('/api/ip/vis', 'get', async=true).nodes;
+        var edges = ajax_request('/api/l3link/vis', 'get', async=true).edges;
+        {% for col in table %}{% if col.editor_entity%}
+        foriegnData{{col.field}} = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %}{% endfor %}
+        if (update == true) {
+            nodes.forEach(elem => networkData.nodes.update(elem))
+            edges.forEach(elem => networkData.edges.update(elem))
+        }
+        else {
+            networkData.nodes.clear()
+            networkData.edges.clear()
+            networkData.nodes.add(nodes)
+            networkData.edges.add(edges)
+        }
+    }
+    redrawAll("network_topology", true);
+    function redrawAll(elem_name, to_update_data) {
+        
+        var container = document.getElementById(elem_name);
+        container.style.cssText = "width: 600px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+        var options = {
+            nodes: {
+                size: 50,
+                scaling: {
+                    min: 10,
+                    max: 30,
+                },
+                font: {
+                    size: 12,
+                    face: "Tahoma",
+                },
+            },
+            edges: {
+                color: { inherit: true },
+                width: 0.15,
+                smooth: {
+                    type: "continuous",
+                },
+            },
+            interaction: {
+                hideEdgesOnDrag: true,
+                tooltipDelay: 100,
+                hover: true
+            },
+            physics: {
+                stabilization: false,
+                barnesHut: {
+                    gravitationalConstant: -30000,
+                    springConstant: 0.07,
+                    springLength: 100,
+                },
+          },
+        };
+        
+        if (to_update_data == true) {
+            get_nodes_and_edges()
+        }
+        network = new vis.Network(container, networkData, options);
+        };
+    network.on ("doubleClick", function (params) {
+        if (params.nodes.length == 1) {
+            if (network.isCluster(params.nodes[0]) == true) {
+                network.openCluster(params.nodes[0]);
+            } 
+            else {
+                network.moveTo({position: network.getPosition(params.nodes[0]), scale: 2})
+            }
+        }
+    });
+    network.on ("click", function (params) {
+        if (params.nodes.length == 1) {
+            show_selected_node_ports(params.nodes[0])
+        }
+    });
+    function show_selected_node_ports(node_id){
+        var info = document.getElementById('node_info');
+        if (network.isCluster(node_id) == true) {
+                var ip_ids = Object.keys(network.body.nodes[node_id].containedNodes);
+                portsTable.setData("/api/port/by_ip_id", {ip_ids: JSON.stringify(ip_ids)})
+            } else {
+                portsTable.setData("/api/port/by_ip_id", {ip_ids: JSON.stringify([node_id])})
+            }
+    }
+    function cluster_by_netmask() {
+        if (cluster != true) {
+            var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
+            var cluster_options_by_data;
+            for (var i = 0; i < unique_groups.length; i++) {
+                var group = unique_groups[i]
+                cluster_options_by_data = {
+                    joinCondition: function (childOptions) {
+                        return childOptions.group == group;
+                    }, 
+                    processProperties: function (
+                        clusterOptions,
+                        childNodes,
+                        childEdges
+                    ) {
+                    var totalMass = 0;
+                    for (var i = 0; i < childNodes.length; i++) {
+                        totalMass += childNodes[i].mass;
+                    }
+                    clusterOptions.mass = 1;
+                    return clusterOptions;
+                    },
+                    clusterNodeProperties: {
+                        id: group,
+                        borderWidth: 3,
+                        shape: "dot",
+                        label: group + ".0/24"
+                    }
+                }
+                network.cluster(cluster_options_by_data)
+            }
+            cluster = true
+        } else {
+            for (const [key, node] of Object.entries(network.body.nodes)) {
+                if (network.isCluster(key) == true) {
+                    network.openCluster(key)
+                }
+            }
+            cluster = false
+        }
+    };
+    network.on('hoverNode', function(params) {
+        network.selectNodes([params.node])
+        // show_selected_node_ports(params.node)
+    })
+    network.on('oncontext', function(params) {
+        if (network.getNodeAt(params.pointer.DOM) != undefined) {
+            node_menu = document.getElementById('nodeDropdownMenu')
+            node_menu.style.position = 'absolute'
+            node_menu.style.top = `${params.event.clientY - 5}px`
+            node_menu.style.left = `${params.event.clientX - 5}px`
+            node_menu.style.zIndex = 1000
+            $('#nodeDropdownMenu').show()
+        };
+    });
+    function create_node_table(ports_data) {
+        function generateTableHead(table, data) {
+            let thead = table.createTHead();
+            let row = thead.insertRow();
+            for (let key of data) {
+                let th = document.createElement("th");
+                let text = document.createTextNode(key);
+                th.appendChild(text);
+                row.appendChild(th);
+            };
+        };
+        function generateTable(table, data) {
+            tbody = table.createTBody();
+            for (let element of data) {
+                let row = tbody.insertRow();
+                for (key of element) {
+                let cell = row.insertCell();
+                let text = document.createTextNode(key);
+                cell.appendChild(text);
+                };
+            };
+        };
+        let table = document.getElementById("node_info");
+        generateTableHead(table, ports_data.headers);
+        generateTable(table, ports_data.data);
+    }
+    function export_to_svg() {
+        var networkContainer = network.body.container;
+        var ctx = new C2S({width: networkContainer.clientWidth, height: networkContainer.clientWidth, embedImages: true});
+        var canvasProto = network.canvas.__proto__;
+        var currentGetContext = canvasProto.getContext;
+        canvasProto.getContext = function()
+        {
+            return ctx;
+        }
+        var svgOptions = {
+            nodes: {
+                shapeProperties: {
+                    interpolation: false //so images are not scaled svg will get full image
+                },
+                scaling: { label: { drawThreshold : 0} },
+                font:{color:'#000000'}
+            },
+            edges: {
+                scaling: { label: { drawThreshold : 0} }
+            }
+        };
+        network.setOptions(svgOptions);
+        network.redraw();
+        canvasProto.getContext = currentGetContext;
+        ctx.waitForComplete(function()
+            {
+                var svg = ctx.getSerializedSvg();
+                showSvg(svg);
+            });
+    };
+    function showSvg(svg)
+    {
+        var svgBlob = new Blob([svg], {type: 'image/svg+xml'});
+        openBlob(svgBlob, "network.svg");
+    }
+    function openBlob(blob, fileName)
+	  {
+		if(window.navigator && window.navigator.msSaveOrOpenBlob)
+        {
+
+            //blobToDataURL(blob, function(dataurl){window.open(dataurl);});
+            window.navigator.msSaveOrOpenBlob(blob,fileName);
+        }
+        else
+        {
+			var a = document.getElementById("blobLink");
+			if(!a)
+			{
+				a = document.createElement("a");
+				document.body.appendChild(a);
+				a.setAttribute("id", "blobLink");
+				a.style = "display: none";
+			}
+			var data = window.URL.createObjectURL(blob);
+			a.href = data;
+			a.download = fileName;
+			a.click();
+			setTimeout(function()
+				{
+				window.URL.revokeObjectURL(data);
+				}
+				, 100);
+        }
+    }
+    function exportNetwork() {
+        var nodes = []
+        Object.values(network.body.nodes).forEach(element => nodes.push(element.options))
+        var edges = []
+        Object.values(network.body.edges).forEach(element => edges.push(element.options))
+        var exportValue = JSON.stringify({data: {nodes: nodes, edges: edges}}, undefined, 4);
+        download(exportValue, 'network.json', 'text/plain')
+    }
+    function importNetwork(inputValue) {
+        var inputData = JSON.parse(inputValue);
+        networkData.nodes.clear()
+        networkData.edges.clear()
+        networkData.nodes.add(inputData.data.nodes)
+        networkData.edges.add(inputData.data.edges)
+    }
+    function download(content, fileName, contentType) {
+        var a = document.createElement("a");
+        if (contentType === 'image/png') {
+            a.href = content
+        } else {
+            var file = new Blob([content], {type: contentType});
+            a.href = URL.createObjectURL(file);
+        }
+        a.download = fileName;
+        a.click();
+    }
+    function openFile() {
+        document.getElementById('inp').click();
+    }
+    function readFile(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+
+    reader.onload = function(e) {
+        importNetwork(e.target.result)
+    }
+        reader.readAsText(file)
+    }
+    function exportToPNG() {
+        download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
+    }
+</script>
+{% endmacro %}

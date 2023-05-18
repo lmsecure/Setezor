@@ -1,0 +1,253 @@
+{% macro tools() %}
+<div class="d-flex align-items-start">
+    <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+        <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-nmap" type="button" role="tab" aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
+        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill" data-bs-target="#v-pills-scapy" type="button" role="tab" aria-controls="v-pills-scapy" aria-selected="false">SCAPY</button>
+    <!-- <button class="nav-link" id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button" role="tab" aria-controls="v-pills-messages" aria-selected="false">Not implement</button>
+    <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">Not implement</button> -->
+    </div>
+    <div class="tab-content" id="v-pills-tabContent">
+        <div class="tab-pane fade show active" id="v-pills-nmap" role="tabpanel" aria-labelledby="v-pills-nmap-tab">
+            <div class="d-flex flex-column">
+                <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
+                    <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab" data-bs-target="#nmap-simple-mode" type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true">Simple</button>
+                    <button class="nav-link" id="nmap-extended-tab" data-bs-toggle="tab" data-bs-target="#nmap-extended-mode" type="button" role="tab" aria-controls="nmap-extended-mode" aria-selected="false">Extended</button>
+                </div>
+                <div class="tab-content" id="dsa">
+                    <div class="tab-pane fage show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
+                        <form id="nmapScanSimpleForm" class="needs-validation" novalidate>
+                            <div class="input-group" id="ipTarget">
+                                <span class="input-group-text" id="basic-addon1">IP</span>
+                                <input type="text" class="form-control" id='inputIP' placeholder="IP address or netmask" aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
+                            </div>
+                            <div class="d-flex justify-content-between py-2">
+                                <div class="form-check form-switch" id="portSwitch">
+                                    <input class="form-check-input" type="checkbox" id="portsScan">
+                                    <label class="form-check-label" for="portsScan">Ports</label>
+                                </div>
+                                <div class="w-50" id="portsSelectorDiv">
+                                    <select class="form-select form-select-sm" id="portsSelector" name="targetPorts" data-allow-clear="1" data-suggestions-threshold="0" 
+                                    data-allow-new="1" data-regex="^[0-9,\-]+$" disabled>
+                                        <option hidden disabled value="1">Choose a ports...</option>
+                                        <option value="--top-ports 1000">top-1000</option>
+                                        <option value="--top-ports 100">top-100</option>
+                                        <option value="-p 80,443,8080,8443">web ports</option>
+                                        <option value="-p 25,465,587,110,143,993,995">email ports</option>
+                                        <option value="-p-">All</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="invalid-feedback">Please select a valid tag.</div>
+                            <div class="d-flex justify-content-between py-1">
+                                <div class="form-check form-switch  pe-2" id="traceSwitch" data-bs-toggle="tooltip" data-bs-placement="top" title="Trace hop path to each host">
+                                    <input class="form-check-input" type="checkbox" id="trace" name="traceroute" value="--traceroute">
+                                    <label class="form-check-label" for="trace">TraceRoute</label>
+                                </div>
+                                <div class="form-check form-switch" id="serviceSwitch" data-bs-toggle="tooltip" data-bs-placement="top" title="Attempts to determine the version of the service running on port">
+                                    <input class="form-check-input" type="checkbox" id="service" name="serviceVersion" value="-sV">
+                                    <label class="form-check-label" for="service">Service Version</label>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between py-1">
+                                <div class="form-check form-switch pe-2" id="stealthSwitch" data-bs-toggle="tooltip" data-bs-placement="top" title="OS detection">
+                                    <input class="form-check-input" type="checkbox" id="stealth" name="stealthScan" value="-O">
+                                    <label class="form-check-label" for="stealth">OS detection</label>
+                                </div>
+                                <div class="form-check form-switch" id="pnSwitch" data-bs-toggle="tooltip" data-bs-placement="top" title="Disable host discovery. Port scan only.">
+                                    <input class="form-check-input" type="checkbox" id="pn" name="skipDiscovery" value="-Pn">
+                                    <label class="form-check-label" for="pn">Skip discovery</label>
+                                </div>
+                            </div>
+                            <div class="my-2">
+                                <div align="center">
+                                    <h6><b>Scan Techniques</b></h6>
+                                </div>
+                                <div class="d-flex justify-content-between" id="p3Group">
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP SYN scan">
+                                        <input class="form-check-input" type="radio" name="scanTechniques" id="ss" value="-sS">
+                                        <label class="form-check-label" for="pa">sS</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Connect() scan">
+                                        <input class="form-check-input" type="radio" name="scanTechniques" id="st" value="-sT">
+                                        <label class="form-check-label" for="ps">sT</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP ACK scan">
+                                        <input class="form-check-input" type="radio" name="scanTechniques" id="sa" value="-sA">
+                                        <label class="form-check-label" for="pu">sA</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Window scan">
+                                        <input class="form-check-input" type="radio" name="scanTechniques" id="sw" value="-sW">
+                                        <label class="form-check-label" for="py">sW</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Maimon scan">
+                                        <input class="form-check-input" type="radio" name="scanTechniques" id="sm" value="-sM">
+                                        <label class="form-check-label" for="py">sM</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="my-2">
+                                <div align="center">
+                                    <h6><b>TCP/UDP discovery</b></h6>
+                                </div>
+                                <div class="d-flex justify-content-between" id="p1Group">
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP ACK discovery to given ports">
+                                        <input class="form-check-input" type="radio" name="portsDiscovery" id="pa" value="-PA">
+                                        <label class="form-check-label" for="pa">PA</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP SYN discovery to given ports">
+                                        <input class="form-check-input" type="radio" name="portsDiscovery" id="ps" value="-PS">
+                                        <label class="form-check-label" for="ps">PS</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="UDP discovery to given ports">
+                                        <input class="form-check-input" type="radio" name="portsDiscovery" id="pu" value="-PU">
+                                        <label class="form-check-label" for="pu">PU</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="SCTP discovery to given ports">
+                                        <input class="form-check-input" type="radio" name="portsDiscovery" id="py" value="-PY">
+                                        <label class="form-check-label" for="py">PY</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="my-2">
+                                <div align="center">
+                                    <h6><b>ICMP request discovery</b></h6>
+                                </div>
+                                <div class="d-flex justify-content-between"  id="p2Group">
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="ICMP echo request discovery probes">
+                                        <input class="form-check-input" type="radio" name="requestDiscovery" id="pe" value="-PE">
+                                        <label class="form-check-label" for="pe">PE</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="ICMP timestamp request discovery probes">
+                                        <input class="form-check-input" type="radio" name="requestDiscovery" id="pp" value="-PP">
+                                        <label class="form-check-label" for="pp">PP</label>
+                                    </div>
+                                    <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="ICMP netmask request discovery probes">
+                                        <input class="form-check-input" type="radio" name="requestDiscovery" id="pm" value="-PM">
+                                        <label class="form-check-label" for="pm">PM</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="btn-group d-flex my-2" role="group">
+                                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                                <button type="button" class="btn btn-primary w-50" id="startScanSimpleBtn" disabled onclick="var params = Object.fromEntries(new FormData(document.getElementById('nmapScanSimpleForm'), null).entries())
+                                    if (params.targetPorts === undefined) {
+                                        params['targetPorts'] = '-sn'
+                                    }
+                                    if (params.targetPorts[0] != '-') {
+                                        params['targetPorts'] = '-p ' + params.targetPorts
+                                    }
+                                    fetch('/api/task/nmap_scan', {
+                                        method: 'POST', body: JSON.stringify(params)
+                                })">Start scan</button>
+                            </div>
+                        </form>
+                        
+                    </div>
+                    <div class="tab-pane fage" id="nmap-extended-mode" role="tabpanel" aria-labelledby="nmap-extended-tab">
+                        <form id="nmapScanExtendedForm">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text" id="nmapExtendedLabel">NMAP</span>
+                                <input type="text" class="form-control" id="nmapExtendedCommand" name="nmapCommand" placeholder="nmap command" aria-label="Username" aria-describedby="nmapExtendedLabel">
+                            </div>
+                            <div class="btn-group d-flex my-2" role="group">
+                                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset command">
+                                <button type="button" class="btn btn-primary w-50" id="startScanExtendedBtn" disabled onclick="
+                                    
+                                    fetch('/api/task/nmap_scan', {
+                                        method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(document.getElementById('nmapScanExtendedForm'), null).entries()))
+                                })">Start scan</button>
+                            </div>
+                        </form>
+                          
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="
+                    var input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = '.xml'
+                    input.onchange = e => { 
+                        for (var file of e.target.files)
+                        {
+                            var reader = new FileReader();
+                            reader.onload = (function (file) {
+                                return async function (e) {
+                                    await fetch('/api/task/nmap_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
+                                }
+                            })(file)
+                            reader.readAsDataURL(file);            
+                        }
+                    }
+                    input.click(); ">
+                Parse xml-log</button>
+
+            </div>
+        </div>
+        <div class="tab-pane fade" id="v-pills-scapy" role="tabpanel" aria-labelledby="v-pills-scapy-tab">
+            <div class="d-flex flex-column">
+                <div class="py-2 bg-highlight">
+                    <h3>Scapy sniffing</h3>
+                    <div class="btn-group d-flex" role="group">
+                        <button type="button" id="start_scapy" class="btn btn-primary w-50"{% if start_scapy %} disabled{% endif %} onclick="fetch('/api/task/scapy_scan', {
+                                method:'POST'
+                            }); 
+                            document.getElementById('start_scapy').disabled = true; 
+                            document.getElementById('stop_scapy').disabled = false;">
+                            Start</button>
+                        <button type="button" id="stop_scapy" class="btn btn-primary w-50"{% if not start_scapy %} disabled{% endif %} onclick="fetch('/api/task/scapy_scan_stop', {
+                                method: 'POST',
+                            }); 
+                            document.getElementById('start_scapy').disabled = false; 
+                            document.getElementById('stop_scapy').disabled = true;">
+                            Stop</button>
+                    </div>
+                </div>
+                <div class="py-2 bg-highlight">
+                    <button type="button" class="btn btn-primary w-100" onclick="
+                        var input = document.createElement('input');
+                        input.type = 'file';
+                        input.multiple = true;
+                        input.accept = '.pcap'
+                        input.onchange = e => { 
+                            for (var file of e.target.files)
+                            {
+                                var reader = new FileReader();
+                                reader.onload = (function (file) {
+                                    return function (e) {
+                                        fetch('/api/task/scapy_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
+                                    }
+                                })(file)
+                                reader.readAsDataURL(file);            
+                            }
+                        }
+                        input.click();">
+                    Parse pcap log</button>
+                </div>
+        </div>
+        </div>
+        <div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">...</div>
+        <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">...</div>
+    </div>
+</div>
+<script>
+    var mask = new Inputmask({mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]'}).mask(document.getElementById('ipTarget').lastElementChild)
+    $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('portsSelector').disabled = !e.target.checked;
+        document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })    
+    $('#ipTarget').on('change', function(e, data) {
+        if ($('#inputIP').inputmask('isComplete')) {
+            document.getElementById('startScanSimpleBtn').disabled = false
+        } else {
+            document.getElementById('startScanSimpleBtn').disabled = true
+        }
+    })
+    $('#nmapExtendedCommand').on('change', function(e, data) {
+        if (e.target.value != '') {
+            document.getElementById('startScanExtendedBtn').disabled = false
+        } else {
+            document.getElementById('startScanExtendedBtn').disabled = true
+        }
+    })
+</script>
+{% endmacro %}

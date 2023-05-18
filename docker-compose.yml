@@ -7,7 +7,7 @@ services:
       - ./logs:/lms.netmap/logs
     ports:
       - "8001:8008"
-    command: echo `pwd && ls`; python3 app.py
+    command: ls
     networks:
       - lms.netmap_network
 networks:
