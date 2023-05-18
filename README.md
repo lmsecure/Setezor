@@ -111,7 +111,7 @@ python3 app.py
 #### From github pyz-file from last release
 1. Скачать файл релиза с github 
 ```bash
-git clone https://github.com/lmsecure/LMS.NetMap.git
+wget https://github.com/lmsecure/LMS.NetMap/releases/download/0.4a/app-v0.4a.pyz
 cd LMS.NetMap
 ```
 2. Установить необходимое ПО
