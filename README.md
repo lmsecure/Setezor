@@ -14,10 +14,10 @@
 [Features in new version](#features-in-new-version)
 
 ### Screenshots
-![Projects page](src/docs/screenshots/scr1.png)
-![Topology page](src/docs/screenshots/scr2.png)
-![Topology fullscreen page](src/docs/screenshots/scr3.png)
-![Info page](src/docs/screenshots/scr4.png)
+![Projects page](src/docs/scr1.png)
+![Topology page](src/docs/scr2.png)
+![Topology fullscreen page](src/docs/scr3.png)
+![Info page](src/docs/scr4.png)
 
 ### Description
 **LMS.NetMap** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
