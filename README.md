@@ -1,7 +1,7 @@
 # **Setezor**
 
 ### Table of contents
-[Desctiprion](#description)
+[Description](#description)
 
 [Features](#features)
 
@@ -115,7 +115,8 @@ sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
 ```
 5. Запустить приложение
 ```bash
-python3 app.py
+
+python3 .py
 ```
 #### From github pyz-file from last release
 1. Скачать файл релиза с github 
@@ -139,7 +140,7 @@ mkdir ~/setezor && cd $_
 ```
 3. Запустить docker контейнер
 ```bash
-docker run -p 16661:16661 --network host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
+docker run -p 16661:16661 --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
 ```
 После запуска перейти `http://localhost:16661`
 
