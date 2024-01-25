@@ -507,7 +507,7 @@ url("./fonts/bootstrap-icons.woff2") format("woff2");
 .bi-door-open-fill::before { content: "\f2e7"; }
 .bi-door-open::before { content: "\f2e8"; }
 .bi-dot::before { content: "\f2e9"; }
-.bi-download::before { content: "\f2ea"; }
+.bi-download::before { content: "\f5c9"; }
 .bi-droplet-fill::before { content: "\f2eb"; }
 .bi-droplet-half::before { content: "\f2ec"; }
 .bi-droplet::before { content: "\f2ed"; }
@@ -1242,7 +1242,7 @@ url("./fonts/bootstrap-icons.woff2") format("woff2");
 .bi-unlock::before { content: "\f5c6"; }
 .bi-upc-scan::before { content: "\f5c7"; }
 .bi-upc::before { content: "\f5c8"; }
-.bi-upload::before { content: "\f5c9"; }
+.bi-upload::before { content: "\f2ea"; }
 .bi-vector-pen::before { content: "\f5ca"; }
 .bi-view-list::before { content: "\f5cb"; }
 .bi-view-stacked::before { content: "\f5cc"; }
