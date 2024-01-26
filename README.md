@@ -118,15 +118,18 @@ sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
 
 python3 .py
 ```
-#### From github pyz-file from last release
+#### From github deb-package from last release
 1. Скачать файл релиза с github 
 ```bash
-wget https://github.com/lmsecure/Setezor/releases/download/v0.4a/app-v0.4a.pyz
-cd Setezor
+wget https://github.com/lmsecure/Setezor/releases/download/v0.5.2b/setezor_0.5.2b_debian_packaged.deb
 ```
-2. Установить необходимое ПО
+2. Установить
 ```bash
-sudo apt install nmap python3.11
+sudo apt install ./setezor_0.5.2b_debian_packaged.deb
+```
+3. Запустить
+```bash
+setezor
 ```
 
 #### From dockerhub image
