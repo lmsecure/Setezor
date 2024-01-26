@@ -46,7 +46,6 @@ class Clients:
     
     def get_queue(self, uuid: str, name: str) -> WebSocketQueue:
         for queue in self.clients.get(uuid, []):
-            print(queue.name)
             if queue.name == name:
                 return queue
         raise Exception(f'Queue with name "{name}" not found')

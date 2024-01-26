@@ -6,7 +6,7 @@ default_description="Multitool for working with network"
 default_version="1.0"
 default_version_type='OEM'
 default_maintainer="LMSecurity"
-default_command="cd /usr/local/share/%s\nvenv/bin/python3.11 setezor.py \$@"
+default_command="cd /usr/local/share/%s\nvenv/bin/python3.11 setezor_cli.py \$@"
 default_depends="sudo, libcap2-bin, python3.11, python3.11-dev, python3-pip, python3.11-venv, nmap, masscan"
 default_postinst="
 cd /usr/local/share/%s
@@ -32,13 +32,12 @@ default_service="echo \"[Unit]\nDescription=Setezor daemon\n\n[Service]\nUser=\n
 package_fullname=""
 
 install_pip_packages () {
-    python3.11 --version >> /dev/null
-    status=$?
+    python3.11 --version > /dev/null
     status=$?
     if [[ $status -eq 0 ]]
     then
-        printf -v package_fullname "%s_%s" "$package_name" "$version"
-        python3.11 -m pip install -t setezor_1.0/usr/local/share/setezor/pip_packages -r ./src/requirements.txt
+#        printf -v package_fullname "%s_%s" "$package_name" "$version"
+        python3.11 -m pip install -t "$package_fullname/usr/local/share/setezor/pip_packages" -r ./src/requirements.txt
     else
         echo '[-] Error no python3.11!!!'
         exit
@@ -188,12 +187,13 @@ write_command_file
 write_postinst_file
 write_postrm_file
 clone_source_code
-if [[ $default_version_type -ne 'OEM' ]]
-echo '[+] Installing packages'
+echo "$version_type"
+if test "$version_type" != 'OEM'
 then 
+echo '[+] Installing packages'
 install_pip_packages
 fi
 echo '[+] Building deb...'
-dpkg-deb --build --root-owner-group "./$package_fullname" > /dev/null 2>&1
-echo "[+] Build package \"""./$package_fullname"".deb\""
+dpkg-deb --build --root-owner-group "./$package_fullname"
+echo "[+] Build package \"""./$package_fullname"".deb\"" > /dev/null 2>&1
 remove_local_folder_structure

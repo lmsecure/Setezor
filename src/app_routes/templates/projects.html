@@ -90,11 +90,9 @@
                             .catch(function(err) {
                                 console.log(err)
                             })
-                            .then((response) => {
-                                console.log(response)
+                            .then(response => {
                                 if (response.redirected) {window.location.href = response.url }
                             })
-                        console.log('2')
                     }">Create</button>
                 </div>
         </div>
