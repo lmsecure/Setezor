@@ -167,7 +167,7 @@ write_command_file () {
 }
 
 clone_source_code () {
-    git clone --branch dev -n --depth=1 --filter=tree:0 git@git.lm:netmapper/network_topology.git "./source_code" > /dev/null 2>&1
+    git clone --branch master -n --depth=1 --filter=tree:0 https://github.com/lmsecure/Setezor.git "./source_code" > /dev/null 2>&1
     cd "./source_code"
     git sparse-checkout set --no-cone src > /dev/null 2>&1
     git checkout > /dev/null 2>&1
