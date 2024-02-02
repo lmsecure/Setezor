@@ -137,7 +137,7 @@ setezor
 #### From dockerhub image
 1. Скачать Docker-образ
 ```bash
-docker pull docker pull lmsecure/setezor
+docker pull lmsecure/setezor
 ```
 2. Создать рабочую папку. Она будет нужна для хранения логов и пользовательских данных
 ```bash
