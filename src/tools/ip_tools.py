@@ -1,6 +1,3 @@
-import os
-import re
-from tools.shell_tools import create_shell_subprocess
 import socket
 import fcntl
 import struct
@@ -14,9 +11,3 @@ def get_self_ip(iface: str):
         return {'ip': ip, 'mac': mac}
     except:
         raise Exception('Can not get IP address for iface %s' % iface)
-    
-    
-def get_self_interfaces():
-    return os.listdir('/sys/class/net')
-
-

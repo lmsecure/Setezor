@@ -40,13 +40,15 @@ class Configs:
         format_path =  os.path.join(project_path, project_name, '%s')
         folders = Folders(nmap_logs=format_path % FilesNames.nmap_logs,
                           scapy_logs=format_path % FilesNames.scapy_logs,
-                          screenshots=format_path % FilesNames.screenshots)
+                          screenshots=format_path % FilesNames.screenshots,
+                          masscan_logs=format_path % FilesNames.masscan_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file)
         variables = Variables(iface=iface, project_name=project_name)
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},
             'nmap': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
+            'masscan': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
         })
         return cls(project_path=format_path % '', files=files, folders=folders,

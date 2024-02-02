@@ -16,6 +16,7 @@ class Folders(BaseStruct):
     nmap_logs: str
     scapy_logs: str
     screenshots: str
+    masscan_logs: str
 
 
 @dataclass
@@ -60,6 +61,7 @@ class SchedulersParams(BaseStruct):
 class FilesNames:
     nmap_logs = 'nmap_logs'
     scapy_logs = 'scapy_logs'
+    masscan_logs = 'masscan_logs'
     screenshots = 'screenshots'
     database_file = 'database.sqlite'
     config_file = 'project_configs.json'

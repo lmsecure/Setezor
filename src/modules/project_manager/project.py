@@ -2,7 +2,7 @@ import os
 import shutil
 from .files import FilesStructure
 from .configs import Configs
-from routes.custom_types import Clients, MessageObserver, WebSocketQueue
+from app_routes.custom_types import Clients, MessageObserver, WebSocketQueue
 from exceptions.loggers import get_logger
 from .schedulers import Schedulers
 from database.db_connection import DBConnection
@@ -13,7 +13,7 @@ class Project:
     
     clients: Clients
     observer: MessageObserver
-    db: DBConnection
+    db: Queries
     schedulers: Schedulers
     configs: Configs
     logger = get_logger(__module__, handlers=[])

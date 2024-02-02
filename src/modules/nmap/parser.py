@@ -113,7 +113,7 @@ class NmapParser:
                 service = i.get('service')
                 if service:
                         result.append({'port': i.get('portid'), 'ip': address.get('ip'),
-                                       'mac': address.get('mac'), 'service': service.get('name'),
+                                       'mac': address.get('mac'), 'service_name': service.get('name'),
                                        'product': service.get('product'), 'extra_info': service.get('extrainfo'),
                                        'version': service.get('version'), 'os_type': service.get('ostype'),
                                        'cpe': ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe'),

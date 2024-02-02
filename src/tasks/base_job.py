@@ -2,7 +2,7 @@ from aiojobs._job import Job
 from aiojobs._scheduler import Scheduler
 import asyncio
 from abc import abstractmethod
-from routes.custom_types import MessageObserver
+from app_routes.custom_types import MessageObserver
 from exceptions.loggers import get_logger, LoggerNames
 
 

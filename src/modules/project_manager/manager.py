@@ -11,10 +11,10 @@ class ProjectManager:
     '''
     # FixMe remake projects_path to variable from config
     def __init__(self): #, projects_folder_path: str):
-        path_prefix = os.path.split(os.environ.get('APPIMAGE'))[0] if os.environ.get('APPIMAGE') else './'
+        path_prefix = os.path.split(os.environ.get('APPIMAGE'))[0] if os.environ.get('APPIMAGE') else os.path.join(os.path.expanduser('~'), '.local/share/setezor')
         self.projects_path = os.path.abspath(os.path.join(path_prefix, './projects/'))
         if not os.path.exists(self.projects_path):
-            os.mkdir(self.projects_path)
+            os.makedirs(self.projects_path, exist_ok=True)
         self.logger = get_logger(self.__module__, handlers=[])
         self.projects: Dict[str, Project]  = {}
         

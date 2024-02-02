@@ -31,11 +31,11 @@ def get_file_handler(filename: str, path_prefix: str, *args, **kwargs):
 def check_and_create_log_folder(path_prefix):
     
     if not os.path.exists(os.path.join(path_prefix, 'logs')):
-        os.mkdir(os.path.join(path_prefix, 'logs'))
+        os.makedirs(os.path.join(path_prefix, 'logs'), exist_ok=True)
 
 
 def get_logger(logger_name: str, level: str='debug', handlers: list=['console', 'file']):
-    path_prefix = os.path.split(os.environ.get('APPIMAGE'))[0] if os.environ.get('APPIMAGE') else './'
+    path_prefix = os.path.split(os.environ.get('APPIMAGE'))[0] if os.environ.get('APPIMAGE') else os.path.join(os.path.expanduser('~'), '.local/share/setezor')
     handlers_dict = {'console': get_console_handler,
                      'file': get_file_handler}
     check_and_create_log_folder(path_prefix=path_prefix)

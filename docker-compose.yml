@@ -1,20 +1,10 @@
 version: "2"
 services:
-  lms.netmap:
+  setezor:
     build: .
     volumes:
-      - ./projects:/lms.netmap/projects
-      - ./logs:/lms.netmap/logs
+      - ./projects:/setezor/projects
+      - ./logs:/setezor/logs
     ports:
-      - "8001:8008"
-    command: ls
-    networks:
-      - lms.netmap_network
-networks:
-  lms.netmap_network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.16.50.0/28
-        # gateway: "172.16.50.1"
+      - "16661:16661"
+    network_mode: "host"

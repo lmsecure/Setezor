@@ -1,4 +1,4 @@
-# **LMS.NetMap**
+# **Setezor**
 
 ### Table of contents
 [Description](#description)
@@ -20,23 +20,27 @@
 ![Info page](src/docs/scr4.png)
 
 ### Description
-**LMS.NetMap** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
+**Setezor** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
 
 ### Features
 1. **Разделение на проекты**. Чтобы "не держать все яйца в одной корзинке" реализовано разделение на проекты. Определение принадлежности пользователя к проекту осуществляется через cookie. Пока у пользователя нет cookie, он не может начать работу с проектом.
 1. **Активное сканирование с использованием nmap**. Произведена интеграция с нативно установленным `nmap`. На данный момент из результатов сканирования вытягиваются:
     - информация о хосте (IP, MAC, hostname);
     - сведения о трассировке;
-    - сведения о порте (номер порта, состояние, сведения о ПО на порту).
-1. **Парсинг xml-логов сканирования nmap**. Провели сканирование на удаленной машине и хотите загрузить логи в проект? Не проблема, `NetMap` поддерживает парсинг xml-логов `nmap`
-1. **Пассивное сканирование с использованием scapy**. Scapy - мощный инструмент для работы с сетью. Приложение создает асинхронный сниффер и налету "потрошит пакеты". Сейчас можно получить информацию из следующих типов пакетов:
+    - сведения об порта (номер порта, состояние, сведения о ПО на порту).
+1. **Активное сканирование с использованием masscan**. Произведена интеграция с нативно установленным `masscan`.
+1. **Парсинг xml-логов сканирования nmap**. Провели сканирование на удаленной машине и хотите загрузить логи в проект? Не проблема, `Setezor` поддерживает парсинг xml-логов `nmap`
+1. **Парсинг xml/list/json-логов сканирования masscan**.
+1. **Пассивное сканирование с использованием scapy**. Scapy - мощный инструмент для работы с сетью. Приложение создает асинхронный сниффер и налету "потрошит пакеты". Сейчас можно получить информацию из следующих типо пакетов:
+
     - ARP;
     - LLNMR;
     - NBNS;
     - TCP.
-1. **Парсинг pcap-файлов**. Сделали сниффинг пакетов и хотите загрузить данные в проект? Не проблема, `NetMap` поддерживает парсинг pcap-файлов.
-1. **Получение информации организовано в виде задач**. Все сканирования парсинг логов организовано в виде задач и выполняется на стороне сервера в отдельных планировщиках. Есть возможность настроить каждый планировщик индивидуально с целью контроля исходящего трафика.
-1. **Построение топологии сети**. На основе данных о сканированиях автоматически строится топология сети со следующими функциями:
+
+1. **Парсинг pcap-файлов**. Сделали сниффиинг пакетов и хотите загрузить данные в проект? Не проблема, `Setezor` поддерживает парсинг pcap-файлов.
+1. **Получение информации организовано в виде задач**. Все сканирования парсиг логов организовано в виде задач и выполняется на стороне сервера в отдельных планировщиках. Есть возможность настроить каждый планировщик индивидуально с целью контороля исходящего траффика.
+1. **Построение топологии сети**. На основе данных о сканированиях автоматический строится топология сети со следующими функциями:
     - автоматическое перестроение карты сети при получении новых данных;
     - интерактивная карта сети с возможностью работы в полноэкранном режиме;
     - получение данных об открытых портах по выделенному узлу сети;
@@ -54,13 +58,16 @@
 
 ### Requirements
 #### Software requirements
-1. python3
+1. python3.11
 1. nmap
+2. masscan
+3. libpcap2-bin
+4. python3-pip
 
 #### Packages requirements
 
 ```
-aiohttp==3.8.1
+aiohttp==3.8.4
 aiohttp_jinja2==1.5
 aiohttp_session==2.11.0
 aiojobs==1.1.0
@@ -70,24 +77,28 @@ iptools==0.7.0
 Jinja2==3.1.2
 mac_vendor_lookup==0.1.12
 nest-asyncio==1.5.6
-pandas==1.4.1
+pandas==2.0.0
 scapy==2.4.5
 setuptools==59.6.0
 SQLAlchemy==1.4.32
 sqlalchemy_schemadisplay==1.3
 xmltodict==0.12.0
 xlsxwriter==3.0.8
+cffi
+click
+colorama
+openpyxl
 ```
 ### Usage
 #### From GitHub repo
 1. Клонировать репозиторий с GitHub 
 ```bash
-git clone https://github.com/lmsecure/LMS.NetMap.git
-cd LMS.NetMap
+git clone https://github.com/lmsecure/Setezor.git
+cd Setezor
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.8
+sudo apt install nmap python3.11
 ```
 &nbsp;&nbsp;&nbsp;2.1. Рекомендуется использовать `venv`
 ```bash
@@ -99,51 +110,44 @@ source venv/bin/activate
 ```bash
 pip3 install -r requirements.txt
 ```
-4. Выдать права на работу с сокетами для `nmap` и `python3.8`
+4. Выдать права на работу с сокетами для `nmap` и `python3.11`
 ```bash
-sudo setcap cap_net_raw=eip /usr/bin/python3.8
+sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
 ```
 5. Запустить приложение
 ```bash
-python3 app.py
+
+python3 .py
 ```
-#### From GitHub pyz-file from last release
-1. Скачать файл релиза с GitHub 
+#### From github deb-package from last release
+1. Скачать файл релиза с github 
 ```bash
-wget https://github.com/lmsecure/LMS.NetMap/releases/download/v0.4a/app-v0.4a.pyz
-cd LMS.NetMap
+wget https://github.com/lmsecure/Setezor/releases/download/v0.5.2b/setezor_0.5.2b_debian_packaged.deb
 ```
-2. Установить необходимое ПО
+2. Установить
 ```bash
-sudo apt install nmap python3.8
+sudo apt install ./setezor_0.5.2b_debian_packaged.deb
 ```
-3. Выдать права на работу с сокетами для `nmap` и `python3.8`
+3. Запустить
 ```bash
-sudo setcap cap_net_raw=eip /usr/bin/python3.8
-sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
-```
-4. Запустить приложение
-```bash
-python3 app.pyz
+setezor
 ```
 
-P.S.: файл `app.pyz` сгенерирован с помощью `shiv` и содержит в себе все зависимые `python`-пакеты
 #### From dockerhub image
 1. Скачать Docker-образ
 ```bash
-docker pull lmsecure/lms.netmap
+docker pull docker pull lmsecure/setezor
 ```
 2. Создать рабочую папку. Она будет нужна для хранения логов и пользовательских данных
 ```bash
-mkdir ~/lms.netmap
-cd ~/lms.netmap
+mkdir ~/setezor && cd $_
 ```
 3. Запустить docker контейнер
 ```bash
-docker run -p 8008:8008 -v ~/lms.netmap/projects:/lms.netmap/projects -v ~/lms.netmap/logs:/lms.netmap/logs -d lmsecure/lms.netmap:latest
+docker run -p 16661:16661 --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
 ```
-После запуска перейти `http://localhost:8008`
+После запуска перейти `http://localhost:16661`
 
 
 ### Database schema
