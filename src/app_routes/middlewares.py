@@ -1,7 +1,8 @@
-from aiohttp.web import Request, HTTPFound, middleware, HTTPException, Application
+from aiohttp.web import HTTPFound, middleware, HTTPException
 
+from modules.application import PMRequest, PMApplication
 
-async def handle_404(request: Request):
+async def handle_404(request: PMRequest):
     # FixMe check what user want to get if file then return 404
     return HTTPFound('/projects/')
 
@@ -23,7 +24,7 @@ def create_error_middleware(overrides):
 
     return error_middleware
 
-def setup_middlewares(app: Application):
+def setup_middlewares(app: PMApplication):
     error_middlewares = create_error_middleware({
         404: handle_404
     })

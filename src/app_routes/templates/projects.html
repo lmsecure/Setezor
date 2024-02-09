@@ -76,6 +76,7 @@
                         })
                     </script>
                 </form>
+
                 <div class="d-flex flex-column pt-1">
                     <button class="btn btn-success" id="createProjectButton" onclick="if (document.getElementById('formCreateProject').checkValidity() == false) {
                         document.getElementById('formCreateProject').classList.add('was-validated')
@@ -94,6 +95,44 @@
                                 if (response.redirected) {window.location.href = response.url }
                             })
                     }">Create</button>
+
+                </div>
+
+                <div class="d-flex flex-column pt-1">
+                    <h4>Import project</h4>
+                        <div class="d-flex flex-column pt-1">
+                            
+                            <button class="btn btn-success" id="importProjectButton" onclick="importProject()">
+                                Import Project
+                            </button>
+                                
+                            <script>
+                                function importProject(){
+        
+                                    var input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.multiple = false;
+                                    input.accept = '.zip'
+                                    input.onchange = e => { 
+                                        for (var file of e.target.files)
+                                        {
+                                            var reader = new FileReader();
+                                            reader.onload = (function (file) {
+                                                return async function (e) {
+                                                    resp = await fetch('/api/project/import_project', {method: 'POST', body: e.target.result});
+                                                    if (resp.status == 200) {
+                                                        location.reload();
+                                                    }
+                                                }
+                                            })(file)
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }
+                                    input.click();
+                                }
+                                
+                            </script>
+                        </div>
                 </div>
         </div>
     </div>

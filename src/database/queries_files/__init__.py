@@ -6,3 +6,4 @@ from .port_queries import PortQueries
 from .screenshot_queries import ScreenshotQueries
 from .task_queries import TaskQueries
 from .object_type_queries import ObjectTypeQueries
+from .pivot_queries import PivotQueries

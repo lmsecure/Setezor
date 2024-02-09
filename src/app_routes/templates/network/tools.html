@@ -1,9 +1,30 @@
 {% macro tools(is_scapy_running) %}
-<div class="d-flex align-items-start">
-    <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-        <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-nmap" type="button" role="tab" aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
-        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill" data-bs-target="#v-pills-scapy" type="button" role="tab" aria-controls="v-pills-scapy" aria-selected="false">SCAPY</button>
-        <button class="nav-link" id="v-pills-masscan-tab" data-bs-toggle="pill" data-bs-target="#v-pills-masscan" type="button" role="tab" aria-controls="v-pills-masscan" aria-selected="false">MASSCAN</button>
+
+<div id="main_bar" class="d-flex justify-content-between bd-highlight mb-3" style="height: auto;">
+
+    <div class="d-flex flex-row">
+
+        <div class="p-2 bd-highlight">
+            <div class="d-flex flex-column flex-shrink-0 p-3">
+                <h4>Tools</h4>
+                <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-nmap" type="button" role="tab" aria-controls="v-pills-nmap"
+                        aria-selected="true">NMAP</button>
+                    <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-scapy" type="button" role="tab" aria-controls="v-pills-scapy"
+                        aria-selected="false" tabindex="-1">SCAPY</button>
+                    <button class="nav-link" id="v-pills-masscan-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-masscan" type="button" role="tab" aria-controls="v-pills-masscan"
+                        aria-selected="false" tabindex="-1">MASSCAN</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+<div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     <!-- <button class="nav-link" id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button" role="tab" aria-controls="v-pills-messages" aria-selected="false">Not implement</button>
     <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">Not implement</button> -->
     </div>
@@ -347,13 +368,13 @@
                 Parse LIST</button>
             </div>
 
-        </div>
-        <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">...</div>
-    </div>
+
+
 </div>
+
 <script>
-    var mask = new Inputmask({mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]'}).mask(document.getElementById('ipTarget').lastElementChild)
-    var mask = new Inputmask({mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]'}).mask(document.getElementById('masscanIpTarget').lastElementChild)
+    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
+    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
     $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
         document.getElementById('portsSelector').disabled = !e.target.checked;
         document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
@@ -362,21 +383,21 @@
         document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
         document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
     })
-    $('#ipTarget').on('change', function(e, data) {
+    $('#ipTarget').on('change', function (e, data) {
         if ($('#inputIP').inputmask('isComplete')) {
             document.getElementById('startScanSimpleBtn').disabled = false
         } else {
             document.getElementById('startScanSimpleBtn').disabled = true
         }
     })
-    $('#masscanIpTarget').on('change', function(e, data) {
+    $('#masscanIpTarget').on('change', function (e, data) {
         if ($('#masscanInputIP').inputmask('isComplete')) {
             document.getElementById('startMasscanScanBtn').disabled = false
         } else {
             document.getElementById('startMasscanScanBtn').disabled = true
         }
     })
-    $('#nmapExtendedCommand').on('change', function(e, data) {
+    $('#nmapExtendedCommand').on('change', function (e, data) {
         if (e.target.value != '') {
             document.getElementById('startScanExtendedBtn').disabled = false
         } else {

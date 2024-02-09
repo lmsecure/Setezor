@@ -12,21 +12,22 @@ Network
         import Tags from "/static/js/tags.js";
         Tags.init('select')
     </script>
-   
+
 {% endblock scripts %}
 {% block content %}
-<div class="d-flex h-100 bd-highlight mb-3">
+<div class="d-flex justify-content-between h-100 bd-highlight mb-3">
     <div class="p-2 bd-highlight" id="div_left_bar">
         {% from 'network/tools.html' import tools %}
         {{tools(is_scapy_running)}}
     </div>
-    <div class="p-2 bd-highlight" id="div_node_info">
-        {% from 'network/info.html' import info%}
-        {{info(table)}}
-    </div>
-    <div class="p-2 bd-highlight fixed-end" id="div_network">
+    <div class="p-2 flex-fill bd-highlight" id="div_network">
         {% from 'network/net_map.html' import net_map %}
         {{net_map(device_types)}}
+    </div>
+    <div class="p-2 bd-highlight fixed-end" id="div_node_info" style="max-width: 325px;">
+        <h4>Select node tosee the information</h4>
+        {# {% from 'network/info.html' import info%}
+        {{info(table)}} #}
     </div>
     
 </div>

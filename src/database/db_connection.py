@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session, scoped_session
-from database.models import Base
+from database.models import Base, Pivot
 import logging
 
 
@@ -17,6 +17,9 @@ class DBConnection:
         self.engine = create_engine(f'sqlite:///{db_path}?check_same_thread=False')
         if create_tabels:
             Base.metadata.create_all(self.engine)
+        with Session(bind=self.engine) as ses:
+            ses.execute(Pivot.delete_query())
+            ses.execute(Pivot.create_query())
         Base.metadata.reflect(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)

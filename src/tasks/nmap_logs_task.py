@@ -29,7 +29,12 @@ class NmapLogTask(NmapScanTask):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, NmapScanner.save_source_data, nmap_logs, data, 'parse_xml_log')
         log_result = await loop.run_in_executor(None, NmapScanner().parse_xml, data)
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, log_result.get('nmaprun'), get_self_ip(iface))
+        try:
+            ip = get_self_ip(iface)
+        except Exception:
+            ip = {'ip': 'unknown', 'mac': 'unknown'}
+            self.logger.error(f'Can`t get ip for {iface}!')
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, log_result.get('nmaprun'), ip)
     
     async def run(self, db: Queries, task_id: int, data: str, iface: str, nmap_logs: str):
         """Метод выполнения задачи

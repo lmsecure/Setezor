@@ -5,41 +5,38 @@
 {% block scripts %}
 
     <link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css"/>
+    <link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
     <script src="/static/js/tabulator.min.js" type="text/javascript"></script>
     <script src="/static/js/luxon.min.js" type="text/javascript"></script>
     <script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
 {% endblock %} 
 
 {% block content %}
-<div class="d-flex justify-content-between">
-    <div class="d-flex">
-        <nav>
-            <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                {% for tab in tabs %}
-                <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}" data-bs-toggle="tab" 
-                data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab" aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}</button>
-                {% endfor %}
+
+
+ <div id="main_bar" class="d-flex justify-content-between bd-highlight mb-3">
+    <div class="d-flex flex-row">
+
+        <div class="p-2 bd-highlight">
+            <div class="d-flex flex-column flex-shrink-0 p-3">
+                <h4>Tables</h4>
+                <div class="nav flex-column nav-pills me-1" id="tab_buttons" role="tablist" aria-orientation="vertical">
+                        {% for tab in tabs %}
+                            <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}" data-bs-toggle="tab" 
+                                onclick={% if tab.name == 'pivot' %} showObject() {% else %} hideObject() {% endif %}
+                                data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab" aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}
+                            </button>
+                        {% endfor %}
+                </div>
             </div>
-        </nav>
-    </div>
-    <div class="d-flex p-1">
-        <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" id="reports_dropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="bi bi-download"></span>
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="reports_dropdown">
-                <li><a class="dropdown-item" href="javascript:window.location='/api/reports/xlsx'">xlsx</a></li>
-                <li><a class="dropdown-item disabled" href="#">pdf</a></li>
-                <li><a class="dropdown-item disabled" href="#">docx</a></li>
-            </ul>
-          </div>
+        </div>
+
     </div>
 
-</div>
 
-  
-<div class="tab-content" id="nav-tabContent">
-       {% for tab in tabs %}
+    <div class="p-2 flex-fill bd-highlight">
+        <div class="tab-content" id="nav-tabContent">
+            {% for tab in tabs %}
             
             <div class="tab-pane fade{% if loop.index0 == 0 %} show active{% endif %}" id="tab-content-{{tab.name}}" role="tabpanel" aria-labelledby="infotabs-{{name}}">
 
@@ -48,29 +45,50 @@
                     <button class="btn btn-primary" id="{{tab.name}}-reload-data" onclick="{{tab.name}}_table.dataLoader.reloadData()"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
 
-                <div id="filter {{tab.name}}" class="d-flex flex-row w-50 py-2 ">
-                    <div class="me-1">
-                        <select class="form-select" id="filter-field-{{tab.name}}">
-                            {% for col in tab.columns %}
-                                <option value= {{col.field}} >{{col.title}}</option>
-                            {%endfor%}
-                        </select>
+                <div class="d-flex flex-row justify-content-between">
+                    <div id="filter {{tab.name}}" class="d-flex flex-row w-50 py-2">
+                        <div class="me-1">
+                            <select class="form-select" id="filter-field-{{tab.name}}">
+                                {% for col in tab.columns %}
+                                    <option value= {{col.field}} >{{col.title}}</option>
+                                {%endfor%}
+                            </select>
+                        </div>
+                        
+                        <div class="me-1">
+                            <select class="form-select" id="filter-type-{{tab.name}}">
+                                <option value="=">=</option>
+                                <option value="<"><</option>
+                                <option value="<="><=</option>
+                                <option value=">">></option>
+                                <option value=">=">>=</option>
+                                <option value="!=">!=</option>
+                                <option value="like">like</option>
+                            </select>
+                        </div>
+                        <input id="filter-value-{{tab.name}}" class="form-control me-1" type="text" placeholder="value to filter" style="width: 20%">
+                        <button id="filter-search-{{tab.name}}" class="btn btn-primary me-1" onclick="{{tab.name}}ApplyFilter()">Search</button>
+                        <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" onclick="{{tab.name}}clearFilter()">Clear</button>
                     </div>
-                    <div class="me-1">
-                        <select class="form-select" id="filter-type-{{tab.name}}">
-                            <option value="=">=</option>
-                            <option value="<"><</option>
-                            <option value="<="><=</option>
-                            <option value=">">></option>
-                            <option value=">=">>=</option>
-                            <option value="!=">!=</option>
-                            <option value="like">like</option>
-                        </select>
-                    </div>
-                    <input id="filter-value-{{tab.name}}" class="form-control me-1" type="text" placeholder="value to filter" style="width: 15%">
-                    <button id="filter-search-{{tab.name}}" class="btn btn-primary me-1" onclick="{{tab.name}}ApplyFilter()">Search</button>
-                    <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" onclick="{{tab.name}}clearFilter()">Clear</button>
-    
+
+                    {% if tab.name == 'pivot' %}
+                            <div id="download_report_container" >
+                                <div  class="d-flex p-1" >
+                                    <div class="dropdown">
+                                        <button class="btn btn-secondary dropdown-toggle" type="button" id="reports_dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <span class="bi bi-download"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="reports_dropdown">
+                                            <li><a class="dropdown-item" href="javascript:window.location='/api/reports/xlsx'">xlsx</a></li>
+                                            <li><a class="dropdown-item" href="javascript:window.location='/api/reports/csv'">csv</a></li>
+                                            <li><a class="dropdown-item disabled" href="#">pdf</a></li>
+                                            <li><a class="dropdown-item disabled" href="#">docx</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    
                     <script>
                         function {{tab.name}}clearFilter(){
                             document.getElementById('filter-value-{{tab.name}}').value = ''
@@ -85,7 +103,6 @@
                         }
     
                     </script>
-    
                 </div>
 
                 <div id="{{tab.name}}-table"></div>
@@ -270,6 +287,15 @@
                     var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table',{
                         layout: "fitColumns",
                         ajaxURL: "{{tab.base_url}}/all",
+                        
+                        ajaxURLGenerator:function(url, config, params){
+                            //url - the url from the ajaxURL property or setData function
+                            //config - the request config object from the ajaxConfig property
+                            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+                    
+                            //return request url
+                            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+                        },
                         selectable: false,
                         sortMode: "remote",
                         filterMode: "remote",
@@ -285,12 +311,12 @@
                             {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %}{% endif %}
                             {% if col.formatter %}, editorParams: {values: foriegnData{{col.field}}, itemFormatter:function(label, value, item, element){label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>`}}, formatter: {{col.formatter}}(foriegnData{{col.field}}){% endif %}
                             {% if col.validator%}, validator: "{{col.validator}}"{% endif %}{{'}'}},{% endfor %}
-                            {% if  tab.name != 'task' %} {{'{'}}title:"Actions",formatter: buttons_formatter, headerSort:false{{'}'}} {% endif %}
+                            {% if  tab.name != 'task' or tab.name != 'pivot' %} {{'{'}}title:"Actions",formatter: buttons_formatter, headerSort:false{{'}'}} {% endif %}
                         ]
                     })
                 </script>
             </div>
-    {% endfor %}
-</div>
+            {% endfor %}
+        </div>
 
 {% endblock content %}

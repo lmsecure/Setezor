@@ -1,8 +1,10 @@
-from aiohttp.web import Request, Response, json_response
-from app_routes.session import project_require, get_db_by_session
-from app_routes.api.base_web_view import BaseView
 import json
 
+from aiohttp.web import Request, Response, json_response
+
+from app_routes.session import project_require, get_db_by_session
+from app_routes.api.base_web_view import BaseView
+from modules.application import PMRequest
 
 class PortView(BaseView):
     endpoint = '/port'
@@ -10,7 +12,7 @@ class PortView(BaseView):
  
     @BaseView.route('GET', '/by_ip_id')
     @project_require
-    async def get_port_by_ip(self, request: Request) -> Response:
+    async def get_port_by_ip(self, request: PMRequest) -> Response:
         """Метод получения портов по идентификатору ip
 
         Args:
@@ -26,7 +28,7 @@ class PortView(BaseView):
     
     @BaseView.route('GET', '/all_short')
     @project_require
-    async def all_short(self, request: Request):
+    async def all_short(self, request: PMRequest):
         db = await get_db_by_session(request=request)
         ports = db.port.get_all()
         return json_response(status=200, data=[{'value': i.id, 'label': i.port} for i in ports])

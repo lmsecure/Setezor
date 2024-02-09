@@ -5,6 +5,7 @@ from .object import ObjectView
 from .port import PortView
 from .project import ProjectView
 from .screenshot import ScreenshotView
+from .pivot import PivotView
 from .task import TaskView
 from .report import ReportsView
 from .websocket import WebSocketView
@@ -18,7 +19,7 @@ def add_api_routes(router: UrlDispatcher) -> None:
     Args:
         router (UrlDispatcher): router из aiohttp приложения
     """    
-    for cls in [IPView, L3LinkView, MACView, ObjectView, PortView, ProjectView, ScreenshotView, TaskView, WebSocketView, ReportsView]:  # для каждого класса api
+    for cls in [IPView, L3LinkView, MACView, ObjectView, PortView, ProjectView, ScreenshotView, TaskView, WebSocketView, ReportsView, PivotView]:  # для каждого класса api
         obj = cls(endpoint)  # создадим класс с endpoint-ом 
         for i in dir(obj):  # для каждого имени атрибута класса
             attr = obj.__getattribute__(i)  # получим атрибут

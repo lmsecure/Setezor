@@ -1,6 +1,8 @@
+from typing import TypedDict, Literal
+
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
-from sqlalchemy import func
+from sqlalchemy import func, Column
 from exceptions.loggers import LoggerNames, get_logger
 from sqlalchemy.exc import OperationalError
 from abc import abstractmethod, ABC
@@ -13,6 +15,12 @@ from datetime import datetime
 class Mock:
     def __getattribute__(self, item):
         return None
+    
+class QueryFilter(TypedDict):
+    
+    field: str
+    type: Literal['=', '<', '<=', '>', '>=', 'like']
+    value: str
     
     
 class BaseQueries(ABC):
@@ -113,7 +121,7 @@ class BaseQueries(ABC):
         return res
         
     @session_provide
-    def get_all(self, session: Session, result_format: str='dict', page: int=None, limit: int=None, sort_by: str=None, direction: str=None) -> dict or pd.DataFrame:
+    def get_all(self, session: Session, result_format: str='dict', page: int=None, limit: int=None, sort_by: str=None, direction: str=None, filters: list[QueryFilter] = []) -> dict or pd.DataFrame:
         """Получает все записи из базы по текущей сущности
 
         Args:
@@ -123,13 +131,46 @@ class BaseQueries(ABC):
         Returns:
             dict or pd.DataFrame: _description_
         """
-        source_query = session.query(self.model)
+        model = self.model
+        source_query = session.query(model)
+        
+        columns: list[Column] = model.__table__._columns._all_columns
+        for query_filter in filters:
+            query_type = query_filter.get('type')
+            query_field = query_filter.get('field')
+            query_value = query_filter.get('value')
+            
+            column = (i for i in columns if i.name == query_field)
+            column = next(column, None)
+            if column is None:
+                raise ValueError(f'No such column with name `{query_field}` in table {model.__table__.name}')
+            if all((query_type, query_field, query_value)):
+                match query_type:
+                    case '=':
+                        source_query = source_query.where(column == query_value)
+                    case '!=':
+                        source_query = source_query.where(column != query_value)
+                    case '<':
+                        source_query = source_query.where(column < query_value)
+                    case '<=':
+                        source_query = source_query.where(column <= query_value)
+                    case '>':
+                        source_query = source_query.where(column > query_value)
+                    case '>=':
+                        source_query = source_query.where(column >= query_value)
+                    case 'like':
+                        source_query = source_query.where(column.like(query_value))
+                    case _:
+                        self.logger.warning(f'No such search type: "{query_type}", only excepted {QueryFilter.__annotations__.get("type").__dict__["__args__"]}')
+            else:
+                raise ValueError('Not on fields in filter, filters must contain `type, field, value`')
+
         if sort_by and direction:
             if self.is_field_foreign_key(session=session, field_name=sort_by):
                 sorting_field, relationship = self.foreign_key_order(sort_by)
                 source_query = source_query.join(relationship)
             else:
-                sorting_field = self.model.__table__.c.get(sort_by)
+                sorting_field = model.__table__.c.get(sort_by)
             if direction == 'desc':
                 sorting_field = sorting_field.desc()
             source_query = source_query.order_by(sorting_field)
@@ -232,7 +273,7 @@ class BaseQueries(ABC):
                                 new_to_update.update({k: ','.join([obj_attr, v])})
                     else:
                         new_to_update.update({k: v})
-                except:
+                except Exception:
                     continue
         obj = obj_query.update(new_to_update)
         self.logger.info('Update "%s" object with id "%s" to new data %s', self.model.__name__, ','.join([str(i.id) for i in obj_query.all()]), new_to_update)
@@ -249,7 +290,7 @@ class BaseQueries(ABC):
             entity = self.model(**kwargs)
             session.add(entity)
             session.flush()
-        except:
+        except Exception:
             raise Exception('Cannot create "%s" entity with params: %s. Expected params %s ', self.__class__.__name__, kwargs, self.model.__table__.c.keys())
     
     @session_provide
@@ -260,6 +301,6 @@ class BaseQueries(ABC):
         if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
             self.logger('Cannot update not exists object "%s" with id "%s"', self.model.__name__, id)
             return None
-        obj = obj_query.update(to_update)
+        obj = obj_query.update(to_update)  # noqa: F841
         self.logger.info('Update "%s" object with id "%s" to new data %s', self.model.__name__, ','.join([str(i.id) for i in obj_query.all()]), to_update)
         session.flush()

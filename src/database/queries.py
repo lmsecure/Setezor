@@ -22,3 +22,4 @@ class Queries:
         self.port = qf.PortQueries(ip=self.ip, session_maker=self.db.create_session())
         self.task = qf.TaskQueries(session_maker=self.db.create_session())
         self.screenshot = qf.ScreenshotQueries(task=self.task, port=self.port, session_maker=self.db.create_session())
+        self.pivot = qf.PivotQueries(objects=self.object, session_maker=self.db.create_session())

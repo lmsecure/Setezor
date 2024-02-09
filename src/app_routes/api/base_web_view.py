@@ -1,10 +1,12 @@
-from aiohttp.web import Response, Request, json_response
 from abc import ABC, abstractmethod
+import json
+
+from aiohttp.web import Response, Request, json_response
+
 from database.queries_files.base_queries import BaseQueries
 from functools import wraps
 from app_routes.session import get_db_by_session, notify_client
-import json
-
+from modules.application import PMRequest
 
 class BaseView(ABC):
     """Базовый api класс 
@@ -37,7 +39,7 @@ class BaseView(ABC):
         return wrapped
     
     @route('POST', '/from_table')
-    async def create_from_table(self, request: Request) -> Response:
+    async def create_from_table(self, request: PMRequest) -> Response:
         """Метод создания объекта в базе со страницы info
 
         Args:
@@ -55,11 +57,11 @@ class BaseView(ABC):
         return json_response(status=200, data={'message': 'Added'})
     
     @route('POST', '/')
-    async def create(self, request: Request) -> Response:
+    async def create(self, request: PMRequest) -> Response:
         return Response(status=404, text='Error: Method not implement')
     
     @route('DELETE', '/')
-    async def delete_by_id(self, request: Request) -> Response:
+    async def delete_by_id(self, request: PMRequest) -> Response:
         """Метод удаления записи из базы по id 
 
         Args:
@@ -74,11 +76,11 @@ class BaseView(ABC):
         return json_response(status=200, data={'message': 'Deleted'})    
     
     @route('PUT', '/')
-    async def update(self, request: Request) -> Response:
+    async def update(self, request: PMRequest) -> Response:
         return Response(status=404, text='Error: Method not implement')
     
     @route('PUT', '/from_table')
-    async def update_from_table(self, request: Request) -> Response:
+    async def update_from_table(self, request: PMRequest) -> Response:
         """Метод обновления данных записи в базе со страницы info
 
         Args:
@@ -94,7 +96,7 @@ class BaseView(ABC):
         return json_response(status=200, data={'message': 'Updated'})
     
     @route('GET', '/all')
-    async def get_all(self, request: Request) -> Response:
+    async def get_all(self, request: PMRequest) -> Response:
         """Метод получения всех записей по таблице из базы
 
         Args:
@@ -103,17 +105,25 @@ class BaseView(ABC):
         Returns:
             Response: json ответ
         """
-        sort_by = request.rel_url.query.get('sort[0][field]')
-        direction = request.rel_url.query.get('sort[0][dir]')
-        page = int(request.rel_url.query.get('page', 0))
-        size = int(request.rel_url.query.get('size', 0))
+        query = request.rel_url.query
+        params: dict = json.loads(query.get('params'))
+        sort = params.get('sort') # todo сделать сортировку по нескольким полям
+        if sort:
+            sort_by = sort[0].get('field')
+            direction = sort[0].get('dir')
+        else:
+            direction = None
+            sort_by = None
+        page = int(params.get('page', 1))
+        size = int(params.get('size', 10))
+        filters: list[dict] = params.get('filter', [])
         db_entity = await self.get_db_queries(request=request)
-        res = db_entity.get_all(page=page, limit=size, sort_by=sort_by, direction=direction)
+        res = db_entity.get_all(page=page, limit=size, sort_by=sort_by, direction=direction, filters=filters)
         res = [{k: v for k,v in i.items()} for i in res]
         total = db_entity.get_records_count()
         return json_response(status=200, data={'data': res, 'last_page': int(total / size) + 1})
     
-    async def get_db_queries(self, request: Request) -> BaseQueries:
+    async def get_db_queries(self, request: PMRequest) -> BaseQueries:
         """Метод получения объекта запросов к базу по сущности (self.queries_path)
 
         Args:

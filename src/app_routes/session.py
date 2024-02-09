@@ -1,11 +1,12 @@
 from aiohttp_session import get_session
 from aiohttp.web import Request, Response, HTTPFound, WebSocketResponse
+
 from functools import wraps
 from database.queries import Queries
 from .custom_types import WebSocketQueue
 from modules.project_manager.project import Project
 from modules.project_manager.manager import ProjectManager
-
+from modules.application import PMRequest
 
 def project_require(func):
     """Декоратор, который перенаправляет пользователей на страницу с 
@@ -29,7 +30,7 @@ def project_require(func):
             
     return wrapped
 
-async def get_db_by_session(request: Request) -> Queries:
+async def get_db_by_session(request: PMRequest) -> Queries:
     """Метод получения объекта запросов к базу на основе сессии пользователя
 
     Args:
@@ -55,21 +56,21 @@ async def get_configs_by_session(request: Request) -> dict:
     session = await get_session(request=request)
     return request.app.pm.get_project(session.get('project_name')).configs
 
-async def get_project(request: Request) -> Project:
+async def get_project(request: PMRequest) -> Project:
     session = await get_session(request=request)
     user_uuid = session.get('user_uuid')
     project_name = session.get('project_name')
     project = request.app.pm.get_project(project_name)
     return project
 
-async def set_websocket_to_client_queue(request: Request, queue_name: str, websocket: WebSocketResponse) -> None:
+async def set_websocket_to_client_queue(request: PMRequest, queue_name: str, websocket: WebSocketResponse) -> None:
     project = await get_project(request=request)
     session = await get_session(request=request)
     user_uuid = session.get('user_uuid')
     queue = project.clients.get_queue(user_uuid, queue_name)
     queue.websocket = websocket
     
-async def notify_client(request: Request, message: dict, queue_type='message'):
+async def notify_client(request: PMRequest, message: dict, queue_type='message'):
     session = await get_session(request=request,)
     project_manager: ProjectManager = request.app.pm
     project_manager.notify_single_client(project_name=session.get('project_name'),
@@ -77,7 +78,7 @@ async def notify_client(request: Request, message: dict, queue_type='message'):
                                          message=message,
                                          queue_type=queue_type)
     
-async def notify_clients_in_project(request: Request, message: dict, queue_type: str):
+async def notify_clients_in_project(request: PMRequest, message: dict, queue_type: str):
     session = await get_session(request=request)
     project_manager: ProjectManager = request.app.pm
     project_manager.notify_clients(project_name=session.get('project_name'),

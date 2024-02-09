@@ -192,3 +192,51 @@ class Screenshot(Base):
     task = Column(Integer, ForeignKey('tasks.id'))
     _task = relationship('Task', backref='_screenshot')
     domain = Column(String)
+    
+    
+class Pivot(Base):
+    
+    """Модель для view"""
+    
+    __tablename__ = 'pivot'
+    
+    id = Column(Integer, primary_key=True)
+    ip = Column(String(15), nullable=False)
+    mac = Column(String(17))
+    port = Column(Integer, nullable=False)
+    
+    @classmethod
+    def delete_query(cls):
+        
+        """Возвращает запрос, удаляющий view"""
+        
+        return "drop table if exists pivot;"
+  
+    
+    @classmethod
+    def create_query(cls):
+        
+        """Возвращает запрос, создающий view"""
+        
+        query = """
+        create table if not exists pivot as 
+            select
+                ROW_NUMBER() over() as id,
+                ip_addresses.ip,
+                ports.port,
+                mac_addresses.mac
+            from
+                ip_addresses
+            left join mac_addresses on ip_addresses.mac = mac_addresses.id
+            left join ports on ports.ip = ip_addresses.id;
+        """
+        return query
+    
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ip', 'title': 'IP'},
+            {'field': 'port', 'title': 'PORT'},
+            {'field': 'mac', 'title': 'MAC'}
+            ]

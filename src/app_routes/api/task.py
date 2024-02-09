@@ -1,3 +1,7 @@
+import json
+from datetime import datetime
+from base64 import b64decode
+
 from aiohttp.web import Request, Response, json_response
 from app_routes.session import (
     project_require,
@@ -19,10 +23,8 @@ from tasks.masscan_logs_task import (
 from tasks.screenshot_by_ip_task import ScreenshotFromIPTask
 from tasks.task_status import TaskStatus
 from app_routes.api.base_web_view import BaseView
-import json
+from modules.application import PMRequest
 from modules.project_manager.manager import ProjectManager
-from datetime import datetime
-from base64 import b64decode
 
 
 class TaskView(BaseView):
@@ -31,7 +33,7 @@ class TaskView(BaseView):
 
     @BaseView.route('POST', '/nmap_scan')
     @project_require
-    async def create_nmap_scan(self, request: Request):
+    async def create_nmap_scan(self, request: PMRequest):
         params = await request.json()
         project = await get_project(request=request)
         db = project.db
@@ -44,7 +46,7 @@ class TaskView(BaseView):
     
     @BaseView.route('POST', '/nmap_log')
     @project_require
-    async def create_nmap_log(self, request: Request):
+    async def create_nmap_log(self, request: PMRequest):
         params = await request.json()
         log_file = params.pop('log_file')
         data = b64decode(log_file.split(',')[1])
@@ -59,7 +61,7 @@ class TaskView(BaseView):
         
     @BaseView.route('POST', '/scapy_scan')
     @project_require
-    async def create_scapy_scan(self, request: Request):
+    async def create_scapy_scan(self, request: PMRequest):
         project = await get_project(request=request)
         scheduler = project.schedulers.get('scapy')
         if scheduler.active_count >= scheduler.limit:
@@ -76,7 +78,7 @@ class TaskView(BaseView):
     
     @BaseView.route('POST', '/scapy_scan_stop')
     @project_require
-    async def stop_scapy(self, request: Request):
+    async def stop_scapy(self, request: PMRequest):
         project = await get_project(request=request)
         jobs = list(project.schedulers.get('scapy')._jobs)
         if not len(jobs):
@@ -97,7 +99,7 @@ class TaskView(BaseView):
     
     @BaseView.route('POST', '/scapy_log')
     @project_require
-    async def create_scapy_log(self, request: Request):
+    async def create_scapy_log(self, request: PMRequest):
         params = await request.json()
         log_file = params.pop('log_file')
         data = b64decode(log_file.split(',')[1])
@@ -111,7 +113,7 @@ class TaskView(BaseView):
     
     @BaseView.route('POST', '/masscan_scan')
     @project_require
-    async def create_masscan_scan(self, request: Request):
+    async def create_masscan_scan(self, request: PMRequest):
         params: dict = await request.json()
         project = await get_project(request=request)
         db = project.db
@@ -124,7 +126,7 @@ class TaskView(BaseView):
     
     @BaseView.route('POST', '/masscan_json_log')
     @project_require
-    async def create_masscan_json_log(self, request: Request):
+    async def create_masscan_json_log(self, request: PMRequest):
         params: dict = await request.json()
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
@@ -138,7 +140,7 @@ class TaskView(BaseView):
 
     @BaseView.route('POST', '/masscan_xml_log')
     @project_require
-    async def create_masscan_xml_log(self, request: Request):
+    async def create_masscan_xml_log(self, request: PMRequest):
         params: dict = await request.json()
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
@@ -152,7 +154,7 @@ class TaskView(BaseView):
 
     @BaseView.route('POST', '/masscan_list_log')
     @project_require
-    async def create_masscan_list_log(self, request: Request):
+    async def create_masscan_list_log(self, request: PMRequest):
         params: dict = await request.json()
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
@@ -166,6 +168,6 @@ class TaskView(BaseView):
 
     @BaseView.route('GET', '/all_short')
     @project_require
-    async def all_short(self, request: Request):
+    async def all_short(self, request: PMRequest):
         raise NotImplementedError()
     

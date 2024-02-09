@@ -1,7 +1,7 @@
 version: "2"
 services:
   setezor:
-    build: .
+    image: lmsecure/setezor:latest
     volumes:
       - ./projects:/setezor/projects
       - ./logs:/setezor/logs

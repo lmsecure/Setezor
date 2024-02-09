@@ -32,12 +32,12 @@ default_service="echo \"[Unit]\nDescription=Setezor daemon\n\n[Service]\nUser=\n
 package_fullname=""
 
 install_pip_packages () {
-    python3.11 --version > /dev/null
+    python3.11 --version >> /dev/null
     status=$?
     if [[ $status -eq 0 ]]
     then
-#        printf -v package_fullname "%s_%s" "$package_name" "$version"
-        python3.11 -m pip install -t "$package_fullname/usr/local/share/setezor/pip_packages" -r ./src/requirements.txt
+        printf -v package_fullname "%s_%s" "$package_name" "$version"
+        python3.11 -m pip install -t setezor_1.0/usr/local/share/setezor/pip_packages -r ./src/requirements.txt
     else
         echo '[-] Error no python3.11!!!'
         exit
@@ -187,13 +187,12 @@ write_command_file
 write_postinst_file
 write_postrm_file
 clone_source_code
-echo "$version_type"
-if test "$version_type" != 'OEM'
+if [[ $default_version_type -ne 'OEM' ]]
 then 
 echo '[+] Installing packages'
 install_pip_packages
 fi
 echo '[+] Building deb...'
-dpkg-deb --build --root-owner-group "./$package_fullname"
-echo "[+] Build package \"""./$package_fullname"".deb\"" > /dev/null 2>&1
+dpkg-deb --build --root-owner-group "./$package_fullname" > /dev/null 2>&1
+echo "[+] Build package \"""./$package_fullname"".deb\""
 remove_local_folder_structure

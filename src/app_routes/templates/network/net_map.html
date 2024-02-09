@@ -120,9 +120,8 @@
     }
     redrawAll("network_topology", true);
     function redrawAll(elem_name, to_update_data) {
-        
         var container = document.getElementById(elem_name);
-        container.style.cssText = "width: 600px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+        container.style.cssText = `height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`
         var options = {
             nodes: {
                 size: 50,
@@ -176,18 +175,9 @@
     });
     network.on ("click", function (params) {
         if (params.nodes.length == 1) {
-            show_selected_node_ports(params.nodes[0])
+            createNodeInformation(params.nodes[0])
         }
     });
-    function show_selected_node_ports(node_id){
-        var info = document.getElementById('node_info');
-        if (network.isCluster(node_id) == true) {
-                var ip_ids = Object.keys(network.body.nodes[node_id].containedNodes);
-                portsTable.setData("/api/port/by_ip_id", {ip_ids: JSON.stringify(ip_ids)})
-            } else {
-                portsTable.setData("/api/port/by_ip_id", {ip_ids: JSON.stringify([node_id])})
-            }
-    }
     function cluster_by_netmask() {
         if (cluster != true) {
             var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
@@ -374,6 +364,71 @@
     }
     function exportToPNG() {
         download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
+    }
+
+    async function createNodeInformation(node_id) {
+        params = {ip_id: JSON.stringify(node_id)}
+        url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
+        resp = await fetch(url_address, {method: 'GET'})
+        json = await resp.json()
+        source_table = document.getElementById('div_node_info')
+        html_text = `<div><h4>Node ${node_id}</h4></div>\n`
+        table = '<table class="table table-bordered table-hover" style="min-width: 325px">'
+        
+        if (json.ip != undefined) {
+            table += `
+                    <tr>
+                        <td> ip </td>
+                        <td> ${json.ip} </td>
+                    </tr>`
+        }
+        if (json.mac != undefined) {
+            table += `
+                    <tr>
+                        <td> mac </td>
+                        <td> ${json.mac} </td>
+                    </tr>`
+        }
+        if (json.os != undefined) {
+            table += `
+                    <tr>
+                        <td> os </td>
+                        <td> ${json.os} </td>
+                    </tr>`
+        }
+        if (json.os != undefined) {
+            table += `
+                    <tr>
+                        <td> vendor </td>
+                        <td> ${json.vendor} </td>
+                    </tr>`
+        }
+        table += '</table>\n'
+        html_text += table
+        if (json.ports) {
+            html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover">\n'
+            html_ports += `
+                    <tr>
+                        <td> Number </td>
+                        <td> Protocol </td>
+                        <td> Soft </td>
+                        <td> Product </td>
+                    </tr>`
+                
+            json.ports.forEach((port) => {
+                html_ports += `
+                    <tr>
+                        <td> ${port.number} </td>
+                        <td> ${port.protocol} </td>
+                        <td> ${port.name} </td>
+                        <td> ${port.product} </td>
+                    </tr>
+                `
+            })
+        html_ports += '</table>\n'
+        html_text += html_ports
+        }
+        source_table.innerHTML = html_text
     }
 </script>
 {% endmacro %}

@@ -1,9 +1,11 @@
-from aiohttp.web import Request, Response, json_response
-from app_routes.session import project_require, get_db_by_session
-from app_routes.api.base_web_view import BaseView
 from datetime import datetime
 import traceback
 
+from aiohttp.web import Request, Response, json_response
+
+from app_routes.session import project_require, get_db_by_session
+from app_routes.api.base_web_view import BaseView
+from modules.application import PMRequest
 
 class L3LinkView(BaseView):
     endpoint = '/l3link'
@@ -11,7 +13,7 @@ class L3LinkView(BaseView):
     
     @BaseView.route('GET', '/vis')
     @project_require
-    async def get_edges(self, request: Request) -> Response:
+    async def get_edges(self, request: PMRequest) -> Response:
         """Метод получения граней для построения топологии сети
 
         Args:
@@ -25,5 +27,5 @@ class L3LinkView(BaseView):
     
     @BaseView.route('GET', '/all_short')
     @project_require
-    async def all_short(self, request: Request):
+    async def all_short(self, request: PMRequest):
         raise NotImplementedError()
