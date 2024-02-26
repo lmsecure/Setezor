@@ -25,13 +25,30 @@
             onclick="get_nodes_and_edges(true);"><i class="bi bi-arrow-clockwise"></i></button>
 
 </div>
-<div id="netwrok_container">
+
+
+
+<div id="edge-popUp" style="display: none;">
+    <span id="edge-operation">Add Edge</span> <br>
+    <table style="margin: auto">
+    <tbody><tr>
+        <td>label</td>
+        <td><input id="edge-label" value="new value"></td>
+    </tr>
+    </tbody></table>
+    <input type="button" value="save" id="edge-saveButton">
+    <input type="button" value="cancel" id="edge-cancelButton">
+</div>
+
+
+<div id="netwrok_container" class="p-2 bd-highlight">
     <div id="network_topology">
         <div class="vis-network" style="position: relative; overflow: hidden; touch-action: pan-y; user-select: none; width: 100%; height: 100%;" tabindex="0">
             <canvas style="position: relative; touch-action: none; user-select: none; width: 100%; height: 100%;"></canvas>
         </div>
     </div>
 </div>
+
 <div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
     <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li><a class="dropdown-item" href="#" id="deviceTypeDD" data-bs-toggle="dropdown" aria-expanded="false">Device type &raquo;</a>
@@ -49,6 +66,10 @@
         </li> -->
     </ul>
 </div>
+
+<div id="ModalCreateNode">
+</div>
+
 <script>
 
     // disable default context menu
@@ -83,23 +104,24 @@
         networkData.nodes.update(ajax_request(`/api/ip/vis/${node_id}`, 'get').node)
     }
     function fullscreen_network () {
-        var div_left_bar = document.getElementById("div_left_bar")
-        var div_node_info = document.getElementById("div_node_info")
+        var div_tools = document.getElementById("div_tools")
+        var div_tools_options = document.getElementById("v-pills-tabContent")
         var div_network = document.getElementById("div_network")
         var netwrok_container = document.getElementById("netwrok_container")
         var network_topology = document.getElementById("network_topology")
-        if (div_left_bar.style.display != "none" && div_node_info.style.display != "none") {
+        if (div_tools.style.display != "none" && div_tools_options.style.display != "none") {
             div_network.className = "bd-highlight w-100"
-            div_left_bar.style.display = "none";
-            div_node_info.style.display = "none";
+            div_tools.style.display = "none";
+            div_tools_options.style.display = "none";
             netwrok_container.style.cssText = "position: relative;width: 100%;height: 100%;"
             network_topology.style.cssText = "position: relative;top: 0px;right: 0px;bottom: 0px;left: 0px;"
         } else {
-            div_network.className = "p-2 bd-highlight fixed-end"
-            div_left_bar.style.display = '';
-            div_node_info.style.display = '';
+            div_network.className = "p-2 bd-highlight"
+            div_tools.style.display = '';
+            div_tools_options.style.display = '';
             netwrok_container.style.cssText = ""
-            network_topology.style.cssText = "width: 400px;height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
+            netwrok_container.classList
+            network_topology.style.cssText = "background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
         }
     }
     function get_nodes_and_edges (update=false) {
@@ -118,12 +140,94 @@
             networkData.edges.add(edges)
         }
     }
-    redrawAll("network_topology", true);
-    function redrawAll(elem_name, to_update_data) {
-        var container = document.getElementById(elem_name);
-        container.style.cssText = `height: 500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`
-        var options = {
-            nodes: {
+    function get_last_node_id() {
+        if (networkData.nodes) {
+            return networkData.nodes.max('id').id 
+        }
+        else {
+            return 0
+        }
+            
+    }
+    function get_id_for_next_node() {
+        return get_last_node_id() + 1
+    }
+    function create_group_for_node(label) {
+        parts = label.split('.')
+        if (parts.lenght == 4) {
+            return parts.slice(0, -1).join('.')
+        }
+        else {
+            return ''
+        }
+    }
+    async function deleteNodeInDatabase(data, callback) {
+        node = networkData.nodes.get(data.nodes[0])
+        ip = node.label
+        resp = await fetch('/api/object/delete_object', {method: 'DELETE', body: ip})
+    }
+    async function deleteEdgeInDatabase(data, callback) {
+        edge = networkData.edges.get(data.edges[0])
+        first = networkData.nodes.get(edge.from).label
+        second = networkData.nodes.get(edge.to).label
+        data = {first_ip: first, second_ip: second}
+        resp = await fetch('/api/l3link/delete_edge', {method: 'DELETE', body: JSON.stringify(data)})
+    }
+    async function createEdgeInDatabase(data, callback) {
+        nodes = networkData.nodes
+        first = nodes.get(data.from).label
+        second = nodes.get(data.to).label
+        data = {first_ip: first, second_ip: second}
+        resp = await fetch('/api/l3link/create_edge', {method: 'PUT', body: JSON.stringify(data)})
+    }
+    async function editNode(data, cancelAction, callback, create) {
+        params = {ip_id: JSON.stringify(data.id)}
+        url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
+        resp = await fetch(url_address, {method: 'GET'})
+        json = await resp.json()
+        if (json.ip) {
+            document.getElementById("node-label").value = json.ip
+        }
+        if (json.mac) {
+        document.getElementById("node-mac").value = json.mac
+        }
+        if (json.domain) {
+        document.getElementById("node-domain").value = json.domain
+        }
+        if (json.os) {
+        document.getElementById("node-os").value = json.os
+        }
+        if (json.vendor) {
+        document.getElementById("node-vendor").value = json.vendor
+        }
+        document.getElementById("node-saveButton").onclick = saveNodeData.bind(
+          this,
+          data,
+          callback,
+          create
+        );
+        document.getElementById("node-cancelButton").onclick =
+          cancelAction.bind(this, callback);
+      }
+
+      // Callback passed as parameter is ignored
+      function clearNodePopUp() {
+        document.getElementById("node-saveButton").onclick = null;
+        document.getElementById("node-cancelButton").onclick = null;
+        document.getElementById("node-popUp").style.display = "none";
+
+        document.getElementById("node-label").value = ''
+        document.getElementById("node-mac").value = ''
+        document.getElementById("node-vendor").value = ''
+        document.getElementById("node-domain").value = ''
+        document.getElementById("node-os").value = ''
+      }
+
+      function cancelNodeEdit(callback) {
+        clearNodePopUp();
+        callback(null);
+      }
+    const nodes_data = {
                 size: 50,
                 scaling: {
                     min: 10,
@@ -133,7 +237,149 @@
                     size: 12,
                     face: "Tahoma",
                 },
-            },
+            }
+    function saveNodeData(data, callback, create) {
+        data.id = get_id_for_next_node();
+        data.label = document.getElementById("node-label").value
+        mac = document.getElementById("node-mac").value;
+        if (mac) {
+            data.mac = mac
+        }
+        os = document.getElementById("node-os").value;
+        if (os) {
+            data.os = os
+        }
+        else {
+            data.os = null
+        }
+        vendor = document.getElementById("node-vendor").value;
+        if (vendor) {
+            data.vendor = vendor
+        }
+        else {
+            data.vendor = null
+        }
+        domain = document.getElementById("node-domain").value;
+        if (domain) {
+            data.domain = domain
+        }
+        else {
+            data.domain = null
+        }
+        data.value = 1
+        data.shape = 'dot'
+        data.group = create_group_for_node(data.label)
+        modal.hide()
+        clearNodePopUp();
+        if (create) {
+            prom = saveNodeInDatabase(data)
+        }
+        else {
+            prom = editNodeInDatabase(data)
+        }
+        
+        
+        prom.then((response) => {
+            if (response.status == 200) {
+                obj_id = null
+                response.json().then((value) => {
+                    data.id = value.object_id
+                    callback(data)
+                    createNodeInformation(data.id)
+                })
+            }
+        })
+      }
+
+    
+    async function saveNodeInDatabase(data) {
+        resp = await fetch('/api/object/create_object', {method: 'PUT', body: JSON.stringify(data)})
+        return resp
+    }
+
+    async function editNodeInDatabase(data) {
+        body = JSON.stringify(data)
+        resp = await fetch('/api/object/update_object', {method: 'PUT', body: body})
+        return resp
+    }
+
+      function saveEdgeData(data, callback) {
+        if (typeof data.to === "object") data.to = data.to.id;
+        if (typeof data.from === "object") data.from = data.from.id;
+        data.label = '';
+        createEdgeInDatabase(data, callback)
+        callback(data);
+      }
+    function createCreateNodeModal(editing) {
+        if (editing) {
+            text = 'Editing node'
+            action_button = 'Edit'
+        }
+        else {
+            text = 'Add node info'
+            action_button = 'Create'
+        }
+        
+        var modal_elem = document.getElementById('ModalCreateNode')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <div class="modal-body">
+                        <form id='createNodeModal'>
+                            <div id="node-popUp" style="">
+                                <table style="margin: auto">
+                                <tbody>
+                                    <tr>
+                                        <td>ip</td>
+                                        <td><input id="node-label" class="form-control" value="" required></td>
+                                        <td id="invalid-ip" class="invalid-feedback">Please, type correct ip</td>
+                                    </tr>
+                                    <tr>
+                                        <td>mac</td>
+                                        <td><input id="node-mac" class="form-control" value="" required></td>
+                                        <td id="invalid-mac" class="invalid-feedback">Please, type correct mac</td>
+                                    </tr>
+                                    <tr>
+                                        <td>domain</td>
+                                        <td><input id="node-domain" class="form-control" value=""></td>
+                                    </tr>
+                                    <tr>
+                                        <td>os</td>
+                                        <td><input id="node-os" class="form-control" value=""></td>
+                                    </tr>
+                                    <tr>
+                                        <td>vendor</td>
+                                        <td><input id="node-vendor" class="form-control" value=""></td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button id="node-saveButton" type="button" class="btn btn-primary">${action_button}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        var maskMAC = new Inputmask("ip").mask(document.getElementById('node-label'))
+        var maskMAC = new Inputmask("mac").mask(document.getElementById('node-mac'))
+        return modal
+    };
+
+    redrawAll("network_topology", true);
+    function redrawAll(elem_name, to_update_data) {
+        var network_topology = document.getElementById("network_topology")
+        var container = document.getElementById(elem_name);
+        container.style.cssText = `height: 500px; width 1500px;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`
+        var options = {
+            nodes: nodes_data,
             edges: {
                 color: { inherit: true },
                 width: 0.15,
@@ -155,6 +401,40 @@
                     springConstant: 0.07,
                     springLength: 100,
                 },
+          },
+          manipulation: {
+            addNode: function (data, callback) {
+              // filling in the popup DOM elements
+              modal = createCreateNodeModal(false)
+              modal.show()
+              editNode(data, clearNodePopUp, callback, true);
+              modal.hide()
+            },
+            editNode: function (data, callback) {
+              // filling in the popup DOM elements
+              modal = createCreateNodeModal(true)
+              modal.show()
+              editNode(data, cancelNodeEdit, callback, false);
+              modal.hide()
+            },
+            addEdge: function (data, callback) {
+                saveEdgeData(data, callback)
+            },
+            deleteNode: function (data, callback) {
+                deleteNodeInDatabase(data, callback)
+                callback(data)
+            },
+            deleteEdge: function (data, callback) {
+                deleteEdgeInDatabase(data, callback)
+                callback(data)
+            },
+            editEdge: {
+              editWithoutDrag: function (data, callback) {
+                document.getElementById("edge-operation").innerText =
+                  "Edit Edge";
+                saveEdgeData(data, callback);
+              }
+            },
           },
         };
         
@@ -221,6 +501,7 @@
     };
     network.on('hoverNode', function(params) {
         network.selectNodes([params.node])
+        createNodeInformation(params.node)
         // show_selected_node_ports(params.node)
     })
     network.on('oncontext', function(params) {
@@ -367,68 +648,78 @@
     }
 
     async function createNodeInformation(node_id) {
-        params = {ip_id: JSON.stringify(node_id)}
-        url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
-        resp = await fetch(url_address, {method: 'GET'})
-        json = await resp.json()
-        source_table = document.getElementById('div_node_info')
-        html_text = `<div><h4>Node ${node_id}</h4></div>\n`
-        table = '<table class="table table-bordered table-hover" style="min-width: 325px">'
-        
-        if (json.ip != undefined) {
-            table += `
-                    <tr>
-                        <td> ip </td>
-                        <td> ${json.ip} </td>
-                    </tr>`
-        }
-        if (json.mac != undefined) {
-            table += `
-                    <tr>
-                        <td> mac </td>
-                        <td> ${json.mac} </td>
-                    </tr>`
-        }
-        if (json.os != undefined) {
-            table += `
-                    <tr>
-                        <td> os </td>
-                        <td> ${json.os} </td>
-                    </tr>`
-        }
-        if (json.os != undefined) {
-            table += `
-                    <tr>
-                        <td> vendor </td>
-                        <td> ${json.vendor} </td>
-                    </tr>`
-        }
-        table += '</table>\n'
-        html_text += table
-        if (json.ports) {
-            html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover">\n'
-            html_ports += `
-                    <tr>
-                        <td> Number </td>
-                        <td> Protocol </td>
-                        <td> Soft </td>
-                        <td> Product </td>
-                    </tr>`
-                
-            json.ports.forEach((port) => {
+        if (Number.isInteger(node_id)) {
+            params = {ip_id: JSON.stringify(node_id)}
+            url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
+            resp = await fetch(url_address, {method: 'GET'})
+            json = await resp.json()
+            source_table = document.getElementById('div_node_info')
+            html_text = `<div><h4>Node ${node_id}</h4></div>\n`
+            table = '<table class="table table-bordered table-hover" style="min-width: 325px; max-width: 325px;">'
+            
+            if (json.ip != undefined) {
+                table += `
+                        <tr>
+                            <td> ip </td>
+                            <td> ${json.ip} </td>
+                        </tr>`
+            }
+            if (json.domain != undefined) {
+                table += `
+                        <tr>
+                            <td> domain </td>
+                            <td> ${json.domain} </td>
+                        </tr>`
+            }
+            if (json.mac != undefined) {
+                table += `
+                        <tr>
+                            <td> mac </td>
+                            <td> ${json.mac} </td>
+                        </tr>`
+            }
+            if (json.os != undefined) {
+                table += `
+                        <tr>
+                            <td> os </td>
+                            <td> ${json.os} </td>
+                        </tr>`
+            }
+            if (json.vendor != undefined) {
+                table += `
+                        <tr>
+                            <td> vendor </td>
+                            <td> ${json.vendor} </td>
+                        </tr>`
+            }
+            table += '</table>\n'
+            html_text += table
+            if (json.ports) {
+                html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover align-middle"">\n'
                 html_ports += `
-                    <tr>
-                        <td> ${port.number} </td>
-                        <td> ${port.protocol} </td>
-                        <td> ${port.name} </td>
-                        <td> ${port.product} </td>
-                    </tr>
-                `
-            })
-        html_ports += '</table>\n'
-        html_text += html_ports
+                        <tr>
+                            <td> Number </td>
+                            <td> Protocol </td>
+                            <td> Soft </td>
+                            <td> Product </td>
+                        </tr>`
+                    
+                json.ports.forEach((port) => {
+                    html_ports += `
+                        <tr>
+                            <td> ${port.number} </td>
+                            <td> ${port.protocol} </td>
+                            <td> ${port.name} </td>
+                            <td> ${port.product} </td>
+                        </tr>
+                    `
+                })
+            html_ports += '</table>\n'
+            html_text += html_ports
+            }
+            source_table.innerHTML = html_text
         }
-        source_table.innerHTML = html_text
+        
     }
 </script>
 {% endmacro %}

@@ -33,9 +33,6 @@ class IPQueries(BaseQueries):
         Returns:
             _type_: объект ip адреса
         """
-        # if mac:
-        #     mac_obj = self.mac.get_or_create(session=session, mac=mac)
-        # else:
         mac_obj = self.mac.create(session=session, mac=mac if mac else '', **kwargs)
         new_ip_obj = self.model(ip=ip, _mac=mac_obj, domain_name=domain_name)
         session.add(new_ip_obj)
@@ -61,6 +58,30 @@ class IPQueries(BaseQueries):
             return ip_obj.to_vis_node()
         else:
             return ip_obj
+        
+    @BaseQueries.session_provide
+    def get_by_ip(self, session: Session, ip: str):
+        stm = session.query(self.model).where(self.model.ip == ip)
+        res: IP | None = stm.first()
+        return res
+    
+    @BaseQueries.session_provide
+    def edit_ip(self, session: Session, ip: str,
+                domain: str | None,
+                os: str | None,
+                mac: str | None ,
+                vendor: str | None
+                ):
+        stm = session.query(self.model).where(self.model.ip == ip)
+        res: IP | None = stm.first()
+        if not res:
+            raise ValueError(f'No such ip({ip}) in database')
+        
+        res._mac.mac = mac
+        res.domain_name = domain
+        res._mac._obj.os = os
+        res._mac.vendor = vendor
+        return res
         
     @BaseQueries.session_provide
     def get_vis_nodes(self, session: Session) -> dict:

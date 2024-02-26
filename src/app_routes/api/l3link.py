@@ -29,3 +29,30 @@ class L3LinkView(BaseView):
     @project_require
     async def all_short(self, request: PMRequest):
         raise NotImplementedError()
+    
+    
+    @BaseView.route('PUT', '/create_edge')
+    @project_require
+    async def create_edge(self, request: PMRequest):
+        
+        db = await get_db_by_session(request=request)
+        resp_data = await request.json()
+        first_ip = resp_data.get('first_ip')
+        second_ip = resp_data.get('second_ip')
+        db.l3link.create_by_ip(first_ip=first_ip, second_ip=second_ip)
+        
+        return Response()
+    
+    
+    @BaseView.route('DELETE', '/delete_edge')
+    @project_require
+    async def delete_edge(self, request: PMRequest):
+        
+        db = await get_db_by_session(request=request)
+        
+        resp_data = await request.json()
+        first_ip = resp_data.get('first_ip')
+        second_ip = resp_data.get('second_ip')
+        db.l3link.delete_by_ip(first_ip=first_ip, second_ip=second_ip)
+        
+        return Response()

@@ -37,6 +37,11 @@ class ObjectQueries(BaseQueries):
             obj = session.query(self.model).filter(self.model.id == ip._mac._obj.id).update(to_update)
             session.flush()
             
+    @BaseQueries.session_provide
+    def add_os(self, session: Session, obj: Object, os: str):
+        session.add(obj)
+        obj.os = os
+            
     def get_headers(self) -> list:
         return [{'name': 'id', 'type': '', 'required': False},
                 {'name': 'object_type', 'type': '', 'required': True},

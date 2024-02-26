@@ -3,9 +3,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy import select
 from exceptions.loggers import LoggerNames, get_logger
 from datetime import datetime
 
+from sqlalchemy_utils import create_view
 
 class BaseModel:
     """базовый класс для моделей базы данных
@@ -62,7 +64,7 @@ class MAC(Base):
     mac = Column(String(17))
     object = Column(Integer, ForeignKey('objects.id'), nullable=False)
     vendor = Column(String)
-    _obj = relationship(Object.__name__, back_populates='_mac')
+    _obj = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
     _ip = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
     
     @staticmethod
@@ -80,7 +82,7 @@ class IP(Base):
 
     id = Column(Integer, primary_key=True)
     mac = Column(Integer, ForeignKey('mac_addresses.id'))
-    _mac = relationship('MAC', back_populates='_ip')
+    _mac = relationship('MAC', back_populates='_ip', lazy='subquery')
     ip = Column(String(15), nullable=False)
     domain_name = Column(String(100))
     _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan')
@@ -192,45 +194,25 @@ class Screenshot(Base):
     task = Column(Integer, ForeignKey('tasks.id'))
     _task = relationship('Task', backref='_screenshot')
     domain = Column(String)
-    
-    
+
+
 class Pivot(Base):
     
-    """Модель для view"""
-    
-    __tablename__ = 'pivot'
-    
-    id = Column(Integer, primary_key=True)
-    ip = Column(String(15), nullable=False)
-    mac = Column(String(17))
-    port = Column(Integer, nullable=False)
-    
-    @classmethod
-    def delete_query(cls):
-        
-        """Возвращает запрос, удаляющий view"""
-        
-        return "drop table if exists pivot;"
-  
-    
-    @classmethod
-    def create_query(cls):
-        
-        """Возвращает запрос, создающий view"""
-        
-        query = """
-        create table if not exists pivot as 
-            select
-                ROW_NUMBER() over() as id,
-                ip_addresses.ip,
-                ports.port,
-                mac_addresses.mac
-            from
-                ip_addresses
-            left join mac_addresses on ip_addresses.mac = mac_addresses.id
-            left join ports on ports.ip = ip_addresses.id;
-        """
-        return query
+    view_select = select(
+            func.row_number().over().label('id'),
+            IP.ip,
+            Port.port,
+            MAC.mac
+                          ).join(
+                              MAC, MAC.id == IP.mac, isouter=True
+                              ).join(
+                                  Port, Port.ip == IP.id, isouter=True
+                              )
+    __table__ = create_view(
+        name='pivot',
+        selectable=view_select,
+        metadata=Base.metadata
+    )
     
     @staticmethod
     def get_headers_for_table() -> list:

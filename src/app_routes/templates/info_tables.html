@@ -80,7 +80,22 @@
                                         </button>
                                         <ul class="dropdown-menu" aria-labelledby="reports_dropdown">
                                             <li><a class="dropdown-item" href="javascript:window.location='/api/reports/xlsx'">xlsx</a></li>
-                                            <li><a class="dropdown-item" href="javascript:window.location='/api/reports/csv'">csv</a></li>
+                                            <li>
+                                                <button class="dropdown-item" onclick="get_csv_report()">
+                                                    csv
+                                                </button>
+                                                <script type="text/javascript">
+                                                    async function get_csv_report() {
+                                                        filters = pivot_table.getFilters()
+                                                        filters = JSON.stringify(filters)
+                                                        params = new URLSearchParams({filters: filters})
+                                                        resp = await fetch(`/api/reports/csv?${params}`)
+                                                        blob = await resp.blob()
+                                                        var file = window.URL.createObjectURL(blob);
+                                                        window.location.assign(file);
+                                                    }
+                                                </script>
+                                            </li>
                                             <li><a class="dropdown-item disabled" href="#">pdf</a></li>
                                             <li><a class="dropdown-item disabled" href="#">docx</a></li>
                                         </ul>
@@ -90,6 +105,12 @@
                         {% endif %}
                     
                     <script>
+                        function create_url_params_from_filter() {
+                            filters = pivot_table.getFilters()
+                            filters = JSON.stringify(filters)
+                            param = new URLSearchParams({filters: filters})
+                            return param
+                        }
                         function {{tab.name}}clearFilter(){
                             document.getElementById('filter-value-{{tab.name}}').value = ''
                             {{tab.name}}_table.clearFilter()
@@ -167,7 +188,7 @@
                     function {{tab.name}}deleteEvent(element) {
                         var rowIndex = element.id.split("-").at(-1)
                         {{tab.name}}_table.getRow(rowIndex).delete()
-                        create_modal("{{tab.name}}ModalDelete", "Row deletion", "Are you sure? Deleteion can have cascade effect.", "Delete", 
+                        create_modal("{{tab.name}}ModalDelete", "Row deletion", "Are you sure? Deletion can have cascade effect.", "Delete", 
                                      function () {fetch("{{tab.base_url}}/", {method: "DELETE", body: JSON.stringify({id: rowIndex})})})
                                     .show()
                         

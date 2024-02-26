@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session, scoped_session
+from sqlalchemy.exc import OperationalError
 from database.models import Base, Pivot
 import logging
 
@@ -16,10 +17,12 @@ class DBConnection:
         """        
         self.engine = create_engine(f'sqlite:///{db_path}?check_same_thread=False')
         if create_tabels:
-            Base.metadata.create_all(self.engine)
-        with Session(bind=self.engine) as ses:
-            ses.execute(Pivot.delete_query())
-            ses.execute(Pivot.create_query())
+            try:
+                Base.metadata.create_all(self.engine)
+            except OperationalError as e:
+                if e.args != ('(sqlite3.OperationalError) table pivot already exists',):
+                    raise
+                
         Base.metadata.reflect(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
@@ -30,4 +33,4 @@ class DBConnection:
         Returns:
             _type_: _description_
         """
-        return scoped_session(sessionmaker(bind=self.engine))
+        return scoped_session(sessionmaker(bind=self.engine, expire_on_commit=False))

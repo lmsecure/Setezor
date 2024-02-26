@@ -101,7 +101,30 @@ class L3LinkQueries(BaseQueries):
             
         return self.create(session=session, child_ip=child_ip, child_mac=child_mac, child_name=child_name, 
                             parent_ip=parent_ip, parent_mac=parent_mac, parent_name=parent_name, start_ip=start_ip)
-
+    
+    @BaseQueries.session_provide
+    def get_by_ip(self, session: Session, first_ip: str, second_ip: str):
+        first_ip_obj = session.query(IP).where(IP.ip == first_ip).first()
+        second_ip_obj = session.query(IP).where(IP.ip == second_ip).first()
+        stm = session.query(self.model).where((self.model.child_ip == first_ip_obj.id and self.model.parent_ip == second_ip_obj.id)
+                                        or (self.model.parent_ip == first_ip_obj.id and self.model.child_ip == second_ip_obj.id))
+        res: L3Link | None = stm.first()
+        return res
+    
+    @BaseQueries.session_provide
+    def delete_by_ip(self, session: Session, first_ip: str, second_ip: str):
+        
+        obj = self.get_by_ip(first_ip=first_ip, second_ip=second_ip)
+        session.delete(obj)
+        
+    @BaseQueries.session_provide
+    def create_by_ip(self, session: Session, first_ip: str, second_ip: str):
+        
+        first_ip = session.query(IP).where(IP.ip == first_ip).first()
+        second_ip = session.query(IP).where(IP.ip == second_ip).first()
+        link = L3Link(child_ip=first_ip.id, parent_ip=second_ip.id)
+        session.add(link)
+                
     @BaseQueries.session_provide
     def get_vis_edges(self, session: Session) -> dict:
         """метод генерации ребер для построения топологии сети на веб-морде

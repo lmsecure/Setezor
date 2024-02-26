@@ -1,6 +1,8 @@
-from aiohttp.web import Request, Response
-from io import StringIO
 import csv
+from io import StringIO
+import json
+
+from aiohttp.web import Response
 
 from app_routes.session import project_require, get_db_by_session
 from app_routes.api.base_web_view import BaseView
@@ -25,7 +27,9 @@ class ReportsView(BaseView):
     @project_require
     async def download_csv_report(self, request: PMRequest) -> Response:
         db = await get_db_by_session(request=request)
-        rows = db.port.get_all()
+        query = request.rel_url.query
+        filters: dict = json.loads(query.get('filters'))
+        rows = db.port.get_all(filters=filters)
         file = StringIO()
         writer = csv.writer(file)
         writer.writerow(['id', 'ip', 'port'])

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 import json
+from typing import Literal
 
 from aiohttp.web import Response, Request, json_response
 
 from database.queries_files.base_queries import BaseQueries
-from functools import wraps
 from app_routes.session import get_db_by_session, notify_client
 from modules.application import PMRequest
 
@@ -22,7 +22,7 @@ class BaseView(ABC):
         """        
         self.endpoint = path + self.endpoint
     
-    def route(method, path):
+    def route(method: Literal['GET', 'POST', 'PUT', 'UPDATE', 'DELETE'], path: str):
         """Декоратор с аргументами, который при вызове возвращает словарь
         для добавления метода в routes aiohttp server
 
@@ -30,6 +30,7 @@ class BaseView(ABC):
             method (_type_): тип HTTP метода
             path (_type_): конечное uri ендпоинта
         """
+        
         def wrapped(func):
             def route_wrapper(obj):
                 def wr1(*args, **kwargs):
