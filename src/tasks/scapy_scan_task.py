@@ -1,6 +1,6 @@
 from tasks.base_job import BaseJob, MessageObserver, CustomScheduler
 from modules.sniffing.base_sniffer import Sniffer
-from tools.ip_tools import get_self_ip
+from tools.ip_tools import get_ipv4
 from database.queries import Queries
 import asyncio
 from time import time
@@ -37,7 +37,7 @@ class ScapyScanTask(BaseJob):
 
     def write_packet_to_db(self, pkt: dict):
         if any(['ip' in j for j in list(pkt.keys())]):
-            self.db.l3link.write(start_ip=get_self_ip(self.iface).get('ip'), **pkt)
+            self.db.l3link.write(start_ip=get_ipv4(self.iface), **pkt)
         else:
             self.db.mac.write(mac=pkt.get('child_mac'))
             self.db.mac.write(mac=pkt.get('parent_mac'))

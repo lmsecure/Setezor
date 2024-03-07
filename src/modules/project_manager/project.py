@@ -30,7 +30,7 @@ class Project:
             self.schedulers = Schedulers(configs.schedulers)
 
     @classmethod
-    def create(cls, name: str, path: str, iface: str):
+    def create(cls, name: str, path: str):
         """метод создания проекта
 
         Args:
@@ -44,7 +44,7 @@ class Project:
         if os.path.exists(project_path):
             cls.logger.info('Project with name "%s" by path "%s" already exists', name, project_path)
             raise Exception('Project with this name already exists')  # return to web-page message via Response
-        configs: Configs = Configs.generate_configs(project_path=path, project_name=name, iface=iface)
+        configs: Configs = Configs.generate_configs(project_path=path, project_name=name)
         files = FilesStructure(folders=configs.folders, files=configs.files)
         files.create_project_structure()
         configs.save_config_file()

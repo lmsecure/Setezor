@@ -20,3 +20,5 @@ cffi
 click
 colorama
 openpyxl
+pyroute2
+orjson

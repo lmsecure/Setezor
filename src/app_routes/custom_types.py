@@ -23,11 +23,13 @@ class WebSocketQueue:
         
     def put_item(self, message: Dict):
         self.message_queue.put_nowait(message)
-        if not self.websocket is None:
-            while not self.message_queue.empty():
-                data = self.message_queue.get_nowait()
-                loop = asyncio.get_running_loop()
-                loop.run_until_complete(self.websocket.send_json(data))
+        if self.websocket is not None:
+            if not self.websocket.closed:
+                while not self.message_queue.empty():
+                    data = self.message_queue.get_nowait()
+                    loop = asyncio.get_running_loop()
+                    loop.run_until_complete(self.websocket.send_json(data))
+
                 
     def stop_queue(self):
         pass  # Fixme implement method

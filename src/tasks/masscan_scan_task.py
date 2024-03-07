@@ -1,7 +1,6 @@
 from .base_job import BaseJob, MessageObserver
 from modules.masscan.executor import MasscanScanner
 from modules.masscan.parser import XMLParser, JsonParser, ListParser, BaseMasscanParser, PortStructure, NetworkLink
-from tools.ip_tools import get_self_ip
 from database.queries import Queries
 from time import time
 import traceback
@@ -10,9 +9,9 @@ from typing import Dict, Type, List, Tuple
 
 class MasscanScanTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, arguments: dict, iface: str, masscan_log_path: str, db: Queries):
+    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, arguments: dict, scanning_ip: str, scanning_mac: str, masscan_log_path: str, db: Queries):
         super().__init__(observer, scheduler, name)
-        self._coro = self.run(db=db, task_id=task_id, arguments=arguments, iface=iface, masscan_log_path=masscan_log_path)
+        self._coro = self.run(db=db, task_id=task_id, arguments=arguments, scanning_ip=scanning_ip, scanning_mac=scanning_mac, masscan_log_path=masscan_log_path)
     
     async def _task_func(self, arguments: dict, masscan_log_path: str) -> str:
         """Запускает активное сканирование с использованием masscan-а
@@ -26,13 +25,13 @@ class MasscanScanTask(BaseJob):
         masscan_obj = MasscanScanner(**arguments)
         return await masscan_obj.async_execute(log_path=masscan_log_path)
     
-    async def _parser_results(self, format: str, input_data: str, iface: str) -> Tuple[List[Type[PortStructure]], List[Type[NetworkLink]]]:
+    async def _parser_results(self, format: str, input_data: str, scanning_ip: str, scanning_mac: str) -> Tuple[List[Type[PortStructure]], List[Type[NetworkLink]]]:
         parsers: Dict[str, Type[BaseMasscanParser]] = {
             'oX': XMLParser,
             'oJ': JsonParser,
             'oL': ListParser
         }
-        parent_ip = get_self_ip(iface=iface)['ip']
+        parent_ip = scanning_ip
         loop = asyncio.get_event_loop()
         parser = parsers.get(format)
         return await loop.run_in_executor(None, parser.parse, input_data, parent_ip)
@@ -47,7 +46,7 @@ class MasscanScanTask(BaseJob):
         db.port.write_many(data=[i.to_dict() for i in port_result])
         db.l3link.write_many(data=[i.to_dict() for i in link_result])
         
-    async def run(self, db: Queries, task_id: int, arguments: dict, iface: str, masscan_log_path: str):
+    async def run(self, db: Queries, task_id: int, arguments: dict, scanning_ip: str, scanning_mac: str, masscan_log_path: str):
         """Метод выполнения задачи
         1. Произвести операции согласно методу self._task_func
         2. Записать результаты в базу согласно методу self._write_result_to_db
@@ -60,8 +59,9 @@ class MasscanScanTask(BaseJob):
         db.task.set_pending_status(index=task_id)
         try:
             t1 = time()
+            arguments['interface_addr'] = scanning_ip
             result = await self._task_func(arguments=arguments, masscan_log_path=masscan_log_path)
-            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, iface=iface)
+            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=scanning_ip)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, port_result=ports, link_result=links)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

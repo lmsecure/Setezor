@@ -131,6 +131,6 @@ class NmapScanner:
             with open(full_path, 'wb' if isinstance(scan_xml, bytes) else 'w') as f:
                 f.write(scan_xml)
             return True
-        except:
-            logger.error('Failed save source scan to path "%s" with error\n%s', full_path, traceback.format_exc())
+        except Exception:
+            logger.error('Failed save source scan to path "%s"', full_path, exc_info=True)
             raise Exception('Failed save source scan to path "%s"' % full_path)

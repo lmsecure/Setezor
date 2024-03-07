@@ -4,6 +4,7 @@ from aiohttp_session import get_session
 
 from app_routes.session import project_require, get_db_by_session
 from modules.application import PMRequest
+from tools.ip_tools import get_interfaces
 
 info_routes = RouteTableDef()
 
@@ -23,7 +24,8 @@ async def info_page(request: PMRequest) -> Response:
     project_name = ses.get('project_name')
     context = {'tabs': [{'name': i.model.__name__.lower(), 
                          'base_url': f'/api/{i.model.__name__.lower()}',
-                         'columns': i.model.get_headers_for_table()} for i in [db.object, db.l3link, db.pivot, db.task]],
-                'current_project': project_name}
+                         'columns': i.model.get_headers_for_table()} for i in [db.object, db.l3link, db.ip, db.mac, db.port, db.pivot, db.task]],
+                'current_project': project_name,
+                'interfaces': [i for i in get_interfaces() if i.ip_address]}
     
     return aiohttp_jinja2.render_template('info_tables.html', request=request, context=context)

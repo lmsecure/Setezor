@@ -23,8 +23,10 @@ fi
 
 venv/bin/python3.11 -m pip install -r requirements.txt
 sudo setcap cap_net_raw=eip \"\$(readlink -f \`which venv/bin/python3.11\`)\"
-sudo setcap cap_net_raw+eip \`which nmap\`\necho \"
-\"\nvenv/bin/python3.11 setezor.py --help\necho \"\n\"\n
+sudo setcap cap_net_raw+eip \`which nmap\`
+sudo setcap cap_net_raw+eip \`which masscan\`
+
+venv/bin/python3.11 setezor.py --help
 "
 default_postrm="sudo rm -rf /usr/local/share/%s"
 default_arch="all"

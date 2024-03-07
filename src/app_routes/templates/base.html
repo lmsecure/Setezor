@@ -139,6 +139,30 @@
 
 					<div class="bd-highlight">
 						
+						{% if hide_navbar%}
+						{% else %}
+							<script>
+								function change_iface(name) {
+									document.getElementById('current_iface').innerText = name
+								}
+							</script>
+							<div class="btn-group">
+								<button id="current_iface" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 200px;" title="your current network interface">
+									{{interfaces[0].name}}
+								</button>
+								<ul class="dropdown-menu" style="">
+									{% for iface in interfaces %}
+										<li>
+											<button class="dropdown-item" onclick="change_iface('{{iface.name}}')">
+												{{iface.name}}
+											</button>
+										</li>
+									{% endfor %}
+								</ul>
+							</div>
+						{% endif %}
+						
+
 						<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#aboutModal">
 							<i class="bi bi-question-circle" title="About project"></i>
 						</button>
@@ -169,7 +193,7 @@
 						  </div>
 
 						{% if hide_navbar %}{% else %}
-						
+
 						<a class="btn btn-success" type="button" id="exportButton" href="javascript:window.location='/api/project/export_project?project_name={{current_project}}'">
 							<i class="bi bi-download" data-bs-toggle="tooltip" title="Export project"></i>
 						</a>

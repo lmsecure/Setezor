@@ -9,6 +9,7 @@ from aiohttp.web_urldispatcher import UrlDispatcher
 
 from ..project_manager.manager import ProjectManager
 
+
 class PMApplication(Application):
     
     """Кастомный класс приложения, дополнительно принимает:

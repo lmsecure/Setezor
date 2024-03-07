@@ -3,6 +3,7 @@ from aiohttp.web import Request, Response, json_response
 from app_routes.session import project_require, get_db_by_session
 from app_routes.api.base_web_view import BaseView
 from modules.application import PMRequest
+from tools.ip_tools import get_ipv4
 
 class IPView(BaseView):
     endpoint = '/ip'
@@ -35,3 +36,11 @@ class IPView(BaseView):
         db = await get_db_by_session(request=request)
         ips = db.ip.get_all()
         return json_response(status=200, data=[{'value': i.get('id'), 'label': i.get('ip')} for i in ips])
+    
+    @BaseView.route('GET', '/interface_ip')
+    @project_require
+    async def get_interface_ip(self, request: PMRequest):
+        
+        iface = request.query['iface']
+        res = get_ipv4(iface)
+        return Response(body=res)

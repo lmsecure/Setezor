@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, Coroutine, Callable
+from aiohttp.typedefs import DEFAULT_JSON_DECODER, JSONDecoder
 
 from aiohttp.web import Request
 

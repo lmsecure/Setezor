@@ -7,18 +7,17 @@ import socket
 import re
 import base64
 
-from aiohttp.web import Request, Response, Application, json_response, HTTPFound
-from aiohttp_session import Session, get_session
+from aiohttp.web import Response, json_response, HTTPFound
+from aiohttp_session import get_session
 from alembic.config import Config as AlembicConfig
 from alembic.script.base import ScriptDirectory
 from alembic.command import upgrade, stamp
 
 from app_routes.api.base_web_view import BaseView
 from modules.project_manager.manager import ProjectManager
-from database.queries import Queries
-from app_routes.custom_types import Clients, MessageObserver
-from app_routes.session import notify_client, notify_clients_in_project
+from app_routes.session import notify_client
 from modules.application import PMRequest
+from tools.ip_tools import get_interfaces
 
 def zip_dir(path: str, zip_file: zipfile.ZipFile):
     for root, dirs, files in os.walk(path):
@@ -56,7 +55,7 @@ class ProjectView(BaseView):
         try:
             if re.search(r'[^\w\-\_\(\)\[\]\!\@\"\?\: ]', project_name) or len(project_name) < 2:
                 raise Exception('Project name contains invalid symbols')
-            project = project_manager.create_project(**project_data)
+            project = project_manager.create_project(project_data['project_name'])
             await self.set_project_data_to_session(request=request, project_name=project_name)
             await notify_client(request=request, queue_type='message',
                           message={'title': f'Create project "{project_name}"', 'type': 'info',
@@ -154,7 +153,10 @@ class ProjectView(BaseView):
     
     @BaseView.route('GET', '/ifaces_list')
     async def get_ifaces_list(self, request: PMRequest):
-        ifaces = [name for index, name in socket.if_nameindex()]
+        
+        """Возвращает список интерфейсов, у которых есть ipv4 адрес"""
+        
+        ifaces = [iface for iface in get_interfaces() if iface.ip_address]
         return json_response(status=200, data={'ifaces': ifaces})
 
     def migrate_db(self, db_url: str, migrate_type: str, base_path: str):

@@ -1,8 +1,7 @@
 import json
-from datetime import datetime
 from base64 import b64decode
 
-from aiohttp.web import Request, Response, json_response
+from aiohttp.web import Response, json_response
 from app_routes.session import (
     project_require,
     get_project,
@@ -25,7 +24,7 @@ from tasks.task_status import TaskStatus
 from app_routes.api.base_web_view import BaseView
 from modules.application import PMRequest
 from modules.project_manager.manager import ProjectManager
-
+from tools.ip_tools import get_ipv4, get_mac
 
 class TaskView(BaseView):
     endpoint = '/task'
@@ -34,13 +33,14 @@ class TaskView(BaseView):
     @BaseView.route('POST', '/nmap_scan')
     @project_require
     async def create_nmap_scan(self, request: PMRequest):
-        params = await request.json()
+        params: dict = await request.json()
         project = await get_project(request=request)
         db = project.db
+        iface = params.pop('iface').strip()
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         scheduler = project.schedulers.get('nmap')
         await scheduler.spawn_job(NmapScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
-                                               command=' '.join(params.values()), iface=project.configs.variables.iface,
+                                               command=' '.join(params.values()), iface=iface,
                                                db = db, nmap_logs=project.configs.folders.nmap_logs, task_id=task_id))
         return Response(status=201)
     
@@ -49,13 +49,15 @@ class TaskView(BaseView):
     async def create_nmap_log(self, request: PMRequest):
         params = await request.json()
         log_file = params.pop('log_file')
+        ip = params.pop('ip')
+        mac = params.pop('mac')
         data = b64decode(log_file.split(',')[1])
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(NmapLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
-                                              data=data, iface=project.configs.variables.iface,
+                                              data=data, scanning_ip=ip, scanning_mac=mac,
                                               db=db, nmap_logs=project.configs.folders.nmap_logs, task_id=task_id))
         return Response(status=201)
         
@@ -66,13 +68,15 @@ class TaskView(BaseView):
         scheduler = project.schedulers.get('scapy')
         if scheduler.active_count >= scheduler.limit:
             await notify_client(request=request, queue_type='message',
-                                message={'title': f'Task alredy running', 'type': 'warning',
-                                         'text': f'Scanning by scapy already running'})
+                                message={'title': 'Task alredy running', 'type': 'warning',
+                                         'text': 'Scanning by scapy already running'})
             return json_response(status=409, data={'message': 'Scanning by scapy already running'})
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params='', ret='id')
+        params = await request.json()
+        iface = params['iface']
         await scheduler.spawn_job(ScapyScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
-                                                iface=project.configs.variables.iface, task_id=task_id,
+                                                iface=iface, task_id=task_id,
                                                 db=db, log_path=project.configs.folders.scapy_logs))
         return Response(status=201)
     
@@ -101,6 +105,8 @@ class TaskView(BaseView):
     @project_require
     async def create_scapy_log(self, request: PMRequest):
         params = await request.json()
+        ip = params.pop('ip')
+        mac = params.pop('mac')
         log_file = params.pop('log_file')
         data = b64decode(log_file.split(',')[1])
         project = await get_project(request=request)
@@ -108,19 +114,22 @@ class TaskView(BaseView):
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(ScapyLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
-                                               db=db, scapy_logs=project.configs.folders.scapy_logs, data=data, iface=project.configs.variables.iface))
+                                               db=db, scapy_logs=project.configs.folders.scapy_logs, data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
     
     @BaseView.route('POST', '/masscan_scan')
     @project_require
     async def create_masscan_scan(self, request: PMRequest):
         params: dict = await request.json()
+        iface = params.pop('iface').strip()
         project = await get_project(request=request)
         db = project.db
+        ip = get_ipv4(iface)
+        mac = get_mac(iface)
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         scheduler = project.schedulers.get('masscan')
         await scheduler.spawn_job(MasscanScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
-                                               arguments=params.get('arguments', {}), iface=project.configs.variables.iface,
+                                               arguments=params.get('arguments', {}), scanning_ip=ip, scanning_mac=mac,
                                                db=db, masscan_log_path=project.configs.folders.masscan_logs, task_id=task_id))
         return Response(status=201)
     
@@ -128,6 +137,8 @@ class TaskView(BaseView):
     @project_require
     async def create_masscan_json_log(self, request: PMRequest):
         params: dict = await request.json()
+        ip = params.pop('ip')
+        mac = params.pop('mac')
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
@@ -135,13 +146,15 @@ class TaskView(BaseView):
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(MasscanJSONLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
-                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, iface=project.configs.variables.iface))
+                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 
     @BaseView.route('POST', '/masscan_xml_log')
     @project_require
     async def create_masscan_xml_log(self, request: PMRequest):
         params: dict = await request.json()
+        ip = params.pop('ip')
+        mac = params.pop('mac')
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
@@ -149,13 +162,15 @@ class TaskView(BaseView):
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(MasscanXMLLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
-                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, iface=project.configs.variables.iface))
+                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 
     @BaseView.route('POST', '/masscan_list_log')
     @project_require
     async def create_masscan_list_log(self, request: PMRequest):
         params: dict = await request.json()
+        ip = params.pop('ip')
+        mac = params.pop('mac')
         log_file: str = params.pop('log_file')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
@@ -163,7 +178,7 @@ class TaskView(BaseView):
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(MasscanListLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
-                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, iface=project.configs.variables.iface))
+                                               db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 
     @BaseView.route('GET', '/all_short')

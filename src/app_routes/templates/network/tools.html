@@ -158,6 +158,7 @@
                                     if (params.targetPorts[0] != '-') {
                                         params['targetPorts'] = '-p ' + params.targetPorts
                                     }
+                                    params['iface'] = getIface()
                                     fetch('/api/task/nmap_scan', {
                                         method: 'POST', body: JSON.stringify(params)
                                 })">Start scan</button>
@@ -174,50 +175,87 @@
                             <div class="btn-group d-flex my-2" role="group">
                                 <input class="btn btn-outline-secondary w-50" type="reset" value="Reset command">
                                 <button type="button" class="btn btn-primary w-50" id="startScanExtendedBtn" disabled onclick="
-                                    
                                     fetch('/api/task/nmap_scan', {
                                         method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(document.getElementById('nmapScanExtendedForm'), null).entries()))
                                 })">Start scan</button>
                             </div>
                         </form>
-                          
                     </div>
                 </div>
-                <button type="button" class="btn btn-primary" onclick="
-                    var input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.accept = '.xml'
-                    input.onchange = e => { 
-                        for (var file of e.target.files)
-                        {
-                            var reader = new FileReader();
-                            reader.onload = (function (file) {
-                                return async function (e) {
-                                    await fetch('/api/task/nmap_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
-                                }
-                            })(file)
-                            reader.readAsDataURL(file);            
-                        }
-                    }
-                    input.click(); ">
-                Parse xml-log</button>
+                </div>
 
-            </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" id="nmap-dropdownMenuButton2" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false", style="min-width: 310px;">
+                        Parse xml logs
+                    </button>
+                    
+                    <div id="nmap-dropdown-menu-log" class="dropdown-menu" aria-labelledby="nmap-dropdownMenuButton2">
+                    
+                        <form id="nmap-formImportLog" class="px-4 py-3" role="dialog" data-backdrop="static" data-keyboard="false">
+                            <legend>Input scanning machine params:</legend>
+                            <div class="mb-2">
+                                <input type="ip" class="form-control" id="nmap-InputLogIp" placeholder="Interface ip" required>
+                                <div class="invalid-feedback">Please, type interface ip</div>
+                            </div>
+                            <div class="mb-2">
+                                <input type="mac" class="p-2 form-control" id="nmap-InputLogMac" placeholder="Interface mac" required>
+                                <div class="invalid-feedback">Please, type interface mac</div>
+                            </div>
+                            <div class="mb-1">
+                                <button class="btn btn-success" type='button' style="min-width: 310px;" onclick="setInterfaceParams('nmap')">
+                                    Fill from current Interface
+                                </button>
+                            </div>
+                            <div class="mb-1">
+                                <button class="btn btn-primary" type="button" style="min-width: 310px;" onclick="
+                                    if (document.getElementById('nmap-formImportLog').checkValidity() == false) {
+                                        document.getElementById('nmap-formImportLog').classList.add('was-validated')
+                                        return false
+                                    } else {
+                                        var input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.multiple = true;
+                                        input.accept = '.xml'
+                                        input.onchange = e => { 
+                                            for (var file of e.target.files)
+                                            {
+                                                var reader = new FileReader();
+                                                reader.onload = (function (file) {
+                                                    return async function (e) {
+                                                        ip = document.getElementById('nmap-InputLogIp').value
+                                                        mac = document.getElementById('nmap-InputLogMac').value
+                                                        document.getElementById('nmap-InputLogIp').value = ''
+                                                        document.getElementById('nmap-InputLogMac').value = ''
+                                                        document.getElementById('nmap-dropdown-menu-log').classList = ['dropdown-menu']
+                                                        await fetch('/api/task/nmap_log', {method: 'POST', body: JSON.stringify({ip: ip, mac: mac, log_file: e.target.result, filename: file.name})});
+                                                    }
+                                                })(file)
+                                                reader.readAsDataURL(file);            
+                                            }
+                                        }
+                                        input.click()
+                                        }
+                                    ">Choose file</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
         </div>
+
         <div class="tab-pane fade" id="v-pills-scapy" role="tabpanel" aria-labelledby="v-pills-scapy-tab">
             <div class="d-flex flex-column">
                 <div class="py-2 bg-highlight">
                     <h3>Scapy sniffing</h3>
                     <div class="btn-group d-flex" role="group">
                         <button type="button" id="start_scapy" class="btn btn-primary w-50"{% if is_scapy_running > 0 %} disabled{% endif %} onclick="fetch('/api/task/scapy_scan', {
-                                method:'POST'
+                                method:'POST', body: JSON.stringify({iface: getIface()})
                             }); 
                             document.getElementById('start_scapy').disabled = true; 
                             document.getElementById('stop_scapy').disabled = false;">
                             Start</button>
                         <button type="button" id="stop_scapy" class="btn btn-primary w-50"{% if is_scapy_running == 0 %} disabled{% endif %} onclick="fetch('/api/task/scapy_scan_stop', {
-                                method: 'POST',
+                                method: 'POST'
                             }); 
                             document.getElementById('start_scapy').disabled = false; 
                             document.getElementById('stop_scapy').disabled = true;">
@@ -225,25 +263,67 @@
                     </div>
                 </div>
                 <div class="py-2 bg-highlight">
-                    <button type="button" class="btn btn-primary w-100" onclick="
-                        var input = document.createElement('input');
-                        input.type = 'file';
-                        input.multiple = true;
-                        input.accept = '.pcap'
-                        input.onchange = e => { 
-                            for (var file of e.target.files)
-                            {
-                                var reader = new FileReader();
-                                reader.onload = (function (file) {
-                                    return function (e) {
-                                        fetch('/api/task/scapy_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
-                                    }
-                                })(file)
-                                reader.readAsDataURL(file);            
-                            }
-                        }
-                        input.click();">
-                    Parse pcap log</button>
+                
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" id="pcap-dropdownMenuButton2" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false", style="min-width: 310px;">
+                            Parse pcap logs
+                        </button>
+                        
+                        <div id="pcap-dropdown-menu-log" class="dropdown-menu" aria-labelledby="pcap-dropdownMenuButton2">
+                        
+                            <form id="pcap-formImportLog" class="px-4 py-3" role="dialog" data-backdrop="static" data-keyboard="false">
+                                <legend>Input scanning machine params:</legend>
+                                <div class="mb-2">
+                                    <input type="ip" class="form-control" id="pcap-InputLogIp" placeholder="Interface ip" required>
+                                    <div class="invalid-feedback">Please, type interface ip</div>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="mac" class="p-2 form-control" id="pcap-InputLogMac" placeholder="Interface mac" required>
+                                    <div class="invalid-feedback">Please, type interface mac</div>
+                                </div>
+                                <div class="mb-1">
+                                    <button class="btn btn-success" type='button' style="min-width: 310px;" onclick="setInterfaceParams('pcap')">
+                                        Fill from current Interface
+                                    </button>
+                                </div>
+                                <div class="mb-1">
+                                    <button class="btn btn-primary" type="button" style="min-width: 310px;" onclick="
+                                        if (document.getElementById('pcap-formImportLog').checkValidity() == false) {
+                                            document.getElementById('pcap-formImportLog').classList.add('was-validated')
+                                            return false
+                                        } else {
+                                            var input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.multiple = true;
+                                            input.accept = '.pcap'
+                                            input.onchange = e => { 
+                                                for (var file of e.target.files)
+                                                {
+                                                    var reader = new FileReader();
+                                                    reader.onload = (function (file) {
+                                                        return async function (e) {
+                                                            ip = document.getElementById('pcap-InputLogIp').value
+                                                            mac = document.getElementById('pcap-InputLogMac').value
+                                                            document.getElementById('pcap-InputLogIp').value = ''
+                                                            document.getElementById('pcap-InputLogMac').value = ''
+                                                            document.getElementById('pcap-dropdown-menu-log').classList = ['dropdown-menu']
+                                                            await fetch('/api/task/scapy_log', {method: 'POST', body: JSON.stringify({ip: ip, mac: mac, log_file: e.target.result, filename: file.name})});
+                                                        }
+                                                    })(file)
+                                                    reader.readAsDataURL(file);            
+                                                }
+                                            }
+                                            input.click()
+                                            }
+                                        ">Choose file</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+
+
+
                 </div>
         </div>
         </div>
@@ -302,77 +382,109 @@
                             } else {
                                 params['ports'] = params.ports
                             }
+                            iface = getIface()
                             fetch('/api/task/masscan_scan', {
-                                method: 'POST', body: JSON.stringify({arguments: params})
+                                method: 'POST', body: JSON.stringify({arguments: params, iface: getIface()})
                         })">Start scan</button>
                     </div>
                 </form>
             </div>
-            <div class="btn-group" role="group" aria-label="Basic outlined example">
-                <button type="button" class="btn btn-outline-primary" onclick="
-                    var input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.accept = '.json'
-                    input.onchange = e => { 
-                        for (var file of e.target.files)
-                        {
-                            var reader = new FileReader();
-                            reader.onload = (function (file) {
-                                return async function (e) {
-                                    await fetch('/api/task/masscan_json_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
-                                }
-                            })(file)
-                            reader.readAsDataURL(file);            
-                        }
-                    }
-                    input.click(); ">
-                Parse JSON</button>
-                <button type="button" class="btn btn-outline-primary" onclick="
-                    var input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.accept = '.xml'
-                    input.onchange = e => { 
-                        for (var file of e.target.files)
-                        {
-                            var reader = new FileReader();
-                            reader.onload = (function (file) {
-                                return async function (e) {
-                                    await fetch('/api/task/masscan_xml_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
-                                }
-                            })(file)
-                            reader.readAsDataURL(file);            
-                        }
-                    }
-                    input.click(); ">
-                Parse XML</button>
-                <button type="button" class="btn btn-outline-primary" onclick="
-                    var input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.accept = '.list'
-                    input.onchange = e => { 
-                        for (var file of e.target.files)
-                        {
-                            var reader = new FileReader();
-                            reader.onload = (function (file) {
-                                return async function (e) {
-                                    await fetch('/api/task/masscan_list_log', {method: 'POST', body: JSON.stringify({log_file: e.target.result, filename: file.name})});
-                                }
-                            })(file)
-                            reader.readAsDataURL(file);            
-                        }
-                    }
-                    input.click(); ">
-                Parse LIST</button>
-            </div>
+            
+             
+            <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" id="masscan-dropdownMenuButton2" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false", style="min-width: 310px;">
+                    Parse masscan logs
+                </button>
+                
+                <div id="masscan-dropdown-menu-log" class="dropdown-menu" aria-labelledby="masscan-dropdownMenuButton2">
+                
+                    <form id="masscan-formImportLog" class="px-4 py-3" role="dialog" data-backdrop="static" data-keyboard="false">
+                        <legend>Input scanning machine params:</legend>
+                        <div class="mb-2">
+                            <input type="ip" class="form-control" id="masscan-InputLogIp" placeholder="Interface ip" required>
+                            <div class="invalid-feedback">Please, type interface ip</div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="mac" class="p-2 form-control" id="masscan-InputLogMac" placeholder="Interface mac" required>
+                            <div class="invalid-feedback">Please, type interface mac</div>
+                        </div>
+                        <div class="mb-1">
+                            <button class="btn btn-success" type='button' style="min-width: 310px;" onclick="setInterfaceParams('masscan')">
+                                Fill from current Interface
+                            </button>
+                        </div>
+                        <div class="mb-1">
+                            <button class="btn btn-primary" type="button" style="min-width: 310px;" onclick="
+                                if (document.getElementById('masscan-formImportLog').checkValidity() == false) {
+                                    document.getElementById('masscan-formImportLog').classList.add('was-validated')
+                                    return false
+                                } else {
+                                    var input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.multiple = true;
+                                    input.accept = '.xml,.list,.json'
+                                    input.onchange = e => { 
+                                        for (var file of e.target.files)
+                                        {
+                                            var reader = new FileReader();
+                                            reader.onload = (function (file) {
+                                                return async function (e) {
+                                                    ip = document.getElementById('masscan-InputLogIp').value
+                                                    mac = document.getElementById('masscan-InputLogMac').value
+                                                    document.getElementById('masscan-InputLogIp').value = ''
+                                                    document.getElementById('masscan-InputLogMac').value = ''
+                                                    document.getElementById('masscan-dropdown-menu-log').classList = ['dropdown-menu']
+                                                    suffix = file.name.split('.').pop()
 
+                                                    switch (suffix){
+                                                        case  'list':
+                                                            url = '/api/task/masscan_list_log'
+                                                            break
+                                                        case 'json':
+                                                            url = '/api/task/masscan_json_log'
+                                                            break
+                                                        case 'xml':
+                                                            url = '/api/task/masscan_xml_log'
+                                                            break
+                                                        default:
+                                                            console.log('Bad file suffix')
+                                                    }
+                                                    await fetch(url, {method: 'POST', body: JSON.stringify({ip: ip, mac: mac, log_file: e.target.result, filename: file.name})});
+                                                }
+                                            })(file)
+                                            reader.readAsDataURL(file);            
+                                        }
+                                    }
+                                    input.click()
+                                    }
+                                ">Choose file</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
 
 </div>
 
 <script>
+    async function getInterfaces() {
+        resp = await fetch('/api/interface/interfaces')
+        interfaces = await resp.json()
+        return interfaces
+    }
+    var interfaces = null
+    getInterfaces().then((data) => interfaces = data.interfaces)
+    function setInterfaceParams (scanner) {
+        current_iface = getIface()
+        iface = interfaces.find((i) => i.name == current_iface)
+        document.getElementById(`${scanner}-InputLogIp`).value = iface.ip_address
+        document.getElementById(`${scanner}-InputLogMac`).value = iface.mac_address
+    }
+    function getIface() {
+        return document.getElementById('current_iface').innerText.replace(/ /g, '')
+    }
+    var mask = new Inputmask('ip').mask('InputLogIp')
+    var mask = new Inputmask('mac').mask('InputLogMac')
     var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
     var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
     $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {

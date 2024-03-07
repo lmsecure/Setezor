@@ -58,15 +58,15 @@
                         <input id="new_project_name" name="project_name" type="text" class="form-control" placeholder="Project name" required>
                         <div class="invalid-feedback">Please, type project name</div>
                     </div>
-                    <div class="pb-2">
+                    {# <div class="pb-2">
                         <select class="form-select" id="iface_select" name="iface" required>
                             <option value="" selected disabled>Select network interface</option>
-                            {% for i in ifaces%}
+                            {% for i in interfaces %}
                                 <option value="{{i}}">{{i}}</option>
                             {% endfor %}
                         </select>
                         <div class="invalid-feedback">Please, choose interface</div>
-                    </div>
+                    </div> #}
                     <script>
                         var create_form = document.getElementById("formCreateProject");
                         create_form.addEventListener('keyup', function(e) {
@@ -83,8 +83,7 @@
                         return false
                     } else {
                         fetch('/api/project/', {method: 'POST', body: JSON.stringify({
-                                    project_name: document.getElementById('new_project_name').value,
-                                    iface: document.getElementById('iface_select').value
+                                    project_name: document.getElementById('new_project_name').value
                                     })
                                 }
                             )

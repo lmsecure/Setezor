@@ -4,6 +4,7 @@ from aiohttp_session import get_session
 
 from app_routes.session import project_require, get_db_by_session, get_project
 from modules.application import PMRequest
+from tools.ip_tools import get_interfaces
 
 network_routes = RouteTableDef()
 
@@ -25,5 +26,5 @@ async def network_page(request: PMRequest):
     ses = await get_session(request)
     project_name = ses.get('project_name')
     context = {'device_types': device_types, 'is_scapy_running': is_scapy_running, 'table': queries.port.model.get_headers_for_table(),
-               'current_project': project_name}
+               'current_project': project_name, 'interfaces': [i for i in get_interfaces() if i.ip_address]}
     return aiohttp_jinja2.render_template('network/base.html', request=request, context=context)

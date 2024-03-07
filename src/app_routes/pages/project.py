@@ -7,6 +7,7 @@ from aiohttp_session import get_session
 
 from modules.project_manager.manager import ProjectManager
 from modules.application import PMRequest
+from tools.ip_tools import get_interfaces
 
 project_routes = RouteTableDef()
 
@@ -30,6 +31,6 @@ async def projects_page(request: PMRequest) -> Response:
         project_manager.add_client(uuid=session.get('user_uuid'), project_name='*')
         hide_navbar = True
     projects_names = project_manager.get_exist_projects_name()
-    context = {'projects': projects_names, 'ifaces': [name for index, name in socket.if_nameindex()], 'hide_navbar': hide_navbar,
+    context = {'projects': projects_names, 'interfaces': [i.name for i in get_interfaces() if i.ip_address], 'hide_navbar': hide_navbar,
                'current_project': project_name}
     return aiohttp_jinja2.render_template('projects.html', request=request, context=context)    

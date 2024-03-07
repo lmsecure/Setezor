@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Type, TypeVar
+from logging import Logger
 
+T = TypeVar('T')
 
 class BaseStruct:
     @classmethod
@@ -8,8 +10,29 @@ class BaseStruct:
         return cls.__name__.lower()
     
     def __iter__(self):
-        for k, v in self.__dict__.items():
-            yield v
+        if hasattr(self, '__slots__'):
+            for v in self.__slots__:
+                yield v
+        else:
+            for v in self.__dict__.values():
+                yield v
+
+def unpack_from_json(structure: Type[T], json_data: dict, logger: Logger | None = None) -> T:
+    
+    """Распаковывает json, если указан логгер и в json\'не есть лишние данные, будет появляться warning"""
+    
+    name: str = structure.get_class_name()
+    data: dict = json_data[name]
+    args = {}
+    init = structure.__init__.__annotations__
+    for k, v in data.items():
+        if init.get(k):
+            args[k] = v
+        else:
+            if logger:
+                logger.warning(f'Config contains extra data for structure {name}: key - {k}, value - {v}')
+    return structure(**args)
+    
 
 @dataclass
 class Folders(BaseStruct):
@@ -27,7 +50,6 @@ class Files(BaseStruct):
 
 @dataclass
 class Variables(BaseStruct):
-    iface: str
     project_name: str
 
 

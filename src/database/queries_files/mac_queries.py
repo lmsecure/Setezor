@@ -2,9 +2,7 @@ from sqlalchemy.orm.session import Session
 from database.models import MAC
 from .base_queries import BaseQueries
 from .object_queries import ObjectQueries
-from mac_vendor_lookup import AsyncMacLookup
-from ..models import MAC
-import asyncio
+from mac_vendor_lookup import MacLookup, VendorNotFoundError, InvalidMacError
 
 
 class MACQueries(BaseQueries):
@@ -46,9 +44,8 @@ class MACQueries(BaseQueries):
             _type_: объект mac адреса
         """
         # try:
-        #     loop = asyncio.get_running_loop()
-        #     vendor = loop.run_until_complete(AsyncMacLookup().lookup(mac=mac))
-        # except:
+        #     vendor = MacLookup().lookup(mac)
+        # except (VendorNotFoundError, InvalidMacError):
         vendor = None
         if not obj:
             obj = self.object.create(session=session, **kwargs)

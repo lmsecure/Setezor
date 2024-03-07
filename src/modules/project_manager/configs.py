@@ -1,19 +1,21 @@
+from typing import Dict
 import os
 import json
+
 from .structure import (
     Files,
     Folders,
     Variables,
     FilesNames,
-    SchedulersParams
+    SchedulersParams,
+    unpack_from_json
 )
 from .exceptions import (
     FileNotExistsError,
     FileSaveError,
     ConfigLoadError
 )
-from typing import Dict
-
+from exceptions.loggers import get_logger
 
 class Configs:
     """Класс конфигураций проекта
@@ -23,6 +25,7 @@ class Configs:
     folders: Folders
     variables: Variables
     schedulers: SchedulersParams
+    logger = get_logger(__module__)
     # FixMe add schedulers
         
     def __init__(self, project_path: str, files: Files, folders: Folders,
@@ -34,7 +37,7 @@ class Configs:
         self.schedulers = schedulers_params
         
     @classmethod
-    def generate_configs(cls, project_path:str, project_name: str, iface: str):
+    def generate_configs(cls, project_path:str, project_name: str):
         """Метод генерации конфигов класса
         """
         format_path =  os.path.join(project_path, project_name, '%s')
@@ -44,7 +47,7 @@ class Configs:
                           masscan_logs=format_path % FilesNames.masscan_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file)
-        variables = Variables(iface=iface, project_name=project_name)
+        variables = Variables(project_name=project_name)
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},
             'nmap': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
@@ -79,11 +82,11 @@ class Configs:
             raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
         configs_json: Dict[str, Dict[str, str]] = json.load(open(file_path, 'r'))
         try:
-            folders = Folders(**configs_json.get(Folders.get_class_name()))
-            files = Files(**configs_json.get(Files.get_class_name()))
-            variables = Variables(**configs_json.get(Variables.get_class_name()))
+            folders = unpack_from_json(Folders, configs_json, cls.logger)
+            files = unpack_from_json(Files, configs_json, cls.logger)
+            variables = unpack_from_json(Variables, configs_json, cls.logger)
             schedulers_params = SchedulersParams.load(configs_json.get(SchedulersParams.get_class_name()))
-        except:
+        except Exception:
             raise ConfigLoadError('Error in parse config file')
         return cls(project_path=project_path, files=files, folders=folders,
                    variables=variables, schedulers_params=schedulers_params)

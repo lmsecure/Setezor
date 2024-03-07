@@ -36,16 +36,17 @@ class ProjectManager:
         else:
             raise Exception('Project does not exists')
         
-    def create_project(self, project_name: str, iface: str) -> Project:
-        project = Project.create(name=project_name, path=self.projects_path, iface=iface)
+    def create_project(self, project_name: str) -> Project:
+        project = Project.create(name=project_name, path=self.projects_path)
         self.projects.update({project_name: project})
         self.logger.debug('Create project "%s"', project_name)
         return project
     
     def delete_project(self, project_name: str) -> None:
         if project_name in self.projects.keys():
-            if _:=len(self.projects.get(project_name).clients):
-                raise Exception(f'Can not delete project because it have {_} clients')
+            # todo уведомить клиентов которые сидят в проекте
+            # if _:=len(self.projects.get(project_name).clients):
+            #     raise Exception(f'Can not delete project because it have {_} clients')
             self.projects.pop(project_name)
         Project.delete(path=self.projects_path, name=project_name)
     

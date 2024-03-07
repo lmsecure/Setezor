@@ -1,11 +1,13 @@
+import traceback
+import asyncio
+from time import time
+
 from .base_job import BaseJob, MessageObserver
 from modules.nmap.scanner import NmapScanner
 from modules.nmap.parser import NmapParser
-from tools.ip_tools import get_self_ip
+from tools.ip_tools import get_ipv4, get_mac
 from database.queries import Queries
-from time import time
-import traceback
-import asyncio
+
 
 
 class NmapScanTask(BaseJob):
@@ -25,8 +27,11 @@ class NmapScanTask(BaseJob):
             _type_: результат сканирования
         """
         loop = asyncio.get_event_loop()
-        scan_result = await NmapScanner().async_run(extra_args=' '.join(command.split(' ')), _password=None, logs_path=nmap_logs)
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), get_self_ip(iface))
+        cmd = ' '.join(command.split(' '))
+        cmd += f' -e {iface}'
+        scan_result = await NmapScanner().async_run(extra_args=cmd, _password=None, logs_path=nmap_logs)
+        addreses = {'ip': get_ipv4(iface), 'mac': get_mac(iface)}
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), addreses)
     
     def _write_result_to_db(self, db: Queries, result):
         """Метод парсинга результатов сканирования nmap-а и занесения в базу

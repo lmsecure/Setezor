@@ -12,12 +12,23 @@ import re
 from asyncio import create_subprocess_shell as async_shell
 from asyncio.subprocess import PIPE as asyncPIPE
 
+class SubrocessError(Exception):
+    
+    def __init__(self, result: str, error: str, code: int) -> None:
+        self.result = result
+        self.error = error
+        self.code = code
+        result = f'\nResult:\n{result}' if result else ''
+        error = f'\nError:\n{error}' if error else ''
+        message = f"""Subrocess task is failed with status code {code}{result}{error}"""
+        super().__init__(message)
 
 def create_shell_subprocess(command: list):
-    return Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf8')
+    return Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf8', errors='backslashreplace')
 
 async def create_async_shell_subprocess(command: list):
-    return await async_shell(' '.join(command), stdin=asyncPIPE, stdout=asyncPIPE, stderr=asyncPIPE)
+    return await async_shell(' '.join(command), stdin=asyncPIPE, stdout=asyncPIPE, 
+                             stderr=asyncPIPE)
 
 
 def check_superuser_previliges(password: str):
@@ -118,23 +129,29 @@ class ConsoleCommandExecutor:
         self.arguments.clear_empty_args()
         execution_command = self.arguments.prepare_command(self.command)
         start_time = time()
-        result, error = create_shell_subprocess(execution_command).communicate()
+        process = create_shell_subprocess(execution_command)
+        result, error = process.communicate()
+        code = process.returncode
         # ToDo add save source data
         self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
-        return result, error
+        return result, error, code
     
     async def async_execute(self, log_path: str=None, extension: str='log'):
         self.arguments.clear_empty_args()
         execution_command = self.arguments.prepare_command(self.command)
         start_time = time()
-        result, error = await (await create_async_shell_subprocess(execution_command)).communicate()
+        process = await create_async_shell_subprocess(execution_command)
+        result, error = await process.communicate()
+        result = result.decode(encoding='utf8', errors='backslashreplace')
+        error = error.decode(encoding='utf8', errors='backslashreplace')
+        code= process.returncode
         if log_path:
             await self.__class__.save_source_data(path=log_path, source_data=result, command='masscan', extension=extension)
         self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
-        return result, error
+        return result, error, code
     
     @classmethod
-    async def save_source_data(cls, path: str, source_data: str or bytes, command: str, extension: str='log') -> bool:
+    async def save_source_data(cls, path: str, source_data: str | bytes, command: str, extension: str='log') -> bool:
         """Метод сохранения сырых логов инструмента
 
         Args:
@@ -161,7 +178,7 @@ class MasscanScanner(ConsoleCommandExecutor):
     command = 'masscan'
     logger = get_logger(__package__, handlers=[])
     
-    def __init__(self, target: List[Type[str]], ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None,
+    def __init__(self, target: List[Type[str]], interface_addr: str, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None,
                  only_open: bool=None, max_rate: int=None, ttl: int=None, retries: int=None, wait: int=10, ping: bool=False, format: str='oX') -> None:
         
         self.arguments = ListConsoleArgument()
@@ -178,6 +195,7 @@ class MasscanScanner(ConsoleCommandExecutor):
                 {'argument': 'target', 'value': target, 'is_flag': False, 'only_value': True},
                 {'argument': '--ping', 'value': ping, 'is_flag': True},
                 {'argument': f'-{format}', 'value': '-'},
+                {'argument': '--adapter-ip', 'value': interface_addr}
                 ]
         for i in args:
             self.arguments.append(ConsoleArgument(**i))
@@ -190,12 +208,16 @@ class MasscanScanner(ConsoleCommandExecutor):
         for i in self.arguments.list_args:
             if i.argument in list(extentions.keys()):
                 extention = extentions[i.argument]
-        res, err = await super().async_execute(log_path, extension=extention)
+        res, err, code = await super().async_execute(log_path, extension=extention)
+        if err or code != 0:
+            raise SubrocessError(res, err, code)
         # ToDo check errors
         return res
     
     def sync_execute(self) -> str:
-        res, err = super().sync_execute()
+        res, err, code = super().sync_execute()
+        if err or code != 0:
+            raise SubrocessError(res, err, code)
         # ToDo check errors
         return res
         
