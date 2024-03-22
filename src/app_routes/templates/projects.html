@@ -6,6 +6,9 @@
 
 {% endblock %}
 {% block content %}
+<script>
+    const projectData = JSON.parse('{{projects_data|safe}}')
+</script>
 <div class="d-flex justify-content-center">
     <div class="d-flex align-items-center flex-column w-25">
     {% if projects %}
@@ -27,17 +30,22 @@
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="button" class="btn btn-success flex-fill" 
                         onclick="if (document.getElementById('projectsForm').checkValidity()!= false) 
-                        {
-                            redirect_fetch('/api/project/' + $('input:radio[name=radio_button_project]:checked').val(), 'GET')
+                        {   
+                            choosed_project = $('input:radio[name=radio_button_project]:checked').val()
+                            project = projectData.find( obj => obj.project_name === choosed_project)
+                            redirect_fetch('/api/project/' + project.project_id, 'GET')
                         } else {
                             document.getElementById('projectsForm').classList.add('was-validated')
                         }">Choose</button>
                         <button type="button" class="btn btn-success flex-fill" onclick="if (document.getElementById('projectsForm').checkValidity()!= false) 
                         {
                             create_modal('deleteProjectModal', 'Project deletion', 'Are you sure?', 'Delete',
-                                function() {fetch('/api/project/', {
+                                function() {
+                                    choosed_project = $('input:radio[name=radio_button_project]:checked').val()
+                                    project = projectData.find( obj => obj.project_name === choosed_project)
+                                    fetch('/api/project/', {
                                         method: 'delete', 
-                                        body: JSON.stringify({project_name: $('input:radio[name=radio_button_project]:checked').val()})
+                                        body: JSON.stringify({project_id: project.project_id})
                                     }).then(() => {location.reload()})
                                     .catch(function(error) {
                                         create_toast('Deletion error', `Faile to delete project with name ${$('input:radio[name=radio_button_project]:checked').val()}. Message: ${error}`, 'error')

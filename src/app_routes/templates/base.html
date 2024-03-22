@@ -31,7 +31,7 @@
 			.sidebar a {
 			padding: 8px 8px 8px 32px;
 			text-decoration: none;
-			font-size: 25px;
+			font-size: 18px;
 			color: #818181;
 			display: block;
 			transition: 0.2s;
@@ -91,6 +91,14 @@
 	
     <body>
 		<div id="mySidebar" class="sidebar">
+			<a class="nav-link" href="/projects_dashboard/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-kanban-fill"></i>
+					</div>
+					<div class="p-2 bd-highlight">Dashboard</div>
+				</div>
+			</a>
             <a class="nav-link active" href="/network/">
 				<div class="d-flex flex-row bd-highlight">
 					<div class="p-2 bd-highlight">
@@ -118,7 +126,7 @@
 								{% if hide_navbar %}{% else %}
 									<button class="openbtn" onclick="changeNav()">☰</button> 
 								{% endif %}
-								<a class="navbar-brand" href="https://lianmedia.ru/" target="_blank">
+								<a class="navbar-brand" target="_blank">
 									<img src="/static/assets/logo.png" width="120px" height="auto"/>
 								</a>
 							</li>
@@ -194,7 +202,7 @@
 
 						{% if hide_navbar %}{% else %}
 
-						<a class="btn btn-success" type="button" id="exportButton" href="javascript:window.location='/api/project/export_project?project_name={{current_project}}'">
+						<a class="btn btn-success" type="button" id="exportButton" href="javascript:window.location='/api/project/export_project?project_id={{current_project_id}}'">
 							<i class="bi bi-download" data-bs-toggle="tooltip" title="Export project"></i>
 						</a>
 

@@ -23,8 +23,8 @@ async def network_page(request: PMRequest):
     project = await get_project(request=request)
     is_scapy_running = project.schedulers.get('scapy').active_count
     device_types = [{'label': i.get('object_type').capitalize(), 'value': i.get('object_type')} for i in queries.object_types.get_all() ]
-    ses = await get_session(request)
-    project_name = ses.get('project_name')
+    project_name = project.configs.variables.project_name
+    project_id = project.configs.variables.project_id
     context = {'device_types': device_types, 'is_scapy_running': is_scapy_running, 'table': queries.port.model.get_headers_for_table(),
-               'current_project': project_name, 'interfaces': [i for i in get_interfaces() if i.ip_address]}
+               'current_project': project_name, 'current_project_id': project_id, 'interfaces': [i for i in get_interfaces() if i.ip_address]}
     return aiohttp_jinja2.render_template('network/base.html', request=request, context=context)

@@ -5,9 +5,9 @@ function create_websocket(endpoint) {
         data = JSON.parse(message.data)
         if (window.location.pathname == '/network/' && data.command != undefined) {
             get_nodes_and_edges(true)
-        } else {
-            create_toast(data.title, data.text, data.type)
-        }
+        } 
+        create_toast(data.title, data.text, data.type)
+        
     };
     sock.onerror = function (error) {console.log(error)}
     sock.onopen = function (event) {console.log('connection is open')}
@@ -19,7 +19,6 @@ var message_sock = create_websocket('/api/websocket/message')
 function redirect_fetch(url, method, body) {
     fetch(url, {method: method, redirect: 'follow', body: body == undefined ? null: body})
     .then(response => {
-        console.log(response)
         if (response.redirected) {window.location.href = response.url }
     })
     .catch(function(err) {

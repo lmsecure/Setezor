@@ -1,6 +1,7 @@
 from typing import Dict
 import os
 import json
+import uuid
 
 from .structure import (
     Files,
@@ -16,6 +17,25 @@ from .exceptions import (
     ConfigLoadError
 )
 from exceptions.loggers import get_logger
+
+class ConfigsFiller:
+    
+    def __init__(self,) -> None:
+        self.is_config_changed = False
+    
+    def __call__(self, data: dict):
+        self.is_config_changed = True
+        return str(uuid.uuid4())
+    
+    def __save(self, configs: 'Configs'):
+        configs.save_config_file()
+    
+    def save(self, configs: 'Configs'):
+        
+        '''Сохраняет конфиг, если были изменения'''
+        
+        if self.is_config_changed:
+            self.__save(configs)
 
 class Configs:
     """Класс конфигураций проекта
@@ -40,14 +60,15 @@ class Configs:
     def generate_configs(cls, project_path:str, project_name: str):
         """Метод генерации конфигов класса
         """
-        format_path =  os.path.join(project_path, project_name, '%s')
+        uid = str(uuid.uuid4())
+        format_path =  os.path.join(project_path, uid, '%s')
         folders = Folders(nmap_logs=format_path % FilesNames.nmap_logs,
                           scapy_logs=format_path % FilesNames.scapy_logs,
                           screenshots=format_path % FilesNames.screenshots,
                           masscan_logs=format_path % FilesNames.masscan_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file)
-        variables = Variables(project_name=project_name)
+        variables = Variables(project_id=uid, project_name=project_name)
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},
             'nmap': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
@@ -68,7 +89,7 @@ class Configs:
             configs = self.get_config_dict()
             json.dump(configs, open(os.path.join(self.project_path, config_file_name), 'w'),
                       default=lambda x: x.__dict__, sort_keys=True, indent='\t', ensure_ascii=False)
-        except:
+        except Exception:
             raise FileSaveError('Cannot save config file')
     
     @classmethod
@@ -81,15 +102,17 @@ class Configs:
         if not os.path.exists(file_path:=os.path.join(project_path, FilesNames.config_file)):
             raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
         configs_json: Dict[str, Dict[str, str]] = json.load(open(file_path, 'r'))
-        try:
-            folders = unpack_from_json(Folders, configs_json, cls.logger)
-            files = unpack_from_json(Files, configs_json, cls.logger)
-            variables = unpack_from_json(Variables, configs_json, cls.logger)
-            schedulers_params = SchedulersParams.load(configs_json.get(SchedulersParams.get_class_name()))
-        except Exception:
-            raise ConfigLoadError('Error in parse config file')
-        return cls(project_path=project_path, files=files, folders=folders,
+        filler = ConfigsFiller()
+        
+        folders = unpack_from_json(Folders, configs_json, cls.logger)
+        files = unpack_from_json(Files, configs_json, cls.logger)
+        variables = unpack_from_json(Variables, configs_json, cls.logger, {'project_id': filler})
+        schedulers_params = SchedulersParams.load(configs_json.get(SchedulersParams.get_class_name()))
+
+        conf =  cls(project_path=project_path, files=files, folders=folders,
                    variables=variables, schedulers_params=schedulers_params)
+        filler.save(conf)
+        return conf
         
     def get_config_dict(self) -> dict:
         """Метод получения кофигов в python-dict формате

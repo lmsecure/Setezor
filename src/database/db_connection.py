@@ -20,7 +20,7 @@ class DBConnection:
             try:
                 Base.metadata.create_all(self.engine)
             except OperationalError as e:
-                if e.args != ('(sqlite3.OperationalError) table pivot already exists',):
+                if e.args not in  [('(sqlite3.OperationalError) table pivot already exists',), ('(sqlite3.OperationalError) view pivot already exists',)]:
                     raise
                 
         Base.metadata.reflect(self.engine)

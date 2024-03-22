@@ -22,7 +22,7 @@ def project_require(func):
             request = args[1]
         args.pop(args.index(request))
         session = await get_session(request)
-        if session.get('project_name') and session.get('project_name') != '*':
+        if session.get('project_id') and session.get('project_id') != '*':
             return await func(request=request, *args, **kwargs)
         else:
             # ToDo redirect to project choosing
@@ -40,11 +40,12 @@ async def get_db_by_session(request: PMRequest) -> Queries:
         Queries: объект запросов к базе
     """    
     session = await get_session(request=request)
-    project_name = session.get('project_name')
-    db : Queries = request.app.pm.get_project(project_name).db
+    project_id = session.get('project_id')
+    project = await request.app.pm.get_project(project_id)
+    db : Queries = project.db
     return db
 
-async def get_configs_by_session(request: Request) -> dict:
+async def get_configs_by_session(request: PMRequest) -> dict:
     """Метод получения конфигов проекта на основе сессии пользователя
 
     Args:
@@ -54,13 +55,14 @@ async def get_configs_by_session(request: Request) -> dict:
         dict: словарь конфигов проекта
     """    
     session = await get_session(request=request)
-    return request.app.pm.get_project(session.get('project_name')).configs
+    project = await request.app.pm.project_storage.get_project(session.get('project_id'))
+    return project.configs
 
 async def get_project(request: PMRequest) -> Project:
     session = await get_session(request=request)
-    user_uuid = session.get('user_uuid')
-    project_name = session.get('project_name')
-    project = request.app.pm.get_project(project_name)
+    session.get('user_uuid')
+    project_id = session.get('project_id')
+    project = await request.app.pm.project_storage.get_project(project_id)
     return project
 
 async def set_websocket_to_client_queue(request: PMRequest, queue_name: str, websocket: WebSocketResponse) -> None:
@@ -73,7 +75,7 @@ async def set_websocket_to_client_queue(request: PMRequest, queue_name: str, web
 async def notify_client(request: PMRequest, message: dict, queue_type='message'):
     session = await get_session(request=request,)
     project_manager: ProjectManager = request.app.pm
-    project_manager.notify_single_client(project_name=session.get('project_name'),
+    await project_manager.notify_single_client(project_id=session.get('project_id'),
                                          client_uuid=session.get('user_uuid'),
                                          message=message,
                                          queue_type=queue_type)
@@ -81,7 +83,7 @@ async def notify_client(request: PMRequest, message: dict, queue_type='message')
 async def notify_clients_in_project(request: PMRequest, message: dict, queue_type: str):
     session = await get_session(request=request)
     project_manager: ProjectManager = request.app.pm
-    project_manager.notify_clients(project_name=session.get('project_name'),
+    await project_manager.notify_clients(project_id=session.get('project_id'),
                                          message=message,
                                          queue_type=queue_type)
     

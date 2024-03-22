@@ -39,7 +39,7 @@ async def create_app(port: int, host = ''):
     add_api_routes(app.router)
     setup_middlewares(app=app)
     # FixMe there is crutch, need more beautifull solition
-    app.pm.create_mock_project()
+    await app.pm.create_mock_project()
     aiohttp_jinja2.setup(app=app, loader=jinja2.FileSystemLoader(os.path.join(base_path, 'app_routes', 'templates')))
     app.router.add_static('/static/', path=os.path.join(base_path, 'static/'), name='static')
     app.on_startup.append(on_startup)

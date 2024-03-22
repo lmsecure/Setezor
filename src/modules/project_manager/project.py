@@ -1,5 +1,7 @@
 import os
 import shutil
+from pathlib import Path
+
 from .files import FilesStructure
 from .configs import Configs
 from app_routes.custom_types import Clients, MessageObserver, WebSocketQueue
@@ -52,25 +54,25 @@ class Project:
         return cls(name=name, path=path, configs=configs)
 
     @classmethod
-    def load(cls, name: str, path: str):
-        project_path = os.path.join(path, name)
-        configs: Configs = Configs.load_config_from_file(project_path=project_path)
+    def load(cls, path: str):
+        configs = Configs.load_config_from_file(project_path=path)
         # ToDo check project_structure
-        return cls(name=name, path=path, configs=configs)
+        return cls(name=configs.variables.project_id, path=path, configs=configs)
 
     @staticmethod
     def check_project(name: str) -> bool:
         return True, 'All Right'
+
     
-    @classmethod
-    def delete(cls, path: str, name: str):
+    def delete(self):
         """метод удаления проекта
 
         Args:
         """
-        cls.logger.debug('Start deleting project "%s"', name)  # FixMe validate project_name, maybe path traversal
-        shutil.rmtree(os.path.join(path, name))
-        cls.logger.debug('Project "%s" is deleted', name)
+        self.logger.debug('Start deleting project "%s"', self.configs.variables.project_name)
+        shutil.rmtree(self.configs.project_path)
+        self.logger.debug('Project "%s" is deleted', self.configs.variables.project_name)
+        # todo?
         # stop tasks in schedulers
         # stop all websockets, clear and delete web_queues
         # close db_connection

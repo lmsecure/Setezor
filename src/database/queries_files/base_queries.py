@@ -1,8 +1,8 @@
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, Iterable, Any
 
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
-from sqlalchemy import func, Column
+from sqlalchemy import func, Column, select, desc
 from exceptions.loggers import LoggerNames, get_logger
 from sqlalchemy.exc import OperationalError
 from abc import abstractmethod, ABC
@@ -51,7 +51,7 @@ class BaseQueries(ABC):
         return wrapped
     
     @session_provide
-    def write(self, session: Session, ret: str=None, to_update: bool=False, **kwargs) -> None or str:
+    def write(self, session: Session, ret: str=None, to_update: bool=False, **kwargs) -> None | str:
         """Ищет такой же объект в базе, если не находит - создает.
         По завершении может вернуть какое-либо поле объекта
 
@@ -121,7 +121,7 @@ class BaseQueries(ABC):
         return res
         
     @session_provide
-    def get_all(self, session: Session, result_format: str='dict', page: int=None, limit: int=None, sort_by: str=None, direction: str=None, filters: list[QueryFilter] = []) -> dict or pd.DataFrame:
+    def get_all(self, session: Session, result_format: str='dict', page: int=None, limit: int=None, sort_by: str=None, direction: str=None, filters: list[QueryFilter] = []) -> dict | pd.DataFrame:
         """Получает все записи из базы по текущей сущности
 
         Args:
@@ -304,3 +304,41 @@ class BaseQueries(ABC):
         obj = obj_query.update(to_update)  # noqa: F841
         self.logger.info('Update "%s" object with id "%s" to new data %s', self.model.__name__, ','.join([str(i.id) for i in obj_query.all()]), to_update)
         session.flush()
+    
+    @session_provide
+    def count(self, session: Session, *, except_values: dict[str, list[Any]] = {}):
+        
+        """Считает количество сток, опционально принимает словарь исключений {колонка: список исключений}"""
+        
+        stm = select([func.count()]).select_from(self.model)
+        for key, list_value in except_values.items():
+            if None in list_value:
+                stm = stm.where(getattr(self.model, key) != None)  # noqa: E711
+                list_value.remove(None)
+            stm = stm.where(getattr(self.model, key).notin_(list_value))
+        res = session.scalar(stm)
+        return res
+    
+    @session_provide
+    def get_most_frequent_values(self, *, session: Session, column: str, 
+                                 limit: int | None = None, 
+                                 except_values: list[Any] | None = None) -> list[tuple[int|Any]]:
+        
+        """Запрос на получение самых распространенных значений в колонке.add()
+        
+        Возвращает (значение, количество)
+        """
+        
+        stm = select(func.count(self.model.id).label('qty'), getattr(self.model, column))
+        if except_values:
+            if None in except_values:
+                except_values.remove(None)
+                stm = stm.where(getattr(self.model, column) != None)  # noqa: E711
+            stm = stm.where(getattr(self.model, column).notin_(except_values))
+        stm = stm.group_by(getattr(self.model, column)).order_by(desc('qty'))
+        if limit:
+            stm = stm.limit(limit)
+        from sqlalchemy.engine.result import ChunkedIteratorResult
+        res: ChunkedIteratorResult = session.execute(stm)
+        res = [i for i in res.iterator]
+        return res

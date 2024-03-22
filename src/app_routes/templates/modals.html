@@ -1,0 +1,49 @@
+{% macro create_close_modal(name, on_save='', title_text='Are you shure?', body_text=none, cancel_text='Close', save_text='Delete') %}
+<button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#close_modal_{{name}}">
+</button>
+
+<div class="modal fade" id="close_modal_{{name}}" tabindex="-1" aria-labelledby="#close_modal_label_{{name}}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="close_modal_label_{{name}}">{{title_text}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            {% if body_text %}
+                <div class="modal-body">
+                    {{body_text}}
+                </div>
+            {% endif %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel_text}}</button>
+                <button type="button" class="btn btn-primary" onclick={{on_save|safe}}>{{save_text}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro create_rename_modal(name, on_save='', title_text='Renaming', body_text=none, cancel_text='Close', save_text='Rename') %}
+{# <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#rename_modal_{{name}}">
+</button> #}
+{# Создаст модальное окно, которое будет тригириться от кнопки, у которой задан data-bs-target с форматом #rename_modal_<name> #}
+
+
+<div class="modal fade" id="rename_modal_{{name}}" tabindex="-1" aria-labelledby="#rename_modal_label_{{name}}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rename_modal_label_{{name}}">{{title_text}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input id="rename_modal_input{{name}}", title="New name">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel_text}}</button>
+                <button type="button" class="btn btn-primary" onclick={{on_save|safe}}>{{save_text}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}

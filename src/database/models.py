@@ -13,7 +13,7 @@ class BaseModel:
     """базовый класс для моделей базы данных
     """
 
-    logger = get_logger(LoggerNames.db)
+    logger = get_logger(LoggerNames.db)  # noqa: F811
             
     def to_dict(self) -> dict:
         """преобразует объект в словарь
@@ -213,6 +213,7 @@ class Pivot(Base):
         selectable=view_select,
         metadata=Base.metadata
     )
+    __tablename__ = 'pivot'
     
     @staticmethod
     def get_headers_for_table() -> list:

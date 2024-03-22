@@ -24,7 +24,7 @@ async def info_page(request: PMRequest) -> Response:
     project_name = ses.get('project_name')
     context = {'tabs': [{'name': i.model.__name__.lower(), 
                          'base_url': f'/api/{i.model.__name__.lower()}',
-                         'columns': i.model.get_headers_for_table()} for i in [db.object, db.l3link, db.ip, db.mac, db.port, db.pivot, db.task]],
+                         'columns': i.model.get_headers_for_table()} for i in [db.object, db.l3link, db.ip, db.mac, db.port, db.task]],
                 'current_project': project_name,
                 'interfaces': [i for i in get_interfaces() if i.ip_address]}
     

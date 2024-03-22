@@ -1,6 +1,15 @@
 from dataclasses import dataclass
-from typing import Dict, Type, TypeVar
+from typing import Dict, Type, TypeVar, Protocol
 from logging import Logger
+
+class MissingAction(Protocol):
+    
+    def __call__(self, json_data: dict = {}):
+        
+        """Действие для заполнения пропущенных значений, принимает все json данные из конфига"""
+        
+        pass
+        
 
 T = TypeVar('T')
 
@@ -17,20 +26,30 @@ class BaseStruct:
             for v in self.__dict__.values():
                 yield v
 
-def unpack_from_json(structure: Type[T], json_data: dict, logger: Logger | None = None) -> T:
+def unpack_from_json(structure: Type[T], json_data: dict, logger: Logger | None = None, missing_values: dict[str, MissingAction] = {}) -> T:
     
-    """Распаковывает json, если указан логгер и в json\'не есть лишние данные, будет появляться warning"""
+    """Распаковывает json, если указан логгер и в json\'не есть лишние данные, будет появляться warning,
+    Опционально принимает действия для заполнения отсутствующих конфигов
+    """
     
     name: str = structure.get_class_name()
     data: dict = json_data[name]
     args = {}
-    init = structure.__init__.__annotations__
+    init = structure.__init__.__annotations__.copy()
+    del init['return']
     for k, v in data.items():
         if init.get(k):
             args[k] = v
         else:
             if logger:
                 logger.warning(f'Config contains extra data for structure {name}: key - {k}, value - {v}')
+    missing_keys = set(init.keys()) - set(args.keys())
+    keys_with_out_action = missing_keys - set(missing_values.keys())
+    if keys_with_out_action:
+        raise RuntimeError(f'Can not parse config. Missing actions for {keys_with_out_action}')
+    for key in missing_keys:
+        args[key] = missing_values[key](json_data)
+    
     return structure(**args)
     
 
@@ -50,6 +69,7 @@ class Files(BaseStruct):
 
 @dataclass
 class Variables(BaseStruct):
+    project_id: str
     project_name: str
 
 
