@@ -20,41 +20,40 @@
 ![Info page](src/docs/scr4.png)
 
 ### Description
-**Setezor** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
-
+**Setezor** is a network traffic analyzer with the ability to automatically build network topology. 
 ### Features
-1. **Разделение на проекты**. Чтобы "не держать все яйца в одной корзинке" реализовано разделение на проекты. Определение принадлежности пользователя к проекту осуществляется через cookie. Пока у пользователя нет cookie, он не может начать работу с проектом.
-1. **Активное сканирование с использованием nmap**. Произведена интеграция с нативно установленным `nmap`. На данный момент из результатов сканирования вытягиваются:
-    - информация о хосте (IP, MAC, hostname);
-    - сведения о трассировке;
-    - сведения об порта (номер порта, состояние, сведения о ПО на порту).
-1. **Активное сканирование с использованием masscan**. Произведена интеграция с нативно установленным `masscan`.
-1. **Парсинг xml-логов сканирования nmap**. Провели сканирование на удаленной машине и хотите загрузить логи в проект? Не проблема, `Setezor` поддерживает парсинг xml-логов `nmap`
-1. **Парсинг xml/list/json-логов сканирования masscan**.
-1. **Пассивное сканирование с использованием scapy**. Scapy - мощный инструмент для работы с сетью. Приложение создает асинхронный сниффер и налету "потрошит пакеты". Сейчас можно получить информацию из следующих типо пакетов:
-
+1. **Separation into projects**. In order not to "keep all eggs in one basket" the division into projects is implemented. User's belonging to a project is determined by a cookie. Unless a user has a cookie, he/she cannot start working with a project.
+1. **Active scanning using nmap**. Integration with natively installed `nmap` has been done. Currently, from the scan results are pulled:
+    - host information (IP, MAC, hostname);
+    - trace information;
+    - port information (port number, state, software information on the port).
+1. **Active scanning using masscan**. Integration with natively installed `masscan` is performed.
+1. **Parsing nmap scan xml logs**. Performed a scan on a remote machine and want to upload the logs to your project? No problem, `Setezor` supports parsing of `nmap` xml logs
+1. **Parsing masscan** scan xml/list/json logs.
+1. **Passive scanning using scapy**. Scapy is a powerful networking tool. The application creates an asynchronous sniffer and "guts packets" on the fly. Right now, you can get information from the following packet types:
     - ARP;
     - LLNMR;
     - NBNS;
     - TCP.
 
-1. **Парсинг pcap-файлов**. Сделали сниффиинг пакетов и хотите загрузить данные в проект? Не проблема, `Setezor` поддерживает парсинг pcap-файлов.
-1. **Получение информации организовано в виде задач**. Все сканирования парсиг логов организовано в виде задач и выполняется на стороне сервера в отдельных планировщиках. Есть возможность настроить каждый планировщик индивидуально с целью контороля исходящего траффика.
-1. **Построение топологии сети**. На основе данных о сканированиях автоматический строится топология сети со следующими функциями:
-    - автоматическое перестроение карты сети при получении новых данных;
-    - интерактивная карта сети с возможностью работы в полноэкранном режиме;
-    - получение данных об открытых портах по выделенному узлу сети;
-    - возможность установить роль узла сети и установить иконку;
-    - объединение узлов сети в кластер по 24 маске. Очень удобно, когда на карте 100500 узлов;
-    - экспорт топологии сети в `SVG`, `PNG` и `JSON` (структура данных vis.js);
-    - импорт топологии сети из `JSON` (структура данных vis.js);
-1. **Уведомления**. При изменении статуса задачи всплывает уведомление, информирующее пользователя
-1. **Работа с базой через веб-интерфейс**. В веб-интерфейсе есть элемент для работы с базой, поддерживающий следующий функционал:
-    - отображение записи;
-    - создание записи;
-    - редактирование записи;
-    - удаление записи.
-1. **Использование REST API**. Для работы с серверной частью используется REST API, поэтому есть возможность написать свой интерфейс (tui, gui native, mobile) или интегрировать в свой проект.
+1. **Parsing pcap files**. You have done packet sniffing and want to load data into your project? No problem, `Setezor` supports pcap-files parsing.
+1. **Parsing is organized as tasks**. All parsing of parsing logs is organized as tasks and executed on the server side in separate schedulers. It is possible to configure each scheduler individually to control outgoing traffic.
+1. **Building network topology**. Network topology is automatically built on the basis of scan data with the following functions:
+    - automatic rebuilding of the network map when new data is received;
+    - interactive network map with the possibility of working in full-screen mode;
+    - obtaining data on open ports for a selected network node;
+    - possibility to set the role of a network node and install an icon;
+    - network nodes clustering by 24 mask. Very convenient when there are 100500 nodes on the map;
+    - export of network topology in `SVG`, `PNG` and `JSON` (vis.js data structure);
+    - importing network topology from `JSON` (vis.js data structure);
+1. **Notifications**. When the status of a task changes, a notification pops up to inform the user
+
+1. **Working with the base through the web interface**. The web interface has an element for working with the database that supports the following functionality:
+    - displaying a record;
+    - record creation
+    - record editing;
+    - deleting a record.
+1. **Use of REST API**. REST API is used to work with the server part, so it is possible to write your own interface (tui, gui native, mobile) or integrate it into your project.
 
 ### Requirements
 #### Software requirements
@@ -90,80 +89,77 @@ colorama
 openpyxl
 ```
 ### Usage
-#### From GitHub repo
-1. Клонировать репозиторий с GitHub 
+#### From github repo
+1. Clone a repository from github 
 ```bash
 git clone https://github.com/lmsecure/Setezor.git
 cd Setezor
 ```
-2. Установить необходимое ПО
+2. Install the necessary software
 ```bash
 sudo apt install nmap python3.11
 ```
-&nbsp;&nbsp;&nbsp;2.1. Рекомендуется использовать `venv`
+2.1. It is recommended that `venv` be used
 ```bash
 sudo apt install -y python3-venv
 python3 -m venv venv
 source venv/bin/activate
 ```
-3. Установить зависимые пакеты. 
+3. Install dependent packages. 
 ```bash
 pip3 install -r requirements.txt
 ```
-4. Выдать права на работу с сокетами для `nmap` и `python3.11`
+4. Grant socket permissions for `nmap` and `python3.11`
 ```bash
 sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
 ```
-5. Запустить приложение
+5. Start the application
 ```bash
 
 python3 .py
 ```
-#### From github deb-package from last release
-1. Скачать файл релиза с github 
+#### From github pyz-file from last release
+1. Download the release file from github
 ```bash
-wget https://github.com/lmsecure/Setezor/releases/download/v0.5.2b/setezor_0.5.2b_debian_packaged.deb
+wget https://github.com/lmsecure/Setezor/releases/download/v0.4a/app-v0.4a.pyz
+cd Setezor
 ```
-2. Установить
+2. Install the necessary software
 ```bash
-sudo apt install ./setezor_0.5.2b_debian_packaged.deb
-```
-3. Запустить
-```bash
-setezor
+sudo apt install nmap python3.11
 ```
 
 #### From dockerhub image
-1. Скачать Docker-образ
+1. Download docker image
 ```bash
-docker pull lmsecure/setezor
+docker pull docker pull lmsecure/setezor
 ```
-2. Создать рабочую папку. Она будет нужна для хранения логов и пользовательских данных
+2. Create a working folder. It will be used to store logs and user data
 ```bash
 mkdir ~/setezor && cd $_
 ```
-3. Запустить docker контейнер
+3. Start the docker container
 ```bash
 docker run -p 16661:16661 --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
 ```
-После запуска перейти `http://localhost:16661`
+After launching, go to `http://localhost:16661`
 
 
 ### Database schema
 ![schema](src/docs/db_schema_full.png)
 
 ### Features in new version
-1. Возможность скармливать логи других инструментов:
+1. Ability to parse logs from other instruments:
     - whatweb
     - crackmapexec
     - nikto
     - gobuster
-    - и другие
-1. Расширенный анализ nmap сканирования
-1. Увеличить количество типов анализируемых пакетов и качество парсинга пакетов
-1. Работа с доменными именами
-1. Поиск сервисов по dns записям и суб-доменам
-1. Создание скриншотов веб-приложений
-1. Проксирование запросов
+    - and others
+1. Advanced analysis of nmap scans
+1. Increase the number of analyzed packet types and the quality of packet parsing
+1. Work with domain names
+1. Search services by dns records and subdomains
+1. Creating screenshots of web applications
+1. Proxying requests
 
