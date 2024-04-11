@@ -61,7 +61,7 @@ class MasscanScanTask(BaseJob):
             t1 = time()
             arguments['interface_addr'] = scanning_ip
             result = await self._task_func(arguments=arguments, masscan_log_path=masscan_log_path)
-            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=scanning_ip)
+            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=scanning_ip, scanning_mac=scanning_mac)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, port_result=ports, link_result=links)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

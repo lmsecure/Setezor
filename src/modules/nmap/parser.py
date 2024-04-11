@@ -1,26 +1,39 @@
-from exceptions.loggers import get_logger
-
+from dataclasses import dataclass, field
+from typing import TypedDict    
+from typing_extensions import deprecated
+    
+try:
+    from exceptions.loggers import get_logger
+    from tools.xml_utils import XMLParser
+    from network_structures import IPv4Struct, IPv6Struct, PortStruct, AnyIPAddress, ServiceStruct
+except ImportError:
+    from ...exceptions.loggers import get_logger
+    from ...tools.xml_utils import XMLParser
+    from ...network_structures import IPv4Struct, IPv6Struct, PortStruct, AnyIPAddress, ServiceStruct
 
 logger = get_logger(__package__, handlers=[])
 
+class NmapRunResult(TypedDict):
 
+    addresses: list[IPv4Struct]
+    traces: list[IPv4Struct]
+
+@dataclass(slots=True)
 class NmapStructure:
     """Структура для хранения распарсенных результатов
     """
-    __slots__ = ['addresses', 'hostnames', 'traces', 'ports']
-    def __init__(self):
-        self.addresses = []
-        self.hostnames  = []
-        self.ports = []
-        self.traces = []
+    addresses: list = field(default_factory=list)
+    hostnames: list  = field(default_factory=list)
+    ports: list = field(default_factory=list)
+    traces: list = field(default_factory=list)
 
 
-class NmapParser:
+class NmapParser(XMLParser):
     """Класс парсинга сырых результаов сканирования nmap-а
     """    
 
-    @staticmethod
-    def to_list(data: dict or list) -> list:
+    @classmethod
+    def to_list(csl, data: dict | list) -> list:
         """Если на вход принимает словарь - преобразует его в лист
 
         Args:
@@ -36,8 +49,8 @@ class NmapParser:
             return []
         return [data] if not isinstance(data, list) else data
 
-    @staticmethod
-    def parse_addresses(address: list or dict) -> list:
+    @classmethod
+    def parse_addresses(cls, address: list | dict) -> list:
         """Метод парсинга раздела с адресами
 
         Args:
@@ -52,8 +65,8 @@ class NmapParser:
         else: 
             return []
 
-    @staticmethod
-    def parse_hostname(hostnames: list or dict) -> list:
+    @classmethod
+    def parse_hostname(cls, hostnames: list | dict) -> list:
         """Метод парсинга раздела с именем хоста
 
         Args:
@@ -68,8 +81,8 @@ class NmapParser:
         else:
             return [None]
 
-    @staticmethod
-    def parse_traces(trace: list or dict, self_address: dict) -> list:
+    @classmethod
+    def parse_traces(cls, trace: list | dict, self_address: IPv4Struct | None = None) -> list:
         """Метод парсинга раздела с трассировки хоста
 
         Args:
@@ -79,24 +92,38 @@ class NmapParser:
         Returns:
             list: распарсенные данные о трассировках
         """        
-        result = []
         trace = NmapParser.to_list(trace.get('hop') if trace else None)
+        addresses = [IPv4Struct.model_validate(i) for i in trace]
+        if self_address:
+            addresses.insert(0, self_address)
+        first = [i for i in addresses] + [None]
+        second = [None] + [i for i in addresses]
+        res: list[IPv4Struct] = [(f, s) for f, s in zip(first, second)]
+        return res
+    
+    
+    @classmethod
+    @deprecated('Нужно будет перейти на структуры')
+    def parse_traces(cls, trace: list | dict, self_address: dict) -> list:
+        trace = NmapParser.to_list(trace.get('hop') if trace else None)
+        result = []
         if trace:
             for index, i in enumerate(trace):
                 if index == 0:
                     result.append({'parent_ip': self_address.get('ip'), 'child_ip': i.get('ipaddr'),
                                    'parent_mac': self_address.get('mac'), 'child_mac': i.get('mac'),
                                    'parent_name': self_address.get('name'), 'child_name': i.get('host'), 'start_ip': self_address.get('ip')})
+                    pass
                 if index == len(trace) - 1:
                     continue
                 else:
                     result.append({'parent_ip': i.get('ipaddr'), 'child_ip': trace[index + 1].get('ipaddr'),
                                    'parent_mac': i.get('mac'), 'child_mac': trace[index + 1].get('mac'),
-                                   'parent_name': i.get('host'), 'child_name': trace[index + 1].get('host'), 'start_ip': self_address.get('ip')})
+                                   'parent_name': i.get('host'), 'child_name': trace[index + 1].get('host')})
         return result
 
-    @staticmethod
-    def parse_ports(ports: dict or list, address: dict) -> list:
+    @classmethod
+    def parse_ports(cls, ports: dict | list, address: dict) -> list:
         """Метод парсинга раздела с результатами сканирования портов
 
         Args:
@@ -106,7 +133,7 @@ class NmapParser:
         Returns:
             list: распарсенные данные о портах
         """        
-        result = []
+        result: list[PortStruct] = []
         ports = NmapParser.to_list(ports.get('port') if ports else None)
         if ports:
             for i in ports:
@@ -120,7 +147,23 @@ class NmapParser:
                                        'state': i.get('state').get('state'), 'protocol': i.get('protocol')})
         return result
     
-    def parse_hosts(self, scan: dict, self_address: dict) -> NmapStructure:
+    @classmethod
+    def convert_to_structures(cls, res: NmapStructure):
+        from time import time
+        # todo! Придумать что делать c ipv6
+        addresses = [IPv4Struct.model_validate(i) for i in res.addresses]
+        ports = {i['ip']:[] for i in res.ports}
+        for i in res.ports:
+            port = PortStruct.model_validate(i)
+            if 'service_name' in i:
+                service = ServiceStruct.model_validate(i)
+                port.service = service
+            ports[i['ip']].append(port)
+        for addr in addresses:
+            addr.ports = ports[str(addr.address)]
+        return NmapRunResult({'addresses': addresses, 'traces': res.traces})
+    
+    def parse_hosts(self, scan: dict, self_address: IPv4Struct | None | dict = None):
         """Метод парсинга лога nmap-а
 
         Args:
@@ -131,6 +174,8 @@ class NmapParser:
             NmapStructure: _description_
         """        
         result = NmapStructure()
+        if 'nmaprun' in scan:
+            scan = scan['nmaprun']
         hosts = self.to_list(scan.get('host'))
         if len(hosts) == 0:
             hosts = self.to_list(scan.get('hosthint'))
@@ -139,10 +184,6 @@ class NmapParser:
             address_data = self.parse_addresses(h.get('address'))
             hostname_data = self.parse_hostname(h.get('hostnames'))
             trace_data = self.parse_traces(h.get('trace'), self_address)
-            if not trace_data:
-                for i in address_data:
-                    if i.get('ip') != self_address.get('ip'):
-                        trace_data.append({'parent_ip': self_address.get('ip'), 'child_ip': i.get('ip'), 'start_ip': self_address.get('ip')})
             for index, i in enumerate(address_data):
                 i.update({'domain_name': hostname_data[index]})
             ports_data = self.parse_ports(h.get('ports'), address_data[0])
@@ -152,4 +193,5 @@ class NmapParser:
             result.traces += trace_data
         logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s traces', 
                      len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
+        # res = self.convert_to_structures(result)
         return result

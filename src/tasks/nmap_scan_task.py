@@ -8,15 +8,20 @@ from modules.nmap.parser import NmapParser
 from tools.ip_tools import get_ipv4, get_mac
 from database.queries import Queries
 
+from network_structures import AnyIPAddress, IPv4Struct, PortStruct
+from modules.nmap.parser import NmapRunResult, NmapStructure
+
 
 
 class NmapScanTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, command: str, iface: str, nmap_logs: str, db: Queries):
+    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, command: str, 
+                 iface: str, nmap_logs: str, db: Queries):
         super().__init__(observer, scheduler, name)
-        self._coro = self.run(db=db, task_id=task_id, command=command, iface=iface, nmap_logs=nmap_logs)
+        self._coro = self.run(db=db, task_id=task_id, command=command, iface=iface, nmap_logs=nmap_logs,
+                              address={'ip': get_ipv4(iface), 'mac': get_mac(iface)})
     
-    async def _task_func(self, command: str, iface: str, nmap_logs: str):
+    async def _task_func(self, command: str, iface: str, nmap_logs: str, address: AnyIPAddress | dict = {}):
         """Запускает активное сканирование с использованием nmap-а
 
         Args:
@@ -30,22 +35,56 @@ class NmapScanTask(BaseJob):
         cmd = ' '.join(command.split(' '))
         cmd += f' -e {iface}'
         scan_result = await NmapScanner().async_run(extra_args=cmd, _password=None, logs_path=nmap_logs)
-        addreses = {'ip': get_ipv4(iface), 'mac': get_mac(iface)}
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), addreses)
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), address)
     
-    def _write_result_to_db(self, db: Queries, result):
+    def _write_result_to_db(self, db: Queries, result: NmapStructure):
         """Метод парсинга результатов сканирования nmap-а и занесения в базу
 
         Args:
             db (Queries): объект запросов в базу
-            result (list): результат скаинрования nmap-а
+            result (list): результат сканирования nmap-а
             iface (str): имя сетевого интерфейса
-        """
+        # """
         db.ip.write_many(data=result.addresses)
         db.l3link.write_many(data=result.traces)
         db.port.write_many(data=result.ports)
+        # Всратый код ниже достает все ip из traces и address, чтобы в дальнейшем создать подсети
+        all_addresses = {}
+        for trace in result.traces:
+            if trace['parent_ip']:
+                ip = all_addresses.get(trace['parent_ip'])
+                if ip:
+                    ip.update({'mac': ip.get('parent_mac'), 'domain': ip.get('parent_name')})
+                else:
+                    ip = {'mac': trace['parent_mac'], 'domain': trace['parent_name']}
+                    all_addresses[trace['parent_ip']] = ip
+            if trace['child_ip']:
+                ip = all_addresses.get(trace['child_ip'])
+                if ip:
+                    ip.update({'mac': ip['child_mac'], 'domain': ip['child_name']})
+                else:
+                    ip = {'mac': trace['child_mac'], 'domain': trace['child_name']}
+                    all_addresses[trace['child_ip']] = ip
+        if result.traces:
+            ip = all_addresses.get(result.traces[0]['start_ip'])
+            if not ip:
+                all_addresses[result.traces[0]['start_ip']] = {}
         
-    async def run(self, db: Queries, task_id: int, command: str, iface: str, nmap_logs: str):
+        for addr in result.addresses:
+            ip = all_addresses.get(addr['ip'])
+            if ip:
+                ip.update({'domain': ip.get('domain')})
+            else:
+                ip = {addr['ip']: {'domain': addr.get('domain_name')}}
+        res = []
+        for key, value in all_addresses.items():
+            value.update({'ip': key})
+            res.append(value)
+        db.network.create_from_addresses(addresses=[IPv4Struct.model_validate(i) for i in res])
+        pass
+        
+    async def run(self, db: Queries, task_id: int, command: str, iface: str, nmap_logs: str, 
+                  address: AnyIPAddress | dict = {}):
         """Метод выполнения задачи
         1. Произвести операции согласно методу self._task_func
         2. Записать результаты в базу согласно методу self._write_result_to_db
@@ -58,7 +97,7 @@ class NmapScanTask(BaseJob):
         db.task.set_pending_status(index=task_id)
         try:
             t1 = time()
-            result = await self._task_func(command=command, iface=iface, nmap_logs=nmap_logs)
+            result = await self._task_func(command=command, iface=iface, nmap_logs=nmap_logs, address=address)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, result=result)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

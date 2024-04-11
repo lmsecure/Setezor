@@ -1,7 +1,6 @@
 from sqlalchemy.orm.session import Session
-from database.models import Object
+from ..models import Object, IP
 from .base_queries import BaseQueries
-from database.models import IP
 
 
 class ObjectQueries(BaseQueries):

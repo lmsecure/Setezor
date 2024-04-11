@@ -1,9 +1,7 @@
-#!/bin/bash
-
 default_package_name="setezor"
 default_source_repo="1"
 default_description="Multitool for working with network"
-default_version="1.0"
+default_version="0.5.7a"
 default_version_type='OEM'
 default_maintainer="LMSecurity"
 default_command="cd /usr/local/share/%s\nvenv/bin/python3.11 setezor_cli.py \$@"
@@ -15,7 +13,7 @@ python3.11 -m venv venv
 
 if test -d ./pip_packages/
 then
-    mv -n ./pip_packages/* ./venv/lib64/python3.11/site-packages/
+    cp -rf ./pip_packages/* ./venv/lib64/python3.11/site-packages/
     rm -r ./pip_packages/
 else
     echo '[-] No pip packeges in src folder'
@@ -28,7 +26,6 @@ sudo setcap cap_net_raw+eip \`which masscan\`
 
 venv/bin/python3.11 setezor.py --help
 "
-default_postrm="sudo rm -rf /usr/local/share/%s"
 default_arch="all"
 default_service="echo \"[Unit]\nDescription=Setezor daemon\n\n[Service]\nUser=\nWorkingDirectory=/usr/local/share/%s\nExecStart=/usr/local/share/%s/venv/bin/python3.11 /usr/local/share/%s/setezor.py\nRestart=always\nRestartSec=3\nTimeoutStopSec=5\n\n[Install]\nWantedBy=multi-user.target\" > /etc/systemd/system/setezor.service"
 package_fullname=""
@@ -63,7 +60,6 @@ usage () {
     -c   | --command_script     Command of run app. Default value \"$default_command\"       
     -dep | --depends_packages   Package depeneds. Default value \"$default_depends\"
     -pi  | --postinstallation   Post instalation command. Default value \"$default_postinst\"
-    -pr  | --postremove         Post remove commands. Default value \"$default_postrm\"
     -a   | --arch               Architectire of package. Default value \"$default_arch\"
     -h   | --help               Show help info 
 "
@@ -79,7 +75,6 @@ handle_options() {
             -c | --command_script) if has_argument $@; then command=$(extract_argument $@); else command=''; fi ;;
             -dep | --depends_packages) if has_argument $@; then depends=$(extract_argument $@); else depends=''; fi ;;
             -pi | --postinstallation) if has_argument $@; then postinst=$(extract_argument $@); else postinst=''; fi ;;
-            -pr | --postremove) if has_argument $@; then postrm=$(extract_argument $@); else postrm=''; fi ;;
             -a | --arch)  if has_argument $@; then arch=$(extract_argument $@); else arch=''; fi ;;
             -h | --help)  usage; exit 1 ;;
         esac
@@ -94,7 +89,6 @@ handle_options() {
     if [ -z $depends ]; then depends=$default_depends; fi
     if [ -z $arch ]; then arch=$default_arch; fi
     if [ -z $postinst ]; then printf -v postinst "$default_postinst" "$package_name"; fi
-    if [ -z $postrm ]; then printf -v postrm "$default_postrm" "$package_name"; fi
     printf -v package_fullname "%s_%s" "$package_name" "$version"
     echo -e "Build params
     Package name: \"$package_name\",
@@ -106,7 +100,6 @@ handle_options() {
     Depends packages: \"$depends\",
     Archecture: \"$arch\",
     Post installation: \"$postinst\",
-    Post remove: \"$postrm\"
 "
 }
 
@@ -116,7 +109,6 @@ create_local_folder_structure() {
     mkdir -p "./$package_fullname/usr/local/bin"
     touch "./$package_fullname/DEBIAN/control"
     touch "./$package_fullname/DEBIAN/postinst"
-    touch "./$package_fullname/DEBIAN/postrm"
     touch "./$package_fullname/usr/local/bin/$package_name"
     echo "[+] Create folders structure of the package"
     tree "./$package_fullname"
@@ -150,15 +142,6 @@ set -e
     echo "[+] Write content to file \"""./$package_fullname/DEBIAN/postinst""\" and give executable permissions"
 }
 
-write_postrm_file () {
-    postrm_template="#!/bin/bash\n\
-set -e\n\
-%s"
-    printf "$postrm_template" "$postrm" > "./$package_fullname/DEBIAN/postrm"
-    chmod +x "./$package_fullname/DEBIAN/postrm"
-    echo "[+] Write content to file \"""./$package_fullname/DEBIAN/postrm""\" and give executable permissions"
-}
-
 write_command_file () {
     command_template='#!/bin/sh
 %s'
@@ -168,7 +151,7 @@ write_command_file () {
 }
 
 clone_source_code () {
-    git clone --branch dev -n --depth=1 --filter=tree:0 https://github.com/lmsecure/Setezor.git "./source_code" > /dev/null 2>&1
+    git clone --branch master -n --depth=1 --filter=tree:0 https://github.com/lmsecure/Setezor "./source_code" > /dev/null 2>&1
     cd "./source_code"
     git sparse-checkout set --no-cone src > /dev/null 2>&1
     git checkout > /dev/null 2>&1
@@ -186,7 +169,6 @@ create_local_folder_structure
 write_control_file
 write_command_file
 write_postinst_file
-write_postrm_file
 clone_source_code
 echo "$version_type"
 if test "$version_type" != 'OEM'
@@ -197,3 +179,4 @@ fi
 echo '[+] Building deb...'
 dpkg-deb --build --root-owner-group "./$package_fullname" > /dev/null 2>&1
 remove_local_folder_structure
+

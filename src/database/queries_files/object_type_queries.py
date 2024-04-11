@@ -1,5 +1,5 @@
 from sqlalchemy.orm.session import Session
-from database.models import ObjectType
+from ..models import ObjectType
 from .base_queries import BaseQueries
 
 

@@ -1,8 +1,8 @@
 from pandas.core.api import DataFrame as DataFrame
 from sqlalchemy.orm.session import Session
 
-from database.models import Pivot, IP, MAC, Object, Port
-from database.queries_files.base_queries import QueryFilter
+from ..models import Pivot, IP, MAC, Object, Port
+from ..queries_files.base_queries import QueryFilter
 from .base_queries import BaseQueries
 from .object_queries import ObjectQueries
 

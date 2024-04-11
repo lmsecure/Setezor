@@ -1,5 +1,5 @@
 from sqlalchemy.orm.session import Session
-from database.models import Task, Screenshot
+from ..models import Task, Screenshot
 from .base_queries import BaseQueries
 from .task_queries import TaskQueries
 from .port_queries import PortQueries

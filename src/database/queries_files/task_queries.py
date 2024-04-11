@@ -1,7 +1,10 @@
 from operator import or_
 from sqlalchemy.orm.session import Session
-from database.models import Task
-from tasks.task_status import TaskStatus
+from ..models import Task
+try:
+    from tasks.task_status import TaskStatus
+except ImportError:
+    from ...tasks.task_status import TaskStatus
 import json
 from datetime import datetime, timedelta
 from sqlalchemy.sql import and_, or_

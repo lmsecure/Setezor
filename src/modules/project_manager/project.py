@@ -82,3 +82,7 @@ class Project:
         for queue in client_queues:
             self.observer.detach(queue)
         self.logger.debug('Clear observer from client "%s" queues in project "%s"', client_uuid, self.name)
+        
+    def __repr__(self):
+        vars = self.configs.variables
+        return f"<Project name='{vars.project_name}', id='{vars.project_id}'>"

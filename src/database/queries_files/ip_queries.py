@@ -1,8 +1,14 @@
-from sqlalchemy.orm.session import Session
-from database.models import IP
-from database.queries_files.base_queries import Mock, BaseQueries
-from database.queries_files.mac_queries import MACQueries
+from typing_extensions import deprecated
 
+from sqlalchemy.orm.session import Session
+from ..models import IP, MAC
+from ..queries_files.base_queries import Mock, BaseQueries
+from ..queries_files.mac_queries import MACQueries
+
+try:
+    from network_structures import IPv4Struct, IPv6Struct
+except ImportError:
+    from ...network_structures import IPv4Struct, IPv6Struct
 
 class IPQueries(BaseQueries):
     """Класс запросов к таблице IP адресов
@@ -21,6 +27,7 @@ class IPQueries(BaseQueries):
         self.mac = mac
         
     @BaseQueries.session_provide
+    @deprecated('Use `create_in_bd` instead')
     def create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, **kwargs):
         """Метод создания объекта IP адреса
 
@@ -41,6 +48,7 @@ class IPQueries(BaseQueries):
         return new_ip_obj
     
     @BaseQueries.session_provide
+    @deprecated('Use `fill_structure` and `create_in_bd` instead')
     def get_or_create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, to_update: bool=False, **kwargs):
         ip_obj = session.query(self.model).filter(self.model.__table__.c.get('ip') == ip).first()
         if ip_obj:
@@ -104,3 +112,12 @@ class IPQueries(BaseQueries):
     def foreign_key_order(self, field_name: str):
         if field_name == 'mac':
             return self.mac.model.mac, self.model._mac
+        
+        
+    # ! Api v2 (with pydantic)
+    
+    @BaseQueries.session_provide
+    def create_in_bd(self, session: Session, *, struct: IPv4Struct):
+        
+        for mac in struct.mac_addresses:
+            mac_obj = self.mac.create(session=session, )

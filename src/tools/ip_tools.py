@@ -18,12 +18,14 @@ class Interface:
     def to_dict(self):
         return asdict(self)
 
-def get_default_interface():
+# ipdb = IPDB() # эта хуйня при инициализации создает 2 сокета и 4 пайпа
+# Так же поиск занимает около 0.03 сек, что при постоянном использовании может влиять на производительность,
+# Поэтому интерфейс выбирается при запуске приложения
+with  IPDB() as db:
+    DEFAULT_INTERFACE = db.interfaces[db.routes['default']['oif']]['ifname']
     
-    ip = IPDB()
-    res = ip.interfaces[ip.routes['default']['oif']]
-    return res['ifname']
-
+def get_default_interface():
+    return DEFAULT_INTERFACE
 
 def get_ipv4(interface: str):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

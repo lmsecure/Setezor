@@ -1,16 +1,23 @@
-from typing import TypedDict, Literal, Iterable, Any
+from typing import TypedDict, Literal, Any, TypeVar
+from datetime import datetime
+from abc import abstractmethod, ABC
+from functools import wraps
+from typing_extensions import deprecated
 
+import pandas as pd
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from sqlalchemy import func, Column, select, desc
-from exceptions.loggers import LoggerNames, get_logger
 from sqlalchemy.exc import OperationalError
-from abc import abstractmethod, ABC
-from database.models import IP
-import pandas as pd
-from functools import wraps
-from sqlalchemy.inspection import inspect
-from datetime import datetime
+
+from ..models import IP
+try:
+    from exceptions.loggers import LoggerNames, get_logger
+except ImportError:
+    from ...exceptions.loggers import LoggerNames, get_logger
+
+T = TypeVar('T')
 
 class Mock:
     def __getattribute__(self, item):
@@ -40,7 +47,7 @@ class BaseQueries(ABC):
         """
         @wraps(func)
         def wrapped(self, *args, **kwargs):
-            if kwargs.get('session'):
+            if kwargs.get('session') or any([i for i in args if isinstance(i, Session)]):
                 res = func(self, *args, **kwargs)
             else:
                 with self.session_maker() as session:
@@ -85,6 +92,7 @@ class BaseQueries(ABC):
         session.flush()
         
     @abstractmethod
+    @deprecated('Use `create_in_bd` instead')
     def create(self, session: Session, *args, **kwargs):
         """Абстрактный метод создания объекта
 
@@ -94,6 +102,7 @@ class BaseQueries(ABC):
         pass
     
     @session_provide
+    @deprecated('Use `fill_structure` and `create_in_bd` instead')
     def get_or_create(self, session: Session, to_update: bool=False, **kwargs):
         """Получает объект из базы, если его не существует - создает
 
@@ -342,3 +351,20 @@ class BaseQueries(ABC):
         res: ChunkedIteratorResult = session.execute(stm)
         res = [i for i in res.iterator]
         return res
+    
+    
+    # ! Api v2 (with pydantic)
+    
+    @session_provide
+    def create_in_bd(self, session: Session, *, struct):
+        
+        """Создает объект структуры в бд"""
+        
+        raise NotImplementedError()
+    
+    @session_provide
+    def fill_struct(self, session: Session, struct: T, depth: int = 0) -> T:
+        
+        """Заполняет структуры из бд c указанной глубиной"""
+        
+        raise NotImplementedError()

@@ -4,7 +4,7 @@ from typing import Any, Iterable, Mapping
 
 from aiohttp.web import Application
 from aiohttp.log import web_logger
-from aiohttp.web_app import _Middleware
+from aiohttp.web_app import _Middlewares
 from aiohttp.web_urldispatcher import UrlDispatcher
 
 from ..project_manager.manager import ProjectManager
@@ -20,7 +20,7 @@ class PMApplication(Application):
     
     def __init__(self, *, project_manager: ProjectManager, port: int, base_path: str,
                  logger: Logger = web_logger, router: UrlDispatcher | None = None,
-                 middlewares: Iterable[_Middleware] = (),
+                 middlewares: Iterable[_Middlewares] = (),
                  handler_args: Mapping[str, Any] | None = None, client_max_size: int = 1024 ** 2,
                  loop: AbstractEventLoop | None = None, debug: Any = ...) -> None:
         super().__init__(logger=logger, router=router,

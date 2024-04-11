@@ -67,6 +67,11 @@ class Clients:
         for queue in client:
             queue.stop_queue()
 
+    def __repr__(self):
+        ws_count = 0
+        for i in self.clients.items():
+            ws_count += len(i)
+        return f'<Clients count={len(self.clients)}, websocket={ws_count}>'
 
 class MessageObserver:
     

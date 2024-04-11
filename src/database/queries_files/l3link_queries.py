@@ -1,6 +1,6 @@
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import or_
-from database.models import L3Link, IP
+from ..models import L3Link, IP
 from .base_queries import BaseQueries
 from .ip_queries import IPQueries
 from copy import deepcopy

@@ -1,10 +1,73 @@
+import asyncio
+from typing import Coroutine, Any
+from datetime import datetime
+from abc import abstractmethod
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from subprocess import Popen, PIPE
+from dataclasses import dataclass, field
 from aiojobs._job import Job
 from aiojobs._scheduler import Scheduler
-import asyncio
-from abc import abstractmethod
-from app_routes.custom_types import MessageObserver
-from exceptions.loggers import get_logger, LoggerNames
 
+try:
+    from app_routes.custom_types import MessageObserver
+    from exceptions.loggers import get_logger, LoggerNames
+except ImportError:
+    from ..app_routes.custom_types import MessageObserver
+    from ..exceptions.loggers import get_logger, LoggerNames
+
+@dataclass(slots=True, unsafe_hash=True, frozen=True)
+class SubprocessResult:
+    
+    command: list[str]
+    return_code: int
+    result: str
+    error: str
+    start_time: datetime
+    end_time: datetime = field(default_factory=datetime.now)
+    
+
+class SubprocessJob(Coroutine):
+    
+    
+    def __init__(self, command: list[str], loop: asyncio.BaseEventLoop = None, 
+                 executor: ThreadPoolExecutor | ProcessPoolExecutor = ThreadPoolExecutor()) -> None:
+        self.command = command
+        self.executor = executor
+        self.loop = loop
+        
+    def _run_subprocess(self):
+        
+        """Запускает суброцесс, возвращает результат, ошибку, код возврата.
+        Текст результата и ошибки, кодируется в utf8, ошибки кодировке обрабатываются 
+        c параметром `backslashreplace`
+        """
+        
+        with Popen(self.command, stdin=PIPE, stderr=PIPE, stdout=PIPE, encoding='utf8', errors='backslashreplace') as process:
+            result, error = process.communicate()
+        return result, error, process.returncode
+        
+    async def _run(self):
+        
+        """Запускает суброцесс в екзекуторе"""
+        
+        start = datetime.now()
+        if self.loop is None:
+            loop = asyncio.get_event_loop()
+            
+        result, error, code = await loop.run_in_executor(self.executor, self._run_subprocess)
+        return SubprocessResult(self.command, code, result, error, start, datetime.now())
+    
+    def __call__(self):
+        return self._run()
+    
+    def ___await__(self):
+        return self._run().__await__()
+        
+    def __del__(self):
+        self.executor.shutdown()
+        
+    def send(self, __value: Any) -> Any:
+        return super().send(__value)
 
 class BaseJob(Job):
     

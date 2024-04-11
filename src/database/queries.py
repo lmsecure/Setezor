@@ -1,6 +1,6 @@
 
-from database import queries_files as qf
-from database.db_connection import DBConnection
+from . import queries_files as qf
+from .db_connection import DBConnection
 
 
 class Queries:
@@ -8,7 +8,7 @@ class Queries:
     """
     def __init__(self, db_path: str):
         """Инициализация объекта управления запросам
-        хранит в себе запросы  в иерархичном виде
+        хранит в себе запросы  в иерархическом виде
 
         Args:
             db_path (str): путь до базы
@@ -23,3 +23,4 @@ class Queries:
         self.task = qf.TaskQueries(session_maker=self.db.create_session())
         self.screenshot = qf.ScreenshotQueries(task=self.task, port=self.port, session_maker=self.db.create_session())
         self.pivot = qf.PivotQueries(objects=self.object, session_maker=self.db.create_session())
+        self.network = qf.NetworkQueries(ip_queries=self.ip, session_maker=self.db.create_session())

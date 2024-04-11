@@ -1,10 +1,21 @@
-from asyncio.log import logger
+
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, TIMESTAMP
+from sqlalchemy import (Column,
+                        String,
+                        Integer,
+                        DateTime,
+                        ForeignKey,
+                        Text,
+                        TIMESTAMP,
+                        SMALLINT,
+                        )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy import select
-from exceptions.loggers import LoggerNames, get_logger
+try:
+    from exceptions.loggers import LoggerNames, get_logger
+except ImportError:
+    from ..exceptions.loggers import LoggerNames, get_logger
 from datetime import datetime
 
 from sqlalchemy_utils import create_view
@@ -25,11 +36,18 @@ class BaseModel:
     
     def get_column(self, column_name):
         return self.__table__.c.get(column_name)
-
+    
 
 Base = declarative_base(cls=BaseModel)
 
-class Object(Base):
+class TimeDependent():
+    
+    created_at: datetime = Column(TIMESTAMP, server_default=func.now())
+    updated_at: datetime | None = Column(TIMESTAMP, nullable=True, default=None, 
+                                         onupdate=func.now(), server_onupdate=func.now()) # может вызывать проблемы, когда у бд и приложения разное временная зона
+    
+
+class Object(Base, TimeDependent):
     """Модель для таблицы с объектами
     """
     __tablename__ = 'objects'
@@ -55,7 +73,7 @@ class ObjectType(Base):
     object_type = Column(String(50), nullable=False)
     
     
-class MAC(Base):
+class MAC(Base, TimeDependent):
     """Модель для таблицы с мак-адресами
     """
     __tablename__ = 'mac_addresses'
@@ -75,13 +93,15 @@ class MAC(Base):
                 {'field': 'vendor', 'title': 'Vendor', 'editor': 'input'},]
 
 
-class IP(Base):
+class IP(Base, TimeDependent):
     """Модель для таблицы с ip-адресами
     """
     __tablename__ = 'ip_addresses'
 
     id = Column(Integer, primary_key=True)
     mac = Column(Integer, ForeignKey('mac_addresses.id'))
+    network_id = Column(ForeignKey('networks.id'))
+    network = relationship('Network', back_populates='ip_addresses', single_parent=True)
     _mac = relationship('MAC', back_populates='_ip', lazy='subquery')
     ip = Column(String(15), nullable=False)
     domain_name = Column(String(100))
@@ -93,7 +113,9 @@ class IP(Base):
     def get_headers_for_table() -> list:
         return [{'field': 'id', 'title': 'ID'},
                 {'field': 'mac', 'title': 'MAC', 'editor': 'list', 'editor_entity': 'mac', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
-                {'field': 'ip', 'title': 'IP', 'editor': 'input', 'validator': 'required'},]
+                {'field': 'ip', 'title': 'IP', 'editor': 'input', 'validator': 'required'},
+                # {'field': 'network', 'title': 'NETWORK', 'editor': 'list', 'editor_entity': 'network', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+                ]
     
     def to_vis_node(self) -> dict:
         node = {'id': self.id, 'label': self.ip, 'group': '.'.join(self.ip.split('.')[:-1]), 'shape': 'dot', 'value': 1, }
@@ -102,7 +124,7 @@ class IP(Base):
         return node
 
 
-class L3Link(Base):
+class L3Link(Base, TimeDependent):
     """Модель для таблицы со связями на l3 уровне
     """
     __tablename__ = 'l3_link'
@@ -123,7 +145,7 @@ class L3Link(Base):
         return {'from': self._parent_ip.id, 'to': self._child_ip.id}
 
 
-class Port(Base):
+class Port(Base, TimeDependent):
     """Модель для таблицы с портами
     """
     __tablename__ = 'ports'
@@ -157,7 +179,7 @@ class Port(Base):
                 {'field': 'cpe', 'title': 'CPE', 'editor': 'input'},]
 
 
-class Task(Base):
+class Task(Base, TimeDependent):
     """Модель для таблицы с задачами
     """
     __tablename__ = 'tasks'
@@ -182,7 +204,7 @@ class Task(Base):
                 {'field': 'comment', 'title': 'Comment', 'editor': 'input'},]
     
 
-class Screenshot(Base):
+class Screenshot(Base, TimeDependent):
     """Модель для таблицы со скриншотами
     """
     __tablename__ = 'screenshots'
@@ -223,3 +245,53 @@ class Pivot(Base):
             {'field': 'port', 'title': 'PORT'},
             {'field': 'mac', 'title': 'MAC'}
             ]
+        
+class Network(Base, TimeDependent):
+    
+    __tablename__ = 'networks'
+    
+    id = Column(Integer, primary_key=True)
+    mask = Column(SMALLINT)
+    network = Column(Text, unique=True)
+    start_ip = Column(Integer, nullable=False)
+    broadcast = Column(Integer, nullable=False)
+    gateway = Column(Integer, nullable=True)
+    # _as = Column(Text)
+    type_id = Column(ForeignKey('network_types.id'))
+    type: 'NetworkType' = relationship('NetworkType', back_populates='networks', single_parent=True)
+    supper_net_id = Column(ForeignKey('networks.id'))
+    
+    # whois = Column()
+    ip_addresses: list[IP] = relationship('IP', back_populates='network', single_parent=True)
+    
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'network', 'title': 'NETWORK'},
+            {'field': 'mask', 'title': 'MASK'},
+            {'field': 'gateway', 'title': 'GATEWAY'},
+            {'field': 'start_ip', 'title': 'START IP'},
+            {'field': 'broadcast', 'title': 'BROADCAST'},
+            {'field': 'type', 'title': 'TYPE'}, # ! Узнать как сделать выгрузку по вторичным ключам
+            ]
+    
+    
+class NetworkType(Base):
+    
+    __tablename__ = 'network_types'
+    
+    id = Column(Integer, primary_key=True)
+    type = Column(Text, unique=True)
+    
+    networks: list[Network] = relationship('Network', back_populates='type', single_parent=False)
+    
+    
+    @classmethod
+    def to_create_on_start_up(csl):
+        
+        to_create = [
+            NetworkType(type='internal'),
+            NetworkType(type='external')
+        ]
+        return to_create

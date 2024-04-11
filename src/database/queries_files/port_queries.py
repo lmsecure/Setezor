@@ -1,5 +1,5 @@
 from sqlalchemy.orm.session import Session
-from database.models import Port
+from ..models import Port
 from .base_queries import BaseQueries
 from .ip_queries import  IPQueries
 import pandas as pd

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session, scoped_session
-from sqlalchemy.exc import OperationalError
-from database.models import Base, Pivot
+from sqlalchemy.exc import OperationalError, IntegrityError
+from .models import Base, NetworkType
 import logging
 
 
@@ -25,8 +25,22 @@ class DBConnection:
                 
         Base.metadata.reflect(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
-        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-
+        logger = logging.getLogger('sqlalchemy.engine')
+        logger.setLevel(logging.INFO)
+        with self.Session() as ses:
+            # for tests
+            # from network_structures import NetworkStruct
+            # from database.models import Network
+            # net = NetworkStruct(network='192.168.0.0/16')
+            # ses.add(Network(network=str(net.network), start_ip=net.start_ip, broadcast=net.broadcast, mask=net.mask))
+            # ses.commit()
+            for i in NetworkType.to_create_on_start_up():
+                try:
+                    ses.add(i)
+                    ses.commit()
+                except IntegrityError:
+                    ses.rollback()
+        
     def create_session(self):
         """метод создания сессии коннекта к базе
 

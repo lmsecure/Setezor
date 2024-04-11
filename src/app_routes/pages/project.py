@@ -38,4 +38,4 @@ async def projects_page(request: PMRequest) -> Response:
     projects_data = orjson.dumps(projects).decode()
     context = {'projects': [i['project_name'] for i in projects], 'interfaces': [i.name for i in get_interfaces() if i.ip_address], 'hide_navbar': hide_navbar,
                'current_project': project_id, 'projects_data': projects_data}
-    return aiohttp_jinja2.render_template('projects.html', request=request, context=context)    
+    return aiohttp_jinja2.render_template('projects.html', request=request, context=context)

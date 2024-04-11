@@ -209,7 +209,7 @@ class MasscanScanner(ConsoleCommandExecutor):
             if i.argument in list(extentions.keys()):
                 extention = extentions[i.argument]
         res, err, code = await super().async_execute(log_path, extension=extention)
-        if err or code != 0:
+        if code != 0:
             raise SubrocessError(res, err, code)
         # ToDo check errors
         return res

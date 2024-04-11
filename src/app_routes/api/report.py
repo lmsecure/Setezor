@@ -29,12 +29,14 @@ class ReportsView(BaseView):
         db = await get_db_by_session(request=request)
         query = request.rel_url.query
         filters: dict = json.loads(query.get('filters'))
-        rows = db.port.get_all(filters=filters)
+        rows = db.port.get_all(filters=filters, result_format=None)
+        ses = db.port.session_maker()
         file = StringIO()
         writer = csv.writer(file)
         writer.writerow(['id', 'ip', 'port'])
         for row in rows:
-            writer.writerow([row['id'], row['ip'], row['port']])
+            ses.add(row)
+            writer.writerow([row.id, row._ip.ip, row.port])
         return Response(body=file.getvalue(), headers= {
             'Content-Type': 'text/csv; charset=UTF-8',
             'CONTENT-DISPOSITION': 'attachment;filename=ip_port.csv'

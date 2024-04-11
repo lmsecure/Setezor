@@ -11,7 +11,6 @@ from exceptions.snanners_exceptions import (
 from exceptions.loggers import LoggerNames, get_logger
 from tools.shell_tools import create_shell_subprocess, create_async_shell_subprocess
 from time import time
-import os
 
 
 logger = get_logger(__package__, handlers=[])
@@ -62,7 +61,7 @@ class NmapScanner:
         logger.error('Nmap sync scan failed with error\n%s', error)
         raise Exception(error)
     
-    async def async_run(self, extra_args: str, _password: str, logs_path: str=None) -> dict:
+    async def async_run(self, extra_args: str, _password: str, logs_path: str=None):
         """Асинхронная реализация запуска nmap с заданными параметрами
 
         Args:
@@ -106,7 +105,7 @@ class NmapScanner:
             json_result = json.dumps(dict_xml).replace('@', '')
             logger.debug('Parse input xml file with size "%s"', len(input_xml if isinstance(input_xml, bytes) else input_xml.encode()))
             return json.loads(json_result)
-        except:
+        except Exception:
             logger.error('Failed parse xml file with error\n%s', traceback.format_exc())
             raise Exception('Error with parsing nmap xml-file')
 

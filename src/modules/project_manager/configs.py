@@ -87,8 +87,9 @@ class Configs:
         """
         try:
             configs = self.get_config_dict()
-            json.dump(configs, open(os.path.join(self.project_path, config_file_name), 'w'),
-                      default=lambda x: x.__dict__, sort_keys=True, indent='\t', ensure_ascii=False)
+            with open(os.path.join(self.project_path, config_file_name), 'w') as f:
+                json.dump(configs, f,
+                        default=lambda x: x.__dict__, sort_keys=True, indent='\t', ensure_ascii=False)
         except Exception:
             raise FileSaveError('Cannot save config file')
     
@@ -101,7 +102,8 @@ class Configs:
         """
         if not os.path.exists(file_path:=os.path.join(project_path, FilesNames.config_file)):
             raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
-        configs_json: Dict[str, Dict[str, str]] = json.load(open(file_path, 'r'))
+        with open(file_path, 'r') as f:
+            configs_json: Dict[str, Dict[str, str]] = json.load(f)
         filler = ConfigsFiller()
         
         folders = unpack_from_json(Folders, configs_json, cls.logger)

@@ -25,11 +25,12 @@ def check_nmap():
 def check_requirements_file(base_path: str):
     result = True
     local_modules = sorted([Package(i.key, i.version) for i in pkg_resources.working_set])
-    requirements = [Package(i.key, i.specs[0][1]) for i in pkg_resources.parse_requirements(open(os.path.join(base_path, 'requirements.txt'), 'r').read())]
+    with open(os.path.join(base_path, 'requirements.txt'), 'r') as f:
+        requirements = [Package(i.key, i.specs[0][1]) for i in pkg_resources.parse_requirements(f.read())]
     not_installed = [r for r in requirements if all([r.name != m.name for m in local_modules])]
     diff_version = [(r.name, r.version, m.version) for r in requirements for m in local_modules if r.name == m.name and r.version != m.version]
     if not_installed:
-        print(f'Find not installed requirements.\nYou must install next packages\n\t' + '\n\t'.join([f'{i.name}=={i.version}'for i in not_installed]))
+        print('Find not installed requirements.\nYou must install next packages\n\t' + '\n\t'.join([f'{i.name}=={i.version}'for i in not_installed]))
         print()
         print([i.name for i in local_modules if 'dash' in i.name])
         result = False

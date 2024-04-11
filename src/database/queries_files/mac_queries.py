@@ -1,8 +1,15 @@
+from typing_extensions import deprecated
+
 from sqlalchemy.orm.session import Session
-from database.models import MAC
+from ..models import MAC
 from .base_queries import BaseQueries
 from .object_queries import ObjectQueries
 from mac_vendor_lookup import MacLookup, VendorNotFoundError, InvalidMacError
+
+try:
+    from network_structures import MacStruct
+except ImportError:
+    from ...network_structures import MacStruct
 
 
 class MACQueries(BaseQueries):
@@ -33,6 +40,7 @@ class MACQueries(BaseQueries):
         return mac._obj
         
     @BaseQueries.session_provide
+    @deprecated('Use `create_in_bd` instead')
     def create(self, session: Session, mac: str, obj=None, **kwargs):
         """Метод создания объекта mac адреса
 
@@ -49,6 +57,8 @@ class MACQueries(BaseQueries):
         vendor = None
         if not obj:
             obj = self.object.create(session=session, **kwargs)
+        if mac == '':
+            mac = None
         new_mac_obj = self.model(mac=mac, vendor=vendor, _obj=obj)
         session.add(new_mac_obj)
         session.flush()
@@ -78,3 +88,11 @@ class MACQueries(BaseQueries):
     def foreign_key_order(self, field_name: str):
         if field_name == 'object':
             return self.object.model.object_type, self.model._obj
+        
+        
+    # ! Api v2 (with pydantic)
+    
+    @BaseQueries.session_provide
+    def create_in_bd(self, session: Session, *, struct: MacStruct):
+        
+        session.query(MAC).where()
