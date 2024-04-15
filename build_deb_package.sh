@@ -1,7 +1,7 @@
 default_package_name="setezor"
 default_source_repo="1"
 default_description="Multitool for working with network"
-default_version="0.5.7a"
+default_version="0.57b"
 default_version_type='OEM'
 default_maintainer="LMSecurity"
 default_command="cd /usr/local/share/%s\nvenv/bin/python3.11 setezor_cli.py \$@"
@@ -125,6 +125,8 @@ Depends: %s
 Version: %s
 Architecture: %s
 Maintainer: %s
+License: https://github.com/lmsecure/Setezor/blob/master/LICENSE
+Homepage: https://setezor.ru/
 Description: %s
 Build-Depends: debhelper (>= 9)
 '
@@ -151,7 +153,7 @@ write_command_file () {
 }
 
 clone_source_code () {
-    git clone --branch master -n --depth=1 --filter=tree:0 https://github.com/lmsecure/Setezor "./source_code" > /dev/null 2>&1
+    git clone --branch dev -n --depth=1 --filter=tree:0 git@git.lm:netmapper/network_topology.git "./source_code" > /dev/null 2>&1
     cd "./source_code"
     git sparse-checkout set --no-cone src > /dev/null 2>&1
     git checkout > /dev/null 2>&1
@@ -179,4 +181,3 @@ fi
 echo '[+] Building deb...'
 dpkg-deb --build --root-owner-group "./$package_fullname" > /dev/null 2>&1
 remove_local_folder_structure
-
