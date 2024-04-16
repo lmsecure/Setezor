@@ -1,0 +1,44 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/requirements.txt
+    - name: Test run
+      run: |
+        python3 src/setezor_cli.py & setezor_pid=$?
+        echo "Pid is $setezor_pid"
+        sleep 5
+        
+        curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:16661/projects/
+        status_code=$?
+        if [[ $status_code="200" ]];
+        then
+            echo good;
+        else
+            echo 'Bad status code, status code is $status_code'
+            exit 1
+        fi
