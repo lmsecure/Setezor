@@ -22,3 +22,5 @@ colorama
 openpyxl
 pyroute2
 orjson
+typing_extensions
+pydantic-extra-types
