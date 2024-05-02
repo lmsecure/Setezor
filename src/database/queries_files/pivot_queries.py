@@ -1,10 +1,10 @@
 from pandas.core.api import DataFrame as DataFrame
 from sqlalchemy.orm.session import Session
+from sqlalchemy import Column, select, func
 
-from ..models import Pivot, IP, MAC, Object, Port
+from ..models import IP, MAC, Object, Port
 from ..queries_files.base_queries import QueryFilter
 from .base_queries import BaseQueries
-from .object_queries import ObjectQueries
 
 def get_str(value):
     
@@ -15,13 +15,34 @@ def get_str(value):
     else:
         return ''
 
+PIVOT_COLUMNS = [
+    Column(name='id'),
+    Column(name='ip'),
+    Column(name='port'),
+    Column(name='mac')
+]
+
+class PivotModel:
+    
+    __name__ = 'pivot'
+    
+    
+    def get_headers_for_table(self):
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ip', 'title': 'IP'},
+            {'field': 'port', 'title': 'PORT'},
+            {'field': 'mac', 'title': 'MAC'}
+            ]
+
+
 class PivotQueries(BaseQueries):
     """Класс запросов к таблице MAC адресов
-    """    
+    """ 
     
-    model = Pivot
-    
-    def __init__(self, objects: ObjectQueries, session_maker: Session):
+    model = PivotModel() 
+
+    def __init__(self, session_maker: Session):
         """Инициализация объекта запросов
 
         Args:
@@ -29,7 +50,6 @@ class PivotQueries(BaseQueries):
             session_maker (Session): генератор сессий
         """        
         super().__init__(session_maker)
-        self.object = objects
     
     @BaseQueries.session_provide
     def get_info_about_node(self, session: Session, ip_id: int):
@@ -66,8 +86,42 @@ class PivotQueries(BaseQueries):
         
     @BaseQueries.session_provide
     def create(self, session: Session, mac: str, obj=None, **kwargs):
-        raise NotImplementedError()   
+        raise NotImplementedError()
+    
+    @BaseQueries.session_provide
+    def get_records_count(self, session: Session):
+        return session.query(func.count(IP.ip)).scalar()
+        
 
     def get_headers(self) -> list:
-        return  Pivot.get_headers_for_table()
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ip', 'title': 'IP'},
+            {'field': 'port', 'title': 'PORT'},
+            {'field': 'mac', 'title': 'MAC'}
+            ]
     
+    @BaseQueries.session_provide
+    def get_all(self, session: Session, result_format: str = None, 
+                page: int = None, limit: int = None, sort_by: str = None, 
+                direction: str = None, filters: list[QueryFilter] = ...) -> list[dict] | DataFrame:
+        
+        query = session.query(
+            func.row_number().over().label('id'),
+            IP.ip,
+            Port.port,
+            MAC.mac
+                          ).join(
+                              MAC, MAC.id == IP.mac, isouter=True
+                              ).join(
+                                  Port, Port.ip == IP.id, isouter=True
+                              )
+        res = self._get_all(session=session, source_query=query, 
+                              columns=PIVOT_COLUMNS,
+                              result_format=result_format, page=page,
+                              limit=limit, sort_by=sort_by, direction=direction,
+                              filters=filters, model=self.model)
+        res = [
+            {'id': i[0], 'ip': i[1], 'port': i[2], 'mac': i[3]} for i in res
+        ]
+        return res

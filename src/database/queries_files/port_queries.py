@@ -57,7 +57,7 @@ class PortQueries(BaseQueries):
     @BaseQueries.session_provide
     def get_or_create(self, session: Session, ip: str, port: int, protocol: str=None, mac: str=None, service_name: str=None, product: str=None,
                       extra_info: str=None, version: str=None, os_type: str=None, cpe: str=None, state: str=None, to_update: bool=False, **kwargs):
-        ip_obj = self.ip.get_or_create(session=session, ip=ip, mac=mac)
+        ip_obj = self.ip.get_or_create(session=session, ip=ip, mac=mac, **kwargs)
         port_query = session.query(self.model).filter(self.model.__table__.c.get('ip') == ip_obj.id, self.model.__table__.c.get('port') == port)
         if self.check_exists(session=session, query=port_query):
             if to_update:

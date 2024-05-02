@@ -3,6 +3,9 @@ import os
 import json
 import uuid
 
+import orjson
+from pydantic import BaseModel
+
 from .structure import (
     Files,
     Folders,
@@ -16,18 +19,27 @@ from .exceptions import (
     FileSaveError,
     ConfigLoadError
 )
+from tools.ip_tools import get_interfaces, get_default_interface
 from exceptions.loggers import get_logger
+from network_structures import AgentStruct
 
 class ConfigsFiller:
     
-    def __init__(self,) -> None:
+    def __init__(self, function) -> None:
+        """
+        Заполнитель не достающих значений, принимает callable объект,
+        который на вход принимает исходный словарь
+
+        :param function: функция с 1 аргументом
+        """
         self.is_config_changed = False
+        self.function = function
     
     def __call__(self, data: dict):
         self.is_config_changed = True
-        return str(uuid.uuid4())
+        return self.function(data)
     
-    def __save(self, configs: 'Configs'):
+    def _save(self, configs: 'Configs'):
         configs.save_config_file()
     
     def save(self, configs: 'Configs'):
@@ -35,7 +47,7 @@ class ConfigsFiller:
         '''Сохраняет конфиг, если были изменения'''
         
         if self.is_config_changed:
-            self.__save(configs)
+            self._save(configs)
 
 class Configs:
     """Класс конфигураций проекта
@@ -68,7 +80,7 @@ class Configs:
                           masscan_logs=format_path % FilesNames.masscan_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file)
-        variables = Variables(project_id=uid, project_name=project_name)
+        variables = Variables(project_id=uid, project_name=project_name, default_agent=AgentStruct(name='Default agent'))
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},
             'nmap': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
@@ -87,11 +99,19 @@ class Configs:
         """
         try:
             configs = self.get_config_dict()
-            with open(os.path.join(self.project_path, config_file_name), 'w') as f:
-                json.dump(configs, f,
-                        default=lambda x: x.__dict__, sort_keys=True, indent='\t', ensure_ascii=False)
+            with open(os.path.join(self.project_path, config_file_name), 'wb') as f:
+                data = orjson.dumps(configs,
+                        default=lambda x: x.model_dump() if isinstance(x, BaseModel) else x.__dict__, option=orjson.OPT_INDENT_2)
+                f.write(data)
         except Exception:
             raise FileSaveError('Cannot save config file')
+    
+    @classmethod
+    def fill_interface(cls, data: dict):
+        ifaces = get_interfaces()
+        default = get_default_interface()
+        default = next((i for i in ifaces if i.name == default))
+        return default
     
     @classmethod
     def load_config_from_file(cls, project_path):
@@ -104,16 +124,24 @@ class Configs:
             raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
         with open(file_path, 'r') as f:
             configs_json: Dict[str, Dict[str, str]] = json.load(f)
-        filler = ConfigsFiller()
+        uid_filler = ConfigsFiller(lambda x: str(uuid.uuid4()))
+        agent_filler = ConfigsFiller(lambda x: AgentStruct(name='Default agent'))
+        interface_filler = ConfigsFiller(cls.fill_interface)
         
         folders = unpack_from_json(Folders, configs_json, cls.logger)
         files = unpack_from_json(Files, configs_json, cls.logger)
-        variables = unpack_from_json(Variables, configs_json, cls.logger, {'project_id': filler})
+        variables = unpack_from_json(Variables, configs_json, cls.logger, 
+                                     {'project_id': uid_filler, 
+                                      'default_agent': agent_filler,
+                                      'default_interface': interface_filler})
         schedulers_params = SchedulersParams.load(configs_json.get(SchedulersParams.get_class_name()))
 
         conf =  cls(project_path=project_path, files=files, folders=folders,
                    variables=variables, schedulers_params=schedulers_params)
-        filler.save(conf)
+        if any((uid_filler.is_config_changed, 
+                agent_filler.is_config_changed, 
+                interface_filler.is_config_changed)):
+            uid_filler._save(conf)
         return conf
         
     def get_config_dict(self) -> dict:

@@ -37,9 +37,11 @@ class TaskView(BaseView):
         project = await get_project(request=request)
         db = project.db
         iface = params.pop('iface').strip()
+        agent_id = params.pop('agent_id')
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         scheduler = project.schedulers.get('nmap')
-        await scheduler.spawn_job(NmapScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
+        await scheduler.spawn_job(NmapScanTask(agent_id=agent_id, observer=project.observer, 
+                                               scheduler=scheduler, name=f'Task {task_id}',
                                                command=' '.join(params.values()), iface=iface,
                                                db = db, nmap_logs=project.configs.folders.nmap_logs, task_id=task_id))
         return Response(status=201)
@@ -51,13 +53,14 @@ class TaskView(BaseView):
         log_file = params.pop('log_file')
         ip = params.pop('ip')
         mac = params.pop('mac')
+        agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1])
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         await scheduler.spawn_job(NmapLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
-                                              data=data, scanning_ip=ip, scanning_mac=mac,
+                                              data=data, scanning_ip=ip, scanning_mac=mac, agent_id=agent_id,
                                               db=db, nmap_logs=project.configs.folders.nmap_logs, task_id=task_id))
         return Response(status=201)
         
@@ -75,7 +78,9 @@ class TaskView(BaseView):
         task_id = db.task.write(status=TaskStatus.in_queue, params='', ret='id')
         params = await request.json()
         iface = params['iface']
-        await scheduler.spawn_job(ScapyScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
+        agent_id = params.pop('agent_id')
+        await scheduler.spawn_job(ScapyScanTask(agent_id=agent_id, observer=project.observer, 
+                                                scheduler=scheduler, name=f'Task {task_id}',
                                                 iface=iface, task_id=task_id,
                                                 db=db, log_path=project.configs.folders.scapy_logs))
         return Response(status=201)
@@ -108,12 +113,13 @@ class TaskView(BaseView):
         ip = params.pop('ip')
         mac = params.pop('mac')
         log_file = params.pop('log_file')
+        agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1])
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        await scheduler.spawn_job(ScapyLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
+        await scheduler.spawn_job(ScapyLogTask(agent_id=agent_id, observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
                                                db=db, scapy_logs=project.configs.folders.scapy_logs, data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
     
@@ -126,9 +132,10 @@ class TaskView(BaseView):
         db = project.db
         ip = get_ipv4(iface)
         mac = get_mac(iface)
+        agent_id = params.pop('agent_id')
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         scheduler = project.schedulers.get('masscan')
-        await scheduler.spawn_job(MasscanScanTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
+        await scheduler.spawn_job(MasscanScanTask(agent_id=agent_id, observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                                arguments=params.get('arguments', {}), scanning_ip=ip, scanning_mac=mac,
                                                db=db, masscan_log_path=project.configs.folders.masscan_logs, task_id=task_id))
         return Response(status=201)
@@ -140,12 +147,13 @@ class TaskView(BaseView):
         ip = params.pop('ip')
         mac = params.pop('mac')
         log_file: str = params.pop('log_file')
+        agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        await scheduler.spawn_job(MasscanJSONLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
+        await scheduler.spawn_job(MasscanJSONLogTask(agent_id=agent_id, observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
                                                db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 
@@ -156,12 +164,13 @@ class TaskView(BaseView):
         ip = params.pop('ip')
         mac = params.pop('mac')
         log_file: str = params.pop('log_file')
+        agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        await scheduler.spawn_job(MasscanXMLLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
+        await scheduler.spawn_job(MasscanXMLLogTask(agent_id=agent_id, observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
                                                db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 
@@ -172,12 +181,13 @@ class TaskView(BaseView):
         ip = params.pop('ip')
         mac = params.pop('mac')
         log_file: str = params.pop('log_file')
+        agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        await scheduler.spawn_job(MasscanListLogTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
+        await scheduler.spawn_job(MasscanListLogTask(agent_id=agent_id, observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', task_id=task_id,
                                                db=db, masscan_log_path=project.configs.folders.masscan_logs, input_data=data, scanning_ip=ip, scanning_mac=mac))
         return Response(status=201)
 

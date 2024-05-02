@@ -7,12 +7,15 @@ import traceback
 import asyncio
 from tools.ip_tools import get_ipv4
 
+from network_structures import IPv4Struct, RouteStruct
+
 
 class ScapyLogTask(ScapyScanTask):
     
-    def __init__(self, observer: MessageObserver, scheduler: CustomScheduler, name: str, db: Queries, data: str, scapy_logs: str, scanning_ip: str, scanning_mac: str, task_id: int):
-        super(ScapyScanTask, self).__init__(observer=observer, scheduler=scheduler, name=name, update_graph=False)
+    def __init__(self, agent_id: int, observer: MessageObserver, scheduler: CustomScheduler, name: str, db: Queries, data: str, scapy_logs: str, scanning_ip: str, scanning_mac: str, task_id: int):
+        super(ScapyScanTask, self).__init__(agent_id=agent_id, observer=observer, scheduler=scheduler, name=name, update_graph=False)
         self.db = db
+        self.task_id = task_id
         self.scanning_ip = scanning_ip
         self.scanning_mac = scanning_mac
         self._coro = self.run(data=data, scanning_ip=scanning_ip, scanning_mac=scanning_mac, scapy_logs=scapy_logs, task_id=task_id)
@@ -27,7 +30,11 @@ class ScapyLogTask(ScapyScanTask):
     async def run(self, data: str, scanning_ip: str, scanning_mac: str, scapy_logs: str, task_id: int):
         try:
             parsed_pkt_list = await self.parse_pkt_list(data=data, scapy_logs=scapy_logs)
-            self.db.l3link.write_many(data=[{'start_ip': scanning_ip, **pkt} for pkt in parsed_pkt_list], to_update=False)
+            for pkt in parsed_pkt_list:
+                host = IPv4Struct(address=pkt['child_ip'])
+                target = IPv4Struct(address=pkt['parent_ip'])
+                route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
+                self.db.route.create(route=route, task_id=self.task_id)
             self.logger.debug('Parse pcap file and extract information from %s packets', len(parsed_pkt_list))
             self.db.task.set_finished_status(index=task_id)
         except Exception as e:

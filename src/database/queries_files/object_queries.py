@@ -10,7 +10,8 @@ class ObjectQueries(BaseQueries):
     model = Object
     
     @BaseQueries.session_provide
-    def create(self, session: Session, obj_type: str = None, os: str = None, status: str = None, **kwargs):
+    def create(self, session: Session, obj_type: str = None, os: str = None, 
+               status: str = None, **kwargs):
         """Метод создания объекта
 
         Args:

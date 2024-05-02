@@ -10,6 +10,7 @@ from .schedulers import Schedulers
 from database.db_connection import DBConnection
 from database.queries import Queries
 
+from network_structures import AgentStruct
 
 class Project:
     

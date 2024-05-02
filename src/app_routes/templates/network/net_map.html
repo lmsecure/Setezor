@@ -124,14 +124,35 @@
             network_topology.style.cssText = "background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;"
         }
     }
-    function get_nodes_and_edges (update=false) {
-        var nodes = ajax_request('/api/ip/vis', 'get', async=true).nodes;
-        var edges = ajax_request('/api/l3link/vis', 'get', async=true).edges;
+    async function get_nodes_and_edges (update=false) {
+        var nodes = ajax_request('/api/route/vis_nodes', 'get', async=true);
+        var edges = ajax_request('/api/route/vis_edges', 'get', async=true);
+        try {
+            await waitForAgentData()
+            nodes.forEach((node) =>{    
+                caclculateNodeColor(node)
+            })
+        }
+        catch {
+            console.log('Can not fill color')
+        }
+
+        nodes.forEach((node => {
+            if (node.agent) {
+                node.icon = new AgentIcon(color=caclculateColor(node))
+                node.shape = 'icon'
+            }
+        }))
         {% for col in table %}{% if col.editor_entity%}
         foriegnData{{col.field}} = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %}{% endfor %}
         if (update == true) {
-            nodes.forEach(elem => networkData.nodes.update(elem))
-            edges.forEach(elem => networkData.edges.update(elem))
+            nodes.forEach(elem => {
+                networkData.nodes.update(elem)
+                }
+            )
+            edges.forEach(elem => {
+                networkData.edges.update(elem)
+            })
         }
         else {
             networkData.nodes.clear()
@@ -373,7 +394,7 @@
         return modal
     };
 
-    redrawAll("network_topology", true);
+    redrawAll("network_topology", true)
     function redrawAll(elem_name, to_update_data) {
         var network_topology = document.getElementById("network_topology")
         var container = document.getElementById(elem_name);
@@ -402,7 +423,8 @@
                     springLength: 100,
                 },
           },
-          manipulation: {
+          /* !Редактирование карты, нужно изменить! */
+          /* manipulation: {
             addNode: function (data, callback) {
               // filling in the popup DOM elements
               modal = createCreateNodeModal(false)
@@ -434,8 +456,8 @@
                   "Edit Edge";
                 saveEdgeData(data, callback);
               }
-            },
-          },
+            }, 
+          },*/
         };
         
         if (to_update_data == true) {
@@ -456,7 +478,20 @@
     network.on ("click", function (params) {
         if (params.nodes.length == 1) {
             createNodeInformation(params.nodes[0])
+            node = networkData.nodes.get(params.nodes[0])
+            if (node.agent) {
+                agent = agentData.agents.find((a) => a.id == node.agent)
+                drowAgentNodes(agent)
+            }
         }
+        else {
+                nodes = networkData.nodes
+                nodes.forEach((node) =>{
+                    color = caclculateColor(node)
+                    colorizeNode(node, color)
+                    networkData.nodes.update(node)
+                })
+            }
     });
     function cluster_by_netmask() {
         if (cluster != true) {
@@ -721,5 +756,92 @@
         }
         
     }
+
+const DEFAULT_COLOR = '#2B7CE9'
+
+function caclculateColor(node) {
+    agents = []
+    if (node.agent) {
+        if (!node.agents.includes(node.agent)) {
+            node.agents.push(node.agent)
+        }
+    }
+
+    node.agents.forEach((agent_id) => {
+        agent = agentData.agents.find((i) => i.id == agent_id)
+        if (agent) {
+            agents.push(agent)
+        }
+    })
+
+    if (agents){
+        r = 0
+        g = 0
+        b = 0
+        agents.forEach((agent) => {
+            r += agent.red
+            g += agent.green
+            b += agent.blue
+        })
+        color = rgbToHex(parseInt(r / agents.length), parseInt(g / agents.length), parseInt(b / agents.length))
+        return color
+    }
+    else {
+        return DEFAULT_COLOR
+    }
+}
+
+function caclculateNodeColor(node) {
+    node.color = caclculateColor(node)
+}
+
+/* Окрашивает ноду*/
+function colorizeNode(node, color) {
+    if (node.icon) {
+        node.icon.color = color
+    }
+    else {
+        node.color = color
+    }
+    networkData.nodes.update(node)
+}
+
+const GRAY_COLOR = '#888888'
+
+/* Функция, которая бежит по нодам и окрашивает их в цвет агента, иначе делает серыми */
+function drowAgentNodes(agent) {
+    agent_color = rgbToHex(agent.red, agent.green, agent.blue)
+    networkData.nodes.forEach((node) => {
+        if (node.agents.includes(agent.id) | node.agent == agent.id) {
+            colorizeNode(node, agent_color)
+        }
+        else {
+            colorizeNode(node, GRAY_COLOR)
+        }
+    })
+}
+
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForAgentData() {
+    while (typeof agentData == "undefined") {
+        await sleep(100)
+    }
+}
+
+class AgentIcon{
+
+    constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF591') {
+        this.color = color
+        this.shape = 'icon'
+        this.size = size
+        this.face = face
+        this.code = code
+    }
+}
+
 </script>
 {% endmacro %}

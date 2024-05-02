@@ -1,4 +1,3 @@
-from typing_extensions import deprecated
 
 from sqlalchemy.orm.session import Session
 from ..models import MAC
@@ -40,7 +39,6 @@ class MACQueries(BaseQueries):
         return mac._obj
         
     @BaseQueries.session_provide
-    @deprecated('Use `create_in_bd` instead')
     def create(self, session: Session, mac: str, obj=None, **kwargs):
         """Метод создания объекта mac адреса
 

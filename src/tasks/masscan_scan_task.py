@@ -7,10 +7,14 @@ import traceback
 import asyncio
 from typing import Dict, Type, List, Tuple
 
+from network_structures import IPv4Struct, RouteStruct
+
 class MasscanScanTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, arguments: dict, scanning_ip: str, scanning_mac: str, masscan_log_path: str, db: Queries):
-        super().__init__(observer, scheduler, name)
+    def __init__(self, agent_id: int, observer: MessageObserver, scheduler, name: str, task_id: int, arguments: dict, scanning_ip: str, scanning_mac: str, masscan_log_path: str, db: Queries):
+        super().__init__(agent_id, observer, scheduler, name)
+        self.agent_id = agent_id
+        self.task_id = task_id
         self._coro = self.run(db=db, task_id=task_id, arguments=arguments, scanning_ip=scanning_ip, scanning_mac=scanning_mac, masscan_log_path=masscan_log_path)
     
     async def _task_func(self, arguments: dict, masscan_log_path: str) -> str:
@@ -43,8 +47,14 @@ class MasscanScanTask(BaseJob):
             db (Queries): объект запросов в базу
             iface (str): имя сетевого интерфейса
         """
-        db.port.write_many(data=[i.to_dict() for i in port_result])
-        db.l3link.write_many(data=[i.to_dict() for i in link_result])
+        port_result = [i.to_dict() for i in port_result]
+
+        db.port.write_many(data=port_result)
+        for link in link_result:
+            host = IPv4Struct(address=link.parent_ip)
+            target = IPv4Struct(address=link.child_ip)
+            route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
+            db.route.create(route=route, task_id=self.task_id)
         
     async def run(self, db: Queries, task_id: int, arguments: dict, scanning_ip: str, scanning_mac: str, masscan_log_path: str):
         """Метод выполнения задачи
@@ -57,11 +67,14 @@ class MasscanScanTask(BaseJob):
             task_id (int): идентификатор задачи
         """
         db.task.set_pending_status(index=task_id)
+        ses = db.db.create_session()
+        agent = db.agent.get_by_id(session=ses, id=self.agent_id)
+        address = agent.ip
         try:
             t1 = time()
             arguments['interface_addr'] = scanning_ip
             result = await self._task_func(arguments=arguments, masscan_log_path=masscan_log_path)
-            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=scanning_ip, scanning_mac=scanning_mac)
+            ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=address.ip, scanning_mac=address._mac.mac)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, port_result=ports, link_result=links)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

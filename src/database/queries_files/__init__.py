@@ -1,5 +1,4 @@
 from .ip_queries import IPQueries
-from .l3link_queries import L3LinkQueries
 from .mac_queries import MACQueries
 from .object_queries import ObjectQueries
 from .port_queries import PortQueries
@@ -8,3 +7,6 @@ from .task_queries import TaskQueries
 from .object_type_queries import ObjectTypeQueries
 from .pivot_queries import PivotQueries
 from .network_queries import NetworkQueries
+from .agent_queries import AgentQueries
+from .route_lists_queries import RouteListQueries
+from .route_queries import RouteQueries

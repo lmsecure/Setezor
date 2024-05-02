@@ -33,7 +33,7 @@ class Sniffer:
         try:
             self.sniffer.start()
             logger.info('Start sniffer "%s" on interface "%s"', self.__class__.__name__, self.iface)
-        except:
+        except Exception:
             raise Exception('Error with starting sniffer by interface %s' % self.iface)
 
     def stop_sniffing(self) -> None:
@@ -45,7 +45,7 @@ class Sniffer:
         try:
             self.sniffer.stop()
             logger.info('Stop sniffer "%s"', self.__class__.__name__)
-        except:
+        except Exception:
             raise Exception('Error in stoping sniffer. Maybe sniffer not started?')
 
     def print_func(self, pkt: Packet):
@@ -96,7 +96,7 @@ class Sniffer:
         """
         try:
             return rdpcap(path)
-        except:
+        except Exception:
             raise Exception('Error with parsing pcal-file. Invalid file format')
 
     def save_sniffing_as_pcap(self, path: str, pkt_list: PacketList, append: bool=True):

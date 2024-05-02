@@ -2,16 +2,14 @@ from typing import TypedDict, Literal, Any, TypeVar
 from datetime import datetime
 from abc import abstractmethod, ABC
 from functools import wraps
-from typing_extensions import deprecated
 
 import pandas as pd
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from sqlalchemy import func, Column, select, desc
-from sqlalchemy.exc import OperationalError
 
-from ..models import IP
+from ..models import IP, BaseModel
 try:
     from exceptions.loggers import LoggerNames, get_logger
 except ImportError:
@@ -86,13 +84,12 @@ class BaseQueries(ABC):
             session (Session): сессия коннекта к базе
             data (list): массив данных
         """
-        objects = [self.get_or_create(session=session, to_update=to_update, **item) for item in data]
+        objects = (self.get_or_create(session=session, to_update=to_update, **item) for item in data)
         objects = [i for i in objects if i]
         self.logger.info('Add %s "%s"', len(objects), self.model.__name__)
         session.flush()
         
     @abstractmethod
-    @deprecated('Use `create_in_bd` instead')
     def create(self, session: Session, *args, **kwargs):
         """Абстрактный метод создания объекта
 
@@ -102,7 +99,11 @@ class BaseQueries(ABC):
         pass
     
     @session_provide
-    @deprecated('Use `fill_structure` and `create_in_bd` instead')
+    def get_by_id(self, *, session: Session, id: int):
+        obj = session.query(self.model).where(self.model.id == id).first()
+        return obj
+    
+    @session_provide
     def get_or_create(self, session: Session, to_update: bool=False, **kwargs):
         """Получает объект из базы, если его не существует - создает
 
@@ -128,22 +129,11 @@ class BaseQueries(ABC):
         if not (log_not_exists and res):
             self.logger.debug('"%s" object not found', self.__class__.__name__)
         return res
-        
-    @session_provide
-    def get_all(self, session: Session, result_format: str='dict', page: int=None, limit: int=None, sort_by: str=None, direction: str=None, filters: list[QueryFilter] = []) -> dict | pd.DataFrame:
-        """Получает все записи из базы по текущей сущности
-
-        Args:
-            session (Session): сессия коннекта к базе
-            result_format (str, optional): формат возвращаемых данных dict или pandas. по умолчанию dict
-
-        Returns:
-            dict or pd.DataFrame: _description_
-        """
-        model = self.model
-        source_query = session.query(model)
-        
-        columns: list[Column] = model.__table__._columns._all_columns
+    
+    
+    def _get_all(self, session: Session, source_query, columns: list[Column], result_format: str='dict', page: int=None, 
+                limit: int=None, sort_by: str=None, direction: str=None, 
+                filters: list[QueryFilter] = [], model: BaseModel | None = None) -> list[dict] | pd.DataFrame:
         for query_filter in filters:
             query_type = query_filter.get('type')
             query_field = query_filter.get('field')
@@ -152,7 +142,7 @@ class BaseQueries(ABC):
             column = (i for i in columns if i.name == query_field)
             column = next(column, None)
             if column is None:
-                raise ValueError(f'No such column with name `{query_field}` in table {model.__table__.name}')
+                raise ValueError(f'No such column with name `{query_field}` in table {model.__name__ if model else source_query}')
             if all((query_type, query_field, query_value)):
                 match query_type:
                     case '=':
@@ -188,14 +178,39 @@ class BaseQueries(ABC):
         if page:
             source_query = source_query.offset(limit * (page - 1))
         source_query = source_query.all()
-        self.logger.debug('Get %s "%s"', len(source_query), self.model.__name__)
-        res_list = [i.to_dict() for i in source_query]
+        self.logger.debug('Get %s "%s"', len(source_query),  {model.__name__ if model else source_query})
         if result_format == 'dict':
+            res_list = [i.to_dict() for i in source_query]
             return res_list
         elif result_format == 'pandas':
+            res_list = [i.to_dict() for i in source_query]
             return pd.DataFrame(res_list)
         else:
             return source_query
+        
+        
+    @session_provide
+    def get_all(self, session: Session, result_format: Literal['dict', 'pandas', None] = 'dict', page: int=None, 
+                limit: int=None, sort_by: str=None, direction: str=None, 
+                filters: list[QueryFilter] = []) -> list[dict] | pd.DataFrame:
+        """Получает все записи из базы по текущей сущности
+
+        Args:
+            session (Session): сессия коннекта к базе
+            result_format (str, optional): формат возвращаемых данных dict или pandas. по умолчанию dict
+
+        Returns:
+            dict or pd.DataFrame: _description_
+        """
+        model = self.model
+        source_query = session.query(model)
+        
+        columns =model.__table__._columns._all_columns
+        return self._get_all(session=session, source_query=source_query, 
+                              columns=columns, result_format=result_format,
+                              page=page, limit=limit, sort_by=sort_by,
+                              direction=direction, filters=filters, 
+                              model=self.model)
         
     def foreign_key_order(self, field_name: str):
         pass
@@ -253,7 +268,7 @@ class BaseQueries(ABC):
         return obj
     
     @session_provide
-    def update_by_id(self, session: Session, id: int, to_update: dict, merge_mode='merge'):
+    def update_by_id(self, session: Session, *, id: int, to_update: dict, merge_mode='merge'):
         id = int(id)
         to_update = {k: v for k,v in to_update.items() if v}
         obj_query = session.query(self.model).filter(self.model.get_column(self.model, 'id') == id)
@@ -355,16 +370,16 @@ class BaseQueries(ABC):
     
     # ! Api v2 (with pydantic)
     
-    @session_provide
-    def create_in_bd(self, session: Session, *, struct):
+    # @session_provide
+    # def create_in_bd(self, session: Session, *, struct):
         
-        """Создает объект структуры в бд"""
+    #     """Создает объект структуры в бд"""
         
-        raise NotImplementedError()
+    #     raise NotImplementedError()
     
-    @session_provide
-    def fill_struct(self, session: Session, struct: T, depth: int = 0) -> T:
+    # @session_provide
+    # def fill_struct(self, session: Session, struct: T, depth: int = 0) -> T:
         
-        """Заполняет структуры из бд c указанной глубиной"""
+    #     """Заполняет структуры из бд c указанной глубиной"""
         
-        raise NotImplementedError()
+    #     raise NotImplementedError()

@@ -9,15 +9,13 @@ import base64
 
 from aiohttp.web import Response, json_response, HTTPFound
 from aiohttp_session import get_session
-from alembic.config import Config as AlembicConfig
-from alembic.script.base import ScriptDirectory
-from alembic.command import upgrade, stamp
 
 from app_routes.api.base_web_view import BaseView
 from modules.project_manager.manager import ProjectManager
-from app_routes.session import notify_client, project_require
+from app_routes.session import notify_client, project_require, get_db_by_session
 from modules.application import PMRequest
-from tools.ip_tools import get_interfaces
+from tools.ip_tools import get_interfaces, get_default_interface
+from network_structures import IPv4Struct
 
 def zip_dir(foldername: str, file: io.BytesIO, includeEmptyDIr=True):   
     empty_dirs = []  
@@ -68,7 +66,16 @@ class ProjectView(BaseView):
             await notify_client(request=request, queue_type='message',
                           message={'title': f'Create project "{project_name}"', 'type': 'info',
                                    'text': f'Successful create project "{project_name}"'})
-            self.migrate_db(str(project.db.db.engine.url), 'stamp', request.app.base_path)
+            project_manager.migrate_db(str(project.db.db.engine.url), 'stamp', request.app.base_path)
+            db = await get_db_by_session(request)
+            ifaces = get_interfaces()
+            default_system_iface = next((i for i in ifaces if i.name == get_default_interface()), None)
+            project.configs.variables.default_agent.ip = default_system_iface.ip_address
+            db_agent = db.agent.create(agent=project.configs.variables.default_agent)
+            project.configs.variables.default_interface = default_system_iface.model_dump()
+            project.configs.variables.default_agent.id = db_agent.id
+            project.configs.variables.default_agent = project.configs.variables.default_agent.model_dump()
+            project.configs.save_config_file()
         except Exception as e:
             await notify_client(request=request, queue_type='message',
                           message={'title': 'Project creation error', 'type': 'error',
@@ -155,8 +162,8 @@ class ProjectView(BaseView):
         project_manager: ProjectManager = request.app.pm
         project = await project_manager.project_storage.get_project(project_id)
         await self.set_project_data_to_session(request=request, project_id=project_id)
-        if project_id != '*':  # fixme костыль
-            self.migrate_db(str(project.db.db.engine.url), 'upgrade', request.app.base_path)
+        if project_id != '*':  #! fixme костыль
+            project_manager.migrate_db(str(project.db.db.engine.url), 'upgrade', request.app.base_path)
         await notify_client(request=request, queue_type='message',
                       message={'title': f'Set project "{project_id}"', 'type': 'info',
                                'text': f'At now you work in project "{project_id}"'})
@@ -170,15 +177,6 @@ class ProjectView(BaseView):
         ifaces = [iface for iface in get_interfaces() if iface.ip_address]
         return json_response(status=200, data={'ifaces': ifaces})
 
-    def migrate_db(self, db_url: str, migrate_type: str, base_path: str):
-        alembic_config = AlembicConfig()
-        alembic_config.set_main_option('script_location', os.path.join(base_path, 'migration'))
-        alembic_config.set_main_option('sqlalchemy.url', db_url)
-        last_revision = ScriptDirectory.from_config(alembic_config).get_current_head()
-        if migrate_type == 'upgrade':
-            upgrade(alembic_config, last_revision)
-        elif migrate_type == 'stamp':
-            stamp(alembic_config, last_revision)
         
     async def set_project_data_to_session(self, request: PMRequest, project_id: str) -> str:
         """Устанавливает в сессию конфиги проекта и создает в aiohttp сервере подключение к базе
@@ -190,6 +188,7 @@ class ProjectView(BaseView):
         session = await get_session(request)
         project_manager: ProjectManager = request.app.pm
         if not session.get('user_uuid'):
+            user_uuid = str(uuid4())
             session['user_uuid'] = str(uuid4())
         else:
             user_uuid = session.get('user_uuid')

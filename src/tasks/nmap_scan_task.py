@@ -15,11 +15,13 @@ from modules.nmap.parser import NmapRunResult, NmapStructure
 
 class NmapScanTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, command: str, 
+    def __init__(self, agent_id: int, observer: MessageObserver, scheduler, 
+                 name: str, task_id: int, command: str, 
                  iface: str, nmap_logs: str, db: Queries):
-        super().__init__(observer, scheduler, name)
-        self._coro = self.run(db=db, task_id=task_id, command=command, iface=iface, nmap_logs=nmap_logs,
-                              address={'ip': get_ipv4(iface), 'mac': get_mac(iface)})
+        super().__init__(agent_id, observer, scheduler, name)
+        self.agent_id = agent_id
+        self.task_id = task_id
+        self._coro = self.run(db=db, task_id=task_id, command=command, iface=iface, nmap_logs=nmap_logs)
     
     async def _task_func(self, command: str, iface: str, nmap_logs: str, address: AnyIPAddress | dict = {}):
         """Запускает активное сканирование с использованием nmap-а
@@ -35,7 +37,7 @@ class NmapScanTask(BaseJob):
         cmd = ' '.join(command.split(' '))
         cmd += f' -e {iface}'
         scan_result = await NmapScanner().async_run(extra_args=cmd, _password=None, logs_path=nmap_logs)
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), address)
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), self.agent_id, address)
     
     def _write_result_to_db(self, db: Queries, result: NmapStructure):
         """Метод парсинга результатов сканирования nmap-а и занесения в базу
@@ -45,46 +47,46 @@ class NmapScanTask(BaseJob):
             result (list): результат сканирования nmap-а
             iface (str): имя сетевого интерфейса
         # """
+
         db.ip.write_many(data=result.addresses)
-        db.l3link.write_many(data=result.traces)
         db.port.write_many(data=result.ports)
+        for rt in result.traces:
+            db.route.create(route=rt, task_id=self.task_id)
         # Всратый код ниже достает все ip из traces и address, чтобы в дальнейшем создать подсети
-        all_addresses = {}
-        for trace in result.traces:
-            if trace['parent_ip']:
-                ip = all_addresses.get(trace['parent_ip'])
-                if ip:
-                    ip.update({'mac': ip.get('parent_mac'), 'domain': ip.get('parent_name')})
-                else:
-                    ip = {'mac': trace['parent_mac'], 'domain': trace['parent_name']}
-                    all_addresses[trace['parent_ip']] = ip
-            if trace['child_ip']:
-                ip = all_addresses.get(trace['child_ip'])
-                if ip:
-                    ip.update({'mac': ip['child_mac'], 'domain': ip['child_name']})
-                else:
-                    ip = {'mac': trace['child_mac'], 'domain': trace['child_name']}
-                    all_addresses[trace['child_ip']] = ip
-        if result.traces:
-            ip = all_addresses.get(result.traces[0]['start_ip'])
-            if not ip:
-                all_addresses[result.traces[0]['start_ip']] = {}
+        # all_addresses = {}
+        # for trace in result.traces:
+        #     if trace['parent_ip']:
+        #         ip = all_addresses.get(trace['parent_ip'])
+        #         if ip:
+        #             ip.update({'mac': ip.get('parent_mac'), 'domain': ip.get('parent_name')})
+        #         else:
+        #             ip = {'mac': trace['parent_mac'], 'domain': trace['parent_name']}
+        #             all_addresses[trace['parent_ip']] = ip
+        #     if trace['child_ip']:
+        #         ip = all_addresses.get(trace['child_ip'])
+        #         if ip:
+        #             ip.update({'mac': ip['child_mac'], 'domain': ip['child_name']})
+        #         else:
+        #             ip = {'mac': trace['child_mac'], 'domain': trace['child_name']}
+        #             all_addresses[trace['child_ip']] = ip
+        # if result.traces:
+        #     ip = all_addresses.get(result.traces[0]['start_ip'])
+        #     if not ip:
+        #         all_addresses[result.traces[0]['start_ip']] = {}
         
-        for addr in result.addresses:
-            ip = all_addresses.get(addr['ip'])
-            if ip:
-                ip.update({'domain': ip.get('domain')})
-            else:
-                ip = {addr['ip']: {'domain': addr.get('domain_name')}}
-        res = []
-        for key, value in all_addresses.items():
-            value.update({'ip': key})
-            res.append(value)
-        db.network.create_from_addresses(addresses=[IPv4Struct.model_validate(i) for i in res])
-        pass
+        # for addr in result.addresses:
+        #     ip = all_addresses.get(addr['ip'])
+        #     if ip:
+        #         ip.update({'domain': ip.get('domain')})
+        #     else:
+        #         ip = {addr['ip']: {'domain': addr.get('domain_name')}}
+        # res = []
+        # for key, value in all_addresses.items():
+        #     value.update({'ip': key})
+        #     res.append(value)
+        # db.network.create_from_addresses(addresses=[IPv4Struct.model_validate(i) for i in res])
         
-    async def run(self, db: Queries, task_id: int, command: str, iface: str, nmap_logs: str, 
-                  address: AnyIPAddress | dict = {}):
+    async def run(self, db: Queries, task_id: int, command: str, iface: str, nmap_logs: str):
         """Метод выполнения задачи
         1. Произвести операции согласно методу self._task_func
         2. Записать результаты в базу согласно методу self._write_result_to_db
@@ -95,6 +97,10 @@ class NmapScanTask(BaseJob):
             task_id (int): идентификатор задачи
         """
         db.task.set_pending_status(index=task_id)
+        ses = db.db.create_session()
+        agent = db.agent.get_by_id(session=ses, id=self.agent_id)
+        address = agent.ip
+        address = {'ip': address.ip, 'mac': address._mac.mac}
         try:
             t1 = time()
             result = await self._task_func(command=command, iface=iface, nmap_logs=nmap_logs, address=address)

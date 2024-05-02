@@ -5,11 +5,11 @@ from typing_extensions import deprecated
 try:
     from exceptions.loggers import get_logger
     from tools.xml_utils import XMLParser
-    from network_structures import IPv4Struct, IPv6Struct, PortStruct, AnyIPAddress, ServiceStruct
+    from network_structures import IPv4Struct, PortStruct, ServiceStruct, RouteStruct
 except ImportError:
     from ...exceptions.loggers import get_logger
     from ...tools.xml_utils import XMLParser
-    from ...network_structures import IPv4Struct, IPv6Struct, PortStruct, AnyIPAddress, ServiceStruct
+    from ...network_structures import IPv4Struct, PortStruct, ServiceStruct, RouteStruct
 
 logger = get_logger(__package__, handlers=[])
 
@@ -25,7 +25,7 @@ class NmapStructure:
     addresses: list = field(default_factory=list)
     hostnames: list  = field(default_factory=list)
     ports: list = field(default_factory=list)
-    traces: list = field(default_factory=list)
+    traces: list[RouteStruct] = field(default_factory=list)
 
 
 class NmapParser(XMLParser):
@@ -82,7 +82,8 @@ class NmapParser(XMLParser):
             return [None]
 
     @classmethod
-    def parse_traces(cls, trace: list | dict, self_address: IPv4Struct | None = None) -> list:
+    def parse_traces(cls, trace: list | dict, agent_id: int, 
+                     self_address: IPv4Struct, host: IPv4Struct) -> list:
         """Метод парсинга раздела с трассировки хоста
 
         Args:
@@ -94,17 +95,17 @@ class NmapParser(XMLParser):
         """        
         trace = NmapParser.to_list(trace.get('hop') if trace else None)
         addresses = [IPv4Struct.model_validate(i) for i in trace]
-        if self_address:
+        if not addresses:
+            addresses = [self_address, host]
+        else:
             addresses.insert(0, self_address)
-        first = [i for i in addresses] + [None]
-        second = [None] + [i for i in addresses]
-        res: list[IPv4Struct] = [(f, s) for f, s in zip(first, second)]
-        return res
+        route = RouteStruct(agent_id=agent_id, routes=addresses)
+        return route
     
     
     @classmethod
     @deprecated('Нужно будет перейти на структуры')
-    def parse_traces(cls, trace: list | dict, self_address: dict) -> list:
+    def _parse_traces(cls, trace: list | dict, self_address: dict) -> list:
         trace = NmapParser.to_list(trace.get('hop') if trace else None)
         result = []
         if trace:
@@ -163,7 +164,7 @@ class NmapParser(XMLParser):
             addr.ports = ports[str(addr.address)]
         return NmapRunResult({'addresses': addresses, 'traces': res.traces})
     
-    def parse_hosts(self, scan: dict, self_address: IPv4Struct | None | dict = None):
+    def parse_hosts(self, scan: dict, agent_id: int, self_address: IPv4Struct | None | dict = None):
         """Метод парсинга лога nmap-а
 
         Args:
@@ -183,14 +184,14 @@ class NmapParser(XMLParser):
         for h in hosts:
             address_data = self.parse_addresses(h.get('address'))
             hostname_data = self.parse_hostname(h.get('hostnames'))
-            trace_data = self.parse_traces(h.get('trace'), self_address)
+            trace_data = self.parse_traces(h.get('trace'), agent_id, self_address, IPv4Struct.model_validate(address_data[0]))
             for index, i in enumerate(address_data):
                 i.update({'domain_name': hostname_data[index]})
             ports_data = self.parse_ports(h.get('ports'), address_data[0])
             result.addresses += address_data
             result.hostnames += hostname_data
             result.ports += ports_data
-            result.traces += trace_data
+            result.traces.append(trace_data)
         logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s traces', 
                      len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
         # res = self.convert_to_structures(result)

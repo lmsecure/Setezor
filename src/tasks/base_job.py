@@ -71,8 +71,9 @@ class SubprocessJob(Coroutine):
 
 class BaseJob(Job):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, update_graph: bool = True):
+    def __init__(self, agent_id: int, observer: MessageObserver, scheduler, name: str, update_graph: bool = True):
         super().__init__(None, scheduler)  # FixMe add custom exception handler
+        self.agent_id = agent_id
         self.observer = observer
         self.name = name
         self.logger = get_logger(logger_name=LoggerNames.task)

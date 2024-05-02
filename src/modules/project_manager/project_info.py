@@ -9,7 +9,6 @@ class ProjectInfo:
     object_count: int
     ip_count: int
     mac_count: int
-    l3_link_count: int
     port_count: int
     
     top_object_type: list['FrequentValue'] = field(default_factory=list)

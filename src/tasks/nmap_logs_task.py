@@ -11,11 +11,15 @@ import asyncio
 
 class NmapLogTask(NmapScanTask):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, data: str, scanning_ip: str, scanning_mac: str, nmap_logs: str, db: Queries):
-        super(NmapScanTask, self).__init__(observer, scheduler, name, update_graph=False)
+    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, 
+                 data: str, scanning_ip: str, scanning_mac: str, nmap_logs: str, agent_id: int, db: Queries):
+        super(NmapScanTask, self).__init__(agent_id, observer, scheduler, name, update_graph=False)
+        self.agent_id = agent_id
+        self.task_id = task_id
         self._coro = self.run(data=data, task_id=task_id, scanning_ip=scanning_ip, scanning_mac=scanning_mac, nmap_logs=nmap_logs, db=db)
 
-    async def _task_func(self, data: str, scanning_ip: str, scanning_mac: str, nmap_logs: str):
+    async def _task_func(self, data: str, scanning_ip: str, 
+                         scanning_mac: str, nmap_logs: str, agent_id: int):
         """Метод задачи для парсинга xml-логов nmap-а
 
         Args:
@@ -28,7 +32,7 @@ class NmapLogTask(NmapScanTask):
         await loop.run_in_executor(None, NmapScanner.save_source_data, nmap_logs, data, 'parse_xml_log')
         log_result = await loop.run_in_executor(None, NmapScanner().parse_xml, data)
         address_data = {'ip': scanning_ip, 'mac': scanning_mac}
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, log_result.get('nmaprun'), address_data)
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, log_result.get('nmaprun'), agent_id, address_data)
     
     async def run(self, db: Queries, task_id: int, data: str, scanning_ip: str, scanning_mac: str, nmap_logs: str):
         """Метод выполнения задачи
@@ -41,9 +45,12 @@ class NmapLogTask(NmapScanTask):
             task_id (int): идентификатор задачи
         """
         db.task.set_pending_status(index=task_id)
+        ses = db.db.create_session()
+        agent = db.agent.get_by_id(session=ses, id=self.agent_id)
+        address = agent.ip
         try:
             t1 = time()
-            result = await self._task_func(data=data, scanning_ip=scanning_ip, scanning_mac=scanning_mac, nmap_logs=nmap_logs)
+            result = await self._task_func(data=data, scanning_ip=address.ip, scanning_mac=address._mac.mac, nmap_logs=nmap_logs, agent_id=self.agent_id)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, result=result)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

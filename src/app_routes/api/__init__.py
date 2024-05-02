@@ -1,3 +1,5 @@
+from .base_web_view import BaseView
+
 from .ip import IPView
 from .l3link import L3LinkView
 from .mac import MACView
@@ -11,6 +13,9 @@ from .report import ReportsView
 from .websocket import WebSocketView
 from .interface import InterfaceView
 from .network import NetworkView
+from .agent import AgentView
+from .route import RouteView
+
 from aiohttp.web import UrlDispatcher
 
 endpoint = '/api'
@@ -20,9 +25,16 @@ def add_api_routes(router: UrlDispatcher) -> None:
 
     Args:
         router (UrlDispatcher): router из aiohttp приложения
-    """    
-    for cls in [IPView, L3LinkView, MACView, ObjectView, PortView, ProjectView, ScreenshotView, 
-                TaskView, WebSocketView, ReportsView, InterfaceView, PivotView, NetworkView]:  # для каждого класса api
+    """
+    
+    views = []
+    for item in tuple(globals().values()): # подсос все вьюх
+        try:
+            if BaseView in item.mro()[1:]:
+                views.append(item)
+        except AttributeError:
+            pass
+    for cls in views:  # для каждого класса api
         obj = cls(endpoint)  # создадим класс с endpoint-ом 
         for i in dir(obj):  # для каждого имени атрибута класса
             attr = obj.__getattribute__(i)  # получим атрибут

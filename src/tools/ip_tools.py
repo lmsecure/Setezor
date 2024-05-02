@@ -1,22 +1,11 @@
-from dataclasses import dataclass, asdict
 import socket
 import fcntl
 import struct
 
 from pyroute2 import IPDB
 
+from network_structures import InterfaceStruct
 
-@dataclass(slots=True, order=True)
-class Interface:
-    
-    id: int
-    name: str
-    ip_address: str | None = None
-    mac_address: str | None = None
-    default: bool = False
-    
-    def to_dict(self):
-        return asdict(self)
 
 # ipdb = IPDB() # эта хуйня при инициализации создает 2 сокета и 4 пайпа
 # Так же поиск занимает около 0.03 сек, что при постоянном использовании может влиять на производительность,
@@ -38,35 +27,24 @@ def get_mac(interface: str):
     return ':'.join('%02x' % b for b in fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', bytes(interface, 'utf-8')[:15]))[18:24])
         
 
-def get_interfaces():
+def get_interfaces() -> list[InterfaceStruct]:
     
     """Возвращает список интерфейсов"""
     
-    ifaces: list[Interface] = []
-    default_iface = get_default_interface()
-    default_i = None
+    ifaces = []
     for ind, name in socket.if_nameindex():
-        if name == default_iface:
-            default = True
-        else:
-            default = False
-        
         try:
             ip = get_ipv4(name)
         except Exception:
             ip = None
-            
         try:
             mac = get_mac(name)
         except Exception:
             mac = None
-        
-        if default:
-            default_i = Interface(ind, name, ip, mac, default)
-        else:
-            ifaces.append(Interface(ind, name, ip, mac, default))
-    
-    ifaces.sort(key=lambda x: x.id)
-    if default_i:
-        ifaces.insert(0, default_i)
+        ifaces.append(InterfaceStruct(
+            id=ind,
+            name=name,
+            ip_address=ip,
+            mac_address=mac
+            ))
     return ifaces

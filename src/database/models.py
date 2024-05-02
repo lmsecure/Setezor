@@ -1,9 +1,8 @@
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (Column,
                         String,
                         Integer,
-                        DateTime,
+                        SmallInteger,
                         ForeignKey,
                         Text,
                         TIMESTAMP,
@@ -11,16 +10,19 @@ from sqlalchemy import (Column,
                         )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from sqlalchemy import select
 try:
     from exceptions.loggers import LoggerNames, get_logger
 except ImportError:
     from ..exceptions.loggers import LoggerNames, get_logger
 from datetime import datetime
 
-from sqlalchemy_utils import create_view
+from .model_repr import RepresentableBase
+try:
+    from network_structures import IPv4Struct, PortStruct, ServiceStruct, MacStruct, ObjectStruct, RouteStruct
+except ImportError:
+    from ..network_structures import IPv4Struct, PortStruct, ServiceStruct, MacStruct, ObjectStruct, RouteStruct
 
-class BaseModel:
+class BaseModel(RepresentableBase):
     """базовый класс для моделей базы данных
     """
 
@@ -45,7 +47,6 @@ class TimeDependent():
     created_at: datetime = Column(TIMESTAMP, server_default=func.now())
     updated_at: datetime | None = Column(TIMESTAMP, nullable=True, default=None, 
                                          onupdate=func.now(), server_onupdate=func.now()) # может вызывать проблемы, когда у бд и приложения разное временная зона
-    
 
 class Object(Base, TimeDependent):
     """Модель для таблицы с объектами
@@ -56,14 +57,37 @@ class Object(Base, TimeDependent):
     object_type = Column(String(100))
     os = Column(String(150))
     status = Column(String(30))
+    # agent_id = Column(ForeignKey('agents.id'))
+    # agent: 'Agent' = relationship('Agent', back_populates='objects', single_parent=True)
     _mac = relationship('MAC', back_populates='_obj', cascade="all, delete-orphan")
     
     @staticmethod
     def get_headers_for_table() -> list:
         return [{'field': 'id', 'title': 'ID'},
                 {'field': 'os', 'title': 'OS', 'editor': 'input'},
-                {'field': 'object_type', 'title': 'Object type', 'editor': 'input'},#, 'formatter': ''},
+                {'field': 'object_type', 'title': 'Object type', 'editor': 'input'},
                 {'field': 'status', 'title': 'Status'},]
+        
+    def to_struct(self):
+        obj = ObjectStruct(
+            id=self.id,
+            object_type=self.object_type,
+            os=self.os,
+            status=self.status
+        )
+        return obj
+    
+    @classmethod
+    def from_struct(self, struct: ObjectStruct):
+        
+        obj = Object(
+            id=struct.id,
+            object_type=struct.object_type,
+            os=struct.os,
+            status=struct.status
+        )
+        return obj
+
 
 class ObjectType(Base):
     """Модель для справочника по типам устройств
@@ -82,8 +106,8 @@ class MAC(Base, TimeDependent):
     mac = Column(String(17))
     object = Column(Integer, ForeignKey('objects.id'), nullable=False)
     vendor = Column(String)
-    _obj = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
-    _ip = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
+    _obj: 'Object' = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
+    _ip: 'IP' = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -91,7 +115,24 @@ class MAC(Base, TimeDependent):
                 {'field': 'object', 'title': 'Object', 'editor': 'list', 'editor_entity': 'object', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
                 {'field': 'mac', 'title': 'MAC', 'editor': 'input', 'validator': 'required'},
                 {'field': 'vendor', 'title': 'Vendor', 'editor': 'input'},]
+        
+    def to_struct(self):
+        mac = MacStruct(
+            id=self.id,
+            mac=self.mac,
+            vendor=self.vendor,
+            object= self._obj.to_struct() if self._obj else None
+        )
+        return mac
 
+    @classmethod
+    def from_struct(self, struct: MacStruct):
+        mac = MAC(
+            id=struct.id,
+            mac=str(struct.mac) if struct.mac else None,
+            _obj=Object.from_struct(struct.object) if struct.object else None
+        )
+        return mac
 
 class IP(Base, TimeDependent):
     """Модель для таблицы с ip-адресами
@@ -101,13 +142,15 @@ class IP(Base, TimeDependent):
     id = Column(Integer, primary_key=True)
     mac = Column(Integer, ForeignKey('mac_addresses.id'))
     network_id = Column(ForeignKey('networks.id'))
-    network = relationship('Network', back_populates='ip_addresses', single_parent=True)
-    _mac = relationship('MAC', back_populates='_ip', lazy='subquery')
     ip = Column(String(15), nullable=False)
     domain_name = Column(String(100))
-    _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan')
-    _child_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip', cascade='all, delete-orphan')
-    _parent_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip', cascade='all, delete-orphan')
+    network = relationship('Network', back_populates='ip_addresses', single_parent=True)
+    _mac: 'MAC' = relationship('MAC', back_populates='_ip', lazy='subquery')
+    _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan', single_parent=False)
+    agent: 'Agent' = relationship('Agent', back_populates='ip', single_parent=True)
+    
+    route_values: list['RouteList'] = relationship('RouteList', back_populates='ip', single_parent=False)
+
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -122,27 +165,85 @@ class IP(Base, TimeDependent):
         if obj_type:= self._mac._obj.object_type:
             node.update({'shape': 'image', 'image': f'/static/assets/{obj_type}.svg', 'size': 50})
         return node
-
-
-class L3Link(Base, TimeDependent):
-    """Модель для таблицы со связями на l3 уровне
-    """
-    __tablename__ = 'l3_link'
-
+    
+    def to_struct(self):
+        struct = IPv4Struct(
+            id=self.id,
+            address=self.ip,
+            domain_name=self.domain_name,
+            ports=[
+                i.to_struct() for i in self._host_ip
+                ] if self._host_ip else [],
+            mac_address= self._mac.to_struct() if self._mac else None,
+        )
+        return struct
+    
+    @classmethod
+    def from_struct(self, struct: IPv4Struct):
+        ip = IP(
+            id=struct.id,
+            ip=str(struct.address),
+            domain_name=struct.domain_name,
+            _host_ip=[Port.from_struct(i) for i in struct.ports] if struct.ports else [],
+            _mac=MAC.from_struct(struct.mac_address) if struct.mac_address else MAC(_obj=Object())
+        )
+        return ip
+        
+class Route(Base):
+    
+    __tablename__ = 'routes'
+    
     id = Column(Integer, primary_key=True)
-    child_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _child_ip = relationship('IP', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip')
-    parent_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _parent_ip = relationship('IP', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip')
+    agent_id: int = Column(ForeignKey('agents.id'))
+    task_id: int = Column(ForeignKey('tasks.id'))
     
-    @staticmethod
-    def get_headers_for_table() -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                {'field': 'child_ip', 'title': 'Child IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
-                {'field': 'parent_ip', 'title': 'Parent IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},]
+    agent: 'Agent' = relationship('Agent',  back_populates='', single_parent=True)
+    routes: list['RouteList'] = relationship('RouteList', back_populates='route', single_parent=False)
+    task: 'Task' = relationship('Task' , back_populates='', single_parent=True)
     
-    def to_vis_edge(self) -> dict:
-        return {'from': self._parent_ip.id, 'to': self._child_ip.id}
+    def to_struct(self) -> RouteStruct:
+        
+        ips = [(i.ip.to_struct(), i.position) for i in self.routes]
+        ips = [i[0] for i in sorted(ips, key=lambda x: x[1])]
+        route = RouteStruct(id=self.id, agent_id=self.agent_id, routes=ips)
+        return route
+    
+    
+class RouteList(Base):
+    
+    """Список значений 1 роута,
+    содержит ссылку на ip и позицию в traceroute
+    """
+    
+    __tablename__ = 'route_lists'
+    
+    id = Column(Integer, primary_key=True)
+    route_id = Column(ForeignKey('routes.id'))
+    value: int = Column(ForeignKey('ip_addresses.id'))
+    position: int = Column(Integer)
+    
+    route: Route = relationship('Route', foreign_keys=[route_id], back_populates='routes')
+    ip: IP = relationship('IP', foreign_keys=[value], back_populates='route_values')
+
+# class L3Link(Base, TimeDependent):
+#     """Модель для таблицы со связями на l3 уровне
+#     """
+#     __tablename__ = 'l3_link'
+
+#     id = Column(Integer, primary_key=True)
+#     child_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
+#     _child_ip = relationship('IP', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip')
+#     parent_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
+#     _parent_ip = relationship('IP', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip')
+    
+#     @staticmethod
+#     def get_headers_for_table() -> list:
+#         return [{'field': 'id', 'title': 'ID'},
+#                 {'field': 'child_ip', 'title': 'Child IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
+#                 {'field': 'parent_ip', 'title': 'Parent IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},]
+    
+#     def to_vis_edge(self) -> dict:
+#         return {'from': self._parent_ip.id, 'to': self._child_ip.id}
 
 
 class Port(Base, TimeDependent):
@@ -164,6 +265,35 @@ class Port(Base, TimeDependent):
     os_type = Column(String(100))
     cpe = Column(String(200))
     
+    def to_struct(self):
+        
+        port = PortStruct(
+            id=self.id,
+            port=self.port,
+            protocol=self.protocol,
+            state=self.state,
+            service=ServiceStruct(
+                name=self.service_name,
+                product=self.product,
+                version=self.version,
+                os=self.os_type,
+                extra_info=self.extra_info,
+                cpe=self.cpe
+            )
+        )
+        return port
+    
+    @classmethod
+    def from_struct(self, port: PortStruct):
+        service_data = port.service.model_dump(by_alias=True) if port.service else {}
+        port = Port(
+            id=port.id,
+            port=port.port,
+            state=port.state,
+            **service_data
+        )
+        return port
+    
     @staticmethod
     def get_headers_for_table() -> list:
         return [{'field': 'id', 'title': 'ID'},
@@ -179,7 +309,7 @@ class Port(Base, TimeDependent):
                 {'field': 'cpe', 'title': 'CPE', 'editor': 'input'},]
 
 
-class Task(Base, TimeDependent):
+class Task(Base):
     """Модель для таблицы с задачами
     """
     __tablename__ = 'tasks'
@@ -217,34 +347,6 @@ class Screenshot(Base, TimeDependent):
     _task = relationship('Task', backref='_screenshot')
     domain = Column(String)
 
-
-class Pivot(Base):
-    
-    view_select = select(
-            func.row_number().over().label('id'),
-            IP.ip,
-            Port.port,
-            MAC.mac
-                          ).join(
-                              MAC, MAC.id == IP.mac, isouter=True
-                              ).join(
-                                  Port, Port.ip == IP.id, isouter=True
-                              )
-    __table__ = create_view(
-        name='pivot',
-        selectable=view_select,
-        metadata=Base.metadata
-    )
-    __tablename__ = 'pivot'
-    
-    @staticmethod
-    def get_headers_for_table() -> list:
-        return [
-            {'field': 'id', 'title': 'ID'},
-            {'field': 'ip', 'title': 'IP'},
-            {'field': 'port', 'title': 'PORT'},
-            {'field': 'mac', 'title': 'MAC'}
-            ]
         
 class Network(Base, TimeDependent):
     
@@ -295,3 +397,29 @@ class NetworkType(Base):
             NetworkType(type='external')
         ]
         return to_create
+    
+class Agent(Base):
+    
+    __tablename__ = 'agents'
+    
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String)
+    description: str = Column(String)
+    ip_id: int = Column(ForeignKey('ip_addresses.id'))
+    red: int = Column(SmallInteger)
+    green: int = Column(SmallInteger)
+    blue: int = Column(SmallInteger)
+    ip: IP = relationship('IP', back_populates='agent', single_parent=True)
+    
+    # objects: list['Object'] = relationship('Object', back_populates='agent')
+    routes: list['Route'] = relationship('Route', back_populates='agent', single_parent=False)
+    
+    @staticmethod
+    def get_headers_for_table() -> list:
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'name', 'title': 'NAME'},
+            {'field': 'description', 'title': 'DESCRIPTION'},
+            {'field': 'color', 'title': 'COLOR'},
+            {'field': 'ip', 'title': 'IP'},
+            ]

@@ -32,6 +32,7 @@ async def create_app(port: int, host = ''):
     project_manager = ProjectManager()
     app = PMApplication(project_manager=project_manager, port=port,
                         base_path=base_path, client_max_size=100*1024*1024)
+    await project_manager.setup()
     key = fernet.Fernet.generate_key()
     crypter = fernet.Fernet(key)
     setup_session(app, EncryptedCookieStorage(crypter))

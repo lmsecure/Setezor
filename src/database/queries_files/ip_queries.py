@@ -1,7 +1,5 @@
-from typing_extensions import deprecated
-
 from sqlalchemy.orm.session import Session
-from ..models import IP, MAC
+from ..models import IP, MAC, Object, Port
 from ..queries_files.base_queries import Mock, BaseQueries
 from ..queries_files.mac_queries import MACQueries
 
@@ -27,8 +25,8 @@ class IPQueries(BaseQueries):
         self.mac = mac
         
     @BaseQueries.session_provide
-    @deprecated('Use `create_in_bd` instead')
-    def create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, **kwargs):
+    def create(self, session: Session, ip: str, mac: str=None, 
+               domain_name: str=None, **kwargs):
         """Метод создания объекта IP адреса
 
         Args:
@@ -48,14 +46,15 @@ class IPQueries(BaseQueries):
         return new_ip_obj
     
     @BaseQueries.session_provide
-    @deprecated('Use `fill_structure` and `create_in_bd` instead')
-    def get_or_create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, to_update: bool=False, **kwargs):
-        ip_obj = session.query(self.model).filter(self.model.__table__.c.get('ip') == ip).first()
+    def get_or_create(self, session: Session, ip: str, mac: str=None, 
+                      domain_name: str=None,
+                      to_update: bool=False, **kwargs):
+        ip_obj = session.query(IP).where(IP.ip == ip).first()
         if ip_obj:
             self.logger.debug('Get "%s" with kwargs %s', self.model.__name__, {'ip': ip})
             return ip_obj
         else:
-            return self.create(session=session, ip=ip, mac=mac, domain_name=domain_name)
+            return self.create(session=session, ip=ip, mac=mac, domain_name=domain_name, **kwargs)
         
     @BaseQueries.session_provide
     def get_by_id(self, session: Session, id: int, return_format:str = 'dict'):
@@ -113,11 +112,29 @@ class IPQueries(BaseQueries):
         if field_name == 'mac':
             return self.mac.model.mac, self.model._mac
         
-        
-    # ! Api v2 (with pydantic)
+    
     
     @BaseQueries.session_provide
-    def create_in_bd(self, session: Session, *, struct: IPv4Struct):
+    def create_from_struct(self, *, session: Session, ip: IPv4Struct):
         
-        for mac in struct.mac_addresses:
-            mac_obj = self.mac.create(session=session, )
+        ip_obj = session.query(IP).where(IP.ip == str(ip.address)).first()
+        if not ip_obj:
+            mac = ip.mac_address.mac if ip.mac_address else None
+            ip_obj = self.create(session, ip=str(ip.address), mac=mac, domain_name=ip.domain_name)
+        else:
+            raise ValueError(f'IP with addr {ip.address} exist!')
+        
+        TO_UPDATE = ('name', 'product', 'version', 'os', 'extra_info', 'cpe')
+        for port in ip.ports:
+            
+            db_port = session.query(Port).filter(Port.port == port.port, Port._ip == ip_obj).first()
+            if not db_port:
+                port_data = port.model_dump(exclude={'id'})
+                service = port_data.pop('service', None)
+                if service:
+                    for i in TO_UPDATE:
+                        port_data[i] = service.get(i)
+                db_port = Port(**port_data, _ip=ip_obj)
+                session.add(db_port)
+                self.logger.debug(f'Created Port {db_port}')
+        return ip_obj

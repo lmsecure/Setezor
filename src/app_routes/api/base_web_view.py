@@ -1,11 +1,11 @@
-from abc import ABC, abstractmethod
-import json
+from abc import ABC
 from typing import Literal
 
-from aiohttp.web import Response, Request, json_response
+import orjson
+from aiohttp.web import Response, json_response
 
 from database.queries_files.base_queries import BaseQueries
-from app_routes.session import get_db_by_session, notify_client
+from app_routes.session import get_db_by_session, notify_client, project_require
 from modules.application import PMRequest
 
 class BaseView(ABC):
@@ -54,7 +54,7 @@ class BaseView(ABC):
         params.pop('id')
         db_entity.simple_create(**params)
         await notify_client(request=request, message={'title': 'Record created', 'type': 'info',
-                                                      'text': f'Create "{self.queries_path.capitalize()}" with params {json.dumps(params, ensure_ascii=False)}'})
+                                                      'text': f'Create "{self.queries_path.capitalize()}" with params {orjson.dumps(params, ensure_ascii=False).decode()}'})
         return json_response(status=200, data={'message': 'Added'})
     
     @route('POST', '/')
@@ -97,6 +97,7 @@ class BaseView(ABC):
         return json_response(status=200, data={'message': 'Updated'})
     
     @route('GET', '/all')
+    @project_require
     async def get_all(self, request: PMRequest) -> Response:
         """Метод получения всех записей по таблице из базы
 
@@ -107,7 +108,9 @@ class BaseView(ABC):
             Response: json ответ
         """
         query = request.rel_url.query
-        params: dict = json.loads(query.get('params'))
+        params = query.get('params', {})
+        if params:
+            params: dict = orjson.loads(params)
         sort = params.get('sort') # todo сделать сортировку по нескольким полям
         if sort:
             sort_by = sort[0].get('field')
@@ -120,9 +123,11 @@ class BaseView(ABC):
         filters: list[dict] = params.get('filter', [])
         db_entity = await self.get_db_queries(request=request)
         res = db_entity.get_all(page=page, limit=size, sort_by=sort_by, direction=direction, filters=filters)
+        
         res = [{k: v for k,v in i.items()} for i in res]
         total = db_entity.get_records_count()
-        return json_response(status=200, data={'data': res, 'last_page': int(total / size) + 1})
+        res = orjson.dumps({'data': res, 'last_page': int(total / size) + 1})
+        return Response(body=res)
     
     async def get_db_queries(self, request: PMRequest) -> BaseQueries:
         """Метод получения объекта запросов к базу по сущности (self.queries_path)

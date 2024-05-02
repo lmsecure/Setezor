@@ -9,6 +9,9 @@
 		<script src="/static/js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
 		<script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
 		<script src="/static/js/scripts.js"></script>
+
+
+
         <title>Setezor: {% block title required %}{% endblock %}</title>
 		<style>
 			body {
@@ -115,6 +118,14 @@
 					<div class="p-2 bd-highlight">Information</div>
 				</div>
 			</a>
+			<a class="nav-link" href="/settings/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-gear"></i>
+					</div>
+					<div class="p-2 bd-highlight">Settings</div>
+				</div>
+			</a>
         </div>
 
 		<header class="header">
@@ -146,29 +157,6 @@
 
 
 					<div class="bd-highlight">
-						
-						{% if hide_navbar%}
-						{% else %}
-							<script>
-								function change_iface(name) {
-									document.getElementById('current_iface').innerText = name
-								}
-							</script>
-							<div class="btn-group">
-								<button id="current_iface" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 200px;" title="your current network interface">
-									{{interfaces[0].name}}
-								</button>
-								<ul class="dropdown-menu" style="">
-									{% for iface in interfaces %}
-										<li>
-											<button class="dropdown-item" onclick="change_iface('{{iface.name}}')">
-												{{iface.name}}
-											</button>
-										</li>
-									{% endfor %}
-								</ul>
-							</div>
-						{% endif %}
 						
 						<a type="button" class="btn btn-primary" href="http://help.setezor.ru/" target="_blank">
 							<i class="bi bi-book" title="Wiki"></i>

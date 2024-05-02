@@ -11,19 +11,19 @@ class L3LinkView(BaseView):
     endpoint = '/l3link'
     queries_path = 'l3link'
     
-    @BaseView.route('GET', '/vis')
-    @project_require
-    async def get_edges(self, request: PMRequest) -> Response:
-        """Метод получения граней для построения топологии сети
+    # @BaseView.route('GET', '/vis')
+    # @project_require
+    # async def get_edges(self, request: PMRequest) -> Response:
+    #     """Метод получения граней для построения топологии сети
 
-        Args:
-            request (Request): объект http запроса
+    #     Args:
+    #         request (Request): объект http запроса
 
-        Returns:
-            Response: json ответ
-        """        
-        db = await get_db_by_session(request=request)
-        return json_response(status=200, data={'status': True, 'edges': db.l3link.get_vis_edges()})
+    #     Returns:
+    #         Response: json ответ
+    #     """        
+    #     db = await get_db_by_session(request=request)
+    #     return json_response(status=200, data={'status': True, 'edges': db.l3link.get_vis_edges()})
     
     @BaseView.route('GET', '/all_short')
     @project_require

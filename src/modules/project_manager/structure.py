@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Dict, Type, TypeVar, Protocol
 from logging import Logger
 
+from network_structures import AgentStruct, InterfaceStruct
+
 class MissingAction(Protocol):
     
     def __call__(self, json_data: dict = {}):
@@ -71,6 +73,8 @@ class Files(BaseStruct):
 class Variables(BaseStruct):
     project_id: str
     project_name: str
+    default_agent: AgentStruct
+    default_interface: InterfaceStruct | None = None
 
 
 @dataclass

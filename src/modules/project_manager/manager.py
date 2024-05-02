@@ -1,12 +1,19 @@
 import os
-from typing import Dict
 import json
+from typing import Literal
+
+from alembic.config import Config as AlembicConfig
+from alembic.script.base import ScriptDirectory
+from alembic.command import upgrade, stamp
 
 from .project import Project, Configs
 from .structure import Variables
 from exceptions.loggers import get_logger
 from .project_info import ProjectInfo, FrequentValue
 from .storage import MemoryProjectStorage
+
+from tools.ip_tools import get_interfaces, get_default_interface
+from network_structures import AgentStruct
 
 class ProjectManager:
     '''
@@ -68,7 +75,7 @@ class ProjectManager:
 
 
     async def create_mock_project(self,):
-        conf = Configs('', '', '', Variables('*', '*'), '')
+        conf = Configs('', '', '', Variables('*', '*', '*'), '')
         project = Project(name='*', path='', configs=conf, is_temp=True)
         self.mock = project
         await self.project_storage.add_project(project)
@@ -93,9 +100,7 @@ class ProjectManager:
             object_count=db.object.count(),
             ip_count=db.ip.count(except_values={'ip': [None, '']}),
             mac_count=db.mac.count(except_values={'mac': [None, '']}),
-            l3_link_count=db.l3link.count(),
             port_count=db.port.count(except_values={'port': [None, '']}),
-            
             top_object_type=top_object_types,
             top_ports=top_ports,
             top_protocols=top_protocols,
@@ -111,3 +116,43 @@ class ProjectManager:
             stat = self.get_project_info(project, top_limit=top_limit)
             stats.append(stat)
         return stats
+    
+    
+    async def setup(self):
+        """
+        Метод для инициализации менеджера, нужен, чтобы синхронизировать конфиги и бд
+        """
+        
+        ifaces = get_interfaces()
+        default_system_iface = next((i for i in ifaces if i.name == get_default_interface()), None)
+        base_path = '/'.join(__file__.split('/')[:-3])
+        for project in await self.project_storage.get_projects():
+            self.migrate_db(str(project.db.db.engine.url), 'upgrade', base_path)            
+            changed = False
+            default_iface = project.configs.variables.default_interface
+            default_agent = project.configs.variables.default_agent
+            if default_iface not in [i.model_dump() for i in ifaces]:
+                changed = True
+                project.configs.variables.default_interface = default_system_iface.model_dump()
+            
+            if default_agent['id'] is None:
+                changed = True
+                agents = project.db.agent.get_all()
+                default = next((i for i in agents if i.get('name') == 'Default agent'), None)
+                if default:
+                    project.configs.variables.default_agent['id'] = default['id']
+                else:
+                    db_agent = project.db.agent.create(agent=AgentStruct.model_validate(default_agent))
+                    project.configs.variables.default_agent = AgentStruct.model_validate(db_agent, from_attributes=True).model_dump()
+            if changed:
+                project.configs.save_config_file()
+                
+    def migrate_db(self, db_url: str, migrate_type: Literal['upgrade', 'stamp'], base_path: str):
+        alembic_config = AlembicConfig()
+        alembic_config.set_main_option('script_location', os.path.join(base_path, 'migration'))
+        alembic_config.set_main_option('sqlalchemy.url', db_url)
+        last_revision = ScriptDirectory.from_config(alembic_config).get_current_head()
+        if migrate_type == 'upgrade':
+            upgrade(alembic_config, last_revision)
+        elif migrate_type == 'stamp':
+            stamp(alembic_config, last_revision)
