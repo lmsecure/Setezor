@@ -49,23 +49,94 @@
     </div>
 </div>
 
-<div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
+<div class="dropdown xs" id="nodeDropdownMenu" style="display:none" node_id="null">
     <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li><a class="dropdown-item" href="#" id="deviceTypeDD" data-bs-toggle="dropdown" aria-expanded="false">Device type &raquo;</a>
-            <ul class="dropdown-menu dropdown-submenu" aria-labelledby="deviceTypeDD">
+            <ul id="scan_device_list" class="dropdown-menu" aria-labelledby="deviceTypeDD">
                 {% for device_type in device_types %}
                 <li><a class="dropdown-item" href="#" onclick="set_device_type(this)" value="{{device_type.value}}">{{device_type.label}}</a></li>
                 {% endfor %}
             </ul>
         </li> 
-        <!-- <li><a class="dropdown-item" href="#" id="ScanDD" data-bs-toggle="dropdown" aria-expanded="false">Scan &raquo;</a>
-            <ul class="dropdown-menu dropdown-submenu" aria-labelledby="ScanDD">
-                <li><a class="dropdown-item disabled" href="#">Nmap</a></li>
-                <li><a class="dropdown-item disabled" href="#">Scapy</a></li>
+        <li><a id="ScanDD" class="dropdown-item" href="#" data-bs-toggle="dropdown" aria-expanded="false">Scan &raquo;</a>
+            <ul id="ScanDM" class="dropdown-menu dropstart" aria-labelledby="ScanDD">
+                <li><a class="dropdown-item" onclick="fillScanner(ScannerTypes.nmap)">Nmap</a></li>
+                <li><a class="dropdown-item" onclick="fillScanner(ScannerTypes.masscan)">Masscan</a></li>
             </ul>
-        </li> -->
+        </li>
     </ul>
 </div>
+<script>
+
+    const ScannerTypes = {
+        nmap: 'nmap',
+        masscan: 'masscan'
+    }
+
+    /*const ScanDevice = document.getElementById('deviceTypeDD')
+    const ScanDeviceList = document.getElementById('scan_device_list')
+    ScanDevice.onmouseover = onLeave(ScanDeviceList)
+    ScanDevice.onmouseleave = onHover(ScanDeviceList) */
+
+    const ScanDD = document.getElementById('ScanDD')
+    const ScanDM = document.getElementById('ScanDM')
+
+    const InputNmap = document.getElementById('inputIP')
+    const InputMasscan = document.getElementById('masscanInputIP')
+
+    ScanDD.onmouseover = onHover(ScanDM)
+    /* ScanDD.onmouseout = onLeave(ScanDM) */
+    ScanDD.onclick = (() => {
+        if (ScanDM.classList == 'dropdown-menu') {
+            ScanDM.classList = ['dropdown-menu', 'show']
+        }
+        else {  
+            ScanDM.classList = ['dropdown-menu']
+        }
+    })
+    function onHover(elem) {
+        hover = function(event) {
+            elem.classList = ['dropdown-menu', 'show']
+        }
+        return hover
+    }
+
+    function onLeave(elem) {
+        leave = function(event) {
+            elem.classList = ['dropdown-menu']
+        }
+        return leave
+    }
+
+
+    /* функция заполнения сканеров ip, берез id ноды, зашитый в dropdownMenu */
+    function fillScanner(scanner) {
+        elem = document.getElementById('nodeDropdownMenu')
+        node_id = elem.getAttribute('node_id')
+        node = networkData.nodes.get(Number(node_id))
+        label = node.label
+        switch (scanner) {
+
+            case ScannerTypes.nmap: {
+                document.getElementById('v-pills-nmap-tab').click()
+                InputNmap.value = label
+                InputMasscan.value = ''
+                document.getElementById('startScanSimpleBtn').disabled = false
+                document.getElementById('startMasscanScanBtn').disabled = true
+                break
+            }
+            case ScannerTypes.masscan: {
+                document.getElementById('v-pills-masscan-tab').click()
+                InputMasscan.value = label
+                InputNmap.value = ''
+                document.getElementById('startMasscanScanBtn').disabled = false
+                document.getElementById('startScanSimpleBtn').disabled = true
+                break
+            }
+        }
+    }
+
+</script>
 
 <div id="ModalCreateNode">
 </div>
@@ -93,6 +164,7 @@
     var dd_div = $('#nodeDropdownMenu')
     dd_div.on('mouseleave', function() {
         dd_div.hide();
+        ScanDM.classList = ['dropdown-menu']
     });
     var cluster = false;
     var network;
@@ -129,20 +201,13 @@
         var edges = ajax_request('/api/route/vis_edges', 'get', async=true);
         try {
             await waitForAgentData()
-            nodes.forEach((node) =>{    
+            nodes.forEach((node) =>{
                 caclculateNodeColor(node)
             })
         }
-        catch {
-            console.log('Can not fill color')
+        catch (e) {
+            console.log('Can not fill color', e)
         }
-
-        nodes.forEach((node => {
-            if (node.agent) {
-                node.icon = new AgentIcon(color=caclculateColor(node))
-                node.shape = 'icon'
-            }
-        }))
         {% for col in table %}{% if col.editor_entity%}
         foriegnData{{col.field}} = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %}{% endfor %}
         if (update == true) {
@@ -541,7 +606,9 @@
     })
     network.on('oncontext', function(params) {
         if (network.getNodeAt(params.pointer.DOM) != undefined) {
+            node = params.nodes[0]
             node_menu = document.getElementById('nodeDropdownMenu')
+            node_menu.setAttribute('node_id', node)
             node_menu.style.position = 'absolute'
             node_menu.style.top = `${params.event.clientY - 5}px`
             node_menu.style.left = `${params.event.clientX - 5}px`
@@ -792,7 +859,12 @@ function caclculateColor(node) {
 }
 
 function caclculateNodeColor(node) {
-    node.color = caclculateColor(node)
+    if (node.icon) {
+        node.icon.color = caclculateColor(node)
+    }
+    else {
+        node.color = caclculateColor(node)
+    }
 }
 
 /* Окрашивает ноду*/
@@ -832,16 +904,6 @@ async function waitForAgentData() {
     }
 }
 
-class AgentIcon{
-
-    constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF591') {
-        this.color = color
-        this.shape = 'icon'
-        this.size = size
-        this.face = face
-        this.code = code
-    }
-}
 
 </script>
 {% endmacro %}

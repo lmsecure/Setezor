@@ -3,16 +3,15 @@ import asyncio
 from time import time
 
 from .base_job import BaseJob, MessageObserver
+
 from modules.nmap.scanner import NmapScanner
-from modules.nmap.parser import NmapParser
+from modules.nmap.parser import NmapParser, NmapStructure
 from tools.ip_tools import get_ipv4, get_mac
 from database.queries import Queries
 
 from network_structures import AnyIPAddress, IPv4Struct, PortStruct
-from modules.nmap.parser import NmapRunResult, NmapStructure
 
-
-
+    
 class NmapScanTask(BaseJob):
     
     def __init__(self, agent_id: int, observer: MessageObserver, scheduler, 
@@ -34,8 +33,7 @@ class NmapScanTask(BaseJob):
             _type_: результат сканирования
         """
         loop = asyncio.get_event_loop()
-        cmd = ' '.join(command.split(' '))
-        cmd += f' -e {iface}'
+        cmd = command + f' -e {iface}'
         scan_result = await NmapScanner().async_run(extra_args=cmd, _password=None, logs_path=nmap_logs)
         return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), self.agent_id, address)
     

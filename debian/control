@@ -1,0 +1,22 @@
+Source: setezor
+Section: unknown
+Priority: optional
+Maintainer: LMSecurity setezor@lianmedia.ru
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ python3-all,
+ python3-requests,
+ python3-setuptools,
+Standards-Version: 0.5.8b
+Homepage: https://setezor.ru
+
+Package: setezor
+Architecture: all
+Depends:
+ ${python3:Depends},
+ ${misc:Depends},
+ sudo, libcap2-bin, python3.11, python3.11-dev, python3-pip, python3.11-venv, nmap, masscan
+Description: Multitool for working with network
+ Multitool for working with network

@@ -23,6 +23,9 @@ class Queries:
         self.screenshot = qf.ScreenshotQueries(task=self.task, port=self.port, session_maker=self.db.create_session())
         self.pivot = qf.PivotQueries(session_maker=self.db.create_session())
         self.network = qf.NetworkQueries(ip_queries=self.ip, session_maker=self.db.create_session())
-        self.agent = qf.AgentQueries(session_maker=self.db.create_session())
-        self.route = qf.RouteQueries(session_maker=self.db.create_session())
+        self.route = qf.RouteQueries(session_maker=self.db.create_session(),
+                                     ip_queries=self.ip)
         self.route_list = qf.RouteListQueries(session_maker=self.db.create_session())
+        self.agent = qf.AgentQueries(session_maker=self.db.create_session(), 
+                                ip_queries=self.ip, route_queries=self.route)
+        self.ip.route_queries = self.route

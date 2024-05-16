@@ -36,13 +36,14 @@ class TaskView(BaseView):
         params: dict = await request.json()
         project = await get_project(request=request)
         db = project.db
+        print(params)
         iface = params.pop('iface').strip()
         agent_id = params.pop('agent_id')
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
         scheduler = project.schedulers.get('nmap')
         await scheduler.spawn_job(NmapScanTask(agent_id=agent_id, observer=project.observer, 
                                                scheduler=scheduler, name=f'Task {task_id}',
-                                               command=' '.join(params.values()), iface=iface,
+                                               command=' '.join(params.values()), iface=iface, #!!! Anton blyat, unsecure !!!
                                                db = db, nmap_logs=project.configs.folders.nmap_logs, task_id=task_id))
         return Response(status=201)
     
@@ -196,3 +197,15 @@ class TaskView(BaseView):
     async def all_short(self, request: PMRequest):
         raise NotImplementedError()
     
+    
+    @BaseView.route('POST', '/nmap_scan')
+    @project_require
+    async def create_snmp_scan(self, request: PMRequest):
+        params: dict = await request.json()
+        project = await get_project(request=request)
+        db = project.db
+        iface = params.pop('iface').strip()
+        agent_id = params.pop('agent_id')
+        task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
+        scheduler = project.schedulers.get('nmap')
+        #! todo

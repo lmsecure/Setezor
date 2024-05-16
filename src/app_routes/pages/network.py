@@ -8,6 +8,14 @@ from tools.ip_tools import get_interfaces
 
 network_routes = RouteTableDef()
 
+NMAP_SCRIPTS = [
+    'snmp-info',
+    'snmp-interfaces',
+    'snmp-netstat',
+    'snmp-processes',
+    'snmp-sysdescr'
+]
+
 @network_routes.get('/network/')
 @project_require
 async def network_page(request: PMRequest):
@@ -26,5 +34,7 @@ async def network_page(request: PMRequest):
     project_name = project.configs.variables.project_name
     project_id = project.configs.variables.project_id
     context = {'device_types': device_types, 'is_scapy_running': is_scapy_running, 'table': queries.port.model.get_headers_for_table(),
-               'current_project': project_name, 'current_project_id': project_id, 'interfaces': [i for i in get_interfaces() if i.ip_address]}
+               'current_project': project_name, 'current_project_id': project_id, 'interfaces': [i for i in get_interfaces() if i.ip_address],
+               'nmap_scripts': NMAP_SCRIPTS}
+    print(NMAP_SCRIPTS)
     return aiohttp_jinja2.render_template('network/base.html', request=request, context=context)

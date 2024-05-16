@@ -7,7 +7,7 @@
 
 [Requirements](#requirements)
 
-[Usage](#usage)
+[Installation](#installation)
 
 [Database schema](#database-schema)
 
@@ -81,15 +81,39 @@ scapy==2.4.5
 setuptools==59.6.0
 SQLAlchemy==1.4.32
 sqlalchemy_schemadisplay==1.3
+SQLAlchemy-Utils==0.41.1
 xmltodict==0.12.0
 xlsxwriter==3.0.8
 cffi
 click
 colorama
 openpyxl
+pyroute2
+orjson
+typing_extensions
+pydantic-extra-types
 ```
-### Usage
-#### From github repo
+### Installation
+
+#### From deb
+
+1. Download latest release
+
+```bash
+wget https://github.com/lmsecure/Setezor/releases/download/0.5.7b/setezor_0.5.7b_oem.deb
+```
+2. Install with apt
+
+```
+sudo apt install ./setezor_0.5.7b_oem.deb
+```
+
+3. Run
+```bash
+setezor
+```
+
+#### From source code
 1. Clone a repository from github 
 ```bash
 git clone https://github.com/lmsecure/Setezor.git
@@ -97,9 +121,9 @@ cd Setezor
 ```
 2. Install the necessary software
 ```bash
-sudo apt install nmap python3.11
+sudo apt install nmap python3.11 masscan
 ```
-2.1. It is recommended that `venv` be used
+2.1. It is recommended to use `venv`
 ```bash
 sudo apt install -y python3-venv
 python3 -m venv venv
@@ -109,25 +133,15 @@ source venv/bin/activate
 ```bash
 pip3 install -r requirements.txt
 ```
-4. Grant socket permissions for `nmap` and `python3.11`
+4. Grant socket permissions for `nmap`, `masscan` and `python3.11`
 ```bash
 sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 ```
 5. Start the application
 ```bash
-
 python3 .py
-```
-#### From github pyz-file from last release
-1. Download the release file from github
-```bash
-wget https://github.com/lmsecure/Setezor/releases/download/v0.4a/app-v0.4a.pyz
-cd Setezor
-```
-2. Install the necessary software
-```bash
-sudo apt install nmap python3.11
 ```
 
 #### From dockerhub image
@@ -143,8 +157,13 @@ mkdir ~/setezor && cd $_
 ```bash
 docker run -p 16661:16661 --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
 ```
-After launching, go to `http://localhost:16661`
+After launching, go to `https://localhost:16661`
 
+#### From docker-compose
+
+```yml
+
+```
 
 ### Database schema
 ![schema](src/docs/db_schema_full.png)

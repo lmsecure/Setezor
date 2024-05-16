@@ -1,6 +1,12 @@
 var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107"};
 function create_websocket(endpoint) {
-    var sock = new WebSocket('ws://' + window.location.host + endpoint);
+    if (location.protocol == 'http:') {
+        wc_protocol = 'ws://'
+    }
+    else {
+        wc_protocol = 'wss://'
+    }
+    var sock = new WebSocket(wc_protocol + window.location.host + endpoint);
     sock.onmessage = function (message) {
         data = JSON.parse(message.data)
         if (window.location.pathname == '/network/' && data.command != undefined) {

@@ -63,7 +63,7 @@ class ConsoleArgument:
     def __str__(self):
         if  self.value is None and self.default_value is None and not self.is_flag:
             raise Exception(f'Argument "{self.argument}" have no value or default value and there is not flag')
-        value = self.value if not self.value is None else self.default_value
+        value = self.value if self.value is not None else self.default_value
         if self.is_flag:
             if value is True:
                 return self.argument
@@ -168,7 +168,7 @@ class ConsoleCommandExecutor:
             async with aiofiles.open(full_path, 'wb' if isinstance(source_data, bytes) else 'w') as f:
                 await f.write(source_data)
             return True
-        except:
+        except Exception:
             cls.logger.error('Failed save source scan to path "%s" with error\n%s', full_path, traceback.format_exc())
             raise Exception('Failed save source scan to path "%s"' % full_path)
 

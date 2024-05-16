@@ -127,25 +127,32 @@ class ProjectManager:
         default_system_iface = next((i for i in ifaces if i.name == get_default_interface()), None)
         base_path = '/'.join(__file__.split('/')[:-3])
         for project in await self.project_storage.get_projects():
-            self.migrate_db(str(project.db.db.engine.url), 'upgrade', base_path)            
-            changed = False
-            default_iface = project.configs.variables.default_interface
-            default_agent = project.configs.variables.default_agent
-            if default_iface not in [i.model_dump() for i in ifaces]:
-                changed = True
-                project.configs.variables.default_interface = default_system_iface.model_dump()
-            
-            if default_agent['id'] is None:
-                changed = True
-                agents = project.db.agent.get_all()
-                default = next((i for i in agents if i.get('name') == 'Default agent'), None)
-                if default:
-                    project.configs.variables.default_agent['id'] = default['id']
-                else:
-                    db_agent = project.db.agent.create(agent=AgentStruct.model_validate(default_agent))
-                    project.configs.variables.default_agent = AgentStruct.model_validate(db_agent, from_attributes=True).model_dump()
-            if changed:
-                project.configs.save_config_file()
+            try:
+                self.migrate_db(str(project.db.db.engine.url), 'upgrade', base_path)            
+                changed = False
+                default_iface = project.configs.variables.default_interface
+                default_agent = project.configs.variables.default_agent
+                if default_iface not in [i.model_dump() for i in ifaces]:
+                    changed = True
+                    project.configs.variables.default_interface = default_system_iface.model_dump()
+                if default_agent['id'] is None:
+                    changed = True
+                    agents = project.db.agent.get_all()
+                    default = next((i for i in agents if i.get('name') == 'Default agent'), None)
+                    if default:
+                        project.configs.variables.default_agent['id'] = default['id']
+                    else:
+                        db_agent = project.db.agent.create(agent=AgentStruct.model_validate(default_agent))
+                        project.configs.variables.default_agent = AgentStruct.model_validate(db_agent, from_attributes=True).model_dump()
+                if changed:
+                    project.configs.save_config_file()
+            except Exception as e:
+                try:
+                    del self.project_storage.projects[project.configs.variables.project_id]
+                except Exception as e2:
+                    self.logger.warn(f'Can not delete project {project.name} from project storage, Error: {e2}')
+                    pass
+                self.logger.error(f'Can not setup project {project.name}, maybe it’s too old. Error: {e}.')
                 
     def migrate_db(self, db_url: str, migrate_type: Literal['upgrade', 'stamp'], base_path: str):
         alembic_config = AlembicConfig()

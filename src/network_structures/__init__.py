@@ -22,6 +22,7 @@ from pydantic import (
     model_validator,
     validate_call,
 )
+from pydantic_core import PydanticCustomError
 from pydantic_extra_types.mac_address import MacAddress
 
 # Можно использовать и классы из ipaddress, создаю отдельный класс, если понадобиться добавить методы в будущем
@@ -43,7 +44,7 @@ class IPStruct(BaseStructModel):
     mac_address: Union["MacStruct", None] = Field(
         default=None, validation_alias=AliasChoices("mac_addresses", "_mac")
     )
-
+    network_id: int | None = None
     def __str__(self):
         return str(self.address)
 
@@ -118,7 +119,7 @@ class ServiceStruct(BaseStructModel):
 
 class PortStruct(BaseStructModel):
     port: int = Field(validation_alias=AliasChoices("value", "port"))
-    protocol: Literal["tcp", "udp"] = "tcp"
+    protocol: str
     state: Literal["open", "closed", "filtered"] = "open"
     service: ServiceStruct | None = None
 
@@ -162,7 +163,7 @@ class MacStruct(BaseStructModel):
 
 class NetworkStruct(BaseStructModel):
     network: IPv4Network | IPv6Network
-    gateway: IPv4Struct | IPv6Struct | None = None
+    gateway: IPv4Struct | IPv6Struct
     _as: str | None = None
     ip_address: list[IPv4Struct | IPv6Struct] = Field(
         default_factory=list, validation_alias=AliasChoices("ip_addresses", "ip")
@@ -209,6 +210,11 @@ class NetworkStruct(BaseStructModel):
     @validate_call
     def check_address(self, address: IPv4Struct | IPv6Struct) -> bool:
         return address.address in self.network
+    
+    @model_validator(mode='after')
+    def root_validator(self):
+        if self.gateway.address not in self.network: # проверка на то, что гетвей входит в нетворк
+            raise PydanticCustomError('gateway_not_in_network', f'Gateway <{self.gateway}> must be in network <{self.network}>!')
 
 
 def random_color() -> int:

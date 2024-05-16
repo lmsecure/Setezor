@@ -15,7 +15,7 @@ from modules.project_manager.manager import ProjectManager
 from app_routes.session import notify_client, project_require, get_db_by_session
 from modules.application import PMRequest
 from tools.ip_tools import get_interfaces, get_default_interface
-from network_structures import IPv4Struct
+from network_structures import IPv4Struct, RouteStruct
 
 def zip_dir(foldername: str, file: io.BytesIO, includeEmptyDIr=True):   
     empty_dirs = []  

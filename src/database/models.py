@@ -1,7 +1,10 @@
+from typing import Union, dataclass_transform
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (Column,
                         String,
                         Integer,
+                        Boolean,
                         SmallInteger,
                         ForeignKey,
                         Text,
@@ -42,24 +45,35 @@ class BaseModel(RepresentableBase):
 
 Base = declarative_base(cls=BaseModel)
 
+
 class TimeDependent():
     
     created_at: datetime = Column(TIMESTAMP, server_default=func.now())
     updated_at: datetime | None = Column(TIMESTAMP, nullable=True, default=None, 
                                          onupdate=func.now(), server_onupdate=func.now()) # может вызывать проблемы, когда у бд и приложения разное временная зона
 
-class Object(Base, TimeDependent):
+@dataclass_transform(kw_only_default=True, field_specifiers=(Column, ))
+class NiceInit():
+    """
+    Миксин для обозначения инита в ide у sql моделей.
+    
+    ! Важно !
+    
+    Что бы миксин работал, нужно указать типы классовых переменных
+    """
+    
+class Object(Base, TimeDependent, NiceInit):
     """Модель для таблицы с объектами
     """
     __tablename__ = 'objects'
 
-    id = Column(Integer, primary_key=True)
-    object_type = Column(String(100))
-    os = Column(String(150))
-    status = Column(String(30))
+    id: int = Column(Integer, primary_key=True)
+    object_type: str = Column(String(100))
+    os: str = Column(String(150))
+    status: str = Column(String(30))
     # agent_id = Column(ForeignKey('agents.id'))
     # agent: 'Agent' = relationship('Agent', back_populates='objects', single_parent=True)
-    _mac = relationship('MAC', back_populates='_obj', cascade="all, delete-orphan")
+    _mac: 'MAC' = relationship('MAC', back_populates='_obj', cascade="all, delete-orphan")
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -88,24 +102,23 @@ class Object(Base, TimeDependent):
         )
         return obj
 
-
-class ObjectType(Base):
+class ObjectType(Base, NiceInit):
     """Модель для справочника по типам устройств
     """
     __tablename__ = 'object_types'
-    id = Column(Integer, primary_key=True)
-    object_type = Column(String(50), nullable=False)
+    id: int = Column(Integer, primary_key=True)
+    object_type: str = Column(String(50), nullable=False)
     
-    
-class MAC(Base, TimeDependent):
+
+class MAC(Base, TimeDependent, NiceInit):
     """Модель для таблицы с мак-адресами
     """
     __tablename__ = 'mac_addresses'
 
-    id = Column(Integer, primary_key=True)
-    mac = Column(String(17))
-    object = Column(Integer, ForeignKey('objects.id'), nullable=False)
-    vendor = Column(String)
+    id: int = Column(Integer, primary_key=True)
+    mac: str = Column(String(17))
+    object: int = Column(Integer, ForeignKey('objects.id'), nullable=False)
+    vendor: str = Column(String)
     _obj: 'Object' = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
     _ip: 'IP' = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
     
@@ -134,22 +147,23 @@ class MAC(Base, TimeDependent):
         )
         return mac
 
-class IP(Base, TimeDependent):
+class IP(Base, TimeDependent, NiceInit):
     """Модель для таблицы с ip-адресами
     """
     __tablename__ = 'ip_addresses'
 
-    id = Column(Integer, primary_key=True)
-    mac = Column(Integer, ForeignKey('mac_addresses.id'))
-    network_id = Column(ForeignKey('networks.id'))
-    ip = Column(String(15), nullable=False)
-    domain_name = Column(String(100))
-    network = relationship('Network', back_populates='ip_addresses', single_parent=True)
+    id: int = Column(Integer, primary_key=True)
+    mac: int = Column(Integer, ForeignKey('mac_addresses.id'))
+    network_id: int = Column(ForeignKey('networks.id'), nullable=True)
+    ip: str = Column(String(15), nullable=False)
+    domain_name: str = Column(String(100))
     _mac: 'MAC' = relationship('MAC', back_populates='_ip', lazy='subquery')
-    _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan', single_parent=False)
-    agent: 'Agent' = relationship('Agent', back_populates='ip', single_parent=True)
+    _host_ip: list['Port'] = relationship('Port', back_populates='_ip', cascade='all, delete-orphan', single_parent=False)
+    agent: 'Agent' = relationship('Agent', back_populates='ip', single_parent=True, uselist=False)
     
     route_values: list['RouteList'] = relationship('RouteList', back_populates='ip', single_parent=False)
+    network: Union['Network',None] = relationship('Network', back_populates='ip_addresses', foreign_keys=[network_id], uselist=False)
+    network_if_gateway: Union['Network', None] = relationship('Network', foreign_keys='[Network.gateway_id]', uselist=False)
 
     
     @staticmethod
@@ -184,16 +198,17 @@ class IP(Base, TimeDependent):
             id=struct.id,
             ip=str(struct.address),
             domain_name=struct.domain_name,
+            network_id=struct.network_id,
             _host_ip=[Port.from_struct(i) for i in struct.ports] if struct.ports else [],
             _mac=MAC.from_struct(struct.mac_address) if struct.mac_address else MAC(_obj=Object())
         )
         return ip
-        
-class Route(Base):
+
+class Route(Base, NiceInit):
     
     __tablename__ = 'routes'
     
-    id = Column(Integer, primary_key=True)
+    id: int = Column(Integer, primary_key=True)
     agent_id: int = Column(ForeignKey('agents.id'))
     task_id: int = Column(ForeignKey('tasks.id'))
     
@@ -209,7 +224,7 @@ class Route(Base):
         return route
     
     
-class RouteList(Base):
+class RouteList(Base, NiceInit):
     
     """Список значений 1 роута,
     содержит ссылку на ip и позицию в traceroute
@@ -217,8 +232,8 @@ class RouteList(Base):
     
     __tablename__ = 'route_lists'
     
-    id = Column(Integer, primary_key=True)
-    route_id = Column(ForeignKey('routes.id'))
+    id: int = Column(Integer, primary_key=True)
+    route_id: int = Column(ForeignKey('routes.id'))
     value: int = Column(ForeignKey('ip_addresses.id'))
     position: int = Column(Integer)
     
@@ -246,24 +261,24 @@ class RouteList(Base):
 #         return {'from': self._parent_ip.id, 'to': self._child_ip.id}
 
 
-class Port(Base, TimeDependent):
+class Port(Base, TimeDependent, NiceInit):
     """Модель для таблицы с портами
     """
     __tablename__ = 'ports'
 
-    id = Column(Integer, primary_key=True)
-    ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _ip = relationship('IP', back_populates='_host_ip')
-    _screenshot = relationship('Screenshot', back_populates='_port')
-    port = Column(Integer, nullable=False)
-    protocol = Column(String(10))
-    service_name = Column(String(100))
-    state = Column(String(15))
-    product = Column(String(100))
-    extra_info = Column(String(150))
-    version = Column(String(100))
-    os_type = Column(String(100))
-    cpe = Column(String(200))
+    id: int = Column(Integer, primary_key=True)
+    ip: int = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
+    _ip: 'IP' = relationship('IP', back_populates='_host_ip')
+    _screenshot: 'Screenshot' = relationship('Screenshot', back_populates='_port')
+    port: int = Column(Integer, nullable=False)
+    protocol: str = Column(String(10))
+    service_name: str = Column(String(100))
+    state: str = Column(String(15))
+    product: str = Column(String(100))
+    extra_info: str = Column(String(150))
+    version: str = Column(String(100))
+    os_type: str = Column(String(100))
+    cpe: str = Column(String(200))
     
     def to_struct(self):
         
@@ -309,19 +324,19 @@ class Port(Base, TimeDependent):
                 {'field': 'cpe', 'title': 'CPE', 'editor': 'input'},]
 
 
-class Task(Base):
+class Task(Base, NiceInit):
     """Модель для таблицы с задачами
     """
     __tablename__ = 'tasks'
     
-    id = Column(Integer, primary_key=True)
-    status = Column(String(10))
+    id: int = Column(Integer, primary_key=True)
+    status: str = Column(String(10))
     # task_type
-    created = Column(TIMESTAMP, server_default=func.now())
-    started = Column(TIMESTAMP)
-    finished = Column(TIMESTAMP)
-    params = Column(Text)
-    comment = Column(String)
+    created: datetime = Column(TIMESTAMP, server_default=func.now())
+    started: datetime = Column(TIMESTAMP)
+    finished: datetime = Column(TIMESTAMP)
+    params: str = Column(Text)
+    comment: str = Column(String)
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -334,37 +349,33 @@ class Task(Base):
                 {'field': 'comment', 'title': 'Comment', 'editor': 'input'},]
     
 
-class Screenshot(Base, TimeDependent):
+class Screenshot(Base, TimeDependent, NiceInit):
     """Модель для таблицы со скриншотами
     """
     __tablename__ = 'screenshots'
     
-    id = Column(Integer, primary_key=True)
-    port = Column(Integer, ForeignKey('ports.id'))
-    _port = relationship('Port', back_populates='_screenshot')
-    screenshot_path = Column(String(100), unique=True)
-    task = Column(Integer, ForeignKey('tasks.id'))
-    _task = relationship('Task', backref='_screenshot')
-    domain = Column(String)
+    id: int = Column(Integer, primary_key=True)
+    port: int = Column(Integer, ForeignKey('ports.id'))
+    _port: 'Port' = relationship('Port', back_populates='_screenshot')
+    screenshot_path: str = Column(String(100), unique=True)
+    task: int = Column(Integer, ForeignKey('tasks.id'))
+    _task: 'Task' = relationship('Task', backref='_screenshot')
+    domain: str = Column(String)
 
-        
-class Network(Base, TimeDependent):
+
+class Network(Base, TimeDependent, NiceInit):
     
     __tablename__ = 'networks'
     
-    id = Column(Integer, primary_key=True)
-    mask = Column(SMALLINT)
-    network = Column(Text, unique=True)
-    start_ip = Column(Integer, nullable=False)
-    broadcast = Column(Integer, nullable=False)
-    gateway = Column(Integer, nullable=True)
-    # _as = Column(Text)
-    type_id = Column(ForeignKey('network_types.id'))
-    type: 'NetworkType' = relationship('NetworkType', back_populates='networks', single_parent=True)
-    supper_net_id = Column(ForeignKey('networks.id'))
-    
-    # whois = Column()
-    ip_addresses: list[IP] = relationship('IP', back_populates='network', single_parent=True)
+    id: int = Column(Integer, primary_key=True)
+    mask: int = Column(SMALLINT)
+    network: str = Column(Text, unique=True)
+    gateway_id: int | None = Column(ForeignKey('ip_addresses.id'))
+    gateway: IP | None = relationship('IP', uselist=False, foreign_keys=[gateway_id], single_parent=True)
+    guess: bool = Column(Boolean, default=True)
+    type_id: int = Column(ForeignKey('network_types.id'))
+    type: 'NetworkType' = relationship('NetworkType', foreign_keys=[type_id], back_populates='networks')
+    ip_addresses: list[IP] = relationship('IP', uselist=True, foreign_keys=[IP.network_id], back_populates='network')
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -377,14 +388,14 @@ class Network(Base, TimeDependent):
             {'field': 'broadcast', 'title': 'BROADCAST'},
             {'field': 'type', 'title': 'TYPE'}, # ! Узнать как сделать выгрузку по вторичным ключам
             ]
+        
     
-    
-class NetworkType(Base):
+class NetworkType(Base, NiceInit):
     
     __tablename__ = 'network_types'
     
-    id = Column(Integer, primary_key=True)
-    type = Column(Text, unique=True)
+    id: int = Column(Integer, primary_key=True)
+    type: str = Column(Text, unique=True)
     
     networks: list[Network] = relationship('Network', back_populates='type', single_parent=False)
     
@@ -398,7 +409,7 @@ class NetworkType(Base):
         ]
         return to_create
     
-class Agent(Base):
+class Agent(Base, NiceInit):
     
     __tablename__ = 'agents'
     

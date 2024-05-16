@@ -9,17 +9,25 @@ if TYPE_CHECKING:
     from database.queries_files.base_queries import QueryFilter
 from ..models import Agent, Object, IP, MAC
 from ..queries_files.base_queries import BaseQueries
+from .ip_queries import IPQueries
+from .route_queries import RouteQueries
 
 try:
-    from network_structures import AgentStruct, IPv4Struct
+    from network_structures import AgentStruct, IPv4Struct, RouteStruct
 except ImportError:
-    from ...network_structures import AgentStruct, IPv4Struct
+    from ...network_structures import AgentStruct, IPv4Struct, RouteStruct
 
 
 class AgentQueries(BaseQueries):
     """Класс запросов к таблице агентов"""
 
     model = Agent
+    
+    def __init__(self, session_maker: Session, ip_queries: IPQueries, 
+                 route_queries: RouteQueries):
+        super().__init__(session_maker)
+        self.ip_queries = ip_queries
+        self.route_queries = route_queries
 
     @BaseQueries.session_provide
     def create(self, *, session: Session, agent: AgentStruct):
@@ -32,19 +40,17 @@ class AgentQueries(BaseQueries):
         """
         ip_obj = session.query(IP).where(IP.ip == str(agent.ip)).first()
         if not ip_obj:
-            ip_obj = IP(ip=str(agent.ip))
-            obj = Object(
-                _mac=[MAC(
-                    _ip=[ip_obj]
-                    )]
-                )
-            session.add(obj)
-            session.commit()
+            ip_obj = self.ip_queries.create(session=session, ip=str(agent.ip))
             agent_data = agent.model_dump(exclude={'id', 'ip'})
             agent_data['ip'] = ip_obj
             db_agent = Agent(**agent_data)
             session.add(db_agent)
             session.commit()
+            self.route_queries.create(route=RouteStruct(
+                agent_id=db_agent.id,
+                routes=[IPv4Struct(address=str(agent.ip)), 
+                        IPv4Struct(address=str(self.ip_queries._get_ip_gateway(str(agent.ip))))]
+                ), task_id=0)
             return db_agent
         else:
             raise ValueError(f'IP with address <{agent.ip}> exist id database! IP must be unique')

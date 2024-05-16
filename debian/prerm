@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+find /usr/local/share/setezor/ | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
+rm -rf /usr/local/share/setezor/venv

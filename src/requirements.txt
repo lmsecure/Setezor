@@ -23,5 +23,4 @@ openpyxl
 pyroute2
 orjson
 typing_extensions
-pydantic
 pydantic-extra-types

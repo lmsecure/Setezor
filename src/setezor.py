@@ -1,4 +1,6 @@
 import os
+import ssl
+from pathlib import Path
 
 import jinja2
 from aiohttp import web
@@ -22,11 +24,12 @@ from exceptions.loggers import get_logger, LoggerNames
 from before_run import check_software
 
 nest_asyncio.apply()
-init
+init()
 
 base_path = '/'.join(__file__.split('/')[:-1])
 PORT = 8008
 HOST = '0.0.0.0'
+
 
 async def create_app(port: int, host = ''):
     project_manager = ProjectManager()
@@ -57,14 +60,23 @@ async def on_shutdown(app: Application):
     pass
 
 def print_banner(host: str, port: int):
-    print(Fore.GREEN + f"=========== Start service on http://{host}:{port} ===========" + Style.RESET_ALL)
+    print(Fore.GREEN + f"=========== Start service on https://{host}:{port} ===========" + Style.RESET_ALL)
+
+def create_ssl_context():
+    path = Path(__file__).absolute()
+    cert = path.parent / Path('cert.pem')
+    key = path.parent / Path('key.pem')
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile=cert, keyfile=key)
+    return ssl_context
 
 @click.command()
 @click.option('-p', '--port', default=16661, type=int, show_default=True, help='Number of port to binding')
 def run_app(port: int):
     web.run_app(app=create_app(port=port), host=HOST, port=port, 
                 access_log=get_logger(LoggerNames.web_server, handlers=['file']), 
-                print=print_banner(HOST, port))
+                print=print_banner(HOST, port),
+                ssl_context=create_ssl_context())
 
 
 

@@ -19,6 +19,7 @@ class ScapyScanTask(BaseJob):
         self.db = db
         self.task_id = task_id
         self.is_stoped = False
+        self.__seen = set()
 
     async def _start_sniffing(self):
         self.sniffer.start_sniffing()
@@ -40,10 +41,15 @@ class ScapyScanTask(BaseJob):
 
     def write_packet_to_db(self, pkt: dict):
         if any(['ip' in j for j in list(pkt.keys())]):
-            host = IPv4Struct(address=pkt['child_ip'])
-            target = IPv4Struct(address=pkt['parent_ip'])
-            route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
-            self.db.route.create(route=route, task_id=self.task_id)
+            host = pkt['child_ip']
+            target = pkt['parent_ip']
+            uniq = f'{host}{target}'
+            if uniq not in self.__seen:
+                host = IPv4Struct(address=host)
+                target = IPv4Struct(address=target)
+                route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
+                self.db.route.create(route=route, task_id=self.task_id)
+                self.__seen.add(uniq)
         else:
             self.db.mac.write(mac=pkt.get('child_mac'), agent_id=self.agent_id)
             self.db.mac.write(mac=pkt.get('parent_mac'), agent_id=self.agent_id)
