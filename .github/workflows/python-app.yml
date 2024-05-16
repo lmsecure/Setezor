@@ -33,7 +33,7 @@ jobs:
         echo "Pid is $setezor_pid"
         sleep 5
         
-        curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:16661/projects/
+        curl -s -o /dev/null -w "%{http_code}" https://0.0.0.0:16661/projects/
         status_code=$?
         if [[ $status_code="200" ]];
         then
