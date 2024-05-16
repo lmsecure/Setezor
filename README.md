@@ -105,7 +105,7 @@ wget https://github.com/lmsecure/Setezor/releases/download/0.5.8b/setezor_0.5.8b
 2. Install with apt
 
 ```
-sudo apt install ./setezor_0.5.7b_oem.deb
+sudo apt install ./setezor_0.5.8b_all.deb
 ```
 
 3. Run
