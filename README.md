@@ -100,7 +100,7 @@ pydantic-extra-types
 1. Download latest release
 
 ```bash
-wget https://github.com/lmsecure/Setezor/releases/download/0.5.7b/setezor_0.5.7b_oem.deb
+wget https://github.com/lmsecure/Setezor/releases/download/0.5.8b/setezor_0.5.8b_all.deb
 ```
 2. Install with apt
 
