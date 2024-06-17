@@ -6,6 +6,11 @@ async def handle_404(request: PMRequest):
     # FixMe check what user want to get if file then return 404
     return HTTPFound('/projects/')
 
+
+async def handle_500(request: PMRequest):
+    return HTTPFound('/projects/')
+
+
 def create_error_middleware(overrides):
 
     @middleware
@@ -26,6 +31,7 @@ def create_error_middleware(overrides):
 
 def setup_middlewares(app: PMApplication):
     error_middlewares = create_error_middleware({
-        404: handle_404
+        404: handle_404,
+        500: handle_500,
     })
     app.middlewares.append(error_middlewares)
