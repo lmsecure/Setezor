@@ -14,10 +14,10 @@
 [Features in new version](#features-in-new-version)
 
 ### Screenshots
-![Projects page](src/docs/scr1.png)
-![Topology page](src/docs/scr2.png)
-![Topology fullscreen page](src/docs/scr3.png)
-![Info page](src/docs/scr4.png)
+![Projects page](setezor/docs/scr1.png)
+![Topology page](setezor/docs/scr2.png)
+![Topology fullscreen page](setezor/docs/scr3.png)
+![Info page](setezor/docs/scr4.png)
 
 ### Description
 **Setezor** - сетевой анализатор трафика с возможностью автоматического построения топологии сети. 
@@ -65,27 +65,36 @@
 #### Packages requirements
 
 ```
-aiohttp==3.8.4
+aiodns==3.2.0
 aiohttp_jinja2==1.5
 aiohttp_session==2.11.0
+aiohttp==3.8.4
 aiojobs==1.1.0
 alembic==1.9.2
-cryptography==3.4.8
+cffi==1.16.0
+click==8.1.7
+colorama==0.4.6
+cryptography==43.0.0
+dnspython==2.6.1
 iptools==0.7.0
 Jinja2==3.1.2
 mac_vendor_lookup==0.1.12
 nest-asyncio==1.5.6
-pandas==2.0.0
-scapy==2.4.5
+openpyxl==3.1.5
+orjson==3.10.6
+pandas==2.2.2
+pydantic-extra-types==2.9.0
+pydantic==2.8.2
+pyOpenSSL==24.2.1
+pyroute2==0.7.12
+scapy==2.5.0
 setuptools==59.6.0
-SQLAlchemy==1.4.32
 sqlalchemy_schemadisplay==1.3
-xmltodict==0.12.0
+SQLAlchemy-Utils==0.41.1
+SQLAlchemy==1.4.32
+typing_extensions==4.12.2
 xlsxwriter==3.0.8
-cffi
-click
-colorama
-openpyxl
+xmltodict==0.12.0
 ```
 ### Usage
 #### From github repo
@@ -106,17 +115,18 @@ source venv/bin/activate
 ```
 3. Установить зависимые пакеты. 
 ```bash
-pip3 install -r requirements.txt
+pip3 install -r setezor/requirements.txt
 ```
 4. Выдать права на работу с сокетами для `nmap` и `python3.11`
 ```bash
 sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 ```
 5. Запустить приложение
 ```bash
 
-python3 .py
+python3 setezor/setezor.py
 ```
 #### From github pyz-file from last release
 1. Скачать файл релиза с github 
@@ -132,7 +142,7 @@ sudo apt install nmap python3.11
 #### From dockerhub image
 1. Скачать docker образ
 ```bash
-docker pull docker pull lmsecure/setezor
+docker pull lmsecure/setezor
 ```
 2. Создать рабочую папку. Она будет нужна для хранения логов и пользовательских данных
 ```bash
@@ -146,7 +156,7 @@ docker run -p 16661:16661 --network=host -v ~/setezor/projects:/setezor/projects
 
 
 ### Database schema
-![schema](src/docs/db_schema_full.png)
+![schema](setezor/docs/db_schema_full.png)
 
 ### Features in new version
 1. Возможность скармливать логи других инструментов:

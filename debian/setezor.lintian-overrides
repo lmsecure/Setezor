@@ -1,0 +1,24 @@
+#python virtual environment
+setezor: arch-independent-package-contains-binary-or-object
+
+setezor: unstripped-binary-or-object
+
+setezor: package-installs-python-pycache-dir
+
+setezor: python3-script-but-no-python3-dep
+
+setezor: library-not-linked-against-libc
+
+setezor: missing-dependency-on-libc
+
+setezor: non-standard-toplevel-dir 
+
+setezor: file-in-usr-local
+
+setezor: file-in-unusual-dir
+
+setezor: interpreter-in-usr-local
+
+setezor: dir-in-usr-local
+
+setezor: privacy-breach-uses-embedded-file

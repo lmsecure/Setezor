@@ -1,11 +1,6 @@
-setezor (0.5.8b) agents; urgency=medium
+setezor (0.6.0b) kali-dev; urgency=medium
 
-    * Changed map drawing.
-    * A new gateway node has appeared.
-    * Now connections are drawn around gateways
-    * For nodes on the local network, a “presumptive gateway is drawn, even if it was not noticed in the traceroute
-    * Added HTTPS connection (to use your own certificate, replace cert.pem and key.pem in /usr/local/share/setezor)
-    * Fixed deb installation
+  * Initial release
 
+ -- lmsecure <lm.security@lianmedia.ru>  Wed, 14 Aug 2024 16:40:15 +0500
 
- -- lmsecure  Thu, 24 May 2024 15:11:40 -0500

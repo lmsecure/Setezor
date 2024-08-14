@@ -1,9 +1,10 @@
 #!/usr/bin/make -f
-#export DH_VERBOSE = 1
+#Export DH_VERBOSE = 1
 export PYBUILD_NAME=setezor
-
+export PYBUILD_SYSTEM=distutils
+export DH_VIRTUALENV_INSTALL_ROOT=/usr/local/share/setezor/venv
 %:
-	dh $@ --with python3
-
+	dh $@ --with python3.11,python-virtualenv --buildsystem=pybuild
+override_dh_virtualenv:
+	dh_virtualenv --builtin-venv --python /usr/bin/python3.11 --requirements setezor/requirements.txt --extra-pip-arg --no-compile
 override_dh_usrlocal:
-	echo ok

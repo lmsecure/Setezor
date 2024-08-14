@@ -1,62 +1,48 @@
 Source: setezor
-Section: туе
+Section: net
 Priority: optional
-Maintainer: LMSecurity <lm.security@lianmedia.ru>
+Maintainer: Kali Developers <devel@kali.org>
 Uploaders: LMSecurity <lm.security@lianmedia.ru>
 Rules-Requires-Root: no
-Build-Depends: debhelper-compat (= 13),
-               dh-python,
-               python3-all,
-               python3-requests,
-               python3-setuptools,
-Standards-Version: 0.5.8b
+Build-Depends: 
+ debhelper-compat (= 13),
+ dh-python,
+ dh-virtualenv (>=1.0),
+ python3-all,
+ python3-venv,
+ python3-requests,
+ python3-setuptools,
+X-Python3-Version: 3.11
+Standards-Version: 4.6.2
 Homepage: https://setezor.ru
 Vcs-Browser: https://github.com/lmsecure/Setezor
 Vcs-Git: https://github.com/lmsecure/Setezor.git
 
 Package: setezor
 Architecture: all
-Depends: ${python3:Depends},
-         ${misc:Depends},
-         sudo,
-         libcap2-bin,
-         python3.11,
-         python3.11-dev,
-         python3-pip,
-         python3.11-venv,
-         python3-sqlalchemy
-         python3-alembic
-         python3-aiohttp
-         python3-aiohttp-session
-         python3-aiofiles
-         python3-aiohttp-jinja2
-         python3-jinja2
-         python3-cryptography
-         python3-nest-asyncio
-         python3-pandas
-         python3-scapy
-         python3-sqlalchemy-utils
-         python3-xmltodict
-         python3-xlsxwriter
-         python3-cffi
-         python3-click
-         python3-colorama
-         python3-pyroute2
-         python3-typing-extensions
-         nmap,
-         masscan,
+Depends:
+ ${misc:Depends},
+ sudo,
+ libcap2-bin,
+ python3.11,
+ python3.11-dev,
+ python3-pip,
+ python3.11-venv,
+ ${python3:Depends},
+ nmap,
+ masscan,
 Description: Multitool for working with network
-.
-Features
-1. Separation into projects. In order not to "keep all eggs in one basket" the division into projects is implemented. User's belonging to a project is determined by a cookie. Unless a user has a cookie, he/she cannot start working with a project.
-2. Active scanning using nmap. Integration with natively installed nmap has been done.
-3. Active scanning using masscan. Integration with natively installed masscan is performed.
-4. Parsing nmap scan xml logs. Performed a scan on a remote machine and want to upload the logs to your project? No problem, Setezor supports parsing of nmap xml logs.
-5. Parsing masscan scan xml/list/json logs.
-6. Passive scanning using scapy. Scapy is a powerful networking tool. The application creates an asynchronous sniffer and "guts packets" on the fly.
-7. Parsing pcap files. You have done packet sniffing and want to load data into your project? No problem, Setezor supports pcap-files parsing.
-8. Parsing is organized as tasks. All parsing of parsing logs is organized as tasks and executed on the server side in separate schedulers. It is possible to configure each scheduler individually to control outgoing traffic.
-9. Building network topology. Network topology is automatically built on the basis of scan data.
-10. Notifications. When the status of a task changes, a notification pops up to inform the user.
-12. Working with the base through the web interface. The web interface has an element for working with the database.
-13. Use of REST API. REST API is used to work with the server part, so it is possible to write your own interface (tui, gui native, mobile) or integrate it into your project.
+ .
+ Features
+ 1. Separation into projects. In order not to "keep all eggs in one basket" the division into projects is implemented. User's belonging to a project is determined by a cookie. Unless a user has a cookie, he/she cannot start working with a project.
+ 2. Active scanning using nmap. Integration with natively installed nmap has been done.
+ 3. Active scanning using masscan. Integration with natively installed masscan is performed.
+ 4. Parsing nmap scan xml logs. Performed a scan on a remote machine and want to upload the logs to your project? No problem, Setezor supports parsing of nmap xml logs.
+ 5. Parsing masscan scan xml/list/json logs.
+ 6. Passive scanning using scapy. Scapy is a powerful networking tool. The application creates an asynchronous sniffer and "guts packets" on the fly.
+ 7. Parsing pcap files. You have done packet sniffing and want to load data into your project? No problem, Setezor supports pcap-files parsing.
+ 8. Parsing is organized as tasks. All parsing of parsing logs is organized as tasks and executed on the server side in separate schedulers. It is possible to configure each scheduler individually to control outgoing traffic.
+ 9. Building network topology. Network topology is automatically built on the basis of scan data.
+ 10. Notifications. When the status of a task changes, a notification pops up to inform the user.
+ 12. Working with the base through the web interface. The web interface has an element for working with the database.
+ 13. Use of REST API. REST API is used to work with the server part, so it is possible to write your own interface (tui, gui native, mobile) or integrate it into your project.

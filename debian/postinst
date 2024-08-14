@@ -1,34 +1,6 @@
 #!/bin/bash
-set -e
+#DEBHELPER#
 
-cd /usr/local/share/setezor
-
-python3.11 -m venv venv
-
-if test -d ./pip_packages/
-then
-    cp -rf ./pip_packages/* ./venv/lib64/python3.11/site-packages/
-    rm -r ./pip_packages/
-else
-    echo '[-] No pip packeges in src folder'
-fi
-
-venv/bin/python3.11 -m pip install -r requirements.txt
-sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
-sudo setcap cap_net_raw+eip `which nmap`
-sudo setcap cap_net_raw+eip `which masscan`
-
-venv/bin/python3.11 setezor.py --help
-echo "[Unit]
-Description=Setezor daemon
-
-[Service]
-User=
-WorkingDirectory=/usr/local/share/setezor
-ExecStart=/usr/local/share//venv/bin/python3.11 /usr/local/share//setezor.py
-Restart=always
-RestartSec=3
-TimeoutStopSec=5
-
-[Install]
-WantedBy=multi-user.target" > /etc/systemd/system/setezor.service
+setcap cap_net_raw=eip "$(readlink -f `which /usr/local/share/setezor/venv/setezor/bin/python3`)"
+setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
+setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`

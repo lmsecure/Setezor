@@ -1,8 +1,12 @@
 version: "2"
 services:
   setezor:
+    build: 
+      dockerfile: ./Dockerfile
     image: lmsecure/setezor:latest
     volumes:
       - ./projects:/setezor/projects
       - ./logs:/setezor/logs
+    ports:
+      - "16661:16661"
     network_mode: "host"
