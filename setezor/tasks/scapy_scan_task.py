@@ -5,7 +5,7 @@ from setezor.tasks.base_job import BaseJob, MessageObserver, CustomScheduler
 from setezor.modules.sniffing.base_sniffer import Sniffer
 from setezor.tools.ip_tools import get_ipv4
 from setezor.database.queries import Queries
-from setezor.network_structures import IPv4Struct, RouteStruct
+from setezor.network_structures import IPv4Struct, MacStruct, RouteStruct, ObjectStruct
 
 class ScapyScanTask(BaseJob):
     
@@ -40,8 +40,8 @@ class ScapyScanTask(BaseJob):
 
     def write_packet_to_db(self, pkt: dict):
         if any(['ip' in j for j in list(pkt.keys())]):
-            host = IPv4Struct(address=pkt['child_ip'])
-            target = IPv4Struct(address=pkt['parent_ip'])
+            host = IPv4Struct(address=pkt['child_ip'],mac_address = MacStruct(mac = pkt['child_mac'], object=ObjectStruct()))
+            target = IPv4Struct(address=pkt['parent_ip'],mac_address = MacStruct(mac = pkt['parent_mac'], object=ObjectStruct()))
             route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
             self.db.route.create(route=route, task_id=self.task_id)
         else:
