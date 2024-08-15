@@ -22,3 +22,5 @@ setezor: interpreter-in-usr-local
 setezor: dir-in-usr-local
 
 setezor: privacy-breach-uses-embedded-file
+
+setezor: embedded-library

@@ -40,5 +40,5 @@ setup(
     entry_points={
         "console_scripts": ["setezor = setezor.__init__:run_app"],
     },
-    python_requires='>=3.11,<3.12',
+    python_requires='>=3.12',
 )

@@ -45,8 +45,8 @@ Base = declarative_base(cls=BaseModel)
 
 class TimeDependent():
     
-    created_at: datetime = Column(TIMESTAMP, server_default=func.now())
-    updated_at: datetime | None = Column(TIMESTAMP, nullable=True, default=None, 
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, nullable=True, default=None, 
                                          onupdate=func.now(), server_onupdate=func.now()) # может вызывать проблемы, когда у бд и приложения разное временная зона
 
 class Object(Base, TimeDependent):
@@ -107,8 +107,8 @@ class MAC(Base, TimeDependent):
     mac = Column(String(17))
     object = Column(Integer, ForeignKey('objects.id'), nullable=False)
     vendor = Column(String)
-    _obj: 'Object' = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
-    _ip: 'IP' = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
+    _obj = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
+    _ip = relationship('IP', back_populates='_mac', cascade='all, delete-orphan')
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -146,9 +146,9 @@ class IP(Base, TimeDependent):
     ip = Column(String(15), nullable=False)
     domain_name = Column(String(100))
     network = relationship('Network', back_populates='ip_addresses', single_parent=True)
-    _mac: 'MAC' = relationship('MAC', back_populates='_ip', lazy='subquery')
+    _mac = relationship('MAC', back_populates='_ip', lazy='subquery')
     _host_ip = relationship('Port', back_populates='_ip', cascade='all, delete-orphan', single_parent=False)
-    agent: 'Agent' = relationship('Agent', back_populates='ip', single_parent=True)
+    agent = relationship('Agent', back_populates='ip', single_parent=True)
 
     _ip_id = relationship('Domain', back_populates='_ip_id')
     _child_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip', cascade='all, delete-orphan')
@@ -157,7 +157,7 @@ class IP(Base, TimeDependent):
     _whois = relationship('Whois', back_populates = '_ip_id')
 
     
-    route_values: list['RouteList'] = relationship('RouteList', back_populates='ip', single_parent=False)
+    route_values = relationship('RouteList', back_populates='ip', single_parent=False)
 
     
     @staticmethod
@@ -205,9 +205,9 @@ class Route(Base):
     agent_id: int = Column(ForeignKey('agents.id'))
     task_id: int = Column(ForeignKey('tasks.id'))
     
-    agent: 'Agent' = relationship('Agent',  back_populates='', single_parent=True)
-    routes: list['RouteList'] = relationship('RouteList', back_populates='route', single_parent=False)
-    task: 'Task' = relationship('Task' , back_populates='', single_parent=True)
+    agent= relationship('Agent',  back_populates='', single_parent=True)
+    routes = relationship('RouteList', back_populates='route', single_parent=False)
+    task = relationship('Task' , back_populates='', single_parent=True)
     
     def to_struct(self) -> RouteStruct:
         
@@ -230,8 +230,8 @@ class RouteList(Base):
     value: int = Column(ForeignKey('ip_addresses.id'))
     position: int = Column(Integer)
     
-    route: Route = relationship('Route', foreign_keys=[route_id], back_populates='routes')
-    ip: IP = relationship('IP', foreign_keys=[value], back_populates='route_values')
+    route = relationship('Route', foreign_keys=[route_id], back_populates='routes')
+    ip = relationship('IP', foreign_keys=[value], back_populates='route_values')
 
 class L3Link(Base):
     """Модель для таблицы со связями на l3 уровне
@@ -370,11 +370,11 @@ class Network(Base, TimeDependent):
     gateway = Column(Integer, nullable=True)
     # _as = Column(Text)
     type_id = Column(ForeignKey('network_types.id'))
-    type: 'NetworkType' = relationship('NetworkType', back_populates='networks', single_parent=True)
+    type = relationship('NetworkType', back_populates='networks', single_parent=True)
     supper_net_id = Column(ForeignKey('networks.id'))
     
     # whois = Column()
-    ip_addresses: list[IP] = relationship('IP', back_populates='network', single_parent=True)
+    ip_addresses = relationship('IP', back_populates='network', single_parent=True)
     
     @staticmethod
     def get_headers_for_table() -> list:
@@ -396,7 +396,7 @@ class NetworkType(Base):
     id = Column(Integer, primary_key=True)
     type = Column(Text, unique=True)
     
-    networks: list[Network] = relationship('Network', back_populates='type', single_parent=False)
+    networks = relationship('Network', back_populates='type', single_parent=False)
     
     
     @classmethod
@@ -419,10 +419,10 @@ class Agent(Base):
     red: int = Column(SmallInteger)
     green: int = Column(SmallInteger)
     blue: int = Column(SmallInteger)
-    ip: IP = relationship('IP', back_populates='agent', single_parent=True)
+    ip = relationship('IP', back_populates='agent', single_parent=True)
     
     # objects: list['Object'] = relationship('Object', back_populates='agent')
-    routes: list['Route'] = relationship('Route', back_populates='agent', single_parent=False)
+    routes = relationship('Route', back_populates='agent', single_parent=False)
     
     @staticmethod
     def get_headers_for_table() -> list:

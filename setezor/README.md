@@ -54,7 +54,7 @@
 
 ### Requirements
 #### Software requirements
-1. python3.10 or python3.11
+1. python3.10 or python3.12
 1. nmap
 
 #### Packages requirements
@@ -88,21 +88,21 @@ cd LMS.NetMap
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.11 python3-pip
+sudo apt install nmap python3.12 python3-pip
 ```
 2.1. Рекомендуется использовать `venv`
 ```bash
-sudo apt install -y python3.11-venv
+sudo apt install -y python3.12-venv
 python3 -m venv venv
 source venv/bin/activate
 ```
 3. Запустить скрипт автоматичиской установки пакетов и конфигурации
 ```bash
-bash ./src/setup_reqs.sh `which python3.11`
+bash ./src/setup_reqs.sh `which python3.12`
 ```
 4. Запустить приложение
 ```bash
-python3.11 src/app.py
+python3.12 src/app.py
 ```
 #### From github pyz-file from last release
 1. Скачать файл релиза с github 

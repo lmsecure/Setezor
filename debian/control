@@ -12,7 +12,7 @@ Build-Depends:
  python3-venv,
  python3-requests,
  python3-setuptools,
-X-Python3-Version: 3.11
+X-Python3-Version: 3.12
 Standards-Version: 4.6.2
 Homepage: https://setezor.ru
 Vcs-Browser: https://github.com/lmsecure/Setezor
@@ -24,10 +24,10 @@ Depends:
  ${misc:Depends},
  sudo,
  libcap2-bin,
- python3.11,
- python3.11-dev,
+ python3.12,
+ python3.12-dev,
  python3-pip,
- python3.11-venv,
+ python3.12-venv,
  ${python3:Depends},
  nmap,
  masscan,

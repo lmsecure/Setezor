@@ -56,7 +56,7 @@
 
 ### Requirements
 #### Software requirements
-1. python3.11
+1. python3.12
 1. nmap
 2. masscan
 3. libpcap2-bin
@@ -66,35 +66,36 @@
 
 ```
 aiodns==3.2.0
-aiohttp_jinja2==1.5
-aiohttp_session==2.11.0
-aiohttp==3.8.4
-aiojobs==1.1.0
-alembic==1.9.2
-cffi==1.16.0
+aiofiles==24.1.0
+aiohttp==3.10.3
+aiohttp_jinja2==1.6
+aiohttp_session==2.12.0
+aiojobs==1.3.0
+alembic==1.13.2
 click==8.1.7
 colorama==0.4.6
 cryptography==43.0.0
 dnspython==2.6.1
 iptools==0.7.0
-Jinja2==3.1.2
+Jinja2==3.1.4
 mac_vendor_lookup==0.1.12
-nest-asyncio==1.5.6
-openpyxl==3.1.5
-orjson==3.10.6
+nest_asyncio==1.6.0
+orjson==3.10.7
 pandas==2.2.2
-pydantic-extra-types==2.9.0
+purl==1.6
 pydantic==2.8.2
+pydantic_extra_types==2.9.0
+pyOpenSSL==24.2.1
 pyOpenSSL==24.2.1
 pyroute2==0.7.12
+pytest==8.3.2
+Requests==2.32.3
 scapy==2.5.0
-setuptools==59.6.0
-sqlalchemy_schemadisplay==1.3
-SQLAlchemy-Utils==0.41.1
-SQLAlchemy==1.4.32
+setuptools==72.2.0
+SQLAlchemy==2.0.32
+sqlalchemy_schemadisplay==2.0
 typing_extensions==4.12.2
-xlsxwriter==3.0.8
-xmltodict==0.12.0
+xmltodict==0.13.0
 ```
 ### Usage
 #### From github repo
@@ -105,7 +106,7 @@ cd Setezor
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.11
+sudo apt install nmap python3.12
 ```
 2.1. Рекомендуется использовать `venv`
 ```bash
@@ -117,11 +118,10 @@ source venv/bin/activate
 ```bash
 pip3 install -r setezor/requirements.txt
 ```
-4. Выдать права на работу с сокетами для `nmap` и `python3.11`
+4. Выдать права на работу с сокетами для `nmap` и `python3.12`
 ```bash
-sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.11`)"
+sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.12`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
-sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 ```
 5. Запустить приложение
 ```bash
@@ -136,7 +136,7 @@ cd Setezor
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.11
+sudo apt install nmap python3.12
 ```
 
 #### From dockerhub image

@@ -336,7 +336,7 @@ class BaseQueries(ABC):
         
         """Считает количество сток, опционально принимает словарь исключений {колонка: список исключений}"""
         
-        stm = select([func.count()]).select_from(self.model)
+        stm = select(func.count()).select_from(self.model)
         for key, list_value in except_values.items():
             if None in list_value:
                 stm = stm.where(getattr(self.model, key) != None)  # noqa: E711
