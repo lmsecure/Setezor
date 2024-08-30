@@ -1,0 +1,315 @@
+{% extends 'acunetix/base.html' %}
+
+{% block title %}
+Acunetix Group Targets
+{% endblock title %}
+
+{% block scripts %}
+
+{% endblock %}
+
+{% block detail %}
+<h2 class="mt-2">Group: {{ group.name}}</h2>
+<hr>
+<div class="container-fluid d-flex">
+    <div class="container-fluid border-end">
+        <h3 class="p-3">Targets</h3>
+        <div class="d-flex flex-row">
+            <div class="flex-row p-2">
+                <div id="group_targets_table">
+
+                </div>
+            </div>
+            <div class="p-2">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTarget"
+                    onclick="document.getElementById('targetAddForm').reset()">Add Target</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <h3 class="p-3">Scans</h3>
+        <div class="d-flex flex-row">
+            <div class="flex-row p-2">
+                <div id="group_scans_table">
+                    <h1>Hello</h1>
+                </div>
+            </div>
+            <div class="p-2">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addScan"
+                    onclick="document.getElementById('scanAddForm').reset()">Create Scan</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<hr>
+
+<div class="container-fluid d-flex">
+    <div class="container-fluid border-end">
+        <h3 class="p-3">Vulnerabilities</h3>
+        <div class="d-flex flex-row">
+            <div class="flex-row p-3">
+                <div id="group_vulns_table">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTarget" tabindex="-1" aria-labelledby="addTargetLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTargetLabel">Adding target</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="add_target(event)" id="targetAddForm">
+                <div class="modal-body">
+                    <input type="text" class="form-control mt-1" name="address" required placeholder="Target Name">
+                    <input type="text" class="form-control mt-1" name="description" placeholder="Description">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_adding_target"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addScan" tabindex="-1" aria-labelledby="addScanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScanLabel">Adding scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="add_scan(event)" id="scanAddForm">
+                <div class="modal-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4">
+                            <label for="scan_speed" class="col-form-label">Scan Speed</label>
+                        </div>
+                        <div class="col-auto">
+                            <select name="scan_speed" id="scanspeed" class="form-select mt-1" required>
+                                <option selected value=""></option>
+                                {% for scan_speed in scan_speeds %}
+                                <option value="{{scan_speed}}">{{scan_speed}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4">
+                            <label for="scan_date" class="col-form-label">Scan Start Date</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="date" id="scan_date" class="form-control mt-1" name="date" required
+                                placeholder="Start Date">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4">
+                            <label for="scan_time" class="col-form-label">Scan Start Time</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="time" id="scan_time" class="form-control mt-1" name="start_time" required
+                                placeholder="Start Time">
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4">
+                            <label for="scan_interval" class="col-form-label">Scan Interval</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="time" id="scan_interval" class="form-control mt-1" name="interval" required
+                                placeholder="Interval">
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4">
+                            <label for="scan_profile_id" class="col-form-label">Scan Profile</label>
+                        </div>
+                        <div class="col-auto">
+                            <select name="profile_id" id="scan_profile_id" class="form-select mt-1" required>
+                                <option selected value=""></option>
+                                {% for profile in scanning_profiles %}
+                                <option value="{{profile.profile_id}}">{{profile.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_adding_scans"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
+<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+<script>
+    let PickGroupButton = function () {
+        let obj = document.getElementById("acunetix_group_btn");
+        obj.classList.add("active");
+    }();
+    var headerMenu = function () {
+        var menu = [];
+        var columns = this.getColumns();
+        for (let column of columns) {
+            if (column.getDefinition().field) {
+                let icon = document.createElement("i");
+                icon.classList.add("bi");
+                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                let label = document.createElement("span");
+                let title = document.createElement("span");
+                title.textContent = " " + column.getDefinition().title;
+                label.appendChild(icon);
+                label.appendChild(title);
+                menu.push({
+                    label: label,
+                    action: function (e) {
+                        e.stopPropagation();
+                        column.toggle();
+                        if (column.isVisible()) {
+                            icon.classList.remove("bi-square");
+                            icon.classList.add("bi-check-square");
+                        } else {
+                            icon.classList.remove("bi-check-square");
+                            icon.classList.add("bi-square");
+                        }
+                        { { tab.name } } _table.redraw()
+                    }
+                });
+            }
+        }
+        return menu;
+    }
+    var group_targets_table = new Tabulator('#group_targets_table', {
+        layout: "fitData",
+        ajaxURL: "{{tab.targets_url}}",
+        height: "600px",
+        ajaxURLGenerator: function (url, config, params) {
+            //url - the url from the ajaxURL property or setData function
+            //config - the request config object from the ajaxConfig property
+            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            //return request url
+            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+        },
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 10,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            {% for col in tab.target_columns %}
+        {{ '{'}}title: "{{col.title}}",
+        field: "{{col.field}}",
+            {% if col.formatter %}
+    formatter: "link",
+        formatterParams: { urlField: "target_id" },
+    {% endif %}
+    headerMenu: headerMenu},
+    {% endfor %}
+        ]
+}
+);
+    var group_vulns_table = new Tabulator('#group_vulns_table', {
+        layout: "fitData",
+        ajaxURL: "{{tab.vulns_url}}",
+        height: "600px",
+        ajaxURLGenerator: function (url, config, params) {
+            //url - the url from the ajaxURL property or setData function
+            //config - the request config object from the ajaxConfig property
+            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            //return request url
+            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+        },
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 10,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            {% for col in tab.vulns_columns %}
+        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
+        {% if col.formatter == 'datetime' %}
+
+    {% endif %}
+    headerMenu: headerMenu},
+    {% endfor %}
+        ]
+}
+);
+
+
+    var group_scans_table = new Tabulator('#group_scans_table', {
+        layout: "fitData",
+        ajaxURL: "{{tab.scans_url}}",
+        height: "600px",
+        ajaxURLGenerator: function (url, config, params) {
+            //url - the url from the ajaxURL property or setData function
+            //config - the request config object from the ajaxConfig property
+            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            //return request url
+            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+        },
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 10,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            {% for col in tab.scans_columns %}
+        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
+        {% if col.formatter == 'datetime' %}
+
+    {% endif %}
+    headerMenu: headerMenu},
+    {% endfor %}
+        ]
+}
+);
+
+    let add_target = async function (event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        resp = await fetch("{{tab.targets_url}}", { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        if (resp.status === 201) {
+            document.getElementById("cancel_adding_target").click();
+            group_targets_table.dataLoader.reloadData();
+        }
+    }
+    let add_scan = async function (event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        resp = await fetch("{{tab.scans_url}}", { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        if (resp.status === 201) {
+            document.getElementById("cancel_adding_scans").click();
+            group_scans_table.dataLoader.reloadData();
+        }
+    }
+</script>
+{% endblock detail %}

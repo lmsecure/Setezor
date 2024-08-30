@@ -49,7 +49,7 @@ class WhoisTask(BaseJob):
         for _net_mask in alias_netmask:
             if _net_mask in result:
                 # _netmask = result[i].split('/')[1]
-                print(_net_mask)
+                #print(_net_mask)
                 break
         db.whois.get_or_create(**data)
 

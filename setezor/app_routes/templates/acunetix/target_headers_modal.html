@@ -1,0 +1,80 @@
+{% macro show() %}
+<div class="modal fade" id="setHeaders" tabindex="-1" aria-labelledby="setHeadersLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="setHeadersLabel">Setting headers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="set_headers(event)" id="setHeadersForm">
+                <input type="hidden" name="target_id" id="acunetix_headers_target_id">
+                <div class="modal-body">
+                    <div id="outerHeadersParent">
+                        <div class="form-group">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="col-form-label">Key</label>
+                                    <input type="text" class="form-control" name="key1" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="col-form-label">Value</label>
+                                    <input type="text" class="form-control" name="value1" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-1" onclick="addHeaderInList()">+</button>
+                    <button class="btn btn-danger mt-1" onclick="clearHeadersList()">Clear</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_setting_headers"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    async function set_headers(event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        let target_id = payload.get("target_id")
+        payload.delete("target_id")
+        resp = await fetch(`/api/acunetix/targets/${target_id}/headers/`, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        if (resp.status === 204) {
+            create_toast('Success', `Headers was set`, 'success')
+            targets_table.dataLoader.reloadData();
+            document.getElementById("cancel_setting_headers").click();
+        }else{
+            create_toast('Error', `Wrong format`, 'error')
+        }
+    }
+    let headersCount = 2;
+    function addHeaderInList() {
+        let container = document.getElementById("outerHeadersParent")
+        let div = document.createElement("div")
+        div.classList = "form-group"
+        div.innerHTML = `<div class="row">
+                                <div class="col-4">
+                                    <label class="col-form-label">Key</label>
+                                    <input type="text" class="form-control" name="key${headersCount}" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="col-form-label">Value</label>
+                                    <input type="text" class="form-control" name="value${headersCount}" required>
+                                </div>
+                            </div>`
+        container.appendChild(div)
+        headersCount++;
+    }
+    function clearHeadersList(){
+        let container = document.getElementById("outerHeadersParent")
+        container.innerHTML=""
+        headersCount = 1
+        addHeaderInList()
+    }
+</script>
+{% endmacro %}

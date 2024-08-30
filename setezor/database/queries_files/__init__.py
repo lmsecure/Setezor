@@ -15,3 +15,6 @@ from .whois_queries import WhoisQueries
 from .cert_queries import Cert
 from .DNS_queries import DNSQueries
 from .cert_queries import CertQueries
+from .resource_queries import ResourceQueries
+from .vulnerability_queries import VulnerabilityQueries
+from .vuln_res_soft_queries import VulnerabilityResSoftQueries

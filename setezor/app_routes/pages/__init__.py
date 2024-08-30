@@ -1,10 +1,12 @@
 from .info import info_routes
 from .screenshots import screenshot_routes
-from .network import network_routes
+from .network_map import network_map_routes
+from .tool import tool_routes
 from .project import project_routes
 from.project_dashboard import project_dashboard_routes
 from .settings import settings_routes
 from aiohttp.web import UrlDispatcher
+
 
 
 def add_page_routes(router: UrlDispatcher):
@@ -15,7 +17,8 @@ def add_page_routes(router: UrlDispatcher):
     """    
     router.add_routes(info_routes)
     router.add_routes(screenshot_routes)
-    router.add_routes(network_routes)
+    router.add_routes(network_map_routes)
+    router.add_routes(tool_routes)
     router.add_routes(project_routes)
     router.add_routes(project_dashboard_routes)
     router.add_routes(settings_routes)

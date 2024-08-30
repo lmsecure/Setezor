@@ -15,6 +15,7 @@ from .interface import InterfaceView
 from .network import NetworkView
 from .agent import AgentView
 from .route import RouteView
+from .acunetix.acunetix import AcunetixView
 
 from aiohttp.web import UrlDispatcher
 

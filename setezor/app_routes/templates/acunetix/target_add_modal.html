@@ -1,0 +1,53 @@
+{% macro show()%}
+<div class="modal fade" id="addTarget" tabindex="-1" aria-labelledby="addScanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScanLabel">Adding target</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="add_target(event)" id="targetAddForm">
+                <input type="hidden" name="group_id" id="acunetix_target_group_id">
+                <div class="modal-body">
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_name" class="col-form-label">Target address</label>
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="target_name" class="form-control" name = "address" required placeholder="https://localhost:8080">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_description" class="col-form-label">Target description</label>
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="target_description" name = "description" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_adding_target"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    let add_target = async function (event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        resp = await fetch("/api/acunetix/targets/", { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        if (resp.status === 200) {
+            document.getElementById("cancel_adding_target").click();
+            create_toast('Success', `Target was added`, 'success')
+            groups_table.dataLoader.reloadData();
+            targets_table.dataLoader.reloadData();
+        }
+    }
+</script>
+{% endmacro %}

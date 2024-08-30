@@ -58,11 +58,14 @@ def is_ip_address(address):
             return False
 
 async def get_ip_by_domain_name(name) -> str:
-    result = await asyncio.get_running_loop().getaddrinfo(
-        name,
-        80,
-        type=socket.SOCK_STREAM,
-        flags=socket.AI_ADDRCONFIG,
-        family=socket.AF_INET
-    )
-    return result[0][4][0]
+    try:
+        result = await asyncio.get_running_loop().getaddrinfo(
+            name,
+            80,
+            type=socket.SOCK_STREAM,
+            flags=socket.AI_ADDRCONFIG,
+            family=socket.AF_INET
+        )
+        return result[0][4][0]
+    except:
+        return None

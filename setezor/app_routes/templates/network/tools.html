@@ -1,9 +1,7 @@
 {% macro tools(is_scapy_running) %}
 
-<div id="main_bar" class="d-flex justify-content-between bd-highlight mb-3" style="height: auto;">
-
+<div id="main_bar" class="d-flex bd-highlight mb-3" style="height: auto;">
     <div class="d-flex flex-row">
-
         <div class="p-2 bd-highlight" id="div_tools">
             <div class="d-flex flex-column flex-shrink-0 p-3">
                 <h4>Tools</h4>
@@ -26,11 +24,9 @@
                     <button class="nav-link" id="v-pills-whois-tab" data-bs-toggle="pill"
                         data-bs-target="#v-pills-whois" type="button" role="tab" aria-controls="v-pills-whois"
                         aria-selected="false" tabindex="-1">WHOIS</button>
-                    <!-- <button class="nav-link" id="v-pills-whois-tab" data-bs-toggle="pill"
-                        data-bs-target="#v-pills-osint" type="button" role="tab" aria-controls="v-pills-osint"
-                        aria-selected="false" tabindex="-1">OSINT</button>  -->
-
-
+                    <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-acunetix" type="button" role="tab" aria-controls="v-pills-acunetix"
+                        aria-selected="false" tabindex="-1">ACUNETIX</button>
                 </div>
             </div>
         </div>
@@ -42,12 +38,12 @@
         <!-- <button class="nav-link" id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button" role="tab" aria-controls="v-pills-messages" aria-selected="false">Not implement</button>
     <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">Not implement</button> -->
     </div>
-    <div class="p2 tab-content boarder" id="v-pills-tabContent" style="width: 310px">
-        <div class="d-flex flex-fill justify-content-between" id="agent_interface_bar">
-            <div id="agent_bar" class="flex-fill">
+    <div class="p2 tab-content boarder" id="v-pills-tabContent">
+        <div class="d-flex " id="agent_interface_bar">
+            <div id="agent_bar" class="me-3">
             </div>
 
-            <div id="interface_bar" class="flex-fill">
+            <div id="interface_bar" class="ms-3">
             </div>
         </div>
 
@@ -550,73 +546,156 @@
             </div>
 
         </div>
+        <div class="tab-pane fade" id="v-pills-acunetix" role="tabpanel" aria-labelledby="v-pills-acunetix-tab">
+            <div class="row ms-1">
+                <ul class="nav nav-pills">
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-groups"
+                            type="button" role="tab" aria-controls="v-pills-acunetix-groups" aria-selected="false"
+                            id="acunetix_groups_pill"
+                            tabindex="-1">Groups</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-targets"
+                            type="button" role="tab" aria-controls="v-pills-acunetix-targets" aria-selected="false"
+                            id="acunetix_targets_pill"
+                            tabindex="-1">Targets</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-scans"
+                        id="acunetix_scans_pill"
+                        type="button" role="tab" aria-controls="" aria-selected="false" tabindex="-1">Scans</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-reports"
+                            type="button" role="tab" aria-controls="" aria-selected="false"
+                            id="acunetix_reports_pill"
+                            tabindex="-1">Reports</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-settings"
+                            type="button" role="tab" aria-controls="" aria-selected="false"
+                            tabindex="-1">Settings</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="p2 tab-content boarder" id="v-pills-acunetixContent">
+                <div class="tab-pane fade" id="v-pills-acunetix-groups" role="tabpanel"
+                    aria-labelledby="v-pills-acunetix-groups-tab">
+                    {% import 'acunetix/groups.html' as acunetix_groups with context%}
+                    {{acunetix_groups.show()}}
+                </div>
+                <div class="tab-pane fade" id="v-pills-acunetix-targets" role="tabpanel"
+                    aria-labelledby="v-pills-acunetix-targets-tab">
+                    {% import 'acunetix/targets.html' as acunetix_targets with context%}
+                    {{acunetix_targets.show()}}
+                </div>
 
-        <script>
+                <div class="tab-pane fade" id="v-pills-acunetix-scans" role="tabpanel"
+                    aria-labelledby="v-pills-acunetix-scans-tab">
+                    {% import 'acunetix/scans.html' as acunetix_scans with context%}
+                    {{acunetix_scans.show()}}
+                </div>
 
-            function getIface() {
-                iface = interfaceData.interfaces.find((elem) => elem.id == interfaceData.default_interface)
-                return iface.name
-            }
+                <div class="tab-pane fade" id="v-pills-acunetix-reports" role="tabpanel"
+                    aria-labelledby="v-pills-acunetix-reports-tab">
+                    {% import 'acunetix/reports.html' as acunetix_reports with context%}
+                    {{acunetix_reports.show()}}
+                </div>
 
-            function getAgent() {
-                agent = agentData.agents.find((elem) => elem.id == agentData.default_agent)
-                return agent.id
-            }
+                <div class="tab-pane fade" id="v-pills-acunetix-settings" role="tabpanel"
+                    aria-labelledby="v-pills-acunetix-settings-tab">
+                    {% import 'acunetix/settings.html' as acunetix_settings%}
+                    {{acunetix_settings.show()}}
+                </div>
+                {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}
+                {{acunetix_scan_modal.show()}}
 
-            var mask = new Inputmask('ip').mask('InputLogIp')
-            var mask = new Inputmask('mac').mask('InputLogMac')
-            var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
-            var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
-            $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
-                document.getElementById('portsSelector').disabled = !e.target.checked;
-                document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-            })
-            $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
-                document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
-                document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-            })
-            $('#ipTarget').on('change', function (e, data) {
-                if ($('#inputIP').inputmask('isComplete')) {
-                    document.getElementById('startScanSimpleBtn').disabled = false
-                } else {
-                    document.getElementById('startScanSimpleBtn').disabled = true
-                }
-            })
-            $('#masscanIpTarget').on('change', function (e, data) {
-                if ($('#masscanInputIP').inputmask('isComplete')) {
-                    document.getElementById('startMasscanScanBtn').disabled = false
-                } else {
-                    document.getElementById('startMasscanScanBtn').disabled = true
-                }
-            })
-            $('#nmapExtendedCommand').on('change', function (e, data) {
-                if (e.target.value != '') {
-                    document.getElementById('startScanExtendedBtn').disabled = false
-                } else {
-                    document.getElementById('startScanExtendedBtn').disabled = true
-                }
-            })
-        </script>
+                {% import 'acunetix/target_add_modal.html' as acunetix_target_modal%}
+                {{acunetix_target_modal.show()}}
 
-        <script>
-            createAgentBar('agent_bar')
-        </script>
-        <script>
-            createInterfaceBar('interface_bar')
-        </script>
+                {% import 'acunetix/target_proxy_modal.html' as target_proxy_modal%}
+                {{target_proxy_modal.show()}}
 
-        <script>
-            interfaceData = null
-            getInterfaceData().then((data) => {
-                interfaceData = data
-                fillInterfaceBar('interface_bar')
-            })
-        </script>
+                {% import 'acunetix/target_cookies_modal.html' as target_cookies_modal%}
+                {{target_cookies_modal.show()}}
 
-        <script>
-            getAgentData().then((data) => {
-                agentData = data
-                fillAgentBar('agent_bar')
-            })
-        </script>
-        {% endmacro %}
+                {% import 'acunetix/target_headers_modal.html' as target_headers_modal%}
+                {{target_headers_modal.show()}}
+
+                {% import 'acunetix/report_modal.html' as acunetix_report_modal with context%}
+                {{acunetix_report_modal.show()}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    function getIface() {
+        iface = interfaceData.interfaces.find((elem) => elem.id == interfaceData.default_interface)
+        return iface.name
+    }
+
+    function getAgent() {
+        agent = agentData.agents.find((elem) => elem.id == agentData.default_agent)
+        return agent.id
+    }
+
+    var mask = new Inputmask('ip').mask('InputLogIp')
+    var mask = new Inputmask('mac').mask('InputLogMac')
+    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
+    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
+    $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('portsSelector').disabled = !e.target.checked;
+        document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })
+    $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
+        document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })
+    $('#ipTarget').on('change', function (e, data) {
+        if ($('#inputIP').inputmask('isComplete')) {
+            document.getElementById('startScanSimpleBtn').disabled = false
+        } else {
+            document.getElementById('startScanSimpleBtn').disabled = true
+        }
+    })
+    $('#masscanIpTarget').on('change', function (e, data) {
+        if ($('#masscanInputIP').inputmask('isComplete')) {
+            document.getElementById('startMasscanScanBtn').disabled = false
+        } else {
+            document.getElementById('startMasscanScanBtn').disabled = true
+        }
+    })
+    $('#nmapExtendedCommand').on('change', function (e, data) {
+        if (e.target.value != '') {
+            document.getElementById('startScanExtendedBtn').disabled = false
+        } else {
+            document.getElementById('startScanExtendedBtn').disabled = true
+        }
+    })
+</script>
+
+<script>
+    createAgentBar('agent_bar')
+</script>
+<script>
+    createInterfaceBar('interface_bar')
+</script>
+
+<script>
+    interfaceData = null
+    getInterfaceData().then((data) => {
+        interfaceData = data
+        fillInterfaceBar('interface_bar')
+    })
+</script>
+
+<script>
+    getAgentData().then((data) => {
+        agentData = data
+        fillAgentBar('agent_bar')
+    })
+</script>
+{% endmacro %}

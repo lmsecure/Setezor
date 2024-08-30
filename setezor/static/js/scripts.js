@@ -1,13 +1,15 @@
-var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107"};
+var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
 function create_websocket(endpoint) {
     var sock = new WebSocket('wss://' + window.location.host + endpoint);
     sock.onmessage = function (message) {
         data = JSON.parse(message.data)
-        if (window.location.pathname == '/network/' && data.command === "update") {
+        if (window.location.pathname == '/network-map/' && data.command === "update") {
             get_nodes_and_edges(true)
             return;
-        } 
-        create_toast(data.title, data.text, data.type)
+        }
+        if (data.command === undefined){
+            create_toast(data.title, data.text, data.type)
+        }
     };
     sock.onerror = function (error) {console.log(error)}
     sock.onopen = function (event) {console.log('connection is open')}
@@ -33,6 +35,18 @@ function create_toast(title, message, level="info", time="just now") {
     var toast_instance = new bootstrap.Toast(toast)
     toast_holder.appendChild(toast)
     toast_instance.show()
+
+    var notification_holder = document.getElementById("notifications_body")
+    var notification_toast = document.createElement("div")
+    var mb = document.createElement("div")
+    mb.classList.add("mb-1", "fade")
+    notification_toast.classList.add("toast", "fade")
+    notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
+    notification_toast.setAttribute("data-bs-autohide",false)
+    var notification_toast_instance = new bootstrap.Toast(notification_toast)
+    notification_holder.prepend(notification_toast)
+    notification_holder.prepend(mb)
+    notification_toast_instance.show()
 };
 function create_html_toast(title, message, time, level) {
     return `

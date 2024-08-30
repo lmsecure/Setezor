@@ -7,7 +7,8 @@ from sqlalchemy import (Column,
                         Text,
                         TIMESTAMP, BOOLEAN, JSON,
                         SMALLINT,
-                        DateTime
+                        DateTime,
+                        Float
                         )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -155,6 +156,7 @@ class IP(Base, TimeDependent):
     _parent_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip', cascade='all, delete-orphan')
     _cert = relationship('Cert', back_populates = '_ip_id')
     _whois = relationship('Whois', back_populates = '_ip_id')
+    _resource = relationship('Resource', back_populates = '_ip_id')
 
     
     route_values = relationship('RouteList', back_populates='ip', single_parent=False)
@@ -274,6 +276,7 @@ class Port(Base, TimeDependent):
     version = Column(String(100))
     os_type = Column(String(100))
     cpe = Column(String(200))
+    _resource = relationship('Resource', back_populates = '_port_id')
     
     def to_struct(self):
         
@@ -448,7 +451,8 @@ class Domain(Base):
     _dns = relationship('DNS', back_populates = '_domain_id')
     _cert = relationship('Cert', back_populates = '_domain_id')
     _whois = relationship('Whois', back_populates = '_domain_id')
-    
+    _resource = relationship('Resource', back_populates = '_domain_id')
+
     @staticmethod
     def get_headers_for_table() -> list:
         return [{'field': 'id', 'title': 'ID'},
@@ -512,3 +516,83 @@ class Whois(Base):
     AS = Column(String)
     range_ip =  Column(String)
     netmask = Column(Integer)
+
+
+
+'''
+class SoftType(Base):
+    __tablename__ = 'soft_type'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+'''
+
+class Vulnerability(Base):
+    __tablename__ = 'vulnerabilities'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    cve = Column(String)
+    cwe = Column(String)
+    description = Column(String)
+    details = Column(String)
+    cvss2 = Column(String)
+    cvss3 = Column(String)
+    cvss4 = Column(String)
+    cvss4_score = Column(Float)
+    severity = Column(Integer)
+    _resource_soft = relationship("Vulnerability_Resource_Soft",back_populates="_vulnerability")
+
+    @classmethod
+    def from_struct(self, struct: MacStruct):
+        vuln = Vulnerability(**struct)
+        return vuln
+
+
+class Software(Base):
+    __tablename__ = "software"
+
+    id = Column(Integer, primary_key=True)
+    vendor = Column(String)
+    product = Column(String)
+    type = Column(String)
+    version = Column(String)
+    build = Column(String)
+    patch = Column(String)
+    platform = Column(String)
+    cpe23 = Column(String)
+
+    _vulnerability_resource = relationship('Vulnerability_Resource_Soft',back_populates='_software')
+
+
+class Vulnerability_Resource_Soft(Base):
+    __tablename__ = "vulnerability_resource_soft"
+    id = Column(Integer, primary_key=True)
+
+    vulnerability_id = Column(Integer, ForeignKey('vulnerabilities.id'))
+    _vulnerability = relationship('Vulnerability', back_populates='_resource_soft')
+
+    software_id = Column(Integer, ForeignKey('software.id'))
+    _software = relationship('Software',back_populates='_vulnerability_resource')
+
+    resource_id = Column(Integer, ForeignKey('resource.id'))
+    _resource = relationship('Resource', back_populates='_vulnerability_soft')
+
+
+class Resource(Base):
+    __tablename__ = 'resource'
+
+    id = Column(Integer, primary_key=True)
+
+    ip_id = Column(Integer, ForeignKey('ip_addresses.id'))
+    _ip_id = relationship('IP', back_populates='_resource')
+    
+    domain_id = Column(Integer, ForeignKey('domains.id'))
+    _domain_id = relationship('Domain', back_populates='_resource')
+
+    port_id = Column(Integer, ForeignKey('ports.id'))
+    _port_id = relationship('Port', back_populates='_resource')
+
+    acunetix_id = Column(String(36), unique=True)
+    
+    _vulnerability_soft = relationship('Vulnerability_Resource_Soft', back_populates='_resource')

@@ -80,7 +80,8 @@ class Configs:
                           masscan_logs=format_path % FilesNames.masscan_logs,
                           certificates_folder = format_path % FilesNames.certificates_folder)
         files = Files(database_file=format_path % FilesNames.database_file,
-                      project_configs=format_path % FilesNames.config_file)
+                      project_configs=format_path % FilesNames.config_file,
+                      acunetix_configs=format_path % FilesNames.acunetix_configs)
         variables = Variables(project_id=uid, project_name=project_name, default_agent=AgentStruct(name='Default agent'))
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},

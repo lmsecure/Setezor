@@ -1,0 +1,58 @@
+{% macro show() %}
+<div class="p-3">
+    <button class="btn btn-primary mt-1" id="updateScans" data-bs-toggle="tooltip" data-bs-toggle="top"
+        title="Update scans" onclick="scans_table.dataLoader.reloadData()"><i
+            class="bi bi-arrow-clockwise"></i></button>
+    <div class="d-flex flex-row mt-2">
+        <div class="flex-row">
+            <div id="scans_table">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function scans_buttons_formatter(cell, formatterParams, onRendered){
+        return `
+            <button class='btn btn-primary btn-sm' id="{{scans_tab.name}}-report-${cell.getRow().getData().scan_id}" 
+                        data-bs-toggle="modal" data-bs-target="#createReport"
+                        onclick="document.getElementById('createReportForm').reset();document.getElementById('acunetix_report_scan_id').value='${cell.getRow().getData().scan_id}'">Create report</button>
+        `
+    }
+    var scans_table = new Tabulator('#scans_table', {
+        layout: "fitData",
+        ajaxURL: "{{scans_tab.base_url}}",
+
+        ajaxURLGenerator: function (url, config, params) {
+            //url - the url from the ajaxURL property or setData function
+            //config - the request config object from the ajaxConfig property
+            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            //return request url
+            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+        },
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 10,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            {% for col in scans_tab.columns %}
+        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
+        {% if col.headerSort == False %}
+    headerSort: false,
+        {% endif %}
+    headerMenu: headerMenu},
+    {% endfor %}
+    { title: "Actions", formatter: scans_buttons_formatter, headerSort: false }
+        ]
+}
+)
+scans_table.on("dataLoadError",function (error){
+        document.getElementById("acunetix_scans_pill").style.display = 'none';
+    })
+</script>
+{% endmacro %}

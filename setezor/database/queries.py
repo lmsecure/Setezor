@@ -31,4 +31,6 @@ class Queries:
         self.whois = qf.WhoisQueries(domain = self.domain, ip = self.ip, session_maker=self.db.create_session())
         self.DNS = qf.DNSQueries(domain = self.domain, session_maker=self.db.create_session())
         self.Cert = qf.CertQueries(domain = self.domain, ip = self.ip, session_maker=self.db.create_session()) # ???
-        
+        self.resource = qf.ResourceQueries(ip = self.ip, port=self.port, domain=self.domain, session_maker=self.db.create_session())
+        self.vulnerability = qf.VulnerabilityQueries(session_maker = self.db.create_session())
+        self.vuln_res_soft = qf.VulnerabilityResSoftQueries(session_maker = self.db.create_session())

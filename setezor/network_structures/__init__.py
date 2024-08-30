@@ -118,8 +118,8 @@ class ServiceStruct(BaseStructModel):
 
 class PortStruct(BaseStructModel):
     port: int = Field(validation_alias=AliasChoices("value", "port"))
-    protocol: Literal["tcp", "udp"] = "tcp"
-    state: Literal["open", "closed", "filtered"] = "open"
+    protocol: Literal["tcp", "udp", None] = "tcp"
+    state: Literal["open", "closed", "filtered", None] = "open"
     service: ServiceStruct | None = None
 
 class ObjectStruct(BaseStructModel):

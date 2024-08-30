@@ -68,6 +68,7 @@ class Folders(BaseStruct):
 class Files(BaseStruct):
     database_file: str
     project_configs: str
+    acunetix_configs: str
 
 
 @dataclass
@@ -113,4 +114,5 @@ class FilesNames:
     database_file = 'database.sqlite'
     config_file = 'project_configs.json'
     certificates_folder = 'certificates'
+    acunetix_configs = 'acunetix.json'
     

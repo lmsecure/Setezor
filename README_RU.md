@@ -106,12 +106,12 @@ cd Setezor
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.12
+sudo apt install masscan nmap python3.12
 ```
 2.1. Рекомендуется использовать `venv`
 ```bash
-sudo apt install -y python3-venv
-python3 -m venv venv
+sudo apt install -y python3.12-venv
+python3.12 -m venv venv
 source venv/bin/activate
 ```
 3. Установить зависимые пакеты. 
@@ -122,11 +122,12 @@ pip3 install -r setezor/requirements.txt
 ```bash
 sudo setcap cap_net_raw=eip "$(readlink -f `which venv/bin/python3.12`)"
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 ```
 5. Запустить приложение
 ```bash
 
-python3 setezor/setezor.py
+python3.12 setezor/setezor.py
 ```
 #### From github pyz-file from last release
 1. Скачать файл релиза с github 
@@ -136,7 +137,7 @@ cd Setezor
 ```
 2. Установить необходимое ПО
 ```bash
-sudo apt install nmap python3.12
+sudo apt install masscan nmap python3.12
 ```
 
 #### From dockerhub image

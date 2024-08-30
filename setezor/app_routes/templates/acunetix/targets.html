@@ -1,0 +1,143 @@
+{% macro show() %}
+
+
+<div class="p-3">
+    <button class="btn btn-primary mt-1" id="updateTargets" data-bs-toggle="tooltip" data-bs-toggle="top"
+        title="Update targets" onclick="targets_table.dataLoader.reloadData()"><i
+            class="bi bi-arrow-clockwise"></i></button>
+
+    <div class="d-flex flex-column mt-2">
+        <div class="d-flex">
+            <div>
+                <div id="targets_table" class="mt-2">
+                </div>
+            </div>
+            <div class="ms-1">
+                <button class="btn btn-success mt-2" data-bs-toggle="modal" data-bs-target="#addTarget"
+                    onclick="document.getElementById('targetAddForm').reset();document.getElementById('acunetix_target_group_id').value=''">Add
+                    Target</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function target_buttons_formatter(cell, formatterParams, onRendered) {
+        return `<button class='btn btn-primary btn-sm' id="{{targets_tab.name}}-scan-${cell.getRow().getData().target_id}" 
+                        data-bs-toggle="modal" data-bs-target="#addScan"
+                        onclick="document.getElementById('scanAddForm').reset();
+                        document.getElementById('acunetix_scan_group_id').value='';
+                        document.getElementById('acunetix_scan_target_db_id').value='';
+                        document.getElementById('acunetix_scan_interval_div').style.display='none';
+                        document.getElementById('acunetix_scan_ports').style.display='none';
+                        document.getElementById('scan_interval').required=false;
+                        document.getElementById('acunetix_scan_target_id').value='${cell.getRow().getData().target_id}'">Scan</button>
+                <button class='btn btn-danger btn-sm' id="{{targets_tab.name}}-delete-${cell.getRow().getData().target_id}"
+                onclick="deleteTarget('${cell.getRow().getData().target_id}')">Delete</button>         
+                        `;
+    }
+    function target_proxy_formatter(cell, formatterParams, onRendered) {
+        return `
+        <div class="row">
+    <div class="col">
+        <textarea disabled id="{{targets_tab.name}}-target-proxy-${cell.getRow().getData().target_id}">${cell.getRow().getData().proxy}</textarea>
+    </div>
+    <div class="col d-flex flex-column">
+        <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setProxy" onclick="document.getElementById('setProxyForm').reset();document.getElementById('acunetix_proxy_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
+        <button class="btn btn-danger btn-sm" onclick="clearProxy('${cell.getRow().getData().target_id}')">Clear</button>
+    </div>
+</div>`;
+    }
+    function target_headers_formatter(cell, formatterParams, onRendered) {
+        return `
+        <div class="row">
+    <div class="col">
+        <textarea disabled id="{{targets_tab.name}}-target-headers-${cell.getRow().getData().target_id}">${cell.getRow().getData().headers}</textarea>
+    </div>
+    <div class="col d-flex flex-column">
+        <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setHeaders" onclick="document.getElementById('setHeadersForm').reset();clearHeadersList();document.getElementById('acunetix_headers_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
+        <button class="btn btn-danger btn-sm" onclick="clearHeaders('${cell.getRow().getData().target_id}')">Clear</button>
+    </div>
+</div>`;
+    }
+    function target_cookies_formatter(cell, formatterParams, onRendered) {
+        return `<div class="row">
+    <div class="col-10">
+        <textarea class="w-100" disabled id="{{targets_tab.name}}-target-cookies-${cell.getRow().getData().target_id}">${cell.getRow().getData().cookies}</textarea>
+    </div>
+    <div class="col-2 d-flex flex-column">
+        <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setCookies" onclick="document.getElementById('setCookiesForm').reset();clearCookiesList();document.getElementById('acunetix_cookies_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
+        <button class="btn btn-danger btn-sm" onclick="clearCookies('${cell.getRow().getData().target_id}')">Clear</button>
+    </div>
+</div>`;
+    }
+    async function deleteTarget(target_id){
+        resp = await fetch(`/api/acunetix/targets/${target_id}/`, { method: 'delete'})
+        if (resp.status === 204) {
+            targets_table.dataLoader.reloadData();
+            create_toast('Success', `Target was deleted`, 'success')
+        }
+    }
+    async function clearProxy(target_id) {
+        resp = await fetch(`/api/acunetix/targets/${target_id}/proxy/`, { method: 'put', body: JSON.stringify(Object()) })
+        if (resp.status === 204) {
+            targets_table.dataLoader.reloadData();
+        }
+    }
+    async function clearCookies(target_id) {
+        resp = await fetch(`/api/acunetix/targets/${target_id}/cookies/`, { method: 'put', body: JSON.stringify(Object()) })
+        if (resp.status === 204) {
+            targets_table.dataLoader.reloadData();
+        }
+    }
+    async function clearHeaders(target_id) {
+        resp = await fetch(`/api/acunetix/targets/${target_id}/headers/`, { method: 'put', body: JSON.stringify(Object()) })
+        if (resp.status === 204) {
+            targets_table.dataLoader.reloadData();
+        }
+    }
+    var targets_table = new Tabulator('#targets_table', {
+        layout: "fitData",
+        ajaxURL: "{{targets_tab.base_url}}",
+
+        ajaxURLGenerator: function (url, config, params) {
+            //url - the url from the ajaxURL property or setData function
+            //config - the request config object from the ajaxConfig property
+            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            //return request url
+            return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+        },
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 5,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            {% for col in targets_tab.columns %}
+        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
+        {% if col.headerSort == False %}
+    headerSort: false,
+        {% endif %}
+    {% if col.field in ("proxy", "cookies", "headers") %}
+    headerSort: false,
+        formatter :target_{{ col.field }}_formatter,
+            {% endif %}
+            {% if col.width %}
+            width:{{col.width}},
+            {% endif %}
+    headerMenu: headerMenu},
+    {% endfor %}
+    { title: "Actions", formatter: target_buttons_formatter, headerSort: false }
+        ]
+}
+)
+targets_table.on("dataLoadError",function (error){
+        document.getElementById("acunetix_targets_pill").style.display = 'none';
+    })
+
+</script>
+{% endmacro %}
