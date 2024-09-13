@@ -13,9 +13,9 @@ from pprint import pprint
 # res = WhoisResult(domain='test.ru')
 # res['']
 
-class Whois():
-    @staticmethod
-    def socket_connect(addr, ip):
+class Whois:
+    @classmethod
+    def socket_connect(cls, addr, ip):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((addr, 43))
         s.send((ip + "\r\n").encode())
@@ -28,13 +28,13 @@ class Whois():
         s.close() 
         return response
     
-    @staticmethod
-    def ianna(ip):
+    @classmethod
+    def ianna(cls, ip:str):
         '''
             Используется для получения информации о регистраторе IP-адреса
         '''
         addr = "whois.iana.org"
-        response = Whois.socket_connect(addr, ip)
+        response = cls.socket_connect(addr, ip)
         whois = ''
         for resp in response.decode().splitlines():
             if resp.startswith('%') or not resp.strip():
@@ -44,8 +44,8 @@ class Whois():
                 break
         return whois
     
-    @staticmethod
-    def parse_whois_info(whois_info):
+    @classmethod
+    def parse_whois_info(cls, whois_info):
         whois_ip = dict()  
         for ln in whois_info.decode().splitlines():
             if ln.strip().startswith("%") or not ln.strip():
@@ -64,14 +64,14 @@ class Whois():
                     whois_ip[key] = value
         return whois_ip
     
-    @staticmethod
-    def get_whois(ip):      
+    @classmethod
+    def get_whois(cls, ip:str):      
         try:
-            if whois := Whois.ianna(ip):
-                if info := Whois.parse_whois_info(Whois.socket_connect(whois,ip)):
+            if whois := cls.ianna(ip):
+                if info := cls.parse_whois_info(cls.socket_connect(whois,ip)):
                     return info
             else:
-                if info := Whois.parse_whois_info(Whois.socket_connect(ip,'www.whois.com')):
+                if info := cls.parse_whois_info(cls.socket_connect(ip,'www.whois.com')):
                     return info
         except AddressValueError:
             print("IP-address not valid")

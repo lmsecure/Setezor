@@ -11,7 +11,8 @@
             </div>
             <div class="ms-1">
                 <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addGroup"
-                    onclick="document.getElementById('groupAddForm').reset()">Add Group</button>
+                    onclick="document.getElementById('groupAddForm').reset();
+                    fillAcunetixInstances('acunetix_instance_group_add','acunetixTargetGroupAdd')">Add Group</button>
             </div>
         </div>
     </div>
@@ -29,6 +30,9 @@
             </div>
             <form onsubmit="add_group(event)" id="groupAddForm">
                 <div class="modal-body">
+                    <div id="acunetix_instance_group_add">
+
+                    </div>
                     <input type="text" class="form-control mt-1" name="name" required placeholder="Group Name">
                     <input type="text" class="form-control mt-1" name="description" placeholder="Description">
                 </div>
@@ -81,9 +85,24 @@
         return menu;
     }
 
+    async function fillAcunetixInstances(acunetix_id,groups_id){
+        resp = await fetch("/api/acunetix/apis/")
+        data = await resp.json()
+        result = `<select name='acunetix_name' required onchange='fillGroups(event, "${groups_id}")' class='form-select'>
+            <option value=''>Acunetix Name</option>`
+        for (const instance of data){
+            result += `<option value='${instance.name}'>${instance.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById(acunetix_id).innerHTML = result;
+        document.getElementById(groups_id).innerHTML="";
+    }
 
     function groups_buttons_formatter(cell, formatterParams, onRendered) {
-        return `<button class='btn btn-primary btn-sm' id="{{groups_tab.name}}-scan-${cell.getRow().getData().group_id}" 
+        return `
+        <div class="row d-flex flex-column">
+            <div class="col">
+                <button class='btn btn-primary btn-sm' id="{{groups_tab.name}}-scan-${cell.getRow().getData().group_id}" 
                         data-bs-toggle="modal" data-bs-target="#addScan"
                         onclick="document.getElementById('scanAddForm').reset();
                         document.getElementById('acunetix_scan_target_id').value='';
@@ -91,17 +110,23 @@
                         document.getElementById('acunetix_scan_interval_div').style.display='';
                         document.getElementById('scan_interval').required = true;
                         document.getElementById('acunetix_scan_ports').style.display='none';
+                        fillAcunetixScanSpeeds();
+                        fillAcunetixScanProfiles();
+                        currentAcunetixName='${cell.getRow().getData().acunetix_name}';
                         document.getElementById('acunetix_scan_group_id').value='${cell.getRow().getData().group_id}'">Scan</button>
                         <button class='btn btn-secondary btn-sm' id="{{groups_tab.name}}-target-${cell.getRow().getData().group_id}"
-                        data-bs-toggle="modal" data-bs-target="#addTarget"
-                        onclick="document.getElementById('targetAddForm').reset();
-                        document.getElementById('acunetix_target_group_id').value='${cell.getRow().getData().group_id}'">Add target</button>
-                        `;
-    }
-    function groups_targets_formatter(cell,formatterParams,onRendered){
-        return `
-        <textarea disabled id="{{groups_tab.name}}-targets-${cell.getRow().getData().group_id}">${cell.getRow().getData().targets}</textarea>
-        `;
+                        onclick="currentAcunetixName='${cell.getRow().getData().acunetix_name}';
+                        getGroupTargets('${cell.getRow().getData().group_id}')"
+                        data-bs-toggle="modal" data-bs-target="#setGroupTargetsModal">Edit membership</button>
+                        
+            </div>
+            <div class="col mt-1">
+                <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setProxy" onclick="document.getElementById('setProxyForm').reset();
+                currentAcunetixName='${cell.getRow().getData().acunetix_name}';
+                document.getElementById('acunetix_proxy_group_id').value='${cell.getRow().getData().group_id}';
+                document.getElementById('acunetix_proxy_target_id').value=''">Set Proxy</button>
+            </div>
+        </div>`;
     }
     var groups_table = new Tabulator('#groups_table', {
         layout: "fitData",
@@ -118,7 +143,7 @@
         sortMode: "remote",
         filterMode: "remote",
         pagination: true,
-        paginationMode: "remote",
+        paginationMode: "local",
         paginationSize: 5,
         paginationInitialPage: 1,
         paginationSizeSelector: [5, 10, 25, 50, 100],
@@ -130,7 +155,6 @@
         {% endif %}
     headerMenu: headerMenu},
     {% endfor %}
-    { title: "Targets", formatter: groups_targets_formatter, headerSort: false },
     { title: "Actions", formatter: groups_buttons_formatter, headerSort: false }
     
         ]
@@ -142,7 +166,9 @@
     async function add_group(event) {
         event.preventDefault();
         let payload = new FormData(event.target);
-        resp = await fetch('/api/acunetix/groups/', { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        let params = (new URLSearchParams({acunetix_name:payload.get("acunetix_name")})).toString()
+        payload.delete("acunetix_name")
+        resp = await fetch('/api/acunetix/groups/?'+ params, { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
         if (resp.status === 201) {
             document.getElementById("cancel_adding").click();
             groups_table.dataLoader.reloadData();

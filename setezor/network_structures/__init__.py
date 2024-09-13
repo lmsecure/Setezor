@@ -26,7 +26,6 @@ from pydantic_extra_types.mac_address import MacAddress
 
 # Можно использовать и классы из ipaddress, создаю отдельный класс, если понадобиться добавить методы в будущем
 
-
 class BaseStructModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: int | None = Field(ge=0, default=None)
@@ -107,20 +106,23 @@ class AnyIPAddress:
         return ip_address(address)
 
 
-class ServiceStruct(BaseStructModel):
-    name: str | None = Field(default=None, validation_alias=AliasChoices("name", "service_name"), serialization_alias='service_name')
-    product: str | None = None
-    version: str | None = None
-    os: str | None = Field(default=None, validation_alias=AliasChoices("os", "os_type"))
-    extra_info: str | None = None
-    cpe: str | None = None
-
-
-class PortStruct(BaseStructModel):
+class PortStruct(BaseModel):
     port: int = Field(validation_alias=AliasChoices("value", "port"))
     protocol: Literal["tcp", "udp", None] = "tcp"
     state: Literal["open", "closed", "filtered", None] = "open"
-    service: ServiceStruct | None = None
+    service_name: str | None = None
+
+
+class SoftwareStruct(BaseModel):
+    vendor: str | None = None
+    product: str | None = None
+    type: str | None = None
+    version: str | None = None
+    build: str | None = None
+    patch: str | None = None
+    platform: str | None = None
+    cpe23: str | None = None
+    
 
 class ObjectStruct(BaseStructModel):
     

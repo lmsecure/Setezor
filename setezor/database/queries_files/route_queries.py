@@ -71,24 +71,23 @@ class RouteQueries(BaseQueries):
     
         
     @BaseQueries.session_provide
-    def get_vis_edges(self, *, session: Session, routes: list[RouteStruct]): # ! заглушка
-        
-        routes: list[RouteStruct] = (i.to_struct() for i in session.query(Route).all())
-        links: list[list[IPv4Struct]] = []
-        for route in routes:
-            route = route.routes
-            result = [route[i:i + 2] for i in range(len(route) - 1)]
-            for i in result:
-                links.append(i)
-                
+    def get_vis_edges(self, *, session: Session): # ! заглушка
+        res = session.query(Route,RouteList,IP)\
+            .join(RouteList,Route.id == RouteList.route_id)\
+            .join(IP,RouteList.value == IP.id).order_by(Route.id,RouteList.position).all()
+        if not res:
+            return []
+        links = []
+        for i in range(len(res) - 1):
+            if res[i].Route.id == res[i+1].Route.id:
+                links.append((res[i],res[i+1]))
         seen = set()
         edges: list[VisEdge] = []
         for first, second in links:
-            key = str(first.address) + str(second.address)
+            key = str(first.IP.ip) + str(second.IP.ip)
             if key not in seen:
                 seen.add(key)
-                (first.id, second.id)
-                edges.append(VisEdge(from_node=first.id, to_node=second.id))
+                edges.append(VisEdge(from_node=first.IP.id, to_node=second.IP.id))
         self.logger.debug(f'Getting {len(edges)} vis edges')
         return edges
     
@@ -100,14 +99,37 @@ class RouteQueries(BaseQueries):
         :param session: сессия алхимии
         :return: (дикт агентов, дикт ip)
         """
+        res = session.query(IP,RouteList,Route)\
+            .join(RouteList,IP.id == RouteList.value,isouter=True)\
+            .join(Route,Route.id == RouteList.route_id,isouter=True)\
+            .join(Agent,Agent.ip_id == IP.id,isouter=True)\
+            .with_entities(IP.ip,Route.agent_id,Agent.id).distinct().all()
+        agents_ips = {}
+        for row in res:
+            address = row[0]
+            agent_id = row[1]
+            agent = row[2]
+            if not agents_ips.get(address):
+                agents_ips[address] = {
+                    "agents": [],
+                    "agent": None
+                }
+                if agent_id:
+                    agents_ips[address].update({"agents": {agent_id}})
+                if agent:
+                    agents_ips[address].update({"agent": agent})
+            else:
+                if agent_id:
+                    agents_ips[address]["agents"].add(agent_id)
+                if agent:
+                    agents_ips[address]["agent"] = agent
         ips: list[IP] = session.query(IP).all()
         nodes = []
         for ip in ips:
             node = ip.to_struct().model_dump()
             vis_node = VisNode.model_validate(node)
-            vis_node.agents = list(set((i.route.agent_id for i in ip .route_values)))
-            if agent:= session.query(Agent).where(Agent.ip_id == ip.id).first():
-                vis_node.agent = agent.id
+            vis_node.agents = list(agents_ips[ip.ip]["agents"])
+            vis_node.agent = agents_ips[ip.ip]["agent"]
             nodes.append(vis_node)
         self.logger.debug(f'Getting {len(nodes)} vis nodes')
         return nodes

@@ -41,14 +41,15 @@
     async function set_headers(event) {
         event.preventDefault();
         let payload = new FormData(event.target);
+        let params = (new URLSearchParams({ acunetix_name: currentAcunetixName })).toString()
         let target_id = payload.get("target_id")
         payload.delete("target_id")
-        resp = await fetch(`/api/acunetix/targets/${target_id}/headers/`, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        resp = await fetch(`/api/acunetix/targets/${target_id}/headers/?` + params, { method: 'put', body: JSON.stringify(Object.fromEntries(payload)) })
         if (resp.status === 204) {
             create_toast('Success', `Headers was set`, 'success')
             targets_table.dataLoader.reloadData();
             document.getElementById("cancel_setting_headers").click();
-        }else{
+        } else {
             create_toast('Error', `Wrong format`, 'error')
         }
     }
@@ -70,9 +71,9 @@
         container.appendChild(div)
         headersCount++;
     }
-    function clearHeadersList(){
+    function clearHeadersList() {
         let container = document.getElementById("outerHeadersParent")
-        container.innerHTML=""
+        container.innerHTML = ""
         headersCount = 1
         addHeaderInList()
     }

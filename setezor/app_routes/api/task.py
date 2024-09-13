@@ -23,6 +23,7 @@ from setezor.tasks.dns_task import DNSTask
 from setezor.tasks.domain_task import SdFindTask
 from setezor.tasks.whois_task import WhoisTask
 from setezor.tasks.cert_task import CertInfoTask
+from setezor.tasks.wappalyzer_task import Wappalyzer
 
 from setezor.tasks.screenshot_by_ip_task import ScreenshotFromIPTask
 from setezor.tasks.task_status import TaskStatus
@@ -262,4 +263,19 @@ class TaskView(BaseView):
                                                certificates_folder = project.configs.folders.certificates_folder, target = target, db=db, task_id=task_id, port=port))
         return Response(status=201)
     
+    @BaseView.route('POST', '/wappalyzer_log_parse')
+    @project_require
+    async def create_wappalyzer_task(self, request: PMRequest):
+        params: dict = await request.json()
+        log_file = b64decode(params.pop('log_file').split(',')[1]).decode()
+        json_file = json.loads(log_file)
+        groups = params.pop('groups')
+        params.update({"task" : Wappalyzer.__name__})
+        project = await get_project(request=request)
+        db = project.db
+        task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
+        scheduler = project.schedulers.get('other')
+        await scheduler.spawn_job(Wappalyzer(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
+                                             task_id=task_id, db=db, data=json_file, groups=groups))
+        return Response(status=201)
     

@@ -5,11 +5,11 @@ from typing_extensions import deprecated
 try:
     from exceptions.loggers import get_logger
     from tools.xml_utils import XMLParser
-    from network_structures import IPv4Struct, PortStruct, ServiceStruct, RouteStruct
+    from network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 except ImportError:
     from ...exceptions.loggers import get_logger
     from ...tools.xml_utils import XMLParser
-    from ...network_structures import IPv4Struct, PortStruct, ServiceStruct, RouteStruct
+    from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 
 logger = get_logger(__package__, handlers=[])
 
@@ -25,6 +25,7 @@ class NmapStructure:
     addresses: list = field(default_factory=list)
     hostnames: list  = field(default_factory=list)
     ports: list = field(default_factory=list)
+    softwares: list = field(default_factory=list)
     traces: list[RouteStruct] = field(default_factory=list)
 
 
@@ -137,17 +138,50 @@ class NmapParser(XMLParser):
         result: list[PortStruct] = []
         ports = NmapParser.to_list(ports.get('port') if ports else None)
         if ports:
-            for i in ports:
-                service = i.get('service')
-                if service:
-                        result.append({'port': i.get('portid'), 'ip': address.get('ip'),
-                                       'mac': address.get('mac'), 'service_name': service.get('name'),
-                                       'product': service.get('product'), 'extra_info': service.get('extrainfo'),
-                                       'version': service.get('version'), 'os_type': service.get('ostype'),
-                                       'cpe': ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe'),
-                                       'state': i.get('state').get('state'), 'protocol': i.get('protocol')})
+            for port in ports:
+                result.append({'port': port.get('portid'), 'ip': address.get('ip'), 
+                               'mac': address.get('mac'), 'service_name' : port.get('service', {}).get('name'),
+                                'state': port.get('state', {}).get('state'),
+                                'protocol': port.get('protocol')})
         return result
     
+
+
+    @classmethod
+    def parse_softwares(cls, ports : dict | list, address : dict) -> list:
+        """Метод парсинга раздела с результатами сканирования софта
+
+        Args:
+            ports (dict or list): информация из раздела с портами
+            address (dict): адреса сканируемой машины
+
+        Returns:
+            list: распарсенные данные о софте портов
+        """
+        # SoftwareStruct:
+        # vendor :      # 
+        # product :     # service -> product
+        # type :        # Software
+        # version :     # service -> version
+        # build :       # 
+        # patch :       # 
+        # platform :    # отдельной структурой
+        # cpe23 :       # service -> cpe
+        result: list[SoftwareStruct] = []
+        ports = NmapParser.to_list(ports.get('port'))
+        if ports:
+            for port in ports:
+                tmp_soft = {}
+                tmp_soft.update({'type' : 'Software'})
+                service = port.get('service')
+                if service:
+                    tmp_soft.update({'ip' : address.get('ip'), 'port' : port.get('portid'),
+                                     'product' : service.get('product'), 'version' : service.get('version'),
+                                     'cpe23' : ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe')})
+                result.append(tmp_soft)
+        return result
+
+
     @classmethod
     def convert_to_structures(cls, res: NmapStructure):
         from time import time
@@ -156,9 +190,6 @@ class NmapParser(XMLParser):
         ports = {i['ip']:[] for i in res.ports}
         for i in res.ports:
             port = PortStruct.model_validate(i)
-            if 'service_name' in i:
-                service = ServiceStruct.model_validate(i)
-                port.service = service
             ports[i['ip']].append(port)
         for addr in addresses:
             addr.ports = ports[str(addr.address)]
@@ -187,12 +218,14 @@ class NmapParser(XMLParser):
             trace_data = self.parse_traces(h.get('trace'), agent_id, self_address, IPv4Struct.model_validate(address_data[0]))
             for index, i in enumerate(address_data):
                 i.update({'domain_name': hostname_data[index]})
-            ports_data = self.parse_ports(h.get('ports'), address_data[0])
+            ports_data = self.parse_ports(h.get('ports',{}), address_data[0])
+            software_data = self.parse_softwares(h.get('ports',{}), address_data[0])
             result.addresses += address_data
             result.hostnames += hostname_data
             result.ports += ports_data
+            result.softwares += software_data
             result.traces.append(trace_data)
-        logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s traces', 
+        logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s software, %s traces', 
                      len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
         # res = self.convert_to_structures(result)
         return result

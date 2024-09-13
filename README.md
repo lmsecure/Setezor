@@ -17,7 +17,9 @@
 ![Projects page](setezor/docs/scr1.png)
 ![Topology page](setezor/docs/scr2.png)
 ![Topology fullscreen page](setezor/docs/scr3.png)
+![Network map](setezor/docs/scr6.png)
 ![Info page](setezor/docs/scr4.png)
+![Acunetix page](setezor/docs/scr5.png)
 
 ### Description
 **Setezor** is a network traffic analyzer with the ability to automatically build network topology. 

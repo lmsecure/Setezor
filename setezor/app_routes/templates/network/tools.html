@@ -27,16 +27,13 @@
                     <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
                         data-bs-target="#v-pills-acunetix" type="button" role="tab" aria-controls="v-pills-acunetix"
                         aria-selected="false" tabindex="-1">ACUNETIX</button>
+                    <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-wappalyzer" type="button" role="tab" aria-controls="v-pills-wappalyzer"
+                        aria-selected="false" tabindex="-1">WAPPALYZER</button>
                 </div>
             </div>
         </div>
 
-    </div>
-
-
-    <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-        <!-- <button class="nav-link" id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button" role="tab" aria-controls="v-pills-messages" aria-selected="false">Not implement</button>
-    <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">Not implement</button> -->
     </div>
     <div class="p2 tab-content boarder" id="v-pills-tabContent">
         <div class="d-flex " id="agent_interface_bar">
@@ -552,29 +549,27 @@
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-groups"
                             type="button" role="tab" aria-controls="v-pills-acunetix-groups" aria-selected="false"
-                            id="acunetix_groups_pill"
-                            tabindex="-1">Groups</button>
+                            id="acunetix_groups_pill" tabindex="-1">Groups</button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-targets"
                             type="button" role="tab" aria-controls="v-pills-acunetix-targets" aria-selected="false"
-                            id="acunetix_targets_pill"
-                            tabindex="-1">Targets</button>
+                            id="acunetix_targets_pill" tabindex="-1">Targets</button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-scans"
-                        id="acunetix_scans_pill"
-                        type="button" role="tab" aria-controls="" aria-selected="false" tabindex="-1">Scans</button>
+                            id="acunetix_scans_pill" type="button" role="tab" aria-controls="" aria-selected="false"
+                            tabindex="-1">Scans</button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-reports"
-                            type="button" role="tab" aria-controls="" aria-selected="false"
-                            id="acunetix_reports_pill"
+                            type="button" role="tab" aria-controls="" aria-selected="false" id="acunetix_reports_pill"
                             tabindex="-1">Reports</button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-settings"
                             type="button" role="tab" aria-controls="" aria-selected="false"
+                            onclick="refreshConfigsTable()"
                             tabindex="-1">Settings</button>
                     </li>
                 </ul>
@@ -614,24 +609,33 @@
                 {% import 'acunetix/target_add_modal.html' as acunetix_target_modal%}
                 {{acunetix_target_modal.show()}}
 
-                {% import 'acunetix/target_proxy_modal.html' as target_proxy_modal%}
-                {{target_proxy_modal.show()}}
+                {% import 'acunetix/target_proxy_modal.html' as acunetix_target_proxy_modal%}
+                {{acunetix_target_proxy_modal.show()}}
 
-                {% import 'acunetix/target_cookies_modal.html' as target_cookies_modal%}
-                {{target_cookies_modal.show()}}
+                {% import 'acunetix/target_cookies_modal.html' as acunetix_target_cookies_modal%}
+                {{acunetix_target_cookies_modal.show()}}
 
-                {% import 'acunetix/target_headers_modal.html' as target_headers_modal%}
-                {{target_headers_modal.show()}}
+                {% import 'acunetix/target_headers_modal.html' as acunetix_target_headers_modal%}
+                {{acunetix_target_headers_modal.show()}}
 
                 {% import 'acunetix/report_modal.html' as acunetix_report_modal with context%}
                 {{acunetix_report_modal.show()}}
+
+                {% import 'acunetix/targets_import_csv_modal.html' as acunetix_targets_import_csv_modal%}
+                {{acunetix_targets_import_csv_modal.show()}}
+
+                {% import 'acunetix/set_group_targets_modal.html' as acunetix_set_group_targets_modal%}
+                {{acunetix_set_group_targets_modal.show()}}
             </div>
         </div>
+
+        {% import 'network/wappalyzer.html' as wappalyzer with context%}
+        {{wappalyzer.show()}}
     </div>
 </div>
 
 <script>
-
+    let currentAcunetixName = "";
     function getIface() {
         iface = interfaceData.interfaces.find((elem) => elem.id == interfaceData.default_interface)
         return iface.name

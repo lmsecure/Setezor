@@ -18,3 +18,5 @@ from .cert_queries import CertQueries
 from .resource_queries import ResourceQueries
 from .vulnerability_queries import VulnerabilityQueries
 from .vuln_res_soft_queries import VulnerabilityResSoftQueries
+from .resource_soft_queries import ResourceSoftwareQueries
+from .software_queries import SoftwareQueries

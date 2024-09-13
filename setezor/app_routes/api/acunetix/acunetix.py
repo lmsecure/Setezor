@@ -4,6 +4,9 @@ from .routes.target import AcunetixTargetView
 from .routes.scan import AcunetixScanView
 from .routes.report import AcunetixReportView
 from .routes.acunetix_config import AcunetixConfigView
+from setezor.modules.application.pm_request import PMRequest
+from setezor.app_routes.session import get_project, project_require
+from aiohttp.web import json_response
 
 class AcunetixView(BaseView,
                    AcunetixGroupView,
@@ -13,6 +16,12 @@ class AcunetixView(BaseView,
                    AcunetixConfigView):
     endpoint = '/acunetix'
     queries_path = 'acunetix'
+
+    @BaseView.route('GET', '/apis/')
+    @project_require
+    async def get_apis(self,request:PMRequest):
+        project = await get_project(request=request)
+        return json_response(status=200,data=project.acunetix_manager.apis)
 
 '''
     @BaseView.route('GET', '/groups/{group_id}/targets/')

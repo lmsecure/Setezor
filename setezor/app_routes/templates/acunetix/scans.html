@@ -13,11 +13,25 @@
 
 
 <script>
+    async function fillReportTemplates(){
+        let resp = await fetch("/api/acunetix/reports/templates/")
+        let templates = await resp.json()
+        let result = "<select name='template_id'  class='form-select mt-1' required><option selected value=''></option>"
+        for (const template of templates){
+            result += `<option value='${template.template_id}'>${template.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById("report_profile_id").innerHTML = result
+    }
+
     function scans_buttons_formatter(cell, formatterParams, onRendered){
         return `
             <button class='btn btn-primary btn-sm' id="{{scans_tab.name}}-report-${cell.getRow().getData().scan_id}" 
                         data-bs-toggle="modal" data-bs-target="#createReport"
-                        onclick="document.getElementById('createReportForm').reset();document.getElementById('acunetix_report_scan_id').value='${cell.getRow().getData().scan_id}'">Create report</button>
+                        onclick="document.getElementById('createReportForm').reset();
+                        currentAcunetixName='${cell.getRow().getData().acunetix_name}';
+                        fillReportTemplates();
+                        document.getElementById('acunetix_report_scan_id').value='${cell.getRow().getData().scan_id}'">Create report</button>
         `
     }
     var scans_table = new Tabulator('#scans_table', {
@@ -32,10 +46,10 @@
             return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
         },
         selectable: false,
-        sortMode: "remote",
+        sortMode: "local",
         filterMode: "remote",
         pagination: true,
-        paginationMode: "remote",
+        paginationMode: "local",
         paginationSize: 10,
         paginationInitialPage: 1,
         paginationSizeSelector: [5, 10, 25, 50, 100],

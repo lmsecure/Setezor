@@ -105,6 +105,8 @@ class Configs:
                 data = orjson.dumps(configs,
                         default=lambda x: x.model_dump() if isinstance(x, BaseModel) else x.__dict__, option=orjson.OPT_INDENT_2)
                 f.write(data)
+            with open(self.files.acunetix_configs, 'w') as f:
+                f.write("{}")
         except Exception:
             raise FileSaveError('Cannot save config file')
     

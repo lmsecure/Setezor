@@ -35,23 +35,25 @@ class DNS:
                     }
                 )
         return domain_records
-
-    @staticmethod
-    async def get_records(domain:str) -> List[Dict[str,str]]:
-        """
-            Получает список для ресурсных записей DNS, которые существуют у домена
-        """
-        async def resolve_domain(domain:str,record:str): 
+    
+    @classmethod
+    async def resolve_domain(cls, domain:str,record:str): 
             #res = dns.asyncresolver.Resolver(configure=False)
             #res.nameservers = ["1.1.1.1"]
             #result = await res.resolve(qname = domain,rdtype=record)
             result = await dns.asyncresolver.resolve(qname = domain,rdtype=record)
             return record, result
+
+    @classmethod
+    async def get_records(cls, domain:str) -> List[Dict[str,str]]:
+        """
+            Получает список для ресурсных записей DNS, которые существуют у домена
+        """
         
         logger.debug('Start getting DNS records for [%s]', domain)
         records = ["A","CNAME","MX","AAAA","SRV","TXT","NS","PTR","SOA"]
         tasks = []
         for record in records:
-            task = asyncio.create_task(resolve_domain(domain,record))
+            task = asyncio.create_task(cls.resolve_domain(domain,record))
             tasks.append(task)
         return await asyncio.gather(*tasks,return_exceptions=True)    

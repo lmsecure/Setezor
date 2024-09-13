@@ -8,6 +8,7 @@
             </div>
             <form onsubmit="set_proxy(event)" id="setProxyForm">
                 <input type="hidden" name="target_id" id="acunetix_proxy_target_id">
+                <input type="hidden" name="group_id" id="acunetix_proxy_group_id">
                 <div class="modal-body">
                     <div class="row mb-1">
                         <div class="col-4">
@@ -57,13 +58,24 @@
 <script>
     async function set_proxy(event) {
         event.preventDefault();
+        let params = (new URLSearchParams({acunetix_name:currentAcunetixName})).toString()
         let payload = new FormData(event.target);
-        let target_id = payload.get("target_id")
-        payload.delete("target_id")
-        resp = await fetch(`/api/acunetix/targets/${target_id}/proxy/`, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        if (payload.get("group_id") === ''){
+            let target_id = payload.get("target_id")
+            payload.delete("target_id")
+            payload.delete("group_id")
+            resp = await fetch(`/api/acunetix/targets/${target_id}/proxy/?`+params, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        }
+        if (payload.get("target_id") === ''){
+            let group_id = payload.get("group_id")
+            payload.delete("group_id")
+            payload.delete("target_id")
+            resp = await fetch(`/api/acunetix/groups/${group_id}/proxy/?`+params, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        }
         if (resp.status === 204) {
             document.getElementById("cancel_setting_proxy").click();
             targets_table.dataLoader.reloadData();
+            create_toast('Success', `Proxy was set`, 'success')
         }
     }
 </script>

@@ -11,18 +11,13 @@
                 <input type="hidden" name="target_id" id="acunetix_scan_target_id">
                 <input type="hidden" name="target_db_id" id="acunetix_scan_target_db_id">
                 <div class="modal-body">
+                    <div class="row mb-1" id="acunetix_scan_instances_parent">
+                    </div>
                     <div class="row mb-1">
                         <div class="col-4">
                             <label for="scan_speed" class="col-form-label">Scan Speed</label>
                         </div>
-                        <div class="col-6">
-                            <select name="scan_speed" id="scanspeed" class="form-select mt-1" data-allow-clear="1"
-                                data-suggestions-threshold="0" required>
-                                <option selected value=""></option>
-                                {% for scan_speed in scan_speeds %}
-                                <option value="{{scan_speed}}">{{scan_speed}}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-6" id="scanspeed">
                         </div>
                     </div>
                     <div class="row mb-1">
@@ -57,14 +52,8 @@
                         <div class="col-4">
                             <label for="scan_profile_id" class="col-form-label">Scan Profile</label>
                         </div>
-                        <div class="col-6">
-                            <select name="profile_id" id="scan_profile_id" class="form-select mt-1" data-allow-clear="1"
-                                data-suggestions-threshold="0" required>
-                                <option selected value=""></option>
-                                {% for profile in scanning_profiles %}
-                                <option value="{{profile.profile_id}}">{{profile.name}}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-6" id="scan_profile_id">
+
                         </div>
                     </div>
                     <div id="acunetix_scan_ports">
@@ -104,10 +93,32 @@
 </div>
 
 <script>
+    async function fillAcunetixScanSpeeds() {
+        resp = await fetch("/api/acunetix/scans/speeds/")
+        scan_speeds = await resp.json()
+        result = `<select name="scan_speed"  class="form-select mt-1" required>
+                                    <option selected value=""></option>`
+        for (const speed of scan_speeds) {
+            result += `<option value="${speed}">${speed}</option>`
+        }
+        result += "</select>"
+        document.getElementById("scanspeed").innerHTML = result
+    }
+    async function fillAcunetixScanProfiles() {
+        resp = await fetch("/api/acunetix/scans/profiles/")
+        profiles = await resp.json()
+        result = `<select name="profile_id"  class="form-select mt-1" required>
+                                    <option selected value=""></option>`
+        for (const profile of profiles) {
+            result += `<option value="${profile.profile_id}">${profile.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById("scan_profile_id").innerHTML = result
+    }
     async function add_scan(event) {
         event.preventDefault();
         let payload = new FormData(event.target);
-        if (((payload.getAll("http_ports").length + payload.getAll("https_ports").length) === 0) && window.location.pathname === "/network-map/"){
+        if (((payload.getAll("http_ports").length + payload.getAll("https_ports").length) === 0) && window.location.pathname === "/network-map/") {
             create_toast('Error', `Add HTTP or HTTPS ports!`, 'error')
             return;
         }
@@ -121,7 +132,7 @@
             payload.delete("https_ports")
             payload.set("https_ports", http_ports.join(","))
         }
-        resp = await fetch("/api/acunetix/scans/", { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        resp = await fetch(`/api/acunetix/scans/?acunetix_name=${currentAcunetixName}`, { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
         if (resp.status === 201) {
             document.getElementById("cancel_adding_scans").click();
             scans_table.dataLoader.reloadData();

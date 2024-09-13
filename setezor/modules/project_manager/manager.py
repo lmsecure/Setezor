@@ -14,6 +14,7 @@ from .storage import MemoryProjectStorage
 
 from setezor.tools.ip_tools import get_interfaces, get_default_interface
 from setezor.network_structures import AgentStruct
+from .acunetix_manager import AcunetixManager
 
 class ProjectManager:
     '''
@@ -76,7 +77,8 @@ class ProjectManager:
 
     async def create_mock_project(self,):
         conf = Configs('', '', '', Variables('*', '*', '*'), '')
-        project = Project(name='*', path='', configs=conf, is_temp=True)
+        acunetix_manager = AcunetixManager("","")
+        project = Project(name='*', path='', configs=conf, acunetix_manager=acunetix_manager,is_temp=True)
         self.mock = project
         await self.project_storage.add_project(project)
         
@@ -91,9 +93,11 @@ class ProjectManager:
         top_ports = [FrequentValue('port', i[1], i[0]) for i in
                         db.port.get_most_frequent_values(column='port', 
                         limit=top_limit, except_values=[None])]
-        top_products = [FrequentValue('product', i[1], i[0]) for i in
-                        db.port.get_most_frequent_values(column='product', 
-                        limit=top_limit, except_values=[None])]
+        
+        top_products = [FrequentValue('product', i[1], i[0]) for i in 
+                        db.software.get_most_frequent_value_from_port(column = 'product', 
+                        limit=top_limit)]
+
         stat = ProjectInfo(
             name=project.configs.variables.project_name,
             project_id=project.configs.variables.project_id,

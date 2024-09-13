@@ -62,6 +62,9 @@ class CertInfoTask(BaseJob):
             t1 = time()
             result = await self._task_func(target=target, port=port, certificates_folder=certificates_folder)
 
+            if not result:
+                raise ValueError("Certificate not found")
+
             self.logger.debug('Task func "%s" finished after %.2f seconds',
                               self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, result=result)

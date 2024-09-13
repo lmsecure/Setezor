@@ -5,97 +5,110 @@ from setezor.app_routes.session import get_db_by_session, get_project, project_r
 from setezor.app_routes.api.base_web_view import BaseView
 from setezor.modules.application import PMRequest
 from setezor.modules.acunetix.target import Target
+import io
+import csv
 
 
 class AcunetixTargetView:
     @BaseView.route('GET', '/targets/')
     @project_require
     async def get_all_targets(self, request: PMRequest) -> Response:
-        project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         query = request.rel_url.query
-        params = json.loads(query.get('params', "{}"))
-        page = int(params.get('page', 1))
-        size = int(params.get('size', 10))
-        sort = params.get('sort', {})
-        if page == 1:
-            params = {"l": size}
-        else:
-            params = {"l": size, "c": size * (page - 1)}
-        if sort:
-            params.update({"s": f"{sort[0]['field']}:{sort[0]['dir']}"})
-        targets, count = await Target.get_all(params=params, credentials=credentials)
-        if not count % size:
-            last_page = count // size
-        else:
-            last_page = count // size + 1
-        return json_response(status=200, data={"data": targets, "last_page": last_page})
+        project = await get_project(request=request)
+        targets = await project.acunetix_manager.get_targets(query.get("acunetix_name"))
+        return json_response(status=200, data=targets)
 
     @BaseView.route('POST', '/targets/')
     @project_require
     async def add_target(self, request: PMRequest) -> Response:
+        query = request.rel_url.query
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         db = await get_db_by_session(request=request)
         payload: dict = await request.json()
-        raw_address = payload["address"]
-        data = Target.parse_url(url = raw_address)
-        resource_obj = db.resource.get_or_create(**data)
-        status, msg = await Target.create(payload=payload, credentials=credentials)
-        if status:
-            db.resource.update_by_id(id=resource_obj.id, to_update={
-                                     "acunetix_id": msg["targets"][0]["target_id"]}, merge_mode="replace")
+        acunetix_name = query.get("acunetix_name")
+        for i in range(len(payload) // 2):
+            raw_payload = {
+                "address": payload[f"address{i+1}"],
+                "description": payload[f"description{i+1}"],
+                "group_id": payload["group_id"]
+            }
+            raw_address = raw_payload["address"]
+            data = Target.parse_url(url=raw_address)
+            resource_obj = db.resource.get_or_create(**data)
+            status, msg = await project.acunetix_manager.add_target(name=acunetix_name, payload=raw_payload)
+            if status:
+                db.resource.update_by_id(id=resource_obj.id, to_update={
+                    "acunetix_id": msg["targets"][0]["target_id"]}, merge_mode="replace")
         return json_response(status=status, data={"data": msg})
+
+    @BaseView.route('POST', '/targets/import_csv/')
+    @project_require
+    async def import_targets_from_csv(self, request: PMRequest) -> Response:
+        query = request.rel_url.query
+        data = await request.post()
+        project = await get_project(request=request)
+        db = await get_db_by_session(request=request)
+        group_id = data.get("group_id")
+        csv_file = data.get('targets_csv')
+        acunetix_name = query.get("acunetix_name")
+        data = csv.reader(io.StringIO(csv_file.file.read().decode()))
+        raw_payload = {
+            "address": "",
+            "description": "",
+            "group_id": group_id
+        }
+        for line in data:
+            addr = line[0]
+            raw_payload["address"] = addr
+            data = Target.parse_url(url=addr)
+            resource_obj = db.resource.get_or_create(**data)
+            status, msg = await project.acunetix_manager.add_target(name=acunetix_name, payload=raw_payload)
+            if status:
+                db.resource.update_by_id(id=resource_obj.id, to_update={
+                    "acunetix_id": msg["targets"][0]["target_id"]}, merge_mode="replace")
+        return json_response(status=204)
 
     @BaseView.route('DELETE', '/targets/{target_id}/')
     @project_require
     async def delete_target(self, request: PMRequest) -> Response:
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         target_id = request.match_info["target_id"]
-        status, msg = await Target.delete(id=target_id, credentials=credentials)
+        status, msg = await project.acunetix_manager.delete_target(name=acunetix_name, target_id=target_id)
         return json_response(status=status, data={"data": msg})
 
     @BaseView.route('PUT', '/targets/{target_id}/proxy/')
     @project_require
-    async def update_proxy(self, request: PMRequest) -> Response:
+    async def update_target_proxy(self, request: PMRequest) -> Response:
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         payload: dict = await request.json()
         target_id = request.match_info["target_id"]
-        status = await Target.set_proxy(id=target_id, payload=payload, credentials=credentials)
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
+        status = await project.acunetix_manager.set_target_proxy(name=acunetix_name, target_id=target_id, payload=payload)
         return json_response(status=status)
 
     @BaseView.route('PUT', '/targets/{target_id}/cookies/')
     @project_require
     async def update_cookies(self, request: PMRequest) -> Response:
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         payload: dict = await request.json()
         target_id = request.match_info["target_id"]
-        status = await Target.set_cookies(id=target_id, payload=payload, credentials=credentials)
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
+        status = await project.acunetix_manager.set_target_cookies(name=acunetix_name, target_id=target_id, payload=payload)
         return json_response(status=status)
 
     @BaseView.route('PUT', '/targets/{target_id}/headers/')
     @project_require
     async def update_headers(self, request: PMRequest) -> Response:
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         payload: dict = await request.json()
         target_id = request.match_info["target_id"]
-        status = await Target.set_headers(id=target_id, payload=payload, credentials=credentials)
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
+        status = await project.acunetix_manager.set_target_headers(name=acunetix_name, target_id=target_id, payload=payload)
         return json_response(status=status)
 
 

@@ -20,9 +20,9 @@ from datetime import datetime
 
 from .model_repr import RepresentableBase
 try:
-    from network_structures import IPv4Struct, PortStruct, ServiceStruct, MacStruct, ObjectStruct, RouteStruct
+    from network_structures import IPv4Struct, PortStruct, MacStruct, ObjectStruct, RouteStruct
 except ImportError:
-    from ..network_structures import IPv4Struct, PortStruct, ServiceStruct, MacStruct, ObjectStruct, RouteStruct
+    from ..network_structures import IPv4Struct, PortStruct, MacStruct, ObjectStruct, RouteStruct
 
 class BaseModel(RepresentableBase):
     """базовый класс для моделей базы данных
@@ -256,7 +256,6 @@ class L3Link(Base):
         return {'from': self._parent_ip.id, 'to': self._child_ip.id}
 
 
-
 class Port(Base, TimeDependent):
     """Модель для таблицы с портами
     """
@@ -271,11 +270,6 @@ class Port(Base, TimeDependent):
     protocol = Column(String(10))
     service_name = Column(String(100))
     state = Column(String(15))
-    product = Column(String(100))
-    extra_info = Column(String(150))
-    version = Column(String(100))
-    os_type = Column(String(100))
-    cpe = Column(String(200))
     _resource = relationship('Resource', back_populates = '_port_id')
     
     def to_struct(self):
@@ -284,26 +278,18 @@ class Port(Base, TimeDependent):
             id=self.id,
             port=self.port,
             protocol=self.protocol,
-            state=self.state,
-            service=ServiceStruct(
-                name=self.service_name,
-                product=self.product,
-                version=self.version,
-                os=self.os_type,
-                extra_info=self.extra_info,
-                cpe=self.cpe
-            )
+            service_name=self.service_name,
+            state=self.state
         )
         return port
     
     @classmethod
     def from_struct(self, port: PortStruct):
-        service_data = port.service.model_dump(by_alias=True) if port.service else {}
         port = Port(
             id=port.id,
             port=port.port,
             state=port.state,
-            **service_data
+            service_data=port.service_name
         )
         return port
     
@@ -313,13 +299,7 @@ class Port(Base, TimeDependent):
                 {'field': 'ip', 'title': 'IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
                 {'field': 'port', 'title': 'Port', 'editor': 'input', 'validator': 'required'},
                 {'field': 'protocol', 'title': 'Protocol', 'editor': 'input'},
-                {'field': 'service_name', 'title': 'Service name', 'editor': 'input'},
-                {'field': 'state', 'title': 'State', 'editor': 'input'},
-                {'field': 'product', 'title': 'Product', 'editor': 'input'},
-                {'field': 'extra_info', 'title': 'Extra info', 'editor': 'input'},
-                {'field': 'version', 'title': 'Version', 'editor': 'input'},
-                {'field': 'os_type', 'title': 'OS', 'editor': 'input'},
-                {'field': 'cpe', 'title': 'CPE', 'editor': 'input'},]
+                {'field': 'service_name', 'title': 'Service name', 'editor': 'input'}]
 
 
 class Task(Base):
@@ -527,6 +507,64 @@ class SoftType(Base):
     name = Column(String)
 '''
 
+class Software(Base):
+    __tablename__ = "software"
+
+    id = Column(Integer, primary_key=True)
+    vendor = Column(String)
+    product = Column(String)
+    type = Column(String)
+    version = Column(String)
+    build = Column(String)
+    patch = Column(String)
+    platform = Column(String)
+    cpe23 = Column(String)
+
+    _resource = relationship('Resource_Software',back_populates='_software')
+
+class Resource(Base):
+    __tablename__ = 'resource'
+
+    id = Column(Integer, primary_key=True)
+
+    ip_id = Column(Integer, ForeignKey('ip_addresses.id'))
+    _ip_id = relationship('IP', back_populates='_resource')
+    
+    domain_id = Column(Integer, ForeignKey('domains.id'))
+    _domain_id = relationship('Domain', back_populates='_resource')
+
+    port_id = Column(Integer, ForeignKey('ports.id'))
+    _port_id = relationship('Port', back_populates='_resource')
+
+    acunetix_id = Column(String(36), unique=True)
+    
+    _software = relationship('Resource_Software', back_populates='_resource')
+
+
+class Resource_Software(Base):
+    __tablename__ = "resource_software"
+
+    id = Column(Integer, primary_key=True)
+
+    resource_id = Column(Integer,ForeignKey('resource.id'))
+    _resource = relationship('Resource', back_populates='_software')
+
+    software_id = Column(Integer, ForeignKey('software.id'))
+    _software = relationship('Software', back_populates='_resource')
+
+    _vulnerability = relationship('Vulnerability_Resource_Soft',back_populates="_resource_soft")
+
+class Vulnerability_Resource_Soft(Base):
+    __tablename__ = "vulnerability_resource_soft"
+    id = Column(Integer, primary_key=True)
+
+    vulnerability_id = Column(Integer, ForeignKey('vulnerabilities.id'))
+    _vulnerability = relationship('Vulnerability', back_populates='_resource_soft')
+
+    resource_soft_id = Column(Integer, ForeignKey('resource_software.id'))
+    _resource_soft = relationship('Resource_Software', back_populates='_vulnerability')
+
+
 class Vulnerability(Base):
     __tablename__ = 'vulnerabilities'
 
@@ -547,52 +585,3 @@ class Vulnerability(Base):
     def from_struct(self, struct: MacStruct):
         vuln = Vulnerability(**struct)
         return vuln
-
-
-class Software(Base):
-    __tablename__ = "software"
-
-    id = Column(Integer, primary_key=True)
-    vendor = Column(String)
-    product = Column(String)
-    type = Column(String)
-    version = Column(String)
-    build = Column(String)
-    patch = Column(String)
-    platform = Column(String)
-    cpe23 = Column(String)
-
-    _vulnerability_resource = relationship('Vulnerability_Resource_Soft',back_populates='_software')
-
-
-class Vulnerability_Resource_Soft(Base):
-    __tablename__ = "vulnerability_resource_soft"
-    id = Column(Integer, primary_key=True)
-
-    vulnerability_id = Column(Integer, ForeignKey('vulnerabilities.id'))
-    _vulnerability = relationship('Vulnerability', back_populates='_resource_soft')
-
-    software_id = Column(Integer, ForeignKey('software.id'))
-    _software = relationship('Software',back_populates='_vulnerability_resource')
-
-    resource_id = Column(Integer, ForeignKey('resource.id'))
-    _resource = relationship('Resource', back_populates='_vulnerability_soft')
-
-
-class Resource(Base):
-    __tablename__ = 'resource'
-
-    id = Column(Integer, primary_key=True)
-
-    ip_id = Column(Integer, ForeignKey('ip_addresses.id'))
-    _ip_id = relationship('IP', back_populates='_resource')
-    
-    domain_id = Column(Integer, ForeignKey('domains.id'))
-    _domain_id = relationship('Domain', back_populates='_resource')
-
-    port_id = Column(Integer, ForeignKey('ports.id'))
-    _port_id = relationship('Port', back_populates='_resource')
-
-    acunetix_id = Column(String(36), unique=True)
-    
-    _vulnerability_soft = relationship('Vulnerability_Resource_Soft', back_populates='_resource')

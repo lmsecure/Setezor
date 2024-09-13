@@ -7,8 +7,8 @@ from typing import List
 logger = get_logger(__package__, handlers=[])
 
 class Domain_brute:
-    @staticmethod
-    async def query(name:str, query_type:str = "A") -> List[str]:
+    @classmethod
+    async def query(cls, name:str, query_type:str = "A") -> List[str]:
         """
             Отправляет запросы на dns сервера с заданным доменом
             по записи 'A'. Возвращает все найденные доменные имена
@@ -23,7 +23,7 @@ class Domain_brute:
             
         logger.debug('Start domain_brute [%s]', name)    
         resolver = aiodns.DNSResolver(loop=asyncio.get_event_loop())
-        filename = Domain_brute.get_subdomains_file_path()
+        filename = cls.get_subdomains_file_path()
         with open(filename,'r') as file:
             subdomains = file.read().splitlines()
         tasks = []
@@ -38,8 +38,8 @@ class Domain_brute:
                 result.add(response[0])
         return list(result)
 
-    @staticmethod
-    def get_subdomains_file_path(filename:str = "subdomains.txt") -> str:
+    @classmethod
+    def get_subdomains_file_path(cls, filename:str = "subdomains.txt") -> str:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(current_dir, filename)
         return file_path

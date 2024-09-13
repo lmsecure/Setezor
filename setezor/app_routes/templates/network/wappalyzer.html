@@ -1,0 +1,105 @@
+{% macro show() %}
+
+<div class="tab-pane fade" id="v-pills-wappalyzer" role="tabpanel" aria-labelledby="v-pills-wappalyzer-setting-tab">
+    <div class="flex-column">
+        
+        <div class="py-2 bg-highlight">
+            <button class="btn btn-primary" id="wappalyzer_button_parse" disabled onclick="
+                var input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.accept = '.json'
+                input.onchange = e => { 
+                    for (var file of e.target.files)
+                    {
+                        var reader = new FileReader();
+                        reader.onload = (
+                            function (file) 
+                                {
+                                    return async function (e) 
+                                    {
+                                        data = {log_file: e.target.result, filename: file.name, groups: wappalyzer_parse_event()}
+                                        resp = await fetch('/api/task/wappalyzer_log_parse', {method: 'POST', body: JSON.stringify(data)});
+                                    } 
+                                })(file)
+                        reader.readAsDataURL(file);            
+                    }
+                }
+                input.click(); " style="min-width: 310px;">
+                Parse wappalyzer logs
+            </button>
+        </div>
+            
+        <div class="btn-group" role="group" aria-label="Basic example">
+            <button class="btn btn-success" onclick="wapplyzer_category_select_all()">Select all</button>
+            <button class="btn btn-danger" onclick="wapplyzer_category_clear()">Clear</button>
+        </div>
+    </div>
+
+    <div class="container-fluid mt-2">
+        <div id="wappalyzer_groups">
+            {%for  name, category_ids in wappalyzer_groups.items()%}
+                <div class="col"> 
+                    <div class="form-check form-switch" data-bs-toggle="tooltip" data-bs-placement="right">
+                        <input class="form-check-input shadow-none" type="checkbox" value="" id="wappgroup_{{name}}" onchange="wappalyzer_element_changed()">
+                        <label class="form-check-label" for="flexCheckDefault" title="{{wappalyzer_name_categories_by_group.get(name)}}">
+                            {{name}}
+                        </label>
+                      </div>
+                </div>
+            {%endfor%}
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+
+function wapplyzer_category_select_all()
+    {
+        document.getElementById("wappalyzer_button_parse").disabled = false;
+        for (let element of document.getElementById("wappalyzer_groups").getElementsByClassName("form-check-input"))
+        {
+            element.checked = true;
+        }
+    }
+
+    function wapplyzer_category_clear()
+    {
+        document.getElementById("wappalyzer_button_parse").disabled = true;
+        for (let element of document.getElementById("wappalyzer_groups").getElementsByClassName("form-check-input"))
+        {
+            element.checked = false;
+        }
+    }
+
+    function wappalyzer_element_changed()
+    {
+        document.getElementById("wappalyzer_button_parse").disabled = true;
+        for (let element of document.getElementById("wappalyzer_groups").getElementsByClassName("form-check-input"))
+        {
+            if (element.checked)
+            {
+                document.getElementById("wappalyzer_button_parse").disabled = false;
+                break;
+            }
+        }
+    }
+    
+    function wappalyzer_parse_event()
+    {
+        let ids = []
+        for (let element of document.getElementById("wappalyzer_groups").getElementsByClassName("form-check-input"))
+        {
+            if (element.checked)
+            {
+                ids.push(element.id.split("_")[1])
+            }
+        }
+        return ids
+    }
+
+</script>
+
+{% endmacro %}

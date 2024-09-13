@@ -43,7 +43,7 @@ class ResourceQueries(BaseQueries):
                 ip_addr = self.ip.get_by_id(id=db_domain.ip_id)
                 if kwargs.get("port"):
                     port = kwargs.pop("port")
-                    db_port = self.port.get_or_create(port=port, ip=ip_addr["id"])
+                    db_port = self.port.get_or_create(port=port, ip=ip_addr["ip"])
                     kwargs["port_id"] = db_port.id
         if kwargs.get("ip"):
             target = kwargs.pop("ip")

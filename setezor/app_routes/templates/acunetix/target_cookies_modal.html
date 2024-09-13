@@ -45,14 +45,15 @@
     async function set_cookies(event) {
         event.preventDefault();
         let payload = new FormData(event.target);
+        let params = (new URLSearchParams({ acunetix_name: currentAcunetixName })).toString()
         let target_id = payload.get("target_id")
         payload.delete("target_id")
-        resp = await fetch(`/api/acunetix/targets/${target_id}/cookies/`, { method: 'put', body: JSON.stringify(Object.fromEntries(payload))})
+        resp = await fetch(`/api/acunetix/targets/${target_id}/cookies/?` + params, { method: 'put', body: JSON.stringify(Object.fromEntries(payload)) })
         if (resp.status === 204) {
             create_toast('Success', `Cookies was set`, 'success')
             targets_table.dataLoader.reloadData();
             document.getElementById("cancel_setting_cookies").click();
-        }else{
+        } else {
             create_toast('Error', `Wrong format`, 'error')
         }
     }
@@ -78,9 +79,9 @@
         container.appendChild(div)
         cookiesCount++;
     }
-    function clearCookiesList(){
+    function clearCookiesList() {
         let container = document.getElementById("outerCookiesParent")
-        container.innerHTML=""
+        container.innerHTML = ""
         cookiesCount = 1
         addCookieInList()
     }

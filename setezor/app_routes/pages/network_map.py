@@ -4,7 +4,6 @@ from aiohttp_session import get_session
 
 from setezor.app_routes.session import project_require, get_db_by_session, get_project
 from setezor.modules.application import PMRequest
-from setezor.tools.acunetix import acunetix_scan_modal_context
 from setezor.tools.ip_tools import get_interfaces
 
 network_map_routes = RouteTableDef()
@@ -29,5 +28,4 @@ async def network_page(request: PMRequest):
     interfaces = [i for i in get_interfaces() if i.ip_address]
     context = {'device_types': device_types, 'is_scapy_running': is_scapy_running, 'table': queries.port.model.get_headers_for_table(),
                'current_project': project_name, 'current_project_id': project_id, 'interfaces': interfaces}
-    context.update(await acunetix_scan_modal_context(project.configs.files.acunetix_configs))
     return aiohttp_jinja2.render_template('network/map_and_info.html', request=request, context=context)

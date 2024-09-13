@@ -1,10 +1,9 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 RUN apt update && apt install -y nmap masscan net-tools python3-pip
-COPY ./src/requirements.txt ./
+COPY ./setezor/requirements.txt ./
 RUN pip3 install -r requirements.txt
-COPY ./src/ /setezor/
-WORKDIR /setezor/
+COPY ./setezor/ /setezor/
+WORKDIR /
 EXPOSE 16661
-VOLUME ./projects:/setezor/projects
-VOLUME ./logs:/setezor/logs
-ENTRYPOINT ["python3", "./setezor.py"]
+ENV APPIMAGE=/setezor/
+ENTRYPOINT ["python3", "setezor/setezor.py"]

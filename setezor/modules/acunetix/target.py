@@ -5,11 +5,13 @@ from .utils import send_request
 from .schemes.target import Target as TargetScheme, TargetForm, TargetFormBase
 from ipaddress import IPv4Address
 
+
 class Target:
     url = "/api/v1/targets"
 
     @classmethod
-    async def get_all(cls, params: dict, credentials: dict) -> Union[list[TargetScheme], int]:
+    async def get_all(cls, credentials: dict):
+        params = {"l": 100, "c": 0}
         raw_data = await send_request(base_url=credentials["url"],
                                       token=credentials["token"],
                                       url=cls.url,
@@ -18,6 +20,19 @@ class Target:
         if raw_data.get("code"):
             return {}
         targets: list[TargetScheme] = raw_data.get("targets")
+        if not targets:
+            return targets
+        while True:
+            params["c"] += 100
+            raw_data = await send_request(base_url=credentials["url"],
+                                          token=credentials["token"],
+                                          url=cls.url,
+                                          method="GET",
+                                          params=params)
+            raw_targets = raw_data.get("targets")
+            if not raw_targets:
+                break
+            targets.extend(raw_targets)
         for target in targets:
             config = await send_request(base_url=credentials["url"],
                                         token=credentials["token"],
@@ -38,21 +53,18 @@ class Target:
                         config["proxy"]["username"]}"
             else:
                 target["proxy"] = ""
+        return targets
 
-        pagination = raw_data.get("pagination")
-        count = pagination.get("count")
-        return targets, count
-    
     @classmethod
-    async def get_by_id(cls,id:str,credentials:dict):
+    async def get_by_id(cls, id: str, credentials: dict):
         return await send_request(base_url=credentials["url"],
-                              token=credentials["token"],
-                              url=f"{cls.url}/{id}",
-                              method="GET")
+                                  token=credentials["token"],
+                                  url=f"{cls.url}/{id}",
+                                  method="GET")
 
     @classmethod
     async def create(cls, payload: dict, credentials: dict) -> Union[int, str]:
-        group_id = payload.pop("group_id", None)
+        group_id = payload.get("group_id", None)
         target_form = TargetFormBase(**payload)
         if group_id:
             data = TargetForm(groups=[group_id], targets=[target_form])
@@ -76,34 +88,34 @@ class Target:
                                   data=data)
 
     @classmethod
-    async def set_scan_speed(cls,targets_ids:list[str],scan_speed:str,credentials:dict):
+    async def set_scan_speed(cls, targets_ids: list[str], scan_speed: str, credentials: dict):
         scan_speed_json = json.dumps({"scan_speed": scan_speed})
         scan_speed_reqs = []
         for target_id in targets_ids:
             task = asyncio.create_task(send_request(base_url=credentials["url"],
                                                     token=credentials["token"],
-                                                    url=f"{cls.url}/{target_id}/configuration",
+                                                    url=f"{
+                                                        cls.url}/{target_id}/configuration",
                                                     method="PATCH",
                                                     data=scan_speed_json))
             scan_speed_reqs.append(task)
         await asyncio.gather(*scan_speed_reqs)
-    
-    
+
     @classmethod
     async def set_proxy(cls, id: str, payload: dict, credentials: dict) -> None:
         if not payload:
             data = json.dumps({"proxy": {"enabled": False}})
         else:
             payload["enabled"] = True
-            if not payload["username"] or not payload["password"]:
-                del payload["username"]
-                del payload["password"]
+            if not payload.get("username") or not payload.get("password"):
+                payload.pop("username",None)
+                payload.pop("password",None)
             data = json.dumps({"proxy": payload})
         return await send_request(base_url=credentials["url"],
-                           token=credentials["token"],
-                           url=f"{cls.url}/{id}/configuration",
-                           method="PATCH",
-                           data=data)
+                                  token=credentials["token"],
+                                  url=f"{cls.url}/{id}/configuration",
+                                  method="PATCH",
+                                  data=data)
 
     @classmethod
     async def set_cookies(cls, id: str, payload: dict, credentials: dict) -> None:
@@ -134,13 +146,13 @@ class Target:
                     f"{payload[f"key{i + 1}"]}: {payload[f"value{i + 1}"]}")
             data = json.dumps({"custom_headers": raw_data}, indent=4)
         return await send_request(base_url=credentials["url"],
-                           token=credentials["token"],
-                           url=f"{cls.url}/{id}/configuration",
-                           method="PATCH",
-                           data=data)
+                                  token=credentials["token"],
+                                  url=f"{cls.url}/{id}/configuration",
+                                  method="PATCH",
+                                  data=data)
 
     @classmethod
-    def parse_url(cls,url:str) -> dict:
+    def parse_url(cls, url: str) -> dict:
         scheme, addr_port = url.split("://")
         if ':' in addr_port:
             addr, port = addr_port.split(":")
@@ -154,9 +166,9 @@ class Target:
         except:
             data.update({"domain": addr})
         return data
-    
+
     @classmethod
-    def create_urls(cls,payload):
+    def create_urls(cls, payload):
         new_targets = []
         if payload.get("http_ports"):
             for port in payload["http_ports"].split(","):

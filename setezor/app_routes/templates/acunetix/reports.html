@@ -14,8 +14,8 @@
 <script>
     function reports_buttons_formatter(cell, formatterParams, onRendered) {
         return `
-        <a href="/api/acunetix/reports/${cell.getRow().getData().report_id}/download/?format=pdf" id="{{reports_tab.name}}-pdf-${cell.getRow().getData().report_id}" class="btn btn-primary btn-sm">PDF</a>
-        <a href="/api/acunetix/reports/${cell.getRow().getData().report_id}/download/?format=html" id="{{reports_tab.name}}-html-${cell.getRow().getData().report_id}" class="btn btn-secondary btn-sm">HTML</a>`;
+        <a href="/api/acunetix/reports/${cell.getRow().getData().report_id}/download/?format=pdf&acunetix_name=${cell.getRow().getData().acunetix_name}" id="{{reports_tab.name}}-pdf-${cell.getRow().getData().report_id}" class="btn btn-primary btn-sm">PDF</a>
+        <a href="/api/acunetix/reports/${cell.getRow().getData().report_id}/download/?format=html&acunetix_name=${cell.getRow().getData().acunetix_name}" id="{{reports_tab.name}}-html-${cell.getRow().getData().report_id}" class="btn btn-secondary btn-sm">HTML</a>`;
     }
     var reports_table = new Tabulator('#reports_table', {
         layout: "fitData",
@@ -29,10 +29,10 @@
             return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
         },
         selectable: false,
-        sortMode: "remote",
+        sortMode: "local",
         filterMode: "remote",
         pagination: true,
-        paginationMode: "remote",
+        paginationMode: "local",
         paginationSize: 10,
         paginationInitialPage: 1,
         paginationSizeSelector: [5, 10, 25, 50, 100],

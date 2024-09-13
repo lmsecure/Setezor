@@ -2,7 +2,7 @@ from pandas.core.api import DataFrame as DataFrame
 from sqlalchemy.orm.session import Session
 from sqlalchemy import Column, select, func
 
-from ..models import IP, MAC, Object, Port
+from ..models import IP, MAC, Object, Port, Resource, Resource_Software, Software
 from ..queries_files.base_queries import QueryFilter
 from .base_queries import BaseQueries
 
@@ -77,11 +77,19 @@ class PivotQueries(BaseQueries):
             os = obj.os
             if os:
                 result['os'] = os
-            ports = session.query(Port).where(Port.ip == res.id).all()
-            ports = [{'number': get_str(i.port), 'protocol': get_str(i.protocol), 'name': get_str(i.service_name), 'product': get_str(i.product)} for i in ports]
+            resourses = session.query(Port, Resource, Resource_Software, Software).\
+            where(Port.id == Resource.port_id).\
+            where(Resource.id == Resource_Software.resource_id).\
+            where(Resource_Software.software_id == Software.id).\
+            where(Resource.ip_id == res.id).all()
+            ports = []
+            for resourse in resourses:
+                port = {}
+                port.update({'number' : get_str(resourse.Port.port), 'protocol' : get_str(resourse.Port.protocol), 
+                             'name' : resourse.Port.service_name, 'product' : get_str(resourse.Software.product)})
+                ports.append(port)
             if ports:
                 result['ports'] = ports
-
         return result
         
     @BaseQueries.session_provide

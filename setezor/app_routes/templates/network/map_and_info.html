@@ -27,6 +27,20 @@ Network Map
             </div>
         </div>
         <div class="col-3" id="node_info_map_div">
+            <div class="container-fluid my-2">
+                <form class="d-flex" onsubmit="findNodesByIP(event)">
+                    <div class="input-group" id="ipTarget">
+                        <span class="input-group-text" id="basic-addon1">IP</span>
+                        <input type="text" class="form-control" id='inputIP' placeholder="IP address or netmask"
+                            aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
+                    </div>
+                    <input type="submit" class="btn btn-success ms-1" value="Find">
+                </form>
+            </div>
+            <div class="container-fluid">
+                <div class="row row-cols-3 overflow-auto p-1" id="search_ip_addresses" style="max-height: 250px;">
+                </div>
+            </div>
             <div class="p-2 flex-fill bd-highlight" id="div_node_info" style="max-width: 325px;">
                 <h4>Select node tosee the information</h4>
                 {# {% from 'network/info.html' import info%}
@@ -35,6 +49,41 @@ Network Map
         </div>
     </div>
 </div>
+<script>
+    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('inputIP'))
+
+    function findNodesByIP(event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        let ip_addr = payload.get("targetIP");
+        ip_addr = ip_addr.replaceAll("_", "")
+        while (ip_addr.endsWith('..')) {
+            ip_addr = ip_addr.replace("..", ".")
+        }
+        let result = ""
+        for (let [key, value] of IPMap) {
+            if (key.startsWith(ip_addr)) {
+                result += `
+                    <div class="col mb-1">
+                        <button class="btn btn-sm btn-success" onclick="findSingleNodeByIP('${key}')">${key}</button>
+                    </div>`
+            }
+        }
+        let el = document.getElementById('search_ip_addresses')
+        if (result === ""){
+            create_toast('Not found', `IP like ${ip_addr} not found`, 'error')
+            el.classList.remove("border")
+            el.classList.remove("border")
+        }else{
+            el.classList.add(['border'])
+            el.classList.add(['border-3'])
+        }
+        el.innerHTML = result
+    }
+    function findSingleNodeByIP(addr) {
+        network.focus(IPMap.get(addr), { scale: 5, locked: false, animation: { duration: 500 } })
+    }
+</script>
 {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}
 {{acunetix_scan_modal.show()}}
 {% endblock content %}

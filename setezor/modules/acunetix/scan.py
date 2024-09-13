@@ -1,6 +1,6 @@
 import asyncio
 import json
-from .utils import convert_to_datetime_for_scan, get_new_interval, send_request
+from .utils import convert_to_datetime_for_scan, get_new_interval, send_request, parse_utc_offset
 import datetime
 from .schemes.scan import TargetScanStart, GroupScanStart
 from .target import Target
@@ -15,7 +15,8 @@ class Scan:
     url = "/api/v1/scans"
 
     @classmethod
-    async def get_all(cls, params: dict, credentials: dict):
+    async def get_all(cls, credentials: dict):
+        params = {"l": 100, "c": 0}
         raw_data = await send_request(base_url=credentials["url"],
                                       token=credentials["token"],
                                       url=cls.url,
@@ -24,8 +25,18 @@ class Scan:
         if raw_data.get("code"):
             return {}
         scans = raw_data.get("scans")
-        pagination = raw_data.get("pagination")
-        count = pagination.get("count")
+        while True:
+            params["c"] += 100
+            raw_data = await send_request(base_url=credentials["url"],
+                                          token=credentials["token"],
+                                          url=cls.url,
+                                          method="GET",
+                                          params=params)
+            raw_scans = raw_data.get("scans")
+            if not raw_scans:
+                break
+            scans.extend(raw_data.get("scans"))
+
         for scan in scans:
             scan['target'] = scan['target']['address']
             scan['last_scan_session_status'] = scan["current_session"]["status"]
@@ -36,10 +47,9 @@ class Scan:
                 raw_datetime = datetime.datetime.strptime(
                     scan["schedule"]["start_date"], "%Y-%m-%dT%H:%M:%S%z")
             raw_datetime = raw_datetime + \
-                datetime.datetime.now().astimezone().tzinfo.utcoffset(datetime.datetime.now())
-            scan["start_date"] = datetime.datetime.strftime(
-                raw_datetime, "%d.%m.%Y, %H:%M:%S")
-        return scans, count
+                parse_utc_offset(credentials["timeUTCOffset"])
+            scan["start_date"] = datetime.datetime.strftime(raw_datetime, "%Y-%m-%d %H:%M:%S")
+        return scans
 
     @classmethod
     async def get_by_id(cls, id: str, credentials: dict):
@@ -89,11 +99,14 @@ class Scan:
                 hours=interval.hour, minutes=interval.minute)
         for index, target_id in enumerate(targets_ids):
             if index == 0:
-                raw_data["schedule"]["start_date"] = convert_to_datetime_for_scan(
-                    date=start_date, time=start_time)
+                raw_data["schedule"]["start_date"] = convert_to_datetime_for_scan(date=start_date,
+                                                                                  time=start_time,
+                                                                                  offset=credentials["timeUTCOffset"])
             else:
-                raw_data["schedule"]["start_date"] = convert_to_datetime_for_scan(
-                    date=start_date, time=start_time, interval=interval_delta)
+                raw_data["schedule"]["start_date"] = convert_to_datetime_for_scan(date=start_date,
+                                                                                  time=start_time,
+                                                                                  interval=interval_delta,
+                                                                                  offset=credentials["timeUTCOffset"])
                 interval_delta = get_new_interval(interval_delta, interval)
             raw_data["target_id"] = target_id
 
@@ -142,11 +155,11 @@ class Scan:
                                     scan_speed=base.scan_speed,
                                     targets_ids=new_targets)
         return await cls.create_for_targets(credentials=credentials,
-                                     profile_id=base.profile_id,
-                                     targets_ids=new_targets,
-                                     start_date=base.date,
-                                     start_time=base.start_time,
-                                     interval=base.interval)
+                                            profile_id=base.profile_id,
+                                            targets_ids=new_targets,
+                                            start_date=base.date,
+                                            start_time=base.start_time,
+                                            interval=base.interval)
 
     @classmethod
     async def get_profiles(cls, credentials: dict):

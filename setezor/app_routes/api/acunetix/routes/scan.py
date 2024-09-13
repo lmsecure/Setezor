@@ -12,49 +12,35 @@ from ..schemes.vulnerability import Vulnerability
 from aiohttp.web import Request, Response, json_response
 from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.acunetix_config import Config
+from setezor.modules.acunetix.schemes.scan import ScanSpeedValues
 
 
 class AcunetixScanView:
     @BaseView.route('GET', '/scans/')
     @project_require
     async def get_scans(self, request: PMRequest):
-        project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         query = request.rel_url.query
-        params = json.loads(query.get('params', {}))
-        page = int(params.get('page', 1))
-        size = int(params.get('size', 10))
-        if page == 1:
-            params = {"l": size}
-        else:
-            params = {"l": size, "c": size * (page - 1)}
-        params.update({
-            "s": "start_date:desc"
-        })
-        scans, count = await Scan.get_all(params=params, credentials=credentials)
-        if not count % size:
-            last_page = count // size
-        else:
-            last_page = count // size + 1
-        return json_response(status=200, data={"data": scans, "last_page": last_page})
+        project = await get_project(request=request)
+        groups = await project.acunetix_manager.get_scans(name=query.get("acunetix_name"))
+        return json_response(status=200, data=groups)
 
     @BaseView.route('POST', '/scans/')
     @project_require
     async def create_scan(self, request: PMRequest):
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         db = await get_db_by_session(request=request)
         payload = await request.json()
         raw_data = []  # заглушка
         if payload.get("group_id"):
-            raw_data = await Scan.create_for_group(payload=payload, credentials=credentials)
+            raw_data = await project.acunetix_manager.create_scan_for_group(name=acunetix_name,
+                                                                            payload=payload)
         if payload.get("target_id"):
-            raw_data = await Scan.create_for_target(payload=payload, credentials=credentials)
+            raw_data = await project.acunetix_manager.create_scan_for_target(name=acunetix_name,
+                                                                             payload=payload)
         if payload.get("target_db_id"):
+            acunetix_name = payload.pop("acunetix_name")
             target_db_id = payload.get("target_db_id")
             ip_obj = db.ip.get_by_id(id=target_db_id)
             payload["target_ip_address"] = ip_obj["ip"]
@@ -64,12 +50,14 @@ class AcunetixScanView:
                 data = Target.parse_url(url=target)
                 resource_obj = db.resource.get_or_create(**data)
                 payload["address"] = target
-                status, msg = await Target.create(payload=payload, credentials=credentials)
+                status, msg = await project.acunetix_manager.add_target(name=acunetix_name,payload=payload)
                 if status:
                     acunetix_id = msg["targets"][0]["target_id"]
-                    db.resource.update_by_id(id=resource_obj.id, to_update={"acunetix_id": acunetix_id}, merge_mode="replace")
+                    db.resource.update_by_id(id=resource_obj.id, to_update={
+                                             "acunetix_id": acunetix_id}, merge_mode="replace")
                     payload["target_ids"].append(acunetix_id)
-            raw_data = await Scan.create_for_db_obj(payload=payload, credentials=credentials)
+            raw_data = await project.acunetix_manager.create_scan_for_db_obj(name=acunetix_name,
+                                                                             payload=payload)
 
         for status, scan in raw_data:
             target_id = scan.get("target_id")
@@ -82,10 +70,23 @@ class AcunetixScanView:
                                                        name=f'Task {task_id}',
                                                        target_id=target_id,
                                                        scan_id=scan_id,
-                                                       credentials=credentials,
+                                                       credentials=project.acunetix_manager.get_credentials(
+                                                           acunetix_name),
                                                        db=db,
                                                        task_id=task_id))
         return json_response(status=201)
+
+    @BaseView.route('GET', '/scans/profiles/')
+    @project_require
+    async def get_scanning_profiles(self, request: PMRequest):
+        project = await get_project(request)
+        profiles = await project.acunetix_manager.get_scanning_profiles()
+        return json_response(status=200, data=profiles)
+
+    @BaseView.route('GET', '/scans/speeds/')
+    @project_require
+    async def get_scans_speeds(self, request: PMRequest):
+        return json_response(status=200, data=[s.value for s in ScanSpeedValues])
 
 
 '''

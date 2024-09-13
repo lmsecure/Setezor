@@ -19,6 +19,7 @@ class Queries:
         self.mac = qf.MACQueries(objects=self.object, session_maker=self.db.create_session())
         self.ip = qf.IPQueries(mac=self.mac, session_maker=self.db.create_session())
         self.port = qf.PortQueries(ip=self.ip, session_maker=self.db.create_session())
+        self.software = qf.SoftwareQueries(session_maker = self.db.create_session())
         self.task = qf.TaskQueries(session_maker=self.db.create_session())
         self.screenshot = qf.ScreenshotQueries(task=self.task, port=self.port, session_maker=self.db.create_session())
         self.pivot = qf.PivotQueries(session_maker=self.db.create_session())
@@ -34,3 +35,5 @@ class Queries:
         self.resource = qf.ResourceQueries(ip = self.ip, port=self.port, domain=self.domain, session_maker=self.db.create_session())
         self.vulnerability = qf.VulnerabilityQueries(session_maker = self.db.create_session())
         self.vuln_res_soft = qf.VulnerabilityResSoftQueries(session_maker = self.db.create_session())
+        self.resource_software = qf.ResourceSoftwareQueries(resource=self.resource, software=self.software, session_maker = self.db.create_session())
+        

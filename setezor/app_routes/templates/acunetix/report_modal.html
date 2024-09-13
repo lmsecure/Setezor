@@ -11,15 +11,10 @@
                 <div class="modal-body">
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="scan_profile_id" class="col-form-label">Scan Profile</label>
+                            <label for="report_profile_id" class="col-form-label">Report Template</label>
                         </div>
-                        <div class="col-6">
-                            <select name="template_id" id="scan_profile_id" class="form-select mt-1" data-allow-clear="1" data-suggestions-threshold="0" required>
-                                <option selected value=""></option>
-                                {% for template in report_templates %}
-                                <option value="{{template.template_id}}">{{template.name}}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-6" id="report_profile_id">
+                            
                         </div>
                     </div>
                 </div>
@@ -38,7 +33,7 @@
     async function createReport(event) {
         event.preventDefault();
         let payload = new FormData(event.target);
-        resp = await fetch("/api/acunetix/reports/", { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
+        resp = await fetch(`/api/acunetix/reports/?acunetix_name=${currentAcunetixName}`, { method: 'post', body: JSON.stringify(Object.fromEntries(payload)) })
         if (resp.status === 201) {
             document.getElementById("cancel_creating_report").click();
             reports_table.dataLoader.reloadData();

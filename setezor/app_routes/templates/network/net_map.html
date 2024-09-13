@@ -78,6 +78,9 @@
                         document.getElementById('acunetix_scan_group_id').value='';
                         document.getElementById('scan_interval').required = false;
                         document.getElementById('acunetix_scan_ports').style.display='';
+                        fillAcunetixScanSpeeds();
+                        fillAcunetixScanProfiles();
+                        fillAcunetixInstances('acunetix_scan_instances');
                         document.getElementById('acunetix_scan_target_db_id').value=network.getSelectedNodes()[0];
                         document.getElementById('acunetix_scan_interval_div').style.display='';">Acunetix
                     </a>
@@ -131,6 +134,7 @@
             network_map_div.classList = "col-9"
         }
     }
+    let IPMap = new Map();
     async function get_nodes_and_edges(update = false) {
         var nodes = ajax_request('/api/route/vis_nodes', 'get', async = true);
         var edges = ajax_request('/api/route/vis_edges', 'get', async = true);
@@ -145,6 +149,7 @@
         }
 
         nodes.forEach((node => {
+            IPMap.set(node.address,node.id)
             if (node.agent) {
                 node.icon = new AgentIcon(color = caclculateColor(node))
                 node.shape = 'icon'
@@ -411,6 +416,8 @@
             edges: {
                 color: { inherit: true },
                 width: 0.15,
+                length: 500,  // длина грани
+                hoverWidth: 3, // ширина грани при наведении
                 smooth: {
                     type: "continuous",
                 },
@@ -482,6 +489,7 @@
             }
         }
     });
+    /*
     network.on("click", function (params) {
         if (params.nodes.length == 1) {
             createNodeInformation(params.nodes[0])
@@ -499,7 +507,7 @@
                 networkData.nodes.update(node)
             })
         }
-    });
+    });*/   // убрал, чтобы не крашилось
     function cluster_by_netmask() {
         if (cluster != true) {
             var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
@@ -542,7 +550,6 @@
         }
     };
     network.on('hoverNode', function (params) {
-        network.selectNodes([params.node])
         createNodeInformation(params.node)
         // show_selected_node_ports(params.node)
     })
@@ -849,6 +856,27 @@
             this.face = face
             this.code = code
         }
+    }
+    let currentAcunetixName = "";
+    async function fillAcunetixInstances(acunetix_id){
+        resp = await fetch("/api/acunetix/apis/")
+        data = await resp.json()
+
+        let parent = `<div class="col-4">
+                            <label for="acunetix_scan_instances" class="col-form-label">Acunetix Name</label>
+                        </div>
+                        <div class="col-6" id="acunetix_scan_instances">
+                        </div>`
+
+        document.getElementById('acunetix_scan_instances_parent').innerHTML = parent
+
+        result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
+            <option value=''>Acunetix Name</option>`
+        for (const instance of data){
+            result += `<option value='${instance.name}'>${instance.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById(acunetix_id).innerHTML = result;
     }
 
 </script>

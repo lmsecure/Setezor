@@ -6,8 +6,9 @@ from setezor.app_routes.session import project_require, get_db_by_session, get_p
 from setezor.modules.application import PMRequest
 from setezor.tools.ip_tools import get_interfaces
 from setezor.tools.acunetix import acunetix_groups_context,acunetix_targets_context,\
-                                   acunetix_scans_context,acunetix_reports_context,\
-                                   acunetix_scan_modal_context
+                                   acunetix_scans_context,acunetix_reports_context
+
+from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
 
 tool_routes = RouteTableDef()
 
@@ -36,5 +37,5 @@ async def network_page(request: PMRequest):
     context.update(acunetix_targets_context())
     context.update(acunetix_scans_context())
     context.update(await acunetix_reports_context(project.configs.files.acunetix_configs))
-    context.update(await acunetix_scan_modal_context(project.configs.files.acunetix_configs))
+    context.update({'wappalyzer_groups' : WappalyzerParser.get_groups(), 'wappalyzer_name_categories_by_group' : WappalyzerParser.get_categories_by_group()})
     return aiohttp_jinja2.render_template('network/tool_base.html', request=request, context=context)

@@ -53,11 +53,18 @@ async def send_request(base_url: str,
                 return {}
 
 
-def convert_to_datetime_for_scan(date: datetime.date, time: datetime.time, interval: datetime.timedelta | None = None):
+def parse_utc_offset(offset_str):
+    hours, minutes = map(int, offset_str.split(':'))
+    return datetime.timedelta(hours=hours, minutes=minutes)
+
+
+def convert_to_datetime_for_scan(date: datetime.date, 
+                                 time: datetime.time, 
+                                 offset: str,
+                                 interval: datetime.timedelta | None = None):
     if not interval:
         interval = datetime.timedelta()
-    raw_datetime = datetime.datetime.combine(
-        date, time) - datetime.datetime.now().astimezone().tzinfo.utcoffset(datetime.datetime.now()) + interval
+    raw_datetime = datetime.datetime.combine(date, time) - parse_utc_offset(offset) + interval
 
     date = raw_datetime.date()
     time = raw_datetime.time()
@@ -112,5 +119,3 @@ async def create_scan_for_db_obj(credentials: dict, payload: dict) -> bool:
                                   start_time=base.start_time,
                                   interval=base.interval)
     return True
-
-

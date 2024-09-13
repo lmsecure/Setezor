@@ -1,9 +1,11 @@
+import asyncio
 from setezor.modules.acunetix.acunetix_config import Config
 import json
 from aiohttp.web import Request, Response, json_response
 from setezor.app_routes.session import get_project, project_require, get_db_by_session
 from setezor.app_routes.api.base_web_view import BaseView
 from setezor.modules.application import PMRequest
+from setezor.modules.acunetix.target import Target
 
 from setezor.modules.acunetix.group import Group
 
@@ -11,39 +13,61 @@ from setezor.modules.acunetix.group import Group
 class AcunetixGroupView:
     @BaseView.route('GET', '/groups/')
     @project_require
-    async def get_all_groups(self, request: PMRequest) -> Response:
-        project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
+    async def get_groups(self, request: PMRequest) -> Response:
         query = request.rel_url.query
-        params = json.loads(query.get('params', "{}"))
-        page = int(params.get('page', 1))
-        size = int(params.get('size', 10))
-        sort = params.get('sort', {})
-        if page == 1:
-            params = {"l": size}
-        else:
-            params = {"l": size, "c": size * (page - 1)}
-        if sort:
-            params.update({"s": f"{sort[0]['field']}:{sort[0]['dir']}"})
-        groups, count = await Group.get_all(params=params, credentials=credentials)
-        if not count % size:
-            last_page = count // size
-        else:
-            last_page = count // size + 1
-        return json_response(status=200, data={"data": groups, "last_page": last_page})
+        project = await get_project(request=request)
+        groups = await project.acunetix_manager.get_groups(name=query.get("acunetix_name"))
+        return json_response(status=200, data=groups)
 
     @BaseView.route('POST', '/groups/')
     @project_require
     async def add_group(self, request: PMRequest):
+        query = request.rel_url.query
         project = await get_project(request=request)
-        credentials = await Config.get(project.configs.files.acunetix_configs)
-        if not credentials:
-            return json_response(status=500)
         payload = await request.text()
-        status, msg = await Group.create(payload=payload, credentials=credentials)
+        status, msg = await project.acunetix_manager.add_group(name=query.get("acunetix_name"), payload=payload)
         return json_response(status=status, data=msg)
+
+    @BaseView.route('GET', '/groups/{group_id}/targets/')
+    @project_require
+    async def get_group_targets(self, request: PMRequest):
+        project = await get_project(request=request)
+        query = request.rel_url.query
+        group_id = request.match_info["group_id"]
+        resp = await project.acunetix_manager.get_group_targets(name=query.get("acunetix_name"), group_id=group_id)
+        targets_ids = resp['target_id_list']
+        tasks = []
+        for target_id in targets_ids:
+            task = asyncio.create_task(project.acunetix_manager.get_target_by_id(
+                name=query.get("acunetix_name"), target_id=target_id))
+            tasks.append(task)
+        targets = await asyncio.gather(*tasks)
+        return json_response(status=200, data=targets)
+
+    @BaseView.route('PUT', '/groups/{group_id}/targets/')
+    @project_require
+    async def set_group_targets(self, request: PMRequest):
+        query = request.rel_url.query
+        project = await get_project(request=request)
+        group_id = request.match_info["group_id"]
+        payload = await request.json()
+        status = await project.acunetix_manager.set_group_targets(name=query.get("acunetix_name"),
+                                                                  group_id=group_id,
+                                                                  payload=payload)
+        return json_response(status=status)
+
+    @BaseView.route('PUT', '/groups/{group_id}/proxy/')
+    @project_require
+    async def update__group_targets_proxy(self, request: PMRequest) -> Response:
+        project = await get_project(request=request)
+        payload: dict = await request.json()
+        group_id = request.match_info["group_id"]
+        query = request.rel_url.query
+        acunetix_name = query.get("acunetix_name")
+        status = await project.acunetix_manager.set_group_targets_proxy(name=acunetix_name,
+                                                                        group_id=group_id,
+                                                                        payload=payload)
+        return json_response(status=status)
 
     '''
     @BaseView.route('GET', '/{group_id}/targets/')

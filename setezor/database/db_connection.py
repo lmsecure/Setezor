@@ -15,7 +15,7 @@ class DBConnection:
             db_path (str): путь до базы
             create_tabels (bool, optional): создать таблицы. по умолчанию создаются
         """        
-        self.engine = create_engine(f'sqlite:///{db_path}?check_same_thread=False')
+        self.engine = create_engine(f'sqlite:///{db_path}?check_same_thread=False',pool_size=0, max_overflow=0)
         Base.metadata.create_all(self.engine)
         Base.metadata.reflect(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
