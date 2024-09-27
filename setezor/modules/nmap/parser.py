@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import TypedDict    
 from typing_extensions import deprecated
+
+import re
     
 try:
     from exceptions.loggers import get_logger
@@ -10,6 +12,8 @@ except ImportError:
     from ...exceptions.loggers import get_logger
     from ...tools.xml_utils import XMLParser
     from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
+
+from cpeguess.cpeguess import CPEGuess
 
 logger = get_logger(__package__, handlers=[])
 
@@ -172,12 +176,54 @@ class NmapParser(XMLParser):
         if ports:
             for port in ports:
                 tmp_soft = {}
-                tmp_soft.update({'type' : 'Software'})
                 service = port.get('service')
                 if service:
-                    tmp_soft.update({'ip' : address.get('ip'), 'port' : port.get('portid'),
-                                     'product' : service.get('product'), 'version' : service.get('version'),
-                                     'cpe23' : ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe')})
+                    cpe = service.get('cpe')
+                    
+                    cpe_type = None
+                    vendor = None
+                    product = None
+                    version = service.get('version')
+                    if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+
+                    if cpe:
+                        if isinstance(service.get('cpe'), list):
+                            list_cpe = [i.replace('/', '2.3:') for i in cpe if i.replace('/', '2.3:').count(':') >= 5]
+                            if len(list_cpe) == 1:
+                                cpe = list_cpe[0]
+                            else:
+                                cpe = ', '.join(list_cpe) or None
+                        else: # str
+                            cpe = cpe.replace('/', '2.3:')
+
+                        if len(cpe.split(', ')) == 1:
+                            vendor = cpe.split(':')[3]
+                            product = cpe.split(':')[4]
+                            cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.split(':')[2])
+                            if cpe.count(':') < 5:
+                                if version:
+                                    cpe += ':' + version.split()[0]
+                                else:
+                                    cpe = None
+                            else:
+                                if not version:
+                                    version = cpe.split(':')[5]
+                    
+                    if product and version:
+                        list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
+                        if list_cpe:
+                            cpe = ', '.join(list_cpe)
+                        else:
+                            cpe = None
+                    else:
+                        cpe = ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe')
+
+                    tmp_soft.update({'ip' : address.get('ip'),'port' : port.get('portid'),
+                                     'vendor' : vendor,
+                                     'product' : product,
+                                     'type' : cpe_type,
+                                     'version' : version,
+                                     'cpe23' : cpe})
                 result.append(tmp_soft)
         return result
 

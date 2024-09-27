@@ -7,7 +7,7 @@ from .object import ObjectView
 from .port import PortView
 from .project import ProjectView
 from .screenshot import ScreenshotView
-from .pivot import PivotView
+from .pivot import PivotView, PivotIPMacPort,PivotDomainIP,PivotSoftwareVulnerabilityLink
 from .task import TaskView
 from .report import ReportsView
 from .websocket import WebSocketView
@@ -16,6 +16,8 @@ from .network import NetworkView
 from .agent import AgentView
 from .route import RouteView
 from .acunetix.acunetix import AcunetixView
+from .vulnerability import VulnerabilityView
+
 
 from aiohttp.web import UrlDispatcher
 

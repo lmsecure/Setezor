@@ -78,16 +78,20 @@ class Configs:
                           scapy_logs=format_path % FilesNames.scapy_logs,
                           screenshots=format_path % FilesNames.screenshots,
                           masscan_logs=format_path % FilesNames.masscan_logs,
-                          certificates_folder = format_path % FilesNames.certificates_folder)
+                          certificates_folder = format_path % FilesNames.certificates_folder,
+                          cve_logs=format_path % FilesNames.cve_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file,
                       acunetix_configs=format_path % FilesNames.acunetix_configs)
-        variables = Variables(project_id=uid, project_name=project_name, default_agent=AgentStruct(name='Default agent'))
+        variables = Variables(project_id=uid, project_name=project_name, default_agent=AgentStruct(name='Default agent'),search_vulns_token="")
         schedulers_params = SchedulersParams.load({  # FixMe set input params to create schedulers params
             'scapy': {'limit': 1, 'pending_limit': 1, 'close_timeout': 0.1},
             'nmap': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
             'masscan': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
+            'cve_vulners': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
+            'cve_nvd': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},   # <- увеличение limit приводит к database locked
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
+            'search-vulns': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
         })
         return cls(project_path=format_path % '', files=files, folders=folders,
                    variables=variables, schedulers_params=schedulers_params)
@@ -131,13 +135,15 @@ class Configs:
         uid_filler = ConfigsFiller(lambda x: str(uuid.uuid4()))
         agent_filler = ConfigsFiller(lambda x: AgentStruct(name='Default agent'))
         interface_filler = ConfigsFiller(cls.fill_interface)
-        
+        search_vulns_token_filler = ConfigsFiller(lambda x: "")
+
         folders = unpack_from_json(Folders, configs_json, cls.logger)
         files = unpack_from_json(Files, configs_json, cls.logger)
         variables = unpack_from_json(Variables, configs_json, cls.logger, 
                                      {'project_id': uid_filler, 
                                       'default_agent': agent_filler,
-                                      'default_interface': interface_filler})
+                                      'default_interface': interface_filler,
+                                      "search_vulns_token":search_vulns_token_filler})
         schedulers_params = SchedulersParams.load(configs_json.get(SchedulersParams.get_class_name()))
 
         conf =  cls(project_path=project_path, files=files, folders=folders,

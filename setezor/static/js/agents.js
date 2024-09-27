@@ -51,29 +51,17 @@ async function getAgentData(page = 1, ifaces = []) {
     resp = await fetch('/api/agent/all?' + new URLSearchParams({ params: params_json }))
 
     if (resp.ok) {
-        try {
-            body = await resp.json()
-        }
-        catch {
-            return
-        }
-        data = body.data
-        last_page = body.last_page
+        data = await resp.json()
         data.forEach(element => {
             rgb = JSON.parse(element.color)
             ifaces.push(
                 new Agent(element.id, element.name, element.description, element.ip, rgb.red, rgb.green, rgb.blue)
             )
         })
-        if (last_page == params.page) {
-            resp = await fetch('/api/agent/get_default')
-            agent_id = await resp.text()
-            res = new AgentData(ifaces, agent_id)
-            return res
-        }
-        else {
-            return getAgentData(params.page + 1, ifaces)
-        }
+
+        resp = await fetch('/api/agent/get_default')
+        agent_id = await resp.text()
+        return new AgentData(ifaces, agent_id)
     }
 }
 

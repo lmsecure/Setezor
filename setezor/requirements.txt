@@ -16,7 +16,7 @@ nest_asyncio==1.6.0
 orjson==3.10.7
 pandas==2.2.2
 purl==1.6
-pydantic==2.8.2
+pydantic==2.9.1
 pydantic_extra_types==2.9.0
 pyOpenSSL==24.2.1
 pyOpenSSL==24.2.1
@@ -24,8 +24,9 @@ pyroute2==0.7.12
 pytest==8.3.2
 Requests==2.32.3
 scapy==2.5.0
-setuptools==72.2.0
-SQLAlchemy==2.0.32
+setuptools==75.1.0
+SQLAlchemy==2.0.34
 sqlalchemy_schemadisplay==2.0
 typing_extensions==4.12.2
 xmltodict==0.13.0
+cpeguess @ git+https://github.com/lmsecure/CPEGuess

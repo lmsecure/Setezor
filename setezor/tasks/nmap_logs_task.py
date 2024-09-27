@@ -33,7 +33,7 @@ class NmapLogTask(NmapScanTask):
         log_result = await loop.run_in_executor(None, NmapScanner().parse_xml, data)
         address_data = {'ip': scanning_ip, 'mac': scanning_mac}
         return await loop.run_in_executor(None, NmapParser().parse_hosts, log_result.get('nmaprun'), agent_id, address_data)
-    
+
     async def run(self, db: Queries, task_id: int, data: str, scanning_ip: str, scanning_mac: str, nmap_logs: str):
         """Метод выполнения задачи
         1. Произвести операции согласно методу self._task_func

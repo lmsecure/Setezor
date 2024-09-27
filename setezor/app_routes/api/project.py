@@ -74,6 +74,7 @@ class ProjectView(BaseView):
             db_agent = db.agent.create(agent=project.configs.variables.default_agent)
             project.configs.variables.default_interface = default_system_iface.model_dump()
             project.configs.variables.default_agent.id = db_agent.id
+            project.configs.variables.search_vulns_token = ""
             project.configs.variables.default_agent = project.configs.variables.default_agent.model_dump()
             project.configs.save_config_file()
         except Exception as e:

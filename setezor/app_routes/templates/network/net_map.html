@@ -549,10 +549,6 @@
             cluster = false
         }
     };
-    network.on('hoverNode', function (params) {
-        createNodeInformation(params.node)
-        // show_selected_node_ports(params.node)
-    })
     network.on('oncontext', function (params) {
         if (network.getNodeAt(params.pointer.DOM) != undefined) {
             node_menu = document.getElementById('nodeDropdownMenu')
@@ -563,9 +559,13 @@
             $('#nodeDropdownMenu').show()
         };
     });
-    network.on('click',function(){
+    network.on('click',function(params){
         var dd_div = document.getElementById('nodeDropdownMenu')
         dd_div.style.display = 'none'
+        let node = network.getNodeAt(params.pointer.DOM)
+        if (node != undefined){
+            createNodeInformation(node)
+        }
     })
     function create_node_table(ports_data) {
         function generateTableHead(table, data) {

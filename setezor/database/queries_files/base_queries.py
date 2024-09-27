@@ -167,16 +167,20 @@ class BaseQueries(ABC):
                 raise ValueError('Not on fields in filter, filters must contain `type, field, value`')
 
         if sort_by and direction:
-            if self.is_field_foreign_key(session=session, field_name=sort_by):
-                sorting_field, relationship = self.foreign_key_order(sort_by)
-                source_query = source_query.join(relationship)
-            else:
-                sorting_field = model.__table__.c.get(sort_by)
-            if direction == 'desc':
-                sorting_field = sorting_field.desc()
-            source_query = source_query.order_by(sorting_field)
-        if limit:
-            source_query = source_query.limit(limit)
+            try:
+                if self.is_field_foreign_key(session=session, field_name=sort_by):
+                    sorting_field, relationship = self.foreign_key_order(sort_by)
+                    source_query = source_query.join(relationship)
+                else:
+                    sorting_field = model.__table__.c.get(sort_by)
+                if direction == 'desc':
+                    sorting_field = sorting_field.desc()
+                source_query = source_query.order_by(sorting_field)
+            except:
+                if direction == "desc":
+                    source_query = source_query.order_by(desc(sort_by))
+                else:
+                    source_query = source_query.order_by(sort_by)
         if page:
             source_query = source_query.offset(limit * (page - 1))
         source_query = source_query.all()

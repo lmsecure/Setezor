@@ -62,6 +62,7 @@ class Folders(BaseStruct):
     screenshots: str
     masscan_logs: str
     certificates_folder: str
+    cve_logs: str
 
 
 @dataclass
@@ -77,6 +78,7 @@ class Variables(BaseStruct):
     project_name: str
     default_agent: AgentStruct
     default_interface: InterfaceStruct | None = None
+    search_vulns_token: str | None = ""
 
 
 @dataclass
@@ -115,4 +117,5 @@ class FilesNames:
     config_file = 'project_configs.json'
     certificates_folder = 'certificates'
     acunetix_configs = 'acunetix.json'
+    cve_logs = 'cve_logs'
     

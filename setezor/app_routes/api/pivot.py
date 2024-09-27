@@ -24,3 +24,16 @@ class PivotView(BaseView):
         db = await get_db_by_session(request=request)
         data = db.pivot.get_info_about_node(ip_id=node_id)
         return json_response(status=200, data=data)
+    
+
+class PivotIPMacPort(BaseView):
+    endpoint='/pivot_ip_mac_port'
+    queries_path = 'pivot_ip_mac_port'
+
+class PivotDomainIP(BaseView):
+    endpoint='/pivot_domain_ip'
+    queries_path = 'pivot_domain_ip'
+
+class PivotSoftwareVulnerabilityLink(BaseView):
+    endpoint='/pivot_software_vulnerability_link'
+    queries_path = 'pivot_software_vulnerability_link'

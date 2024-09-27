@@ -24,6 +24,8 @@ from setezor.tasks.domain_task import SdFindTask
 from setezor.tasks.whois_task import WhoisTask
 from setezor.tasks.cert_task import CertInfoTask
 from setezor.tasks.wappalyzer_task import Wappalyzer
+from setezor.tasks.cve_refresh_task import CVERefresher
+from setezor.tasks.cve_task import Cve
 
 from setezor.tasks.screenshot_by_ip_task import ScreenshotFromIPTask
 from setezor.tasks.task_status import TaskStatus
@@ -31,6 +33,8 @@ from setezor.app_routes.api.base_web_view import BaseView
 from setezor.modules.application import PMRequest
 from setezor.modules.project_manager.manager import ProjectManager
 from setezor.tools.ip_tools import get_ipv4, get_mac
+from sqlalchemy import desc
+import datetime
 
 class TaskView(BaseView):
     endpoint = '/task'
@@ -277,5 +281,73 @@ class TaskView(BaseView):
         scheduler = project.schedulers.get('other')
         await scheduler.spawn_job(Wappalyzer(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                              task_id=task_id, db=db, data=json_file, groups=groups))
+        return Response(status=201)
+    
+
+    @BaseView.route('POST', '/cve_task')
+    @project_require
+    async def create_cve_task(self, request: PMRequest):
+        project = await get_project(request=request)
+        source = 'vulners'
+        db = project.db
+        session = db.db.create_session()
+        list_soft_obj = session.query(db.software.model).where(db.software.model.cpe23 != None).all()
+        for soft_obj in list_soft_obj:
+            list_cpe = (soft_obj.cpe23 or '').split(', ')
+            for cpe in list_cpe:
+                if cpe[:7] == "cpe:2.3":
+                    params = json.dumps({'source' : source, 'cpe' : cpe}, ensure_ascii=False)
+                    task = session.query(db.task.model).filter(db.task.model.params == json.dumps(params), 
+                                                            db.task.model.status == "FINISHED")\
+                                                                .order_by(desc(db.task.model.started)).first()
+                    if task:
+                        val = datetime.datetime.now() - task.started
+                        if val.seconds < 3600: # проверка, что для данного cpe23 повторный запуск был не раньше часа
+                            await notify_client(request=request, queue_type='message',
+                                message={'title': f'Warning', 'type': 'warning',
+                                        'text': f'Retry after {(3600 - val.seconds) // 60 + 1} minutes. cpe = {cpe}'})
+                        continue
+                    task_id = db.task.write(status=TaskStatus.in_queue, params=params, ret='id')
+                    scheduler = project.schedulers.get('cve_vulners')
+                    await scheduler.spawn_job(Cve(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}', db=db,
+                                                task_id=task_id, log_path=project.configs.folders.cve_logs, cpe=cpe, source=source, list_res_id=[obj.id for obj in soft_obj._resource]))
+        return Response(status=201)
+    
+
+    @BaseView.route('POST','/refresh_cve')
+    @project_require
+    async def refresh_cve_task(self, request: PMRequest):
+        project = await get_project(request=request)
+        if not (token := project.configs.variables.search_vulns_token):
+            return json_response(status=500)
+        db = project.db
+        scheduler = project.schedulers.get('search-vulns')
+        session = db.db.create_session()
+        softwares = session.query(db.software.model).filter(db.software.model.cpe23 != None).all()
+        
+        for soft in softwares:
+            cpe_list = soft.cpe23.split(", ")
+            for cpe23 in cpe_list:
+                params = json.dumps({"source":"search-vulns","cpe":cpe23}, ensure_ascii=False)
+                task = session.query(db.task.model).filter(db.task.model.params == json.dumps(params), 
+                                                        db.task.model.status == "FINISHED")\
+                                                            .order_by(desc(db.task.model.started)).first()
+                if task:
+                    val = datetime.datetime.now() - task.started
+                    if val.seconds < 3600: # проверка, что для данного cpe23 повторный запуск был не раньше часа
+                        await notify_client(request=request, queue_type='message',
+                            message={'title': f'Warning', 'type': 'warning',
+                                    'text': f'Retry after {(3600 - val.seconds) // 60 + 1} minutes. cpe = {cpe23}'})
+                        continue
+                resource_softwares = [obj.id for obj in soft._resource]
+                if not resource_softwares:
+                    await notify_client(request=request, queue_type='message',
+                            message={'title': f'Error"', 'type': 'error',
+                                    'text': f'No resources found for cpe="{cpe23}'})
+                    continue
+                task_id = db.task.write(status=TaskStatus.in_queue, params=params, ret='id')
+                await scheduler.spawn_job(CVERefresher(observer=project.observer,scheduler=scheduler, 
+                                                    name=f'Task {task_id}',task_id=task_id, 
+                                                    db=db,token=token,cpe23=cpe23,res_softs_ids = resource_softwares))
         return Response(status=201)
     

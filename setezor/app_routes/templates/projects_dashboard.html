@@ -64,7 +64,7 @@ Projects
         </div>
     </div>
 
-    <div class="col">
+    <div class="col-10">
         <div class="d-flex flex-column bd-highlight mb-3">
             <h5 class="p-2 d-flex justify-content-center">
                 Graphical data
@@ -150,7 +150,7 @@ var headerMenu = function(){
 }
 
 var pivot_table = new Tabulator('#pivot_table',{
-    layout: "fitColumns",
+    layout: "fitDataTable",
     ajaxURL: "{{tab.base_url}}/all",
     
     ajaxURLGenerator:function(url, config, params){
@@ -164,7 +164,7 @@ var pivot_table = new Tabulator('#pivot_table',{
     sortMode: "remote",
     filterMode: "remote",
     pagination: true,
-    paginationMode: "remote",
+    paginationMode: "local",
     paginationSize: 10,
     paginationInitialPage: 1,
     paginationSizeSelector: [5, 10, 25, 50, 100],

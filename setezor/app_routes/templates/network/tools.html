@@ -30,12 +30,21 @@
                     <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
                         data-bs-target="#v-pills-wappalyzer" type="button" role="tab" aria-controls="v-pills-wappalyzer"
                         aria-selected="false" tabindex="-1">WAPPALYZER</button>
+                    <button class="nav-link" id="v-pills-cpe-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-cpe" type="button" role="tab" aria-controls="v-pills-cpe"
+                        aria-selected="false" tabindex="-1">CPEGuess</button>
+                    <button class="nav-link" id="v-pills-search-vulns-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-search-vulns" type="button" role="tab" aria-controls="v-pills-search-vulns"
+                        aria-selected="false" tabindex="-1">SearchVulns</button>
+                    <button class="nav-link" id="v-pills-cve-tab" data-bs-toggle="pill"
+                        data-bs-target="#v-pills-cve" type="button" role="tab" aria-controls="v-pills-cve"
+                        aria-selected="false" tabindex="-1">VULNERS</button>
                 </div>
             </div>
         </div>
 
     </div>
-    <div class="p2 tab-content boarder" id="v-pills-tabContent">
+    <div class="p2 tab-content w-100" id="v-pills-tabContent">
         <div class="d-flex " id="agent_interface_bar">
             <div id="agent_bar" class="me-3">
             </div>
@@ -47,7 +56,7 @@
         <div class="m-2">
         </div>
 
-        <div class="tab-pane fade show active" id="v-pills-nmap" role="tabpanel" aria-labelledby="v-pills-nmap-tab">
+        <div class="tab-pane fade show active col-3" id="v-pills-nmap" role="tabpanel" aria-labelledby="v-pills-nmap-tab">
             <div class="d-flex flex-column">
                 <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
                     <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab"
@@ -277,7 +286,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="v-pills-scapy" role="tabpanel" aria-labelledby="v-pills-scapy-tab">
+        <div class="tab-pane fade col-3" id="v-pills-scapy" role="tabpanel" aria-labelledby="v-pills-scapy-tab">
             <div class="d-flex flex-column">
                 <div class="py-2 bg-highlight">
                     <h3>Scapy sniffing</h3>
@@ -328,7 +337,7 @@
                 </div>
             </div>
         </div>
-        <div class="tab-pane fade" id="v-pills-masscan" role="tabpanel" aria-labelledby="v-pills-masscan-tab">
+        <div class="tab-pane fade col-3" id="v-pills-masscan" role="tabpanel" aria-labelledby="v-pills-masscan-tab">
             <div class="d-flex flex-column">
                 <form id="masscanScanForm" class="needs-validation" novalidate>
                     <div class="input-group" id="masscanIpTarget">
@@ -441,9 +450,9 @@
                 ">Choose file</button>
         </div>
 
-        <div class="tab-pane fade" id="v-pills-domains" role="tabpanel" aria-labelledby="v-pills-domains-tab">
+        <div class="tab-pane fade col-3" id="v-pills-domains" role="tabpanel" aria-labelledby="v-pills-domains-tab">
             <div class="d-flex flex-column">
-                <div class="tab-content" id="dsa" style="width: 310px">
+                <div class="tab-content" id="dsa">
                     <form id="DomainForm" class="needs-validation" novalidate>
                         <div class="input-group" id="domainTarget">
                             <span class="input-group-text" id="basic-addon1">DOMAIN</span>
@@ -495,9 +504,9 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="v-pills-cert" role="tabpanel" aria-labelledby="v-pills-cert-tab">
+        <div class="tab-pane fade col-3" id="v-pills-cert" role="tabpanel" aria-labelledby="v-pills-cert-tab">
             <div class="d-flex flex-column">
-                <div class="tab-content" id="dsa" style="width: 310px">
+                <div class="tab-content" id="dsa">
                     <form id="CertForm" class="needs-validation" novalidate>
                         <div class="input-group" id="Target">
                             <span class="input-group-text" id="basic-addon1">TARGET</span>
@@ -520,9 +529,9 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="v-pills-whois" role="tabpanel" aria-labelledby="v-pills-whois-tab">
+        <div class="tab-pane fade col-3" id="v-pills-whois" role="tabpanel" aria-labelledby="v-pills-whois-tab">
             <div class="d-flex flex-column">
-                <div class="tab-content" id="dsa" style="width: 310px">
+                <div class="tab-content" id="dsa">
                     <form id="WhoisForm" class="needs-validation" novalidate>
                         <div class="input-group" id="Target">
                             <span class="input-group-text" id="basic-addon1">TARGET</span>
@@ -569,12 +578,11 @@
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-acunetix-settings"
                             type="button" role="tab" aria-controls="" aria-selected="false"
-                            onclick="refreshConfigsTable()"
-                            tabindex="-1">Settings</button>
+                            onclick="refreshConfigsTable()" tabindex="-1">Settings</button>
                     </li>
                 </ul>
             </div>
-            <div class="p2 tab-content boarder" id="v-pills-acunetixContent">
+            <div class="p2 tab-content" id="v-pills-acunetixContent">
                 <div class="tab-pane fade" id="v-pills-acunetix-groups" role="tabpanel"
                     aria-labelledby="v-pills-acunetix-groups-tab">
                     {% import 'acunetix/groups.html' as acunetix_groups with context%}
@@ -631,6 +639,17 @@
 
         {% import 'network/wappalyzer.html' as wappalyzer with context%}
         {{wappalyzer.show()}}
+        <div class="tab-pane fade" id="v-pills-cpe" role="tabpanel" aria-labelledby="v-pills-cpe-setting-tab">
+            {% import 'network/cpe.html' as cpe%}
+            {{ cpe.show() }}
+        </div>
+        <div class="tab-pane fade" id="v-pills-search-vulns" role="tabpanel" aria-labelledby="v-pills-search-vulns-tab">
+            {% import 'network/search_vulns.html' as search_vulns %}
+            {{ search_vulns.show() }}
+        </div>
+
+        {% import 'network/cve.html' as cve with context%}
+        {{cve.show()}}
     </div>
 </div>
 

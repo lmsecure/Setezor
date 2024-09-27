@@ -20,16 +20,9 @@
 		}
 
 		.sidebar {
-			height: 100%;
-			width: 0;
-			position: fixed;
-			z-index: 0;
-			top: 0;
-			left: 0;
 			background-color: #111;
-			overflow-x: hidden;
-			transition: 0.25s;
-			padding-top: 80px;
+			width: 250px !important;
+			top: 66px !important;
 		}
 
 		.sidebar a {
@@ -43,14 +36,6 @@
 
 		.sidebar a:hover {
 			color: #f1f1f1;
-		}
-
-		.sidebar .closebtn {
-			position: absolute;
-			top: 50px;
-			right: 25px;
-			font-size: 36px;
-			margin-left: 50px;
 		}
 
 		.openbtn {
@@ -81,65 +66,65 @@
 				font-size: 18px;
 			}
 		}
-	</style>
-	<script>
-		function changeNav() {
-			width = document.getElementById("mySidebar").style.width;
-			if (width == '250px') {
-				document.getElementById("mySidebar").style.width = "0";
-				document.getElementById("content").style.marginLeft = "0";
-			}
-			else {
-				document.getElementById("mySidebar").style.width = "250px";
-				document.getElementById("content").style.marginLeft = "250px";
-			}
+
+		#toastHolderParent {
+			z-index: 11;
+			max-height: 90vh;
+			top: 66px !important;
 		}
-	</script>
+		#toast_holder div{
+			margin-top: 0.2rem;
+			margin-bottom: 0.2rem;
+		}
+	</style>
 	{% block scripts %}{% endblock %}
 </head>
 
 <body>
-	<div id="mySidebar" class="sidebar">
-		<a class="nav-link" href="/projects_dashboard/">
-			<div class="d-flex flex-row bd-highlight">
-				<div class="p-2 bd-highlight">
-					<i class="bi bi-kanban-fill"></i>
+	<div class="offcanvas offcanvas-start sidebar" id="offcanvasNavbar" data-bs-backdrop="false" tabindex="-1"
+		aria-labelledby="offcanvasNavbarLabel">
+		<div class="offcanvas-body">
+			<a class="nav-link" href="/projects_dashboard/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-kanban-fill"></i>
+					</div>
+					<div class="p-2 bd-highlight">Dashboard</div>
 				</div>
-				<div class="p-2 bd-highlight">Dashboard</div>
-			</div>
-		</a>
-		<a class="nav-link active" href="/network-map/">
-			<div class="d-flex flex-row bd-highlight">
-				<div class="p-2 bd-highlight">
-					<i class="bi bi-bezier2"></i>
+			</a>
+			<a class="nav-link active" href="/network-map/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-bezier2"></i>
+					</div>
+					<div class="p-2 bd-highlight">Network Map</div>
 				</div>
-				<div class="p-2 bd-highlight">Network Map</div>
-			</div>
-		</a>
-		<a class="nav-link active" href="/tools/">
-			<div class="d-flex flex-row bd-highlight">
-				<div class="p-2 bd-highlight">
-					<i class="bi bi-tools"></i>
+			</a>
+			<a class="nav-link active" href="/tools/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-tools"></i>
+					</div>
+					<div class="p-2 bd-highlight">Tools</div>
 				</div>
-				<div class="p-2 bd-highlight">Tools</div>
-			</div>
-		</a>
-		<a class="nav-link" href="/info/">
-			<div class="d-flex flex-row bd-highlight">
-				<div class="p-2 bd-highlight">
-					<i class="bi bi-table"></i>
+			</a>
+			<a class="nav-link" href="/info/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-table"></i>
+					</div>
+					<div class="p-2 bd-highlight">Information</div>
 				</div>
-				<div class="p-2 bd-highlight">Information</div>
-			</div>
-		</a>
-		<a class="nav-link" href="/settings/">
-			<div class="d-flex flex-row bd-highlight">
-				<div class="p-2 bd-highlight">
-					<i class="bi bi-gear"></i>
+			</a>
+			<a class="nav-link" href="/settings/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-gear"></i>
+					</div>
+					<div class="p-2 bd-highlight">Settings</div>
 				</div>
-				<div class="p-2 bd-highlight">Settings</div>
-			</div>
-		</a>
+			</a>
+		</div>
 	</div>
 
 	<header class="header">
@@ -149,7 +134,8 @@
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item d-inline">
 							{% if hide_navbar %}{% else %}
-							<button class="openbtn" onclick="changeNav()">☰</button>
+							<button class="openbtn" data-bs-toggle="offcanvas"
+								data-bs-target="#offcanvasNavbar">☰</button>
 							{% endif %}
 							<a class="navbar-brand" target="_blank">
 								<img src="/static/assets/logo.png" width="120px" height="auto" />
@@ -219,7 +205,7 @@
 
 					{% if hide_navbar %}{% else %}
 					<button type="button" class="btn btn-secondary" data-bs-toggle="offcanvas"
-						data-bs-target="#offcanvasExample">
+						data-bs-target="#offcanvasNotifications">
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
 							class="bi bi-bell" viewBox="0 0 16 16">
 							<path
@@ -251,14 +237,15 @@
 	<div id="content">
 		{% block content required %}{% endblock content %}
 	</div>
-	<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+	<div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent">
 		<div id="toast_holder"></div>
 	</div>
 	</div>
 	</div>
-	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
+	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
+		aria-labelledby="offcanvasNotificationsLabel">
 		<div class="offcanvas-header">
-			<h5 class="offcanvas-title" id="offcanvasExampleLabel">Notifications</h5>
+			<h5 class="offcanvas-title" id="offcanvasNotificationsLabel">Notifications</h5>
 			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 		</div>
 		<div class="offcanvas-body" id="notifications_body">

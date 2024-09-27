@@ -118,6 +118,11 @@ class MAC(Base, TimeDependent):
                 {'field': 'mac', 'title': 'MAC', 'editor': 'input', 'validator': 'required'},
                 {'field': 'vendor', 'title': 'Vendor', 'editor': 'input'},]
         
+    @classmethod
+    def get_name(cls):
+        return cls.__name__.lower()
+
+
     def to_struct(self):
         mac = MacStruct(
             id=self.id,
@@ -161,7 +166,10 @@ class IP(Base, TimeDependent):
     
     route_values = relationship('RouteList', back_populates='ip', single_parent=False)
 
-    
+    @classmethod
+    def get_name(cls):
+        return cls.__name__.lower()
+
     @staticmethod
     def get_headers_for_table() -> list:
         return [{'field': 'id', 'title': 'ID'},
@@ -301,6 +309,9 @@ class Port(Base, TimeDependent):
                 {'field': 'protocol', 'title': 'Protocol', 'editor': 'input'},
                 {'field': 'service_name', 'title': 'Service name', 'editor': 'input'}]
 
+    @classmethod
+    def get_name(cls):
+        return cls.__name__.lower()
 
 class Task(Base):
     """Модель для таблицы с задачами
@@ -326,6 +337,9 @@ class Task(Base):
                 {'field': 'params', 'title': 'Params', 'editor': 'input'},
                 {'field': 'comment', 'title': 'Comment', 'editor': 'input'},]
     
+    @classmethod
+    def get_name(cls):
+        return cls.__name__.lower()
 
 class Screenshot(Base, TimeDependent):
     """Модель для таблицы со скриншотами
@@ -574,14 +588,27 @@ class Vulnerability(Base):
     cwe = Column(String)
     description = Column(String)
     details = Column(String)
+    cvss = Column(String)
     cvss2 = Column(String)
+    cvss2_score = Column(Float)
     cvss3 = Column(String)
+    cvss3_score = Column(Float)
     cvss4 = Column(String)
     cvss4_score = Column(Float)
     severity = Column(Integer)
     _resource_soft = relationship("Vulnerability_Resource_Soft",back_populates="_vulnerability")
+    _link = relationship("VulnerabilityLink", back_populates="_vulnerability")
 
     @classmethod
     def from_struct(self, struct: MacStruct):
         vuln = Vulnerability(**struct)
         return vuln
+    
+
+class VulnerabilityLink(Base):
+    __tablename__ = 'vulnerability_links'
+
+    id = Column(Integer, primary_key=True)
+    link = Column(String)
+    vulnerability_id = Column(Integer,ForeignKey("vulnerabilities.id"))
+    _vulnerability = relationship("Vulnerability", back_populates="_link")

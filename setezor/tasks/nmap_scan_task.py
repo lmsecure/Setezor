@@ -52,7 +52,8 @@ class NmapScanTask(BaseJob):
         db.port.write_many(data=result.ports)
         db.software.write_many(data=result.softwares, to_update=False)
         for port, soft in zip(result.ports, result.softwares):
-            db.resource_software.get_or_create(**{**port, **soft})
+            if any([v for k, v in soft.items() if k not in ['ip', 'port']]):
+                db.resource_software.get_or_create(**{**port, **soft})
         for rt in result.traces:
             db.route.create(route=rt, task_id=self.task_id)
         # Всратый код ниже достает все ip из traces и address, чтобы в дальнейшем создать подсети

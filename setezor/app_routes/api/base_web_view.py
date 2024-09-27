@@ -125,8 +125,7 @@ class BaseView(ABC):
         res = db_entity.get_all(page=page, limit=size, sort_by=sort_by, direction=direction, filters=filters)
         
         res = [{k: v for k,v in i.items()} for i in res]
-        total = db_entity.get_records_count()
-        res = orjson.dumps({'data': res, 'last_page': int(total / size) + 1})
+        res = orjson.dumps(res)
         return Response(body=res)
     
     async def get_db_queries(self, request: PMRequest) -> BaseQueries:

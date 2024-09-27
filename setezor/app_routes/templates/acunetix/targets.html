@@ -14,11 +14,7 @@
             fillAcunetixInstances('acunetix_instance_target_import','acunetix_groups_import')" 
             data-bs-target="#importTargetsCSV">Import targets</button>
     <div class="d-flex flex-column mt-2">
-        <div class="d-flex">
-            <div>
-                <div id="targets_table" class="mt-2">
-                </div>
-            </div>
+        <div id="targets_table" class="mt-2" style="width:87vw">
         </div>
     </div>
 </div>
@@ -113,7 +109,7 @@
         }
     }
     var targets_table = new Tabulator('#targets_table', {
-        layout: "fitData",
+        layout: "fitDataTable",
         ajaxURL: "{{targets_tab.base_url}}",
 
         ajaxURLGenerator: function (url, config, params) {

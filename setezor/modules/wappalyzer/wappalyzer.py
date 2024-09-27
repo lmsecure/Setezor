@@ -1,7 +1,11 @@
+import re
+
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
 
 from ipaddress import IPv4Address
+
+from cpeguess.cpeguess import CPEGuess
 
 
 class WappalyzerParser:
@@ -89,12 +93,31 @@ class WappalyzerParser:
             for name_categoty in groups:
                 categories_id = set.union(categories_id, WappalyzerParser.groups.get(name_categoty))
             softwares: list[SoftwareStruct] = []
-            for tech in wappalyzer_log.get('technologies'):
+            for tech in wappalyzer_log.get('technologies', {}):
+                cpe = tech.get('cpe')
+                cpe_type = None
+                vendor = None
+                product = None
+                if cpe:
+                    cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
+                    vendor = cpe.replace('/', '2.3:').split(':')[3]
+                    product = cpe.replace('/', '2.3:').split(':')[4]
+                version = tech.get('version')
+                if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+                if product and version:
+                    list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
+                    if list_cpe:
+                        cpe = ', '.join(list_cpe)
+                    else:
+                        cpe = None
+
                 if any([int(category.get('id')) in categories_id for category in tech.get('categories')]):
                     tmp_soft = SoftwareStruct()
-                    tmp_soft.product = tech.get('name')
-                    tmp_soft.version = tech.get('version')
-                    tmp_soft.cpe23 = tech.get('cpe')
+                    tmp_soft.type = cpe_type
+                    tmp_soft.vendor = vendor
+                    tmp_soft.product = product
+                    tmp_soft.version = version
+                    tmp_soft.cpe23 = cpe
                     softwares.append(tmp_soft)
             result.update({'softwares' : softwares})
         return result

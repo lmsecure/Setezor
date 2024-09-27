@@ -1,0 +1,101 @@
+{% macro show() %}
+<div class="p2 tab-content">
+    <div class="row">
+        <div class="col-3">
+            <div class="row">
+                <form onsubmit="saveToken(event)" id="tokenSaveFormSearchVulns" class="flex-column">
+                    <label for="cpeNameInput" class="form-label">Token</label>
+                    <div class="mb-3 d-flex">
+                        <input type="text" class="form-control me-2" name="token">
+                        <button type="submit" class="btn btn-primary">Set</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row">
+                <form onsubmit="findVulnerabilities(event)" id="tokenSearchFormSearchVulns">
+                    <div class="mb-3">
+                        <label for="cpeNameInput" class="form-label">QueryString</label>
+                        <input type="text" class="form-control" name="query">
+                    </div>
+                    <button type="submit" class="btn btn-success">Search</button>
+                </form>
+            </div>
+            <button class="btn btn-primary mt-2" onclick="refreshCVE()">Refresh CVE</button>
+        </div>
+        <div class="col-9 overflow-auto" style="max-height: 700px;">
+            <h5>CVE's</h5>
+            <h6 id="softName"></h6>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Description</th>
+                        <th>Links</th>
+                    </tr>
+                </thead>
+                <tbody id="vulnsList">
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+
+</div>
+
+<script>
+    document.getElementById("tokenSaveFormSearchVulns").reset()
+    document.getElementById("tokenSearchFormSearchVulns").reset()
+    async function saveToken(event) {
+        event.preventDefault()
+        let data = new FormData(event.target)
+        resp = await fetch("/api/vulnerability/search_vulns/token/", { method: 'PUT', body: JSON.stringify(Object.fromEntries(data)) })
+        if (resp.status == 200){
+            create_toast('Success', 'Token was set', 'success')
+        }
+    }
+
+    async function findVulnerabilities(event) {
+        event.preventDefault()
+        let el = document.getElementById("vulnsList")
+
+        el.innerHTML = `<div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>`
+        let data = new FormData(event.target)
+        params = new URLSearchParams()
+        for (const [key, value] of data) {
+            params.set(key, value)
+        }
+        resp = await fetch("/api/vulnerability/search_vulns/?" + params)
+        data = await resp.json()
+        if (resp.status == 200){
+            let result = ""
+        for (let [key, value] of Object.entries(data)) {
+            document.getElementById("softName").innerHTML = `${key}. Latest version: ${value.version_status.latest}`
+            for (let [k, v] of Object.entries(value.vulns)) {
+                result += `
+                    <tr>
+                        <td>${k}</td>
+                        <td>${v.description}</td>
+                        <td>`
+                for (let link of v.exploits){
+                    result += `<p>
+                        <a href="${link}">${link}</a>
+                        </p>`
+                }
+                result += `</td></tr>`
+            }
+        }
+        el.innerHTML = result
+        }else{
+            create_toast('Error', data.error, 'error')
+        }
+        
+        
+    }
+    async function refreshCVE() {
+        await fetch("/api/task/refresh_cve",{method:"POST"})
+    }
+</script>
+{% endmacro %}

@@ -35,7 +35,7 @@
         `
     }
     var scans_table = new Tabulator('#scans_table', {
-        layout: "fitData",
+        layout: "fitDataFill",
         ajaxURL: "{{scans_tab.base_url}}",
 
         ajaxURLGenerator: function (url, config, params) {
@@ -50,7 +50,7 @@
         filterMode: "remote",
         pagination: true,
         paginationMode: "local",
-        paginationSize: 10,
+        paginationSize: 5,
         paginationInitialPage: 1,
         paginationSizeSelector: [5, 10, 25, 50, 100],
         columns: [

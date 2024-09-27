@@ -5,7 +5,9 @@ from .port_queries import PortQueries
 from .screenshot_queries import ScreenshotQueries
 from .task_queries import TaskQueries
 from .object_type_queries import ObjectTypeQueries
-from .pivot_queries import PivotQueries
+from .pivot_resource_software_queries import PivotResourceSoftwareQueries
+from .pivot_ip_mac_port import PivotIpMacPortQueries
+from .pivot_domain_ip import PivotDomainIP
 from .network_queries import NetworkQueries
 from .agent_queries import AgentQueries
 from .route_lists_queries import RouteListQueries
@@ -20,3 +22,5 @@ from .vulnerability_queries import VulnerabilityQueries
 from .vuln_res_soft_queries import VulnerabilityResSoftQueries
 from .resource_soft_queries import ResourceSoftwareQueries
 from .software_queries import SoftwareQueries
+from .vulnerability_link_queries import VulnerabilityLinkQueries
+from .pivot_software_vulnerability_link_queries import PivotSoftwareVulnerabilityLink
