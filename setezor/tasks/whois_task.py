@@ -1,7 +1,6 @@
 import traceback
 import asyncio
 from time import time
-import socket
 from .base_job import BaseJob, MessageObserver
 from setezor.modules.osint.whois.whoistest import Whois
 from setezor.database.queries import Queries
@@ -44,7 +43,7 @@ class WhoisTask(BaseJob):
                 break
         for _range in alias_range:
             if _range in result:
-                data.update({'range_ip': result[_range]})
+                data.update({'range_ip': ", ".join(result[_range])})
                 break
         for _net_mask in alias_netmask:
             if _net_mask in result:

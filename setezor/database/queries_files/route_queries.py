@@ -48,6 +48,28 @@ class RouteQueries(BaseQueries):
         session.commit()
         self.logger.debug(f'Creating route {route}')
         return db_route
+    
+    @BaseQueries.session_provide
+    def delete_edges(self, *, session: Session, route: RouteStruct, task_id: int):
+        db_route = session.query(Route).filter(Route.agent_id == route.agent_id).first()
+
+        if not db_route:
+            self.logger.warning(f'Route with agent_id {route.agent_id}')
+            return None
+
+        ips_to_delete = []
+
+        for ip in route.routes:
+            ip_obj = session.query(RouteList).filter(RouteList.route_id == str(RouteStruct)).first()
+            if ip_obj:
+                ips_to_delete.append(ip_obj)
+
+        for ip_obj in ips_to_delete:
+            session.delete(ip_obj)
+        session.delete(db_route)
+        session.commit()
+        self.logger.debug(f'Removal of route {db_route} successful.')
+        return db_route
 
     @BaseQueries.session_provide
     def get_routes(self, *, session: Session) -> list[RouteStruct]:
@@ -74,7 +96,8 @@ class RouteQueries(BaseQueries):
     def get_vis_edges(self, *, session: Session): # ! заглушка
         res = session.query(Route,RouteList,IP)\
             .join(RouteList,Route.id == RouteList.route_id)\
-            .join(IP,RouteList.value == IP.id).order_by(Route.id,RouteList.position).all()
+            .join(IP,RouteList.value == IP.id).order_by(Route.id,RouteList.position)
+        res = res.all()
         if not res:
             return []
         links = []
@@ -111,7 +134,7 @@ class RouteQueries(BaseQueries):
             agent = row[2]
             if not agents_ips.get(address):
                 agents_ips[address] = {
-                    "agents": [],
+                    "agents": set(),
                     "agent": None
                 }
                 if agent_id:
@@ -133,7 +156,6 @@ class RouteQueries(BaseQueries):
             nodes.append(vis_node)
         self.logger.debug(f'Getting {len(nodes)} vis nodes')
         return nodes
-        
-        
+
     def get_headers(self, *args, **kwargs) -> list:
         return super().get_headers(*args, **kwargs)

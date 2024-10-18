@@ -24,3 +24,6 @@ from .resource_soft_queries import ResourceSoftwareQueries
 from .software_queries import SoftwareQueries
 from .vulnerability_link_queries import VulnerabilityLinkQueries
 from .pivot_software_vulnerability_link_queries import PivotSoftwareVulnerabilityLink
+from .vuln_res_soft_screenshot_queries import ResourceSoftwareVulnerabilityScreenshotQueries
+from .permissions_queries import PermissionsQueries
+from .authentication_credentials_queries import AuthenticationCredentialsQueries

@@ -1,8 +1,10 @@
-from .base_queries import BaseQueries
+from pandas import DataFrame
+from sqlalchemy import func
+from .base_queries import BaseQueries, QueryFilter
 from .ip_queries import IPQueries
 from .domain_queries import DomainQueries
 from .port_queries import PortQueries
-from ..models import Resource
+from setezor.database.models import Resource, IP, Port, Domain, Resource_Software, Vulnerability_Resource_Soft
 from sqlalchemy.orm.session import Session
 
 
@@ -71,4 +73,45 @@ class ResourceQueries(BaseQueries):
         return session.query(self.model).filter(self.model.acunetix_id == id).first()
     
     def get_headers(self) -> list:
-            return [{},]
+            return [{'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP'},
+            {'field': 'port', 'title': 'PORT'},
+            {'field': 'domain', 'title': 'DOMAIN'},
+            {'field': 'vuln_count', 'title': 'VulnCount'},
+            ]
+    
+
+    @BaseQueries.session_provide
+    def get_all(self, session: Session, result_format: str = None,
+                page: int = None, limit: int = None, sort_by: str = None,
+                direction: str = None, filters: list[QueryFilter] = []) -> list[dict] | DataFrame:
+
+        query = session.query(
+            Resource.id,
+            IP.ip.label("ipaddr"),
+            Port.port.label("port"),
+            Domain.domain.label("domain"),
+            func.count(Vulnerability_Resource_Soft.vulnerability_id).label("cnt")).select_from(Resource)\
+            .join(IP, Resource.ip_id == IP.id, isouter=True)\
+            .join(Port, Resource.port_id == Port.id, isouter=True)\
+            .join(Domain, Resource.domain_id == Domain.id, isouter=True)\
+            .join(Resource_Software, Resource_Software.resource_id == Resource.id)\
+            .join(Vulnerability_Resource_Soft, Resource_Software.id == Vulnerability_Resource_Soft.resource_soft_id, isouter=True)\
+            .group_by(Resource.id,"ipaddr","port","domain")
+
+        res = self._get_all(session=session, source_query=query,
+                            columns=[],
+                            result_format=result_format, page=page,
+                            limit=limit, sort_by=sort_by, direction=direction,
+                            filters=filters, model=self.model)
+        result = []
+        for i in res:
+            record = {
+                'id': i[0],
+                'ipaddr': i[1],
+                'port': i[2],
+                'domain': i[3],
+                "vuln_count":i[4],
+            }
+            result.append(record)
+        return result

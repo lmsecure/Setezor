@@ -272,7 +272,6 @@ class Port(Base, TimeDependent):
     id = Column(Integer, primary_key=True)
     ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
     _ip = relationship('IP', back_populates='_host_ip')
-    _screenshot = relationship('Screenshot', back_populates='_port')
     _cert = relationship('Cert', back_populates = '_port')
     port = Column(Integer, nullable=False)
     protocol = Column(String(10))
@@ -347,12 +346,9 @@ class Screenshot(Base, TimeDependent):
     __tablename__ = 'screenshots'
     
     id = Column(Integer, primary_key=True)
-    port = Column(Integer, ForeignKey('ports.id'))
-    _port = relationship('Port', back_populates='_screenshot')
-    screenshot_path = Column(String(100), unique=True)
-    task = Column(Integer, ForeignKey('tasks.id'))
-    _task = relationship('Task', backref='_screenshot')
-    domain = Column(String)
+    resource_id = Column(Integer, ForeignKey('resource.id'))
+    _resource = relationship('Resource',back_populates='_screenshot')
+    path = Column(String(100), unique=True)
 
         
 class Network(Base, TimeDependent):
@@ -553,6 +549,18 @@ class Resource(Base):
     acunetix_id = Column(String(36), unique=True)
     
     _software = relationship('Resource_Software', back_populates='_resource')
+    _screenshot = relationship('Screenshot',back_populates='_resource')
+
+    _authentication_credentials = relationship("Authentication_Credentials", back_populates='_resource')
+
+    @staticmethod
+    def get_headers_for_table():
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP'},
+            {'field': 'port', 'title': 'PORT'},
+            {'field': 'domain', 'title': 'DOMAIN'},
+        ]
 
 
 class Resource_Software(Base):
@@ -571,13 +579,14 @@ class Resource_Software(Base):
 class Vulnerability_Resource_Soft(Base):
     __tablename__ = "vulnerability_resource_soft"
     id = Column(Integer, primary_key=True)
-
+    confirmed = Column(BOOLEAN)
     vulnerability_id = Column(Integer, ForeignKey('vulnerabilities.id'))
     _vulnerability = relationship('Vulnerability', back_populates='_resource_soft')
 
     resource_soft_id = Column(Integer, ForeignKey('resource_software.id'))
     _resource_soft = relationship('Resource_Software', back_populates='_vulnerability')
 
+    _screenshot = relationship("Resource_Software_Vulnerability_Screenshot", back_populates="_resource_vulnerability_id")
 
 class Vulnerability(Base):
     __tablename__ = 'vulnerabilities'
@@ -612,3 +621,32 @@ class VulnerabilityLink(Base):
     link = Column(String)
     vulnerability_id = Column(Integer,ForeignKey("vulnerabilities.id"))
     _vulnerability = relationship("Vulnerability", back_populates="_link")
+
+class Resource_Software_Vulnerability_Screenshot(Base):
+    __tablename__ = "resource_vulnerability_screenshot"
+
+    id = Column(Integer, primary_key = True)
+    path = Column(String)
+    note = Column(String)
+    resource_vulnerability_id = Column(Integer, ForeignKey("vulnerability_resource_soft.id"))
+    _resource_vulnerability_id = relationship("Vulnerability_Resource_Soft", back_populates="_screenshot")
+
+
+class Permissions(Base):
+    __tablename__ = "permissions"
+
+    id = Column(Integer, primary_key=True)
+    permission = Column(String)
+
+class Authentication_Credentials(Base):
+    __tablename__ = "authentication_credentials"
+
+    id = Column(Integer, primary_key=True)
+    resource_id = Column(Integer, ForeignKey('resource.id'))
+    _resource = relationship('Resource', back_populates='_authentication_credentials')
+    login = Column(String)
+    password = Column(String)
+    need_auth = Column(BOOLEAN)
+    role = Column(String)
+    permissions = Column(Integer)
+

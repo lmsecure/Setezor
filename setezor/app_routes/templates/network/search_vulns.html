@@ -6,7 +6,7 @@
                 <form onsubmit="saveToken(event)" id="tokenSaveFormSearchVulns" class="flex-column">
                     <label for="cpeNameInput" class="form-label">Token</label>
                     <div class="mb-3 d-flex">
-                        <input type="text" class="form-control me-2" name="token">
+                        <input type="text" class="form-control me-2" name="token" required>
                         <button type="submit" class="btn btn-primary">Set</button>
                     </div>
                 </form>
@@ -15,7 +15,7 @@
                 <form onsubmit="findVulnerabilities(event)" id="tokenSearchFormSearchVulns">
                     <div class="mb-3">
                         <label for="cpeNameInput" class="form-label">QueryString</label>
-                        <input type="text" class="form-control" name="query">
+                        <input type="text" class="form-control" name="query" id="queryInput" required>
                     </div>
                     <button type="submit" class="btn btn-success">Search</button>
                 </form>
@@ -50,18 +50,17 @@
         event.preventDefault()
         let data = new FormData(event.target)
         resp = await fetch("/api/vulnerability/search_vulns/token/", { method: 'PUT', body: JSON.stringify(Object.fromEntries(data)) })
-        if (resp.status == 200){
+        if (resp.status == 200) {
             create_toast('Success', 'Token was set', 'success')
+        }
+        else {
+            create_toast('Error', 'Invalid token SearchVulns', 'error')
         }
     }
 
     async function findVulnerabilities(event) {
         event.preventDefault()
         let el = document.getElementById("vulnsList")
-
-        el.innerHTML = `<div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>`
         let data = new FormData(event.target)
         params = new URLSearchParams()
         for (const [key, value] of data) {
@@ -69,33 +68,41 @@
         }
         resp = await fetch("/api/vulnerability/search_vulns/?" + params)
         data = await resp.json()
-        if (resp.status == 200){
+
+        if (resp.status == 500) {
+            create_toast('Error', data.error, 'error')
+            return
+        }
+        el.innerHTML = `<div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>`
+        if (resp.status == 200) {
             let result = ""
-        for (let [key, value] of Object.entries(data)) {
-            document.getElementById("softName").innerHTML = `${key}. Latest version: ${value.version_status.latest}`
-            for (let [k, v] of Object.entries(value.vulns)) {
-                result += `
+            for (let [key, value] of Object.entries(data)) {
+                document.getElementById("softName").innerHTML = `${key}. Latest version: ${value.version_status.latest}`
+                for (let [k, v] of Object.entries(value.vulns)) {
+                    result += `
                     <tr>
                         <td>${k}</td>
                         <td>${v.description}</td>
                         <td>`
-                for (let link of v.exploits){
-                    result += `<p>
+                    for (let link of v.exploits) {
+                        result += `<p>
                         <a href="${link}">${link}</a>
                         </p>`
+                    }
+                    result += `</td></tr>`
                 }
-                result += `</td></tr>`
             }
-        }
-        el.innerHTML = result
-        }else{
+            el.innerHTML = result
+        } else {
             create_toast('Error', data.error, 'error')
         }
-        
-        
+
+
     }
     async function refreshCVE() {
-        await fetch("/api/task/refresh_cve",{method:"POST"})
+        await fetch("/api/task/refresh_cve", { method: "POST" })
     }
 </script>
 {% endmacro %}

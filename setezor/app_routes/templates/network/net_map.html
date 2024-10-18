@@ -1,4 +1,5 @@
 {% macro net_map(device_types) %}
+
 <div class="btn-group" role="group">
     <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
             if (cluster) {
@@ -23,8 +24,11 @@
         </ul>
     </div>
     <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top"
-        title="Update network" onclick="get_nodes_and_edges(true);"><i class="bi bi-arrow-clockwise"></i></button>
-
+        title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
+            <div class="ms-2 ms-md-4" id="agent_interface_bar">
+                <div id="agent_bar">
+                </div>
+            </div>
 </div>
 
 
@@ -92,6 +96,10 @@
 
 <div id="ModalCreateNode">
 </div>
+<div id="ModalDeleteAgent">
+</div>
+<div id="ModalDeleteLastAgent">
+</div>
 
 <script>
 
@@ -114,6 +122,7 @@
     function keyboardUp(e) {
     };
 
+    update_agent_bar()
     var cluster = false;
     var network;
     var networkData = { nodes: new vis.DataSet(), edges: new vis.DataSet() }
@@ -153,6 +162,10 @@
             if (node.agent) {
                 node.icon = new AgentIcon(color = caclculateColor(node))
                 node.shape = 'icon'
+            }else if (node.mac_address.object.object_type != null){
+                node.shape="image"
+                node.image=`/static/assets/${node.mac_address.object.object_type}.svg`
+                node.size=50
             }
         }))
         {% for col in table %} {% if col.editor_entity %}
@@ -194,24 +207,79 @@
             return ''
         }
     }
+    let deletionAgentData = undefined
+    let deletionAgentCallback = undefined
+    let modal = undefined
     async function deleteNodeInDatabase(data, callback) {
+        
         node = networkData.nodes.get(data.nodes[0])
         ip = node.label
-        resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: ip })
+        let nodeIsAgent = false;
+
+        for (let i =0 ; i <agentData.agents.length; i++)
+            {
+                if (node.address == agentData.agents[i].ip)
+                {   
+                    nodeIsAgent = true;
+                    break;
+                }
+            }
+        if (nodeIsAgent){  
+
+            deletionAgentData = data
+            deletionAgentCallback = callback
+
+            if (agentData.agents.length > 1){
+                modal = createDeleteAgentModal(true)
+                modal.show()
+            }else{
+                modal = createDeleteLastAgentModal(true)
+                modal.show()
+                callback()
+            }
+        }else{
+            resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: JSON.stringify({ ip })});
+            callback(data)
+        }
+
     }
+    async function confirmDeletingOfAgent(event) {
+        event.preventDefault();
+        let data = new FormData(event.target);
+        let node_id = network.getSelectedNodes()[0];
+        let node = networkData.nodes.get(node_id);
+
+        if (data.get('ip') == node.address) {
+            const defaultAgentId = data.get('defaultAgent');
+            
+            const resp = await fetch('/api/object/delete_object', { 
+                method: 'DELETE', 
+                body: JSON.stringify({ ip: node.address, default_agent: defaultAgentId }), 
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            setDefaultAgent(defaultAgentId)
+            modal.hide();
+            update_agent_bar();
+            deletionAgentCallback(deletionAgentData);
+    }
+}
+
     async function deleteEdgeInDatabase(data, callback) {
         edge = networkData.edges.get(data.edges[0])
         first = networkData.nodes.get(edge.from).label
         second = networkData.nodes.get(edge.to).label
-        data = { first_ip: first, second_ip: second }
-        resp = await fetch('/api/l3link/delete_edge', { method: 'DELETE', body: JSON.stringify(data) })
+        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent}
+        resp = await fetch('/api/route/delete_edge', { method: 'DELETE', body: JSON.stringify(data) })
     }
     async function createEdgeInDatabase(data, callback) {
         nodes = networkData.nodes
         first = nodes.get(data.from).label
         second = nodes.get(data.to).label
-        data = { first_ip: first, second_ip: second }
-        resp = await fetch('/api/l3link/create_edge', { method: 'PUT', body: JSON.stringify(data) })
+        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent }
+        // send request for getting agent for node with ip=first.ip
+        resp = await fetch('/api/route/vis_add_edges', { method: 'POST', body: JSON.stringify(data) })
     }
     async function editNode(data, cancelAction, callback, create) {
         params = { ip_id: JSON.stringify(data.id) }
@@ -248,7 +316,6 @@
         document.getElementById("node-saveButton").onclick = null;
         document.getElementById("node-cancelButton").onclick = null;
         document.getElementById("node-popUp").style.display = "none";
-
         document.getElementById("node-label").value = ''
         document.getElementById("node-mac").value = ''
         document.getElementById("node-vendor").value = ''
@@ -323,8 +390,6 @@
             }
         })
     }
-
-
     async function saveNodeInDatabase(data) {
         resp = await fetch('/api/object/create_object', { method: 'PUT', body: JSON.stringify(data) })
         return resp
@@ -336,13 +401,13 @@
         return resp
     }
 
-    function saveEdgeData(data, callback) {
-        if (typeof data.to === "object") data.to = data.to.id;
-        if (typeof data.from === "object") data.from = data.from.id;
-        data.label = '';
-        createEdgeInDatabase(data, callback)
-        callback(data);
-    }
+    // function saveEdgeData(data, callback) {
+    //     Функция была промежуточной между addEdges и createEdgeInDatabase, зачем она хз
+    //     if (typeof data.to === "object") data.to = data.to.id;
+    //     if (typeof data.from === "object") data.from = data.from.id;
+    //     data.label = '';
+    //     createEdgeInDatabase(data, callback)
+    // }
     function createCreateNodeModal(editing) {
         if (editing) {
             text = 'Editing node'
@@ -405,6 +470,96 @@
         var maskMAC = new Inputmask("mac").mask(document.getElementById('node-mac'))
         return modal
     };
+  function createDeleteAgentModal(editing) {
+        if (editing) {
+            text = 'Are you sure you want to remove the agent?'
+            action_button = 'Remove'
+        }
+        var modal_elem = document.getElementById('ModalDeleteAgent')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <form id='deleteAgentModal' onsubmit="confirmDeletingOfAgent(event)">
+                        <div class="modal-body">
+                            
+                                <div id="node-popUp" style="">
+                                    <td>Confirm deleting agent by typing his IP</td>
+                                    <input id="agent-label" class="form-control" value="" name="ip" required>
+                                </div>
+
+                                   <div class="mt-3" id="agent_interface_bar">
+                                    <td> agent_id of all edges will be transferred to the selected agent</td>
+                                    <select name="defaultAgent" id="agent_bar2" class='form-select'>
+                                    </select>
+                                </div>
+                            
+                        </div>
+                        <div class="modal-footer">
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `
+        
+        document.getElementById('node-cancelButton').onclick = function () {
+        modal_elem.innerHTML = '';
+        deletionAgentCallback()
+        };
+        let elem = document.getElementById('agent_bar2')
+        let result = ''
+        for (const agent of agentData.agents){
+            if (agent.id != node.id){
+                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
+            }
+        }
+        elem.innerHTML = result
+
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-label'))
+        return modal
+    };  
+    function createDeleteLastAgentModal(editing) {
+        if (editing) {
+            text = 'Error'
+        }
+        var modal_elem = document.getElementById('ModalDeleteLastAgent')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <div class="modal-body">
+                        <form id='deleteLastAgentModal'>
+                            <div id="node-popUp" style="">
+                                <table style="margin: auto">
+                                <tbody>
+                                    <tr>
+                                        <td >You cannot remove the last agent</td>
+
+                                    </tr>
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        return modal
+    };
 
     redrawAll("network_topology", true)
     function redrawAll(elem_name, to_update_data) {
@@ -423,7 +578,7 @@
                 },
             },
             interaction: {
-                hideEdgesOnDrag: true,
+                hideEdgesOnDrag: false,
                 tooltipDelay: 100,
                 hover: true,
                 navigationButtons: true,
@@ -438,7 +593,7 @@
                 },
             },
             /* !Редактирование карты, нужно изменить! */
-            /* manipulation: {
+             manipulation: {
               addNode: function (data, callback) {
                 // filling in the popup DOM elements
                 modal = createCreateNodeModal(false)
@@ -454,11 +609,11 @@
                 modal.hide()
               },
               addEdge: function (data, callback) {
-                  saveEdgeData(data, callback)
+                  createEdgeInDatabase(data, callback)
+                  callback(data)
               },
               deleteNode: function (data, callback) {
-                  deleteNodeInDatabase(data, callback)
-                  callback(data)
+                deleteNodeInDatabase(data, callback)
               },
               deleteEdge: function (data, callback) {
                   deleteEdgeInDatabase(data, callback)
@@ -471,7 +626,7 @@
                   saveEdgeData(data, callback);
                 }
               }, 
-            },*/
+            },
         };
 
         if (to_update_data == true) {
@@ -550,7 +705,9 @@
         }
     };
     network.on('oncontext', function (params) {
-        if (network.getNodeAt(params.pointer.DOM) != undefined) {
+        let node = network.getNodeAt(params.pointer.DOM)
+        if (node != undefined) {
+            network.selectNodes([node])
             node_menu = document.getElementById('nodeDropdownMenu')
             node_menu.style.position = 'absolute'
             node_menu.style.top = `${params.event.clientY - 5}px`
@@ -747,6 +904,7 @@
                             <td> Protocol </td>
                             <td> Soft </td>
                             <td> Product </td>
+                            <td> Version </td>
                         </tr>`
 
                 json.ports.forEach((port) => {
@@ -756,6 +914,7 @@
                             <td> ${port.protocol} </td>
                             <td> ${port.name} </td>
                             <td> ${port.product} </td>
+                            <td> ${port.version} </td>
                         </tr>
                     `
                 })
@@ -831,11 +990,6 @@
         })
     }
 
-    getAgentData().then((data) => {
-        agentData = data
-    })
-
-
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -878,6 +1032,14 @@
         result += "</select>"
         document.getElementById(acunetix_id).innerHTML = result;
     }
+    function update_agent_bar() {
+        createAgentBar('agent_bar')
+        getAgentData().then((data) => {
+            agentData = data
+            fillAgentBar('agent_bar')
+        })
+    }
 
 </script>
+
 {% endmacro %}

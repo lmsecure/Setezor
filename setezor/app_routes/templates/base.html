@@ -81,7 +81,7 @@
 </head>
 
 <body>
-	<div class="offcanvas offcanvas-start sidebar" id="offcanvasNavbar" data-bs-backdrop="false" tabindex="-1"
+	<div class="offcanvas offcanvas-start sidebar" id="offcanvasNavbar" data-bs-backdrop="false" tabindex="-1 "
 		aria-labelledby="offcanvasNavbarLabel">
 		<div class="offcanvas-body">
 			<a class="nav-link" href="/projects_dashboard/">
@@ -101,11 +101,19 @@
 				</div>
 			</a>
 			<a class="nav-link active" href="/tools/">
-				<div class="d-flex flex-row bd-highlight">
+				<div class="d-flex flex-row bd-highlight" data-testid="Tools">
 					<div class="p-2 bd-highlight">
 						<i class="bi bi-tools"></i>
 					</div>
 					<div class="p-2 bd-highlight">Tools</div>
+				</div>
+			</a>
+			<a class="nav-link active" href="/vulnerabilities/">
+				<div class="d-flex flex-row bd-highlight">
+					<div class="p-2 bd-highlight">
+						<i class="bi bi-bug-fill"></i>
+					</div>
+					<div class="p-2 bd-highlight">Vulnerabilities</div>
 				</div>
 			</a>
 			<a class="nav-link" href="/info/">
@@ -117,7 +125,7 @@
 				</div>
 			</a>
 			<a class="nav-link" href="/settings/">
-				<div class="d-flex flex-row bd-highlight">
+				<div class="d-flex flex-row bd-highlight" data-testid="settings" >
 					<div class="p-2 bd-highlight">
 						<i class="bi bi-gear"></i>
 					</div>
@@ -135,7 +143,7 @@
 						<li class="nav-item d-inline">
 							{% if hide_navbar %}{% else %}
 							<button class="openbtn" data-bs-toggle="offcanvas"
-								data-bs-target="#offcanvasNavbar">☰</button>
+								data-bs-target="#offcanvasNavbar" data-testid="open_navbar_button">☰</button>
 							{% endif %}
 							<a class="navbar-brand" target="_blank">
 								<img src="/static/assets/logo.png" width="120px" height="auto" />
@@ -159,11 +167,11 @@
 
 				<div class="bd-highlight">
 
-					<a type="button" class="btn btn-primary" href="http://help.setezor.ru/" target="_blank">
+					<a type="button" class="btn btn-primary" href="http://help.setezor.ru/" target="_blank" data-testid="wiki_help">
 						<i class="bi bi-book" title="Wiki"></i>
 					</a>
 
-					<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#aboutModal">
+					<button type="button"  class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#aboutModal" data-testid="about_project">
 						<i class="bi bi-question-circle" title="About project"></i>
 					</button>
 
@@ -219,7 +227,7 @@
 						<i class="bi bi-download" data-bs-toggle="tooltip" title="Export project"></i>
 					</a>
 
-					<button class="btn btn-danger" type="submit" onclick="handleClick()">
+					<button class="btn btn-danger" type="submit" onclick="handleClick()" data-testid="exit_project">
 						<i class="bi bi-box-arrow-right" title="Exit to project menu"></i>
 					</button>{% endif %}
 				</div>

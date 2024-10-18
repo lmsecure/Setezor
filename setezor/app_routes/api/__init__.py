@@ -17,6 +17,10 @@ from .agent import AgentView
 from .route import RouteView
 from .acunetix.acunetix import AcunetixView
 from .vulnerability import VulnerabilityView
+from .resource import ResourceView
+from .resource_vulnerability import ResourceVulnerabilityView
+from .resource_vulnerability_screenshot import ResourceVulnerabilityScreenshotView
+from .software import SoftwareView
 
 
 from aiohttp.web import UrlDispatcher

@@ -29,3 +29,34 @@ class RouteView(BaseView):
         nodes = db.route.get_vis_nodes()
         nodes = [i.model_dump() for i in nodes]
         return json_response(nodes, dumps=orjson_dumps)
+
+    @BaseView.route("POST", "/vis_add_edges")
+    @project_require
+    async def create_edge(self, request: PMRequest):
+        project = await get_project(request)
+        db = await get_db_by_session(request=request)
+        resp_data = await request.json()
+        first_ip = resp_data.get("first_ip")
+        second_ip = resp_data.get("second_ip")
+        agent_id = resp_data.get("agent_id")
+        first_ip = IPv4Struct(address=resp_data.get('first_ip'))
+        second_ip = IPv4Struct(address=resp_data.get('second_ip'))
+        routes = RouteStruct(routes=[first_ip, second_ip], agent_id=agent_id)
+        db.route.create(route=routes, task_id=None)
+        return Response(status=200)
+
+    @BaseView.route('DELETE', '/delete_edge')
+    @project_require
+    async def delete_edge(self, request: PMRequest):
+        
+        project = await get_project(request)
+        db = await get_db_by_session(request=request)
+        resp_data = await request.json()
+        first_ip = resp_data.get('first_ip')
+        second_ip = resp_data.get('second_ip')
+        agent_id = resp_data.get("agent_id")
+        first_ip = IPv4Struct(address=resp_data.get('first_ip'))
+        second_ip = IPv4Struct(address=resp_data.get('second_ip'))
+        routes = RouteStruct(routes=[first_ip, second_ip], agent_id=agent_id)
+        db.route.delete_edges(route=routes, task_id=None)
+        return Response()

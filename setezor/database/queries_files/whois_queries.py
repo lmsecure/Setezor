@@ -75,7 +75,7 @@ class WhoisQueries(BaseQueries):
         if kwargs.get("ip"):
             target = kwargs.pop("ip")
             db_ip = self.ip.get_or_create(ip = target)
-            kwargs["ip_id"] = db_ip.ip_id
+            kwargs["ip_id"] = db_ip.id
         obj = session.query(self.model).filter(*[self.model.__table__.c.get(k) == v for k, v in kwargs.items() if v])
         if self.check_exists(session=session, query=obj):
             if to_update:

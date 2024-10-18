@@ -79,6 +79,7 @@ class Configs:
                           screenshots=format_path % FilesNames.screenshots,
                           masscan_logs=format_path % FilesNames.masscan_logs,
                           certificates_folder = format_path % FilesNames.certificates_folder,
+                          vulnerability_screenshots_folder = format_path % FilesNames.vulnerability_screenshots_folder,
                           cve_logs=format_path % FilesNames.cve_logs)
         files = Files(database_file=format_path % FilesNames.database_file,
                       project_configs=format_path % FilesNames.config_file,
@@ -92,6 +93,7 @@ class Configs:
             'cve_nvd': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},   # <- увеличение limit приводит к database locked
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
             'search-vulns': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
+            'screenshoter': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
         })
         return cls(project_path=format_path % '', files=files, folders=folders,
                    variables=variables, schedulers_params=schedulers_params)

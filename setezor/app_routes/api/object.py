@@ -88,9 +88,25 @@ class ObjectView(BaseView):
     @BaseView.route('DELETE', '/delete_object')
     @project_require
     async def delete_object(self, request: PMRequest):
-        
         db = await get_db_by_session(request)
-        ip = await request.text()
+        data = await request.json()
+        ip = data['ip']
+
+
         ip_obj = db.ip.get_by_ip(ip=ip)
-        db.object.delete_by_id(id=ip_obj._mac._obj.id)
-        return Response()
+        session = db.db.create_session()
+        agent_obj = session.query(db.agent.model).where(db.agent.model.ip_id == ip_obj.id).first()
+
+        if agent_obj:
+            cnt_agents = session.query(db.agent.model).count()
+            if cnt_agents > 1:
+                default_agent = data['default_agent']
+                db.agent.delete_by_id(id=agent_obj.id, default_agent=default_agent)
+                db.object.delete_by_id(id=ip_obj._mac._obj.id)
+            else:
+                return Response(status=500)
+        else:
+            db.object.delete_by_id(id=ip_obj._mac._obj.id)
+
+        session.close()
+        return Response(status=200)

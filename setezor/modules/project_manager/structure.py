@@ -62,6 +62,7 @@ class Folders(BaseStruct):
     screenshots: str
     masscan_logs: str
     certificates_folder: str
+    vulnerability_screenshots_folder: str
     cve_logs: str
 
 
@@ -116,6 +117,7 @@ class FilesNames:
     database_file = 'database.sqlite'
     config_file = 'project_configs.json'
     certificates_folder = 'certificates'
+    vulnerability_screenshots_folder = 'vulnerability_screenshots_folder'
     acunetix_configs = 'acunetix.json'
     cve_logs = 'cve_logs'
     

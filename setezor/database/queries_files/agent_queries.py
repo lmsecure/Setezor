@@ -7,7 +7,7 @@ import orjson
 
 if TYPE_CHECKING:
     from database.queries_files.base_queries import QueryFilter
-from ..models import Agent, Object, IP, MAC
+from ..models import Agent, Object, IP, MAC, Route
 from ..queries_files.base_queries import BaseQueries
 
 try:
@@ -40,14 +40,18 @@ class AgentQueries(BaseQueries):
                 )
             session.add(obj)
             session.commit()
-            agent_data = agent.model_dump(exclude={'id', 'ip'})
-            agent_data['ip'] = ip_obj
-            db_agent = Agent(**agent_data)
-            session.add(db_agent)
-            session.commit()
-            return db_agent
-        else:
-            raise ValueError(f'IP with address <{agent.ip}> exist id database! IP must be unique')
+
+        agent_obj = session.query(Agent).where(Agent.ip_id == ip_obj.id).first()
+        if agent_obj:
+            raise ValueError(f'IP adress <{ip_obj.ip}> relates to another agent')
+
+        agent_data = agent.model_dump(exclude={'id', 'ip'})
+        agent_data['ip'] = ip_obj
+        db_agent = Agent(**agent_data)
+        session.add(db_agent)
+        session.commit()
+        return db_agent
+              
 
     def get_headers(self, *args, **kwargs) -> list:
         return []
@@ -98,6 +102,30 @@ class AgentQueries(BaseQueries):
         else:
             raise IndexError(f"Can not update agent. No such agent with id {id}")
 
+    @BaseQueries.session_provide
+    def delete_by_id(self, session: Session, id: int, default_agent: int = None):
+        """Удаляет запись по id и обновляет agent_id в таблице routes, если default_agent передан
+
+        Args:
+            session (Session): сессия коннекта к базе
+            id (int): идентификатор записи
+            default_agent (int, optional): идентификатор нового агента для обновления.
+        """
+        obj_query = session.query(self.model).filter(self.model.id == id)
+        if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
+            return
+
+        # Обновляем agent_id в таблице routes, если передан default_agent
+        if default_agent is not None:
+            session.query(Route).filter(Route.agent_id == id).update({Route.agent_id: default_agent})
+            session.flush()
+        
+        obj = obj_query.first()
+
+        obj_args = [f'{i.get("name")}={obj.__getattribute__(i.get("name"))}' for i in self.get_headers() if obj.__getattribute__(i.get('name'))]
+        self.logger.info('Delete %s with args: %s ', self.model.__name__, ", ".join(obj_args))
+        session.delete(obj)
+        session.flush()
     @BaseQueries.session_provide
     def get_names(self, session: Session) -> list[tuple[int, str]]:
         """

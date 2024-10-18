@@ -24,7 +24,7 @@ Information
                         aria-orientation="vertical">
                         {% for tab in tabs %}
                         <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}"
-                            data-bs-toggle="tab" onclick={% if tab.name=='pivot' %} showObject() {% else %} hideObject()
+                            data-bs-toggle="tab" onclick={% if tab.name == 'resource_software' %} showObject() {% else %} hideObject()
                             {% endif %} data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab"
                             aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}
                         </button>
@@ -80,7 +80,7 @@ Information
                                 onclick="{{tab.name}}clearFilter()">Clear</button>
                         </div>
 
-                        {% if tab.name == 'pivot' %}
+                        {% if tab.name == 'resource_software' %}
                         <div id="download_report_container">
                             <div class="d-flex p-1">
                                 <div class="dropdown">
@@ -97,7 +97,7 @@ Information
                                             </button>
                                             <script type="text/javascript">
                                                 async function get_csv_report() {
-                                                    filters = pivot_table.getFilters()
+                                                    filters = resource_software_table.getFilters()
                                                     filters = JSON.stringify(filters)
                                                     params = new URLSearchParams({ filters: filters })
                                                     resp = await fetch(`/api/reports/csv?${params}`)
@@ -117,7 +117,7 @@ Information
 
                         <script>
                             function create_url_params_from_filter() {
-                                filters = pivot_table.getFilters()
+                                filters = resource_software_table.getFilters()
                                 filters = JSON.stringify(filters)
                                 param = new URLSearchParams({ filters: filters })
                                 return param

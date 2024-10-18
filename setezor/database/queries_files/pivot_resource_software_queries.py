@@ -50,9 +50,9 @@ class PivotModel:
             {'field': 'service_name', 'title': 'SERVICE_NAME'},
             {'field': 'domain', 'title': 'DOMAIN'},
             {'field': 'vendor', 'title': 'VENDOR'},
-            {'field': 'type', 'title': 'TYPE'},
             {'field': 'product', 'title': 'PRODUCT'},
             {'field': 'version', 'title': 'VERSION'},
+            {'field': 'type', 'title': 'TYPE'},
             {'field': 'build', 'title': 'BUILD'},
             {'field': 'patch', 'title': 'PATCH'},
             {'field': 'platform', 'title': 'PLATFORM'},
@@ -109,7 +109,8 @@ class PivotResourceSoftwareQueries(BaseQueries):
             for resourse in resourses:
                 port = {}
                 port.update({'number': get_str(resourse.Port.port), 'protocol': get_str(resourse.Port.protocol),
-                             'name': resourse.Port.service_name, 'product': get_str(resourse.Software.product)})
+                             'name': resourse.Port.service_name, 'product': get_str(resourse.Software.product),
+                             'version':get_str(resourse.Software.version)})
                 ports.append(port)
             if ports:
                 result['ports'] = ports
@@ -132,9 +133,9 @@ class PivotResourceSoftwareQueries(BaseQueries):
             {'field': 'service_name', 'title': 'SERVICE_NAME'},
             {'field': 'domain', 'title': 'DOMAIN'},
             {'field': 'vendor', 'title': 'VENDOR'},
-            {'field': 'type', 'title': 'TYPE'},
             {'field': 'product', 'title': 'PRODUCT'},
             {'field': 'version', 'title': 'VERSION'},
+            {'field': 'type', 'title': 'TYPE'},
             {'field': 'build', 'title': 'BUILD'},
             {'field': 'patch', 'title': 'PATCH'},
             {'field': 'platform', 'title': 'PLATFORM'},

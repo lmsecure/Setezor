@@ -8,6 +8,7 @@ from setezor.app_routes.api.base_web_view import BaseView
 from setezor.modules.application import PMRequest
 
 class L3LinkView(BaseView):
+    # Deprecated class
     endpoint = '/l3link'
     queries_path = 'l3link'
     

@@ -77,7 +77,8 @@ class DomainQueries(BaseQueries):
     def get_or_create(self, session: Session, domain: str,is_wildcard:bool = None, obj=None, **kwargs):
         db_domain = session.query(Domain).where(Domain.domain==domain).first()
         if not db_domain:
-            ip_from_task = asyncio.run(ip_tools.get_ip_by_domain_name(domain))
+            loop = asyncio.get_running_loop()
+            ip_from_task = loop.run_until_complete(ip_tools.get_ip_by_domain_name(domain))
             if ip_from_task:
                 ip_db = self.ip.get_or_create(session = session, ip = ip_from_task,domain_name = domain)
                 kwargs.update({"ip_id":ip_db.id})

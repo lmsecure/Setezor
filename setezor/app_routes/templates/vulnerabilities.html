@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block title %}
+Vulnerabilities
+{% endblock title %}
+{% block scripts %}
+<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
+<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row p-3">
+        <div class="col">
+            <div id="resource-table"></div>
+        </div>
+        <div class="col">
+            <div id="resourceINFO">
+                
+            </div>
+            <div id="carouselCards" class="carousel slide carousel-dark" data-bs-interval="false">
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal modal-lg fade" id="screenshotsModal" tabindex="-1" aria-labelledby="screenshotsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="screenshotsModalLabel">Screenshots</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="screenshotForm">
+            <div class="modal-body" >
+                <div id="rowContainer">
+                    <div class="row mb-2">
+                        <div class="col-7">
+                            <label for="noteInput1" class="form-label">Note</label>
+                            <input type="text" class="form-control" name="note1" id="noteInput1" required>
+                        </div>
+                        <div class="col-5">
+                            <label for="screenshotInput1" class="form-label">Screenshot</label>
+                            <input type="file" class="form-control" accept="image/*" name="image1" id="screenshotInput1" required>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-success mt-2" onclick="addScreenshotRow()">+</button>
+                <hr>
+                <h5>Existing Screenshots</h5>
+                <div id="existingScreenshots">
+                    
+                </div>
+            </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelAddingScreenshot">Close</button>
+                <button type="submit" class="btn btn-primary">Add</button>
+              </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="zoomedImage" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" data-dismiss="modal">
+      <div class="modal-content"> 
+        <div class="modal-header">
+            <h5 class="modal-title" id="screenshotsModalLabel">Screenshot</h5>
+            <button type="button" data-bs-toggle="modal" data-bs-target="#screenshotsModal" class="btn-close" aria-label="Close"></button>
+          </div>             
+        <div class="modal-body" id="zoomINBody">
+        </div> 
+      </div>
+    </div>
+  </div>
+{% import 'modals.html' as modals %}
+{{ modals.create_vulnerabilities_add_modal() }}
+
+<script>
+    let currentResourceID = 0
+    let currentResourceVulnerabilityID = 0
+    var headerMenu = function () {
+        var menu = [];
+        var columns = this.getColumns();
+        for (let column of columns) {
+            if (column.getDefinition().field) {
+                let icon = document.createElement("i");
+                icon.classList.add("bi");
+                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                let label = document.createElement("span");
+                let title = document.createElement("span");
+                title.textContent = " " + column.getDefinition().title;
+                label.appendChild(icon);
+                label.appendChild(title);
+                menu.push({
+                    label: label,
+                    action: function (e) {
+                        e.stopPropagation();
+                        column.toggle();
+                        if (column.isVisible()) {
+                            icon.classList.remove("bi-square");
+                            icon.classList.add("bi-check-square");
+                        } else {
+                            icon.classList.remove("bi-check-square");
+                            icon.classList.add("bi-square");
+                        }
+                        { { groups_tab.name } } _table.redraw()
+                    }
+                });
+            }
+        }
+        return menu;
+    }
+
+    var resource_table = new Tabulator('#resource-table', {
+                            {% if  tab.name == 'resource_software' or tab.name == 'soft_vuln_link' or tab.name =='task' %}
+                                layout: "fitDataTable",
+                            {% else %}
+                                layout: "fitColumns",
+                            {% endif %}
+                            ajaxURL: "{{tab.base_url}}/all",
+
+                            ajaxURLGenerator: function (url, config, params) {
+                                //url - the url from the ajaxURL property or setData function
+                                //config - the request config object from the ajaxConfig property
+                                //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+
+                                //return request url
+                                return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
+                            },
+                            selectable: false,
+                            sortMode: "local",
+                            filterMode: "local",
+                            pagination: true,
+                            paginationMode: "local",
+                            paginationSize: 10,
+                            paginationInitialPage: 1,
+                            paginationSizeSelector: [5, 10, 25, 50, 100],
+                            validationMode: 'highlight',
+                            columns: [
+                                {% for col in tab.columns %}
+                                {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
+                                {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}
+                        {% if col.formatter %}, editorParams: { values: foriegnData{{ col.field }}, itemFormatter: function(label, value, item, element) { label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>` } }, formatter: {{ col.formatter }} (foriegnData{{ col.field }}) {% endif %}
+                        {% if col.validator %}, validator: "{{col.validator}}"{% endif %} {{ '}' }}, {% endfor %}
+                        {% if  tab.name != 'task' and tab.name != 'resource_software' and tab.name != 'ip_mac_port' and tab.name != 'domain_ip' and tab.name != 'soft_vuln_link'%} {{ '{' }} title: "Actions", formatter: buttons_formatter, headerSort: false{{ '}' }} {% endif %}]
+                        })
+                        function buttons_formatter(cell, formatterParams, onRendered) {
+                            return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID=${cell.getRow().getData().id};getVulnerabilities(${cell.getRow().getData().id});">Vulnerabilities (${cell.getRow().getData().vuln_count})</button>`;
+                        }
+    let counter = 1
+    let objCount = 0
+    async function getVulnerabilities(id){
+        let els = document.getElementsByClassName("btnIdentifyClass")
+        for (const el of els){
+            if (el.id == `resource_vulnerabilities-edit-${id}`){
+                el.classList.add("btn-primary")
+                el.classList.remove("btn-outline-primary")
+            }else{
+                el.classList.add("btn-outline-primary")
+                el.classList.remove("btn-primary")
+            }
+        }
+        let resp = await fetch(`/api/resource/${currentResourceID}/vulnerabilities`)
+        let data = await resp.json()
+        let resource = data.resource
+        let vulnerabilities = data.vulns
+        let first = true
+        let result = ""
+        for (const vuln of vulnerabilities){
+            let links = ""
+            for (const link of vuln.links){
+                links += `<p><a href="${link}" target="_blank">${link}</a></p>`
+            }
+            result += `
+            <div class="carousel-item ${first ? 'active' : ''} h-100">
+                <div class="card-wrapper d-flex h-100 justify-content-around">
+                    <div id="confirmation-card-${vuln.vuln_res_soft_id}" ${vuln.confirmed?'class="card border border-success border-5"':'class="card border border-danger border-5"'} style="width: 40rem;">
+                        <div class="card-body">
+                            <h3 id="confirmation-${vuln.vuln_res_soft_id}">Confirmed: ${vuln.confirmed?true:false}</h3>
+                            <hr>
+                            <h5 class="card-title">Vulnerability</h5>
+                            <h6>Name: ${vuln.name}</h6>
+                            <h6>CVE: ${vuln.cve}</h6>
+                            <h6>CWE: ${vuln.cwe}</h6>
+                            <button class="btn btn-danger" onclick="setVulnerabilityStatus(${vuln.vuln_res_soft_id},false)">Reset</button>
+                            <button class="btn btn-success" onclick="setVulnerabilityStatus(${vuln.vuln_res_soft_id},true)">Confirm</button>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID=${vuln.vuln_res_soft_id};resetContainer()">Screenshots (${vuln.screenshots_count})</button>
+                            <hr>
+                            <h5>Software</h5>
+                            <h6>Vendor: ${vuln.vendor}</h6>
+                            <h6>Product: ${vuln.product}</h6>
+                            <h6>Version: ${vuln.version}</h6>
+                            <h6>Build: ${vuln.build}</h6>
+                            <h6>Patch: ${vuln.patch}</h6>
+                            <h6>Platform: ${vuln.platform}</h6>
+                            <hr>
+                            <h5>Links</h5>
+                            ${links}
+                        </div>
+                    </div>
+                </div>
+            </div>`
+            first = false
+        }
+        if (result != ""){
+            document.getElementById("carouselCards").innerHTML = `<div class="text-center" id="cardsCounter"></div>
+                <div class="carousel-inner" id="cardsHolder">
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselCards"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselCards"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>`
+            let el = document.getElementById("cardsHolder")
+            el.innerHTML = result
+            counter = 1
+            objCount = vulnerabilities.length
+            document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`
+        }else{
+            document.getElementById("carouselCards").innerHTML = "Not found"
+        }
+        if (Object.keys(resource).length != 0){
+            document.getElementById("resourceINFO").innerHTML = `
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" 
+            onclick="document.getElementById('addingVulnerabilityForm').reset()"
+            >Add Vulnerability</button>
+            <p>IP: ${resource.ip}</p><p>PORT: ${resource.port}</p><p>DOMAIN: ${resource.domain}</p>`
+        }
+    }
+    var myCarousel = document.getElementById('carouselCards')
+    myCarousel.addEventListener('slide.bs.carousel', function (event) {
+        if (event.direction == "left"){
+            counter++
+        }else{
+            counter--
+        }
+        if (counter > objCount){
+            counter = 1
+        }
+        if (counter < 1){
+            counter = objCount
+        }
+        document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`
+      })
+
+    async function setVulnerabilityStatus(id,status){
+        resp = await fetch(`/api/resource-vulnerability/${id}/confirm`,{method:'put',body:JSON.stringify({"status":status})})
+        status = await resp.json()
+        document.getElementById(`confirmation-${id}`).innerHTML = `Confirmed: ${status}`
+        if (status){
+            document.getElementById(`confirmation-card-${id}`).classList = "card border border-success border-5"
+        }else{
+            document.getElementById(`confirmation-card-${id}`).classList = "card border border-danger border-5"
+        }
+    }
+    let screenshotsCounter = 1
+    async function resetContainer(){
+        let el = document.getElementById("rowContainer");
+        screenshotsCounter = 1
+        el.innerHTML = `
+            <div class="row mb-2">
+                    <div class="col-7">
+                        <label for="noteInput1" class="form-label">Note</label>
+                        <input type="text" class="form-control" name="note${screenshotsCounter}" id="noteInput${screenshotsCounter}" required>
+                    </div>
+                    <div class="col-5">
+                        <label for="screenshotInput1" class="form-label">Screenshot</label>
+                        <input type="file" class="form-control" accept="image/*" name="image${screenshotsCounter}" id="screenshotInput${screenshotsCounter}" required>
+                    </div>
+                </div>
+        `
+        let resp = await fetch(`/api/resource-vulnerability/${currentResourceVulnerabilityID}/screenshots`)
+        let screenshots = await resp.json()
+        let scr = document.getElementById("existingScreenshots")
+        let result = ""
+        for (let screenshot of screenshots){
+            result += `
+            <div class="row mb-5" id="scheenshotRow${screenshot.id}">
+                    <div class="col-6">
+                        <input type="text" class="form-control"  disabled value="${screenshot.note}">
+                    </div>
+                    <div class="col-5">
+                        <img class="img-thumbnail" onclick="zoomImage(${screenshot.id})" 
+                        data-bs-toggle="modal" data-bs-target="#zoomedImage"
+                        src="https://localhost:16661/api/resource-vulnerability-screenshot/${screenshot.id}" alt="">
+                    </div>
+                    <div class="col-1">
+                        <span class="btn btn-danger" onclick="deleteScreenshot(${screenshot.id})">X</span>
+                    </div>
+                </div>
+            ` 
+        }
+        scr.innerHTML = result
+    }
+
+    function zoomImage(id){
+        document.getElementById("zoomINBody").innerHTML = `
+        <img class="img-fluid w-100" data-bs-target="#screenshotsModal" data-bs-toggle="modal"  
+        src="https://localhost:16661/api/resource-vulnerability-screenshot/${id}" alt="">
+        `
+    }
+
+    function addScreenshotRow(){
+        let container = document.getElementById("rowContainer");
+        screenshotsCounter++
+        let div = document.createElement("div")
+        div.classList = "row mb-2"
+        div.innerHTML = `<div class="col-7">
+                        <label for="noteInput${screenshotsCounter}" class="form-label">Note</label>
+                        <input type="text" class="form-control" name="note${screenshotsCounter}" id="noteInput${screenshotsCounter}" required>
+                    </div>
+                    <div class="col-5">
+                        <label for="screenshotInput${screenshotsCounter}" class="form-label">Screenshot</label>
+                        <input type="file" class="form-control" accept="image/*" name="image${screenshotsCounter}" id="screenshotInput${screenshotsCounter}" required>
+                    </div>`
+        container.appendChild(div)
+    }
+
+    async function deleteScreenshot(id){
+        let resp = await fetch(`/api/resource-vulnerability-screenshot/${id}`,{method:"DELETE"})
+        if (resp.status == 200){
+            let el = document.getElementById(`scheenshotRow${id}`)
+            el.remove()
+            let cnt = await resp.json()
+            el = document.getElementById(`screenshot-btn-${currentResourceVulnerabilityID}`)
+            el.innerHTML = `Screenshots (${cnt})`
+        }
+    }
+
+    screenshotForm.onsubmit = async (e) => {
+        e.preventDefault();
+        let map = {}
+        let form = new FormData(screenshotForm)
+        for (const [key, value] of form){
+            if (typeof(value) == "object"){
+                var reader = new FileReader();
+                reader.onload = (function (key, file) {
+                    return async function (e) {
+                        data = {file: e.target.result, filename: file.name, note:map["note" + key.slice(-1)]}
+                        resp = await fetch(`/api/resource-vulnerability/${currentResourceVulnerabilityID}/screenshots`, {method:"POST", body:JSON.stringify(data)})
+                        let cnt = await resp.json()
+                        let el = document.getElementById(`screenshot-btn-${currentResourceVulnerabilityID}`)
+                        el.innerHTML = `Screenshots (${cnt})`
+                        document.getElementById("cancelAddingScreenshot").click()
+                    }
+                })(key, value)
+                reader.readAsDataURL(value);
+            }else{
+                map[key] = value
+            }
+        }
+      };
+</script>
+<style>
+    .card-body{
+        max-height: 550px;
+        min-height: 550px;
+        overflow-x: auto;
+    }
+    .img-thumbnail{
+        cursor: pointer;
+    }
+</style>
+{% endblock content %}

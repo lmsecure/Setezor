@@ -16,6 +16,7 @@ class Queries:
         self.db = DBConnection(db_path)
         self.object = qf.ObjectQueries(session_maker=self.db.create_session())
         self.object_types = qf.ObjectTypeQueries(session_maker=self.db.create_session())
+        self.permis = qf.PermissionsQueries(session_maker=self.db.create_session())
         self.mac = qf.MACQueries(objects=self.object, session_maker=self.db.create_session())
         self.ip = qf.IPQueries(mac=self.mac, session_maker=self.db.create_session())
         self.port = qf.PortQueries(ip=self.ip, session_maker=self.db.create_session())
@@ -34,8 +35,10 @@ class Queries:
         self.resource = qf.ResourceQueries(ip = self.ip, port=self.port, domain=self.domain, session_maker=self.db.create_session())
         self.vulnerability = qf.VulnerabilityQueries(session_maker = self.db.create_session())
         self.vuln_res_soft = qf.VulnerabilityResSoftQueries(session_maker = self.db.create_session())
+        self.vuln_res_soft_screenshot = qf.ResourceSoftwareVulnerabilityScreenshotQueries(session_maker = self.db.create_session())
         self.resource_software = qf.ResourceSoftwareQueries(resource=self.resource, software=self.software, session_maker = self.db.create_session())
         self.vulnerability_link = qf.VulnerabilityLinkQueries(session_maker = self.db.create_session())
+        self.authentication_credentials = qf.AuthenticationCredentialsQueries(session_maker = self.db.create_session())
 
         self.pivot_ip_mac_port = qf.PivotIpMacPortQueries(session_maker = self.db.create_session())
         self.pivot_domain_ip = qf.PivotDomainIP(session_maker = self.db.create_session())

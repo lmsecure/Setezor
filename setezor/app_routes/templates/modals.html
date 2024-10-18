@@ -47,3 +47,70 @@
     </div>
 </div>
 {% endmacro %}
+
+{% macro create_vulnerabilities_add_modal() %}
+<div class="modal fade" id="vulnerabilityAddModal" tabindex="-1" aria-labelledby="vulnerabilityAddModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" data-dismiss="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotsModalLabel">Adding vulnerability</h5>
+                <button type="button" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" class="btn-close"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="addVulnerability(event)" id="addingVulnerabilityForm">
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityName" name="name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityCVE" class="form-label">CVE</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityCVE" name="cve">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityCWE" class="form-label">CWE</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityCWE" name="cwe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityDescription" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityDescription" name="cwe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityDetails" class="form-label">Details</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityDetails" name="details">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputSoftwaresDict" class="form-label">Software</label>
+                        <select class="form-select" id="InputSoftwaresDict" name="software_id"></select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    async function addVulnerability(event) {
+        event.preventDefault()
+        let data = new FormData(event.target)
+        let resp = await fetch(`/api/resource/${currentResourceID}/vulnerabilities`, { method: "POST", body: JSON.stringify(Object.fromEntries(data)) })
+        if (resp.status == 201){
+            await getVulnerabilities()
+            resource_table.dataLoader.reloadData()
+        }
+    }
+    async function fillSoftwares() {
+        let resp = await fetch("/api/software/")
+        let softwares = await resp.json()
+        let el = document.getElementById("InputSoftwaresDict")
+        el.innerHTML += "<option selected></option>"
+        for (const software of softwares) {
+            el.innerHTML += `
+                <option value="${software.id}">Vendor: ${software.vendor}, Product: ${software.product}, Version: ${software.version}</option>
+            `
+        }
+    }
+    fillSoftwares()
+</script>
+{% endmacro %}

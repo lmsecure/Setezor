@@ -1,0 +1,32 @@
+{% macro show() %}
+<div class="d-flex flex-column">
+    <div class="tab-content" id="dsa">
+        <form id="ScreenshotForm" class="needs-validation" onsubmit="createScreenshotTask(event)">
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputScreenshotURL-addon1">URL</span>
+                <input type="text" class="form-control" id='inputScreenshotURL'
+                    placeholder="e.g. https://192.168.15.15:8055/users/1"
+                    aria-describedby="inputScreenshotURL-addon1" required name="url">
+            </div>
+            <div class="input-group">
+                <span class="input-group-text" id="inputScreenshotTimeout-addon1">Timeout(sec)</span>
+                <input type="number" class="form-control" id='inputScreenshotTimeout' value="5.0" min="5.0" max="60" step="0.1"
+                    aria-describedby="inputScreenshotTimeout-addon1" required name="timeout">
+            </div>
+
+            <div class="btn-group d-flex my-2" role="group">
+                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                <button type="submit" class="btn btn-primary w-50">Start</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    async function createScreenshotTask(event){
+        event.preventDefault()
+        let data = new FormData(event.target)
+        await fetch('/api/task/screenshot', {method: 'POST', body: JSON.stringify(Object.fromEntries(data))})
+    }
+</script>
+{% endmacro %}

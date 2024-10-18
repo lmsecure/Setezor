@@ -29,4 +29,6 @@ SQLAlchemy==2.0.34
 sqlalchemy_schemadisplay==2.0
 typing_extensions==4.12.2
 xmltodict==0.13.0
+pysnmp==7.1.5
+playwright==1.47.0
 cpeguess @ git+https://github.com/lmsecure/CPEGuess

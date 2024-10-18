@@ -1,7 +1,7 @@
 from .base_queries import BaseQueries
 from ..models import Vulnerability_Resource_Soft
 from sqlalchemy.orm.session import Session
-
+from ..models import Resource_Software_Vulnerability_Screenshot
 
 class VulnerabilityResSoftQueries(BaseQueries):
     model = Vulnerability_Resource_Soft
@@ -54,5 +54,34 @@ class VulnerabilityResSoftQueries(BaseQueries):
                 'Create new "%s" object with kwargs %s', self.model.__name__, kwargs)
             return self.create(session=session, **kwargs)
 
+    @BaseQueries.session_provide
+    def set_confirm(self, session: Session, id:int,status:bool):
+        obj = session.query(self.model).get(id)
+        obj.confirmed = status
+        session.flush()
+
+    @BaseQueries.session_provide
+    def save_screenshot(self, session: Session,**kwargs):
+        new_screenshot = Resource_Software_Vulnerability_Screenshot(
+            resource_vulnerability_id = kwargs.get("resource_vuln_id"),
+            note = kwargs.get("note"),
+            path = kwargs.get("path")
+        )
+        session.add(new_screenshot)
+        session.flush()
+        self.logger.debug('Created "%s" object with kwargs %s', Resource_Software_Vulnerability_Screenshot.__name__, kwargs)
+        return new_screenshot
+    
+    @BaseQueries.session_provide
+    def get_screenshots(self, session: Session,**kwargs):
+        id = kwargs.get("resource_vuln_id")
+        screenshots = session.query(Resource_Software_Vulnerability_Screenshot)\
+            .filter(Resource_Software_Vulnerability_Screenshot.resource_vulnerability_id == id).all()
+        self.logger.debug('Get "%s" objects with kwargs %s',Resource_Software_Vulnerability_Screenshot.__name__, kwargs)
+        return screenshots
+
+    
+    
+    
     def get_headers(self) -> list:
             return [{},]

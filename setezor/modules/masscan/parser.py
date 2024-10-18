@@ -82,7 +82,7 @@ class JsonParser(BaseMasscanParser):
             data: List[Dict] = json.loads(input_data)
         except:
             logger.error('Json data parsing error')
-            return []
+            raise Exception("Masscan json log parse error")
         for i in data:  # ToDo remake to async
             try:
                 port_result.append(PortStructure(ip=i.get('ip', None),
