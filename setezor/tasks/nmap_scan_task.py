@@ -10,7 +10,7 @@ from setezor.database.queries import Queries
 
 from setezor.network_structures import AnyIPAddress, IPv4Struct, PortStruct
 from setezor.modules.nmap.parser import NmapRunResult, NmapStructure
-
+from setezor.spy import spy
 
 
 class NmapScanTask(BaseJob):
@@ -23,7 +23,9 @@ class NmapScanTask(BaseJob):
         self.task_id = task_id
         self._coro = self.run(db=db, task_id=task_id, command=command, iface=iface, nmap_logs=nmap_logs)
     
-    async def _task_func(self, command: str, iface: str, nmap_logs: str, address: AnyIPAddress | dict = {}):
+    @spy.spy_method
+    @staticmethod
+    async def _task_func(command: str, iface: str, agent_id: int, nmap_logs: str, address: IPv4Struct | dict = {}) -> NmapStructure:
         """Запускает активное сканирование с использованием nmap-а
 
         Args:
@@ -37,7 +39,7 @@ class NmapScanTask(BaseJob):
         cmd = ' '.join(command.split(' '))
         cmd += f' -e {iface}'
         scan_result = await NmapScanner().async_run(extra_args=cmd, _password=None, logs_path=nmap_logs)
-        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), self.agent_id, address)
+        return await loop.run_in_executor(None, NmapParser().parse_hosts, scan_result.get('nmaprun'), agent_id, address)
     
     def _write_result_to_db(self, db: Queries, result: NmapStructure):
         """Метод парсинга результатов сканирования nmap-а и занесения в базу
@@ -56,39 +58,6 @@ class NmapScanTask(BaseJob):
                 db.resource_software.get_or_create(**{**port, **soft})
         for rt in result.traces:
             db.route.create(route=rt, task_id=self.task_id)
-        # Всратый код ниже достает все ip из traces и address, чтобы в дальнейшем создать подсети
-        # all_addresses = {}
-        # for trace in result.traces:
-        #     if trace['parent_ip']:
-        #         ip = all_addresses.get(trace['parent_ip'])
-        #         if ip:
-        #             ip.update({'mac': ip.get('parent_mac'), 'domain': ip.get('parent_name')})
-        #         else:
-        #             ip = {'mac': trace['parent_mac'], 'domain': trace['parent_name']}
-        #             all_addresses[trace['parent_ip']] = ip
-        #     if trace['child_ip']:
-        #         ip = all_addresses.get(trace['child_ip'])
-        #         if ip:
-        #             ip.update({'mac': ip['child_mac'], 'domain': ip['child_name']})
-        #         else:
-        #             ip = {'mac': trace['child_mac'], 'domain': trace['child_name']}
-        #             all_addresses[trace['child_ip']] = ip
-        # if result.traces:
-        #     ip = all_addresses.get(result.traces[0]['start_ip'])
-        #     if not ip:
-        #         all_addresses[result.traces[0]['start_ip']] = {}
-        
-        # for addr in result.addresses:
-        #     ip = all_addresses.get(addr['ip'])
-        #     if ip:
-        #         ip.update({'domain': ip.get('domain')})
-        #     else:
-        #         ip = {addr['ip']: {'domain': addr.get('domain_name')}}
-        # res = []
-        # for key, value in all_addresses.items():
-        #     value.update({'ip': key})
-        #     res.append(value)
-        # db.network.create_from_addresses(addresses=[IPv4Struct.model_validate(i) for i in res])
         
     async def run(self, db: Queries, task_id: int, command: str, iface: str, nmap_logs: str):
         """Метод выполнения задачи
@@ -107,7 +76,8 @@ class NmapScanTask(BaseJob):
         address = {'ip': address.ip, 'mac': address._mac.mac}
         try:
             t1 = time()
-            result = await self._task_func(command=command, iface=iface, nmap_logs=nmap_logs, address=address)
+            ip, port = db.agent.get_ip_port(agent_id=self.agent_id)
+            result = await self._task_func.run_on_agent(ip, port, command=command, iface=iface, agent_id=self.agent_id, nmap_logs=nmap_logs, address=address)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, result=result)
             self.logger.debug('Result of task "%s" wrote to db', self.__class__.__name__)

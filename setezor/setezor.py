@@ -29,6 +29,7 @@ from setezor.modules.application import PMApplication, PMRequest
 from setezor.app_routes.middlewares import setup_middlewares
 from setezor.exceptions.loggers import get_logger, LoggerNames
 from setezor.before_run import check_software
+from setezor.spy import spy as spy_instanse
 
 nest_asyncio.apply()
 init()
@@ -79,11 +80,15 @@ def create_ssl_context():
 
 @click.command()
 @click.option('-p', '--port', default=16661, type=int, show_default=True, help='Number of port to binding')
-def run_app(port: int):
-    web.run_app(app=create_app(port=port), host=HOST, port=port, 
-                access_log=get_logger(LoggerNames.web_server, handlers=['file']), 
-                print=print_banner(HOST, port),
-                ssl_context=create_ssl_context())
+@click.option('-s', '--spy', default=False, type=bool, show_default=True, help='Enable spy', is_flag=True)
+def run_app(port: int, spy: bool):
+    if spy:
+        spy_instanse.serve(host=HOST, port=port)
+    else:
+        web.run_app(app=create_app(port=port), host=HOST, port=port, 
+                    access_log=get_logger(LoggerNames.web_server, handlers=['file']), 
+                    print=print_banner(HOST, port),
+                    ssl_context=create_ssl_context())
 
 
 

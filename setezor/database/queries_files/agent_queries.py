@@ -101,6 +101,12 @@ class AgentQueries(BaseQueries):
             return res
         else:
             raise IndexError(f"Can not update agent. No such agent with id {id}")
+        
+    @BaseQueries.session_provide
+    def get_ip_port(self, *, session: Session, agent_id: int) -> tuple[str, int]:
+        agent = self.get_by_id(session=session, id=agent_id)
+        ip = session.get(IP, agent.ip_id)
+        return ip.ip, 1337
 
     @BaseQueries.session_provide
     def delete_by_id(self, session: Session, id: int, default_agent: int = None):
