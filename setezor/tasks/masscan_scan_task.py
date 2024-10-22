@@ -8,6 +8,8 @@ import asyncio
 from typing import Dict, Type, List, Tuple
 
 from setezor.network_structures import IPv4Struct, RouteStruct
+from setezor.spy import spy
+
 
 class MasscanScanTask(BaseJob):
     
@@ -17,7 +19,9 @@ class MasscanScanTask(BaseJob):
         self.task_id = task_id
         self._coro = self.run(db=db, task_id=task_id, arguments=arguments, scanning_ip=scanning_ip, scanning_mac=scanning_mac, masscan_log_path=masscan_log_path)
     
-    async def _task_func(self, arguments: dict, masscan_log_path: str) -> str:
+    @spy.spy_method
+    @staticmethod
+    async def _task_func(arguments: dict, masscan_log_path: str) -> str:
         """Запускает активное сканирование с использованием masscan-а
 
         Args:
@@ -69,11 +73,12 @@ class MasscanScanTask(BaseJob):
         db.task.set_pending_status(index=task_id)
         ses = db.db.create_session()
         agent = db.agent.get_by_id(session=ses, id=self.agent_id)
+        ip, port = db.agent.get_ip_port(agent_id=self.agent_id)
         address = agent.ip
         try:
             t1 = time()
             arguments['interface_addr'] = scanning_ip
-            result = await self._task_func(arguments=arguments, masscan_log_path=masscan_log_path)
+            result = await self._task_func.run_on_agent(ip, port,arguments=arguments, masscan_log_path=masscan_log_path)
             ports, links = await self._parser_results(format=arguments.get('format', 'oJ'), input_data=result, scanning_ip=address.ip, scanning_mac=address._mac.mac)
             self.logger.debug('Task func "%s" finished after %.2f seconds', self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, port_result=ports, link_result=links)

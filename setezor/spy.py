@@ -13,7 +13,7 @@ MACHINE_IP = get_ipv4(get_default_interface())
 _P = ParamSpec("_P")
 _Returns = TypeVar("_Returns")
 
-
+import types
 class SpyMethod(Generic[_P, _Returns]):
     def __init__(self, func: Callable[_P, _Returns]) -> None:
         self._func = func
@@ -69,6 +69,10 @@ class SpyMethod(Generic[_P, _Returns]):
             for var_name, adapter in self.__kwargs_adapters.items():
                 if var_name in kwargs:
                     kwargs[var_name] = adapter.validate_python(kwargs[var_name])
+                    
+            # todo поменять, у сущности агента должны быть интерфейсы
+            if 'iface' in kwargs:
+                kwargs['iface'] = get_default_interface()
             result = await self(**kwargs)
             return_data = self.__return_adapter.dump_json(result)
             return web.Response(body=return_data, content_type='application/json')
