@@ -91,6 +91,7 @@ class Configs:
             'masscan': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
             'cve_vulners': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'cve_nvd': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},   # <- увеличение limit приводит к database locked
+            'snmp' : {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
             'search-vulns': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'screenshoter': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},

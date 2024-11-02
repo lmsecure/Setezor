@@ -131,17 +131,6 @@ sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 
 python3.12 setezor/setezor.py
 ```
-#### From github pyz-file from last release
-1. Скачать файл релиза с github 
-```bash
-wget https://github.com/lmsecure/Setezor/releases/download/v0.4a/app-v0.4a.pyz
-cd Setezor
-```
-2. Установить необходимое ПО
-```bash
-sudo apt install masscan nmap python3.12
-```
-
 #### From dockerhub image
 1. Скачать docker образ
 ```bash

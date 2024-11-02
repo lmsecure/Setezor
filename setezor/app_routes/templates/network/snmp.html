@@ -1,79 +1,41 @@
 {% macro show() %}
 
+<!--  style="-moz-appearance: textfield;" -->
 
-<div class="tab-pane fade show active col-3" id="v-pills-snmp" role="tabpanel" aria-labelledby="v-pills-snmp-tab">
-    <div class="d-flex flex-column">
-        <div class="nav nav-tabs me-3 mb-3" id="snmp-tab" role="tablist">
-            <button class="nav-link active" id="snmp-brute-cs-tab" data-bs-toggle="tab"
-                data-bs-target="#snmp-brute-cs-mode" type="button" role="tab"
-                aria-controls="snmp-brute-cs-mode" aria-selected="true">Brute community string</button>
-            <button class="nav-link d-none" id="snmp-crawler-tab" data-bs-toggle="tab"
-                data-bs-target="#snmp-crawler-mode" type="button" role="tab"
-                aria-controls="snmp-crawler-mode" aria-selected="false">SNMP crawler</button>
-        </div>
+<div id="v-pills-snmp" class="container-fluid">
 
-
-        <div class="tab-content" id="snmp" style="width: 28rem">
-
-            <div class="tab-pane fage show active" id="snmp-brute-cs-mode" role="tabpanel" aria-labelledby="snmp-brute-cs-tab">
-                <form id="SNMPbrutecommunitystring" class="needs-validation" novalidate>
-                    <div class="input-group mb-3" id="ipTargetSNMPbrute">
-                        <span class="input-group-text" id="ip_snmp_brute">IP</span>
-                        <input type="text" class="form-control" id='inputIP_SNMPbrute'
-                        placeholder="IP address or netmask" aria-label="IP"
-                        aria-describedby="basic-addon1" required name="inputIP_SNMPbrute">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="fileFromSNMPbrute_cs" class="form-label">Community strings dictionary (default if empty):</label>
-                        <div class="d-flex">
-                            <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
-                            <button class="btn btn-danger" type="button" onclick="reset_community_string_lst()">Reset</button>
+    <div id="snmp" class="row">
+            <div class="col-5">
+                <form class="row g-3" onsubmit=startScan161udpPort(event)>
+                    <div class="col-md-4">
+                        <div class="input-group" id="ipTargetSNMPbrute">
+                            <span class="input-group-text" id="ip_snmp_brute">IP:</span>
+                            <input type="text" class="form-control" id="inputIP_SNMPbrute" placeholder="IP address or netmask" aria-label="IP" aria-describedby="basic-addon1" required name="inputIP_SNMPbrute">
                         </div>
                     </div>
-
-                    <div class="btn-group d-flex my-2" role="group">
-                        <button class="btn btn-outline-secondary" type="button" onclick="reset_params_from_SNMP_brute()">Reset params</button>
-                        <button class="btn btn-primary" type="button" id="button_SNMP_start_brute" disabled onclick="start_brute_community_string()">Start brute</button>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <span class="input-group-text">Port:</span>
+                            <input type="number" min="0" max="65535" class="form-control" placeholder="161" id="inputPort_SNMPbrute" name="inputPort_SNMPbrute" style="-moz-appearance: textfield;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group col-md-4" class="col-md-4">
+                            <button class="btn btn-primary" type="submit" id="idButtonStartScan161udpPort" disabled  title="Scan on a given IP address">Scan</button>
+                        </div>
                     </div>
                 </form>
             </div>
-            
 
-
-            <div class="tab-pane fage show" id="snmp-crawler-mode" role="tabpanel" aria-labelledby="snmp-crawler-tab">
-                <form id="SNMPcrawler" class="needs-validation" onsubmit="start_snmp_crawler(event)">
-                    <div class="input-group mb-3" id="ipTargetSNMPcrawler">
-                        <span class="input-group-text" id="ip_snmp_crawler">IP</span>
-                        <input type="text" class="form-control" id='inputIP_SNMPcrawler'
-                        placeholder="IP address or netmask" aria-label="IP"
-                        aria-describedby="basic-addon1" required name="inputIP_SNMPcrawler">
-                    </div>
-
-                    <div class="input-group mb-3" id="id_class_communitystringSNMPcrawler">
-                        <span class="input-group-text" id="id_span_communitystringSNMPcrawler">Community string</span>
-                        <input type="text" class="form-control" id='id_inputCommunityString_SNMPcrawler'
-                        aria-describedby="basic-addon1" required name="inputCommunityString_SNMPcrawler">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="selectOIDforSNMPcrawler" class="form-label">OID:</label>
-                        <div class="d-flex">
-                            <label for="selectOIDforSNMPcrawler" class="form-label">...</label>
-                        </div>
-                    </div>
-
-                    <div class="btn-group d-flex my-2" role="group">
-                        <button class="btn btn-outline-secondary" type="button" onclick="reset_params_from_SNMP_crawler()">Reset params</button>
-                        <button class="btn btn-primary" type="submit" id="button_SNMP_start_crawler" disabled>Start crawler</button>
-                    </div>
-                </form>
-            </div>
-        
+        <div id="snmp-tabel-ip-on-port-161" class="col-8" style="margin-top: 2em;">
+            <!-- генерация таблицы в функции get_all_ips_with_open_port_snmp() -->
         </div>
 
     </div>
 </div>
+
+
+<div id = "idModalForChoiceBruteCSParams"> </div>
 
 
 <script>
@@ -85,27 +47,94 @@
         function (e, data)
             {
                 if ($('#inputIP_SNMPbrute').inputmask('isComplete')) {
-                    document.getElementById('button_SNMP_start_brute').disabled = false;
+                    document.getElementById('idButtonStartScan161udpPort').disabled = false;
                 } else {
-                    document.getElementById('button_SNMP_start_brute').disabled = true;
+                    document.getElementById('idButtonStartScan161udpPort').disabled = true;
                 }
             }
     )
 
-    // <!--данные-->
+
     function reset_community_string_lst()
     {
         document.getElementById("fileFromSNMPbrute_cs").value = "";
     }
 
-    function reset_params_from_SNMP_brute()
+
+    async function startScan161udpPort(event)
     {
-        reset_community_string_lst();
-        document.getElementById("inputIP_SNMPbrute").value = "";
-        document.getElementById('button_SNMP_start_brute').disabled = true;
+        event.preventDefault();
+        ip = document.getElementById("inputIP_SNMPbrute").value;
+        port = document.getElementById("inputPort_SNMPbrute").value || "161";
+        params = {
+            "nmapCommand" : "-sV -sU -p " + port + " " + ip,
+            "iface" : getIface(),
+            "agent_id" : getAgent()};                                                    
+
+        fetch('/api/task/nmap_scan', {method: 'POST', body: JSON.stringify(params)});
     }
 
-    function start_brute_community_string()
+    async function startCrawlerSNMP(ip_target, port_target, community_string)
+    {
+        console.log(ip_target, port_target, community_string);
+        data = {ip: ip_target, port: port_target, community_string: community_string};
+        fetch('/api/task/SNMP_crawler', {method: 'POST', body: JSON.stringify(data)});
+    }
+
+
+    async function get_all_ips_with_open_port_snmp()
+    {
+        resp = await fetch('/api/task/get_all_ips_with_open_port_snmp', {method: 'GET'});
+        data = await resp.json();
+        let el = document.getElementById("snmp-tabel-ip-on-port-161");
+        if (data.length)
+        {
+            let result = `
+                <div>
+                    <label class="form-label"> List of already found IP with an open snmp port: </label>
+                </div>
+                <div style="overflow-y: auto; max-height:36em;">
+                    <table class="table">
+                        <thead style="position:sticky; top:0; background: white;">
+                            <tr>
+                                <th scope="col"> IP </th>
+                                <th score="col"> Port </th>
+                                <th scope="col"> Community string </th>
+                                <th scope="col"> Need authentication </th>
+                                <th scope="col"> Permissions </th>
+                            </tr>
+                        </thead>
+                            <tbody id="ip_table_on_port_161_body">`;
+                                for (const item of data)
+                                {
+                                    for (let i = 0; i < item.community_strings.length; i++)
+                                    {
+                                        result += `<tr>`;
+                                        if (i == 0) 
+                                            {
+                                                result += `<td rowspan="${item.community_strings.length}"> ${item.ip} </td>` 
+                                                result += `<td rowspan="${item.community_strings.length}"> ${item.port} </td>`
+                                            }
+                                        result += `
+                                            <td> ${item.community_strings[i]} </td>
+                                            <td> ${item.need_auth[i]} </td>
+                                            <td> ${item.permissions[i]} </td>`
+                                        if (i == 0) { result += `<td rowspan="${item.community_strings.length}"> <button class="btn btn-outline-primary" onclick="createModalForChoiceParamsBruteCS('${item.ip}', '${item.port}')"> Start brute </button> </td>` }
+                                        if (item.permissions[i] != "no permissions" && item.permissions[i] !== "")
+                                        { result += `<td> <button class="btn btn-outline-primary" onclick="startCrawlerSNMP('${item.ip}', '${item.port}', '${item.community_strings[i]}')"> Start crawler </button> </td>` }
+                                        result += `</tr>`;
+                                    }
+                                }
+            result += `
+                        </tbody>
+                    </table>
+                </div>`
+            el.innerHTML = result;
+        }
+    }
+
+
+    async function startBruteCommunityString(ip_target, port_target)
     {
         let files = document.getElementById("fileFromSNMPbrute_cs").files;
         if (files.length)
@@ -117,7 +146,7 @@
                 {
                     return async function (e) 
                         {
-                            data = {community_string_lst: e.target.result, filename: file.name, ip: document.getElementById("inputIP_SNMPbrute").value}
+                            data = {community_string_lst: e.target.result, filename: file.name, ip: ip_target, port: port_target}
                             resp = await fetch('/api/task/SNMP_brute_communitystring', {method: 'POST', body: JSON.stringify(data)});
                         }
                 }
@@ -128,44 +157,44 @@
         {
             return async function ()
             {
-                data = {filename: "default.txt", ip: document.getElementById("inputIP_SNMPbrute").value};
+                data = {filename: "default.txt", ip: ip_target, port: port_target};
                 resp = await fetch('/api/task/SNMP_brute_communitystring', {method: 'POST', body: JSON.stringify(data)});
             } ()
         }
     }
 
-
-    var mask = new Inputmask("ip").mask(document.getElementById('ipTargetSNMPcrawler').lastElementChild)
-
-    $('#ipTargetSNMPcrawler').on
-    (
-        'change',
-        function (e, data)
-            {
-                if ($('#inputIP_SNMPcrawler').inputmask('isComplete')) {
-                    document.getElementById('button_SNMP_start_crawler').disabled = false;
-                } else {
-                    document.getElementById('button_SNMP_start_crawler').disabled = true;
-                }
-            }
-    )
-
-
-    function reset_params_from_SNMP_crawler()
+    function createModalForChoiceParamsBruteCS(ip, port)
     {
-        document.getElementById("inputIP_SNMPcrawler").value = "";
-        document.getElementById("id_inputCommunityString_SNMPcrawler").value = "";
-        document.getElementById('button_SNMP_start_crawler').disabled = true
-    }
-
-    function start_snmp_crawler(event){
-        event.preventDefault()   
-        console.log(event);
-        return async function ()
-            {
-                data = {ip: document.getElementById("inputIP_SNMPcrawler").value, community_string: document.getElementById("id_inputCommunityString_SNMPcrawler").value};
-                resp = await fetch('/api/task/SNMP_crawler', {method: 'POST', body: JSON.stringify(data)});
-            } ()
+        let modal_elem = document.getElementById('idModalForChoiceBruteCSParams');
+        modal_elem.innerHTML = `
+            <div class="modal fade" id="idModalForChoiceBruteCSParams2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true"> 
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"> Params for brute community string on ${ip}</h5>
+                        </div>
+                        <div class="modal-body">
+                            <form id='idChoiceDictCommunityStrings'>
+                                <div class="mb-3">
+                                    <label for="fileFromSNMPbrute_cs" class="form-label">Community strings dictionary (default if empty):</label>
+                                    <div class="d-flex">
+                                        <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
+                                        <button class="btn btn-danger" type="button" onclick="reset_community_string_lst()">Reset</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalChoiceParamsForBruteCS"> Cancel </button>
+                            <button class="btn btn-primary" type="button" data-bs-dismiss="modal" id="idButtonStartModalChoiceParamsForBruteCS"> Start </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById("idButtonCancelModalChoiceParamsForBruteCS").onclick = function () { modal_elem.innerHTML = ``; };
+        document.getElementById("idButtonStartModalChoiceParamsForBruteCS").onclick = async function () { await startBruteCommunityString(ip, port); modal_elem.innerHTML = ``;  };
+        let modal = new bootstrap.Modal(modal_elem.children[0]);
+        modal.show();
     }
 
 

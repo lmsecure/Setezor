@@ -49,11 +49,14 @@ class NmapScanTask(BaseJob):
         # """
 
         db.ip.write_many(data=result.addresses)
-        db.port.write_many(data=result.ports)
+        db.port.write_many(data=result.ports, to_update=False)
         db.software.write_many(data=result.softwares, to_update=False)
         for port, soft in zip(result.ports, result.softwares):
             if any([v for k, v in soft.items() if k not in ['ip', 'port']]):
                 db.resource_software.get_or_create(**{**port, **soft})
+            else:
+                ip_port = {'ip' : soft.get('ip'), 'port' : soft.get('port')}
+                db.resource.get_or_create(**ip_port)
         for rt in result.traces:
             db.route.create(route=rt, task_id=self.task_id)
         # Всратый код ниже достает все ip из traces и address, чтобы в дальнейшем создать подсети

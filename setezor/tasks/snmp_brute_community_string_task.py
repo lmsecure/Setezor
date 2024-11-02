@@ -6,33 +6,31 @@ from .base_job import BaseJob, MessageObserver
 from setezor.database.queries import Queries
 from ipaddress import IPv4Address
 
-from setezor.modules.snmp.snmp import SNMP, SNMP_brute
+from setezor.modules.snmp.snmp import SNMP, SnmpGettingAccess
 
 
-class  SNMP_brute_community_string_task(BaseJob):
+class  SnmpBruteCommunityStringTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, db: Queries, ip: str, community_strings: list):
+    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, db: Queries, ip: str, port: int, community_strings: list):
         super().__init__(observer = observer, scheduler = scheduler, name = name)
         self.task_id = task_id
         self.db = db
         self.ip = ip
+        self.port = port
         self.community_strings = community_strings
         self._coro = self.run()
 
     async def _task_func(self):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(SNMP_brute.community_string(ip_address=self.ip, community_strings=self.community_strings)) 
+        return  await SnmpGettingAccess.community_string(ip_address=self.ip, port=self.port, community_strings=self.community_strings)
 
     async def _write_result_to_db(self, data):
         resource = {"port" : 161, "ip" : self.ip}
         obj_resource = self.db.resource.get_or_create(**resource)
         for d in data:
-            loop = asyncio.get_event_loop()
             permission = 0
             if not d[2]:
                 permission += 1
-                loop = asyncio.get_event_loop()
-                if loop.run_until_complete(SNMP.is_write_access(ip_address=self.ip, community_string=d[1])):
+                if await SnmpGettingAccess.is_write_access(ip_address=self.ip, port=self.port, community_string=d[1]):
                     permission += 2
             result = {"resource_id": obj_resource.id,
                       "login": d[1],

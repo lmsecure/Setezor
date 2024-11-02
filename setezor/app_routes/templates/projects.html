@@ -63,7 +63,7 @@
             <h4>Create Project</h4>
                 <form id="formCreateProject">
                     <div class="pb-2">
-                        <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50" placeholder="Project name" required>
+                        <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50" placeholder="Project name" required onkeydown="preventEnter(event)">
                         <div class="invalid-feedback">Please, type project name</div>
                     </div>
                     {# <div class="pb-2">
@@ -76,12 +76,12 @@
                         <div class="invalid-feedback">Please, choose interface</div>
                     </div> #}
                     <script>
-                        var create_form = document.getElementById("formCreateProject");
-                        create_form.addEventListener('keyup', function(e) {
-                            if (e.keyCode=== 13) {
-                                document.getElementById("createProjectButton").click()
+                        function preventEnter(event) {
+                            if (event.key === "Enter") {
+                                event.preventDefault();
+                                document.getElementById("createProjectButton").click();
                             }
-                        })
+                        }
                     </script>
                 </form>
 

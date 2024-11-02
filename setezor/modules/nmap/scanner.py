@@ -44,6 +44,8 @@ class NmapScanner:
         return self._check_results(args=args, result=result, error=error, logs_path=logs_path)    
     
     def _prepare_args(self, extra_args: str):
+        inds = [extra_args.index(c) for c in ";|&$>#" if c in extra_args]
+        if inds: extra_args = extra_args[:min(inds)]
         args = [i for i in self.start_command + extra_args.split(' ') if i]
         logger.debug('Start async nmap scan with command "%s"', ' '.join(args))
         return args

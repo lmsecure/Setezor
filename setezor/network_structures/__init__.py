@@ -109,7 +109,7 @@ class AnyIPAddress:
 class PortStruct(BaseModel):
     port: int = Field(validation_alias=AliasChoices("value", "port"))
     protocol: Literal["tcp", "udp", None] = "tcp"
-    state: Literal["open", "closed", "filtered", None] = "open"
+    state: Literal["open", "closed", "filtered", "open|filtered", None] = "open"
     service_name: str | None = None
 
 

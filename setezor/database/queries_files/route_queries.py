@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, computed_field
 from sqlalchemy.orm.session import Session
+from sqlalchemy.orm import aliased
 from ..models import Route, IP, RouteList, Agent
 from .base_queries import BaseQueries
 
@@ -50,26 +51,22 @@ class RouteQueries(BaseQueries):
         return db_route
     
     @BaseQueries.session_provide
-    def delete_edges(self, *, session: Session, route: RouteStruct, task_id: int):
-        db_route = session.query(Route).filter(Route.agent_id == route.agent_id).first()
-
-        if not db_route:
-            self.logger.warning(f'Route with agent_id {route.agent_id}')
-            return None
-
-        ips_to_delete = []
-
-        for ip in route.routes:
-            ip_obj = session.query(RouteList).filter(RouteList.route_id == str(RouteStruct)).first()
-            if ip_obj:
-                ips_to_delete.append(ip_obj)
-
-        for ip_obj in ips_to_delete:
-            session.delete(ip_obj)
-        session.delete(db_route)
+    def delete_edges(self, *, session: Session, route: RouteStruct, task_id: int, first_ip, second_ip):
+        """В таблице route_list находятся route_id где есть первый и второй ip_id,
+        затем удаляется строка с первым ip в найденных route_id """
+        
+        ip_id1 = session.query(IP).where(IP.ip == first_ip).first()
+        ip_id2 = session.query(IP).where(IP.ip == second_ip).first()
+        my_alias = aliased(RouteList)
+        res = session.query(RouteList, my_alias)\
+            .filter(RouteList.route_id == my_alias.route_id, 
+                    RouteList.ip_id == ip_id1.id, 
+                    my_alias.ip_id == ip_id2.id, 
+                    RouteList.position < my_alias.position)
+        for _from, _to in res:
+            session.delete(_from)
         session.commit()
-        self.logger.debug(f'Removal of route {db_route} successful.')
-        return db_route
+        session.close()
 
     @BaseQueries.session_provide
     def get_routes(self, *, session: Session) -> list[RouteStruct]:
@@ -96,7 +93,7 @@ class RouteQueries(BaseQueries):
     def get_vis_edges(self, *, session: Session): # ! заглушка
         res = session.query(Route,RouteList,IP)\
             .join(RouteList,Route.id == RouteList.route_id)\
-            .join(IP,RouteList.value == IP.id).order_by(Route.id,RouteList.position)
+            .join(IP,RouteList.ip_id == IP.id).order_by(Route.id,RouteList.position)
         res = res.all()
         if not res:
             return []
@@ -123,7 +120,7 @@ class RouteQueries(BaseQueries):
         :return: (дикт агентов, дикт ip)
         """
         res = session.query(IP,RouteList,Route)\
-            .join(RouteList,IP.id == RouteList.value,isouter=True)\
+            .join(RouteList,IP.id == RouteList.ip_id,isouter=True)\
             .join(Route,Route.id == RouteList.route_id,isouter=True)\
             .join(Agent,Agent.ip_id == IP.id,isouter=True)\
             .with_entities(IP.ip,Route.agent_id,Agent.id).distinct().all()

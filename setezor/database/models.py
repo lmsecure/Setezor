@@ -50,6 +50,7 @@ class TimeDependent():
     updated_at = Column(TIMESTAMP, nullable=True, default=None, 
                                          onupdate=func.now(), server_onupdate=func.now()) # может вызывать проблемы, когда у бд и приложения разное временная зона
 
+
 class Object(Base, TimeDependent):
     """Модель для таблицы с объектами
     """
@@ -141,6 +142,7 @@ class MAC(Base, TimeDependent):
         )
         return mac
 
+
 class IP(Base, TimeDependent):
     """Модель для таблицы с ip-адресами
     """
@@ -157,8 +159,6 @@ class IP(Base, TimeDependent):
     agent = relationship('Agent', back_populates='ip', single_parent=True)
 
     _ip_id = relationship('Domain', back_populates='_ip_id')
-    _child_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip', cascade='all, delete-orphan')
-    _parent_ip = relationship('L3Link', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip', cascade='all, delete-orphan')
     _cert = relationship('Cert', back_populates = '_ip_id')
     _whois = relationship('Whois', back_populates = '_ip_id')
     _resource = relationship('Resource', back_populates = '_ip_id')
@@ -206,7 +206,8 @@ class IP(Base, TimeDependent):
             _mac=MAC.from_struct(struct.mac_address) if struct.mac_address else MAC(_obj=Object())
         )
         return ip
-        
+
+
 class Route(Base):
     
     __tablename__ = 'routes'
@@ -225,8 +226,8 @@ class Route(Base):
         ips = [i[0] for i in sorted(ips, key=lambda x: x[1])]
         route = RouteStruct(id=self.id, agent_id=self.agent_id, routes=ips)
         return route
-    
-    
+
+
 class RouteList(Base):
     
     """Список значений 1 роута,
@@ -237,31 +238,11 @@ class RouteList(Base):
     
     id = Column(Integer, primary_key=True)
     route_id = Column(ForeignKey('routes.id'))
-    value: int = Column(ForeignKey('ip_addresses.id'))
+    ip_id: int = Column(ForeignKey('ip_addresses.id'))
     position: int = Column(Integer)
     
-    route = relationship('Route', foreign_keys=[route_id], back_populates='routes')
-    ip = relationship('IP', foreign_keys=[value], back_populates='route_values')
-
-class L3Link(Base):
-    """Модель для таблицы со связями на l3 уровне
-    """
-    __tablename__ = 'l3_link'
-
-    id = Column(Integer, primary_key=True)
-    child_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _child_ip = relationship('IP', primaryjoin='IP.id == L3Link.child_ip', back_populates='_child_ip')
-    parent_ip = Column(Integer, ForeignKey('ip_addresses.id'), nullable=False)
-    _parent_ip = relationship('IP', primaryjoin='IP.id == L3Link.parent_ip', back_populates='_parent_ip')
-    
-    @staticmethod
-    def get_headers_for_table() -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                {'field': 'child_ip', 'title': 'Child IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},
-                {'field': 'parent_ip', 'title': 'Parent IP', 'editor': 'list', 'editor_entity': 'ip', 'formatter': 'foriegnKeyReplace', 'validator': 'required'},]
-    
-    def to_vis_edge(self) -> dict:
-        return {'from': self._parent_ip.id, 'to': self._child_ip.id}
+    route = relationship('Route', back_populates='routes')
+    ip = relationship('IP', back_populates='route_values')
 
 
 class Port(Base, TimeDependent):
@@ -312,6 +293,7 @@ class Port(Base, TimeDependent):
     def get_name(cls):
         return cls.__name__.lower()
 
+
 class Task(Base):
     """Модель для таблицы с задачами
     """
@@ -339,6 +321,7 @@ class Task(Base):
     @classmethod
     def get_name(cls):
         return cls.__name__.lower()
+
 
 class Screenshot(Base, TimeDependent):
     """Модель для таблицы со скриншотами
@@ -400,7 +383,8 @@ class NetworkType(Base):
             NetworkType(type='external')
         ]
         return to_create
-    
+
+
 class Agent(Base):
     
     __tablename__ = 'agents'
@@ -465,7 +449,8 @@ class DNS(Base):
     
     record_type = Column(String(6))
     record_value = Column(String)
-    
+
+
 class Cert(Base):
     
     __tablename__ = 'cert'
@@ -508,7 +493,6 @@ class Whois(Base):
     netmask = Column(Integer)
 
 
-
 '''
 class SoftType(Base):
     __tablename__ = 'soft_type'
@@ -531,6 +515,7 @@ class Software(Base):
     cpe23 = Column(String)
 
     _resource = relationship('Resource_Software',back_populates='_software')
+
 
 class Resource(Base):
     __tablename__ = 'resource'
@@ -576,6 +561,7 @@ class Resource_Software(Base):
 
     _vulnerability = relationship('Vulnerability_Resource_Soft',back_populates="_resource_soft")
 
+
 class Vulnerability_Resource_Soft(Base):
     __tablename__ = "vulnerability_resource_soft"
     id = Column(Integer, primary_key=True)
@@ -587,6 +573,7 @@ class Vulnerability_Resource_Soft(Base):
     _resource_soft = relationship('Resource_Software', back_populates='_vulnerability')
 
     _screenshot = relationship("Resource_Software_Vulnerability_Screenshot", back_populates="_resource_vulnerability_id")
+
 
 class Vulnerability(Base):
     __tablename__ = 'vulnerabilities'
@@ -622,6 +609,7 @@ class VulnerabilityLink(Base):
     vulnerability_id = Column(Integer,ForeignKey("vulnerabilities.id"))
     _vulnerability = relationship("Vulnerability", back_populates="_link")
 
+
 class Resource_Software_Vulnerability_Screenshot(Base):
     __tablename__ = "resource_vulnerability_screenshot"
 
@@ -637,6 +625,7 @@ class Permissions(Base):
 
     id = Column(Integer, primary_key=True)
     permission = Column(String)
+
 
 class Authentication_Credentials(Base):
     __tablename__ = "authentication_credentials"

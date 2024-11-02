@@ -38,7 +38,7 @@ Network Map
                 </form>
             </div>
             <div class="container-fluid">
-                <div class="row row-cols-3 overflow-auto p-1" id="search_ip_addresses" style="max-height: 250px;">
+                <div class="row row-cols-xxxl-3 g-2  overflow-auto p-1" id="search_ip_addresses" style="max-height: 250px;">
                 </div>
             </div>
             <div class="p-2 flex-fill bd-highlight" id="div_node_info" style="max-width: 325px;">
@@ -64,8 +64,8 @@ Network Map
         for (let [key, value] of IPMap) {
             if (key.startsWith(ip_addr)) {
                 result += `
-                    <div class="col mb-1">
-                        <button class="btn btn-sm btn-success" onclick="findSingleNodeByIP('${key}')">${key}</button>
+                    <div class="col md-1">
+                        <button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${key}')">${key}</button>
                     </div>`
             }
         }

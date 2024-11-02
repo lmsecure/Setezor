@@ -285,7 +285,7 @@ Vulnerabilities
                     <div class="col-5">
                         <img class="img-thumbnail" onclick="zoomImage(${screenshot.id})" 
                         data-bs-toggle="modal" data-bs-target="#zoomedImage"
-                        src="https://localhost:16661/api/resource-vulnerability-screenshot/${screenshot.id}" alt="">
+                        src="/api/resource-vulnerability-screenshot/${screenshot.id}" alt="">
                     </div>
                     <div class="col-1">
                         <span class="btn btn-danger" onclick="deleteScreenshot(${screenshot.id})">X</span>
@@ -299,7 +299,7 @@ Vulnerabilities
     function zoomImage(id){
         document.getElementById("zoomINBody").innerHTML = `
         <img class="img-fluid w-100" data-bs-target="#screenshotsModal" data-bs-toggle="modal"  
-        src="https://localhost:16661/api/resource-vulnerability-screenshot/${id}" alt="">
+        src="/api/resource-vulnerability-screenshot/${id}" alt="">
         `
     }
 
@@ -362,6 +362,10 @@ Vulnerabilities
     }
     .img-thumbnail{
         cursor: pointer;
+    }
+    .tabulator-tableholder{
+        max-height: 572px;
+        min-height: 572px;
     }
 </style>
 {% endblock content %}

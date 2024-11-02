@@ -1,6 +1,7 @@
 var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
 function create_websocket(endpoint) {
     var sock = new WebSocket('wss://' + window.location.host + endpoint);
+    
     sock.onmessage = function (message) {
         data = JSON.parse(message.data)
         if (window.location.pathname == '/network-map/' && data.command === "update") {
@@ -9,6 +10,10 @@ function create_websocket(endpoint) {
         }
         if (data.command === undefined){
             create_toast(data.title, data.text, data.type)
+        }
+        if (window.location.pathname == '/tools/' && data.command === "update") {
+            get_all_ips_with_open_port_snmp();
+            return;
         }
     };
     sock.onerror = function (error) {console.log(error)}

@@ -6,31 +6,48 @@ from .base_job import BaseJob, MessageObserver
 from setezor.database.queries import Queries
 from ipaddress import IPv4Address
 
-from setezor.modules.snmp.snmp import SNMP
+from setezor.modules.snmp.snmp import SnmpGet
 
 
-class  SNMP_crawler_task(BaseJob):
+
+class  SnmpCrawlerTask(BaseJob):
     
-    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, db: Queries, ip: str, community_string: str):
+    def __init__(self, observer: MessageObserver, scheduler, name: str, task_id: int, db: Queries, ip: str, port: int, community_string: str):
         super().__init__(observer = observer, scheduler = scheduler, name = name)
         self.task_id = task_id
         self.db = db
 
         self.ip = ip
+        self.port = port
         self.community_string = community_string
 
         self._coro = self.run()
 
 
     async def _task_func(self):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(SNMP.walk(ip_address=self.ip, community_string=self.community_string))
+        # return await SNMP.walk(ip_address=self.ip, port=self.port, community_string=self.community_string)
+        data = {}
+        snmp_obj = await SnmpGet.create_obj(ip_address=self.ip, port=self.port, community_string=self.community_string)
+        data.update({"system" : await snmp_obj.system_name()})
+        data.update({"interface_index" : await snmp_obj.interface_index()})
+        data.update({"interface_description" : await snmp_obj.interface_description()})
+        data.update({"phys_address" : await snmp_obj.phys_address()})
+        data.update({"interface_IPs" : await snmp_obj.ip_add_ent_addr()})
+        data.update({"interface_IP_indexes" : await snmp_obj.ip_add_ent_if_ind()})
+        
+        return data
 
 
     async def _write_result_to_db(self, data):
-        print('\n', "_write_result_to_db from SNMP_crawler:")
-        for item in data:
-            print(item)
+        # TODO (add interface objectes (name, mac, speed ...)) ?
+        for i in range(len(data.get("interface_IPs", []))):
+            if data["interface_IPs"][i] != self.ip:
+                new_ip_mac = {"ip": data["interface_IPs"][i],
+                              "mac": data["phys_address"][data["interface_index"].index(data["interface_IP_indexes"][i])]}
+                if (new_ip_mac.get("mac")):
+                    self.db.ip.get_or_create(**new_ip_mac)
+                else:
+                    self.db.ip.create(**new_ip_mac)
 
 
     async def run(self):

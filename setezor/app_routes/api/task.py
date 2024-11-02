@@ -1,6 +1,7 @@
 import json
 from base64 import b64decode
-
+import magic
+import copy
 from aiohttp.web import Response, json_response
 from setezor.app_routes.session import (
     project_require,
@@ -26,8 +27,8 @@ from setezor.tasks.cert_task import CertInfoTask
 from setezor.tasks.wappalyzer_task import Wappalyzer
 from setezor.tasks.cve_refresh_task import CVERefresher
 from setezor.tasks.cve_task import Cve
-from setezor.tasks.snmp_brute_community_string_task import SNMP_brute_community_string_task
-from setezor.tasks.snmp_crawler_task import SNMP_crawler_task
+from setezor.tasks.snmp_brute_community_string_task import SnmpBruteCommunityStringTask
+from setezor.tasks.snmp_crawler_task import SnmpCrawlerTask
 
 from setezor.tasks.screenshot_task import ScreenshotTask
 from setezor.tasks.task_status import TaskStatus
@@ -35,7 +36,7 @@ from setezor.app_routes.api.base_web_view import BaseView
 from setezor.modules.application import PMRequest
 from setezor.modules.project_manager.manager import ProjectManager
 from setezor.tools.ip_tools import get_ipv4, get_mac
-from sqlalchemy import desc
+from sqlalchemy import desc, and_
 import datetime
 from setezor.tools import url_tools
 
@@ -68,6 +69,16 @@ class TaskView(BaseView):
         mac = params.pop('mac')
         agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1])
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:3] != "XML":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})            
+            return Response(status=400)
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
@@ -128,6 +139,16 @@ class TaskView(BaseView):
         log_file = params.pop('log_file')
         agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1])
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:4] != "pcap":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})            
+            return Response(status=400)
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
@@ -162,6 +183,16 @@ class TaskView(BaseView):
         log_file: str = params.pop('log_file')
         agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:4] != "JSON":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})            
+            return Response(status=400)
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
@@ -179,6 +210,16 @@ class TaskView(BaseView):
         log_file: str = params.pop('log_file')
         agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:3] != "XML":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})            
+            return Response(status=400)
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
@@ -196,6 +237,16 @@ class TaskView(BaseView):
         log_file: str = params.pop('log_file')
         agent_id = params.pop('agent_id')
         data = b64decode(log_file.split(',')[1]).decode()
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:5] != "ASCII":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})      
+            return Response(status=400)
         project = await get_project(request=request)
         scheduler = project.schedulers.get('other')
         db = project.db
@@ -275,10 +326,15 @@ class TaskView(BaseView):
     async def create_wappalyzer_task(self, request: PMRequest):
         params: dict = await request.json()
         log_file = b64decode(params.pop('log_file').split(',')[1]).decode()
-        if not log_file:
+        if len(log_file) == 0:
             await notify_client(request=request, queue_type='message',
-                        message={'title': f'Error"', 'type': 'error',
-                        'text': f'Empty file failed'})
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(log_file)[:4] != "JSON":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})      
             return Response(status=400)
         json_file = json.loads(log_file)
         groups = params.pop('groups')
@@ -327,6 +383,9 @@ class TaskView(BaseView):
     async def refresh_cve_task(self, request: PMRequest):
         project = await get_project(request=request)
         if not (token := project.configs.variables.search_vulns_token):
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'No token provided'})
             return json_response(status=500)
         db = project.db
         scheduler = project.schedulers.get('search-vulns')
@@ -392,45 +451,86 @@ class TaskView(BaseView):
         return json_response(data=True)
 
 
+    @BaseView.route("GET", "/get_all_ips_with_open_port_snmp")
+    @project_require
+    async def get_all_ips_with_open_port_161(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        session = db.db.create_session()
+        data = session.query(db.resource.model).join(
+            db.port.model, db.resource.model.port_id == db.port.model.id).filter(
+                and_(
+                    db.port.model.protocol == "udp",
+                    db.port.model.state == "open",
+                    db.port.model.service_name == "snmp")).all()
+        result = []
+        for d in data:
+            if d._authentication_credentials:
+                tmp = {"ip" : d._ip_id.ip,
+                       "port" : d._port_id.port,
+                       "community_strings": [],
+                       "need_auth": [],
+                       "permissions": []}
+                for ac in d._authentication_credentials:
+                    tmp["community_strings"].append(ac.login)
+                    tmp["need_auth"].append(("no", "yes")[ac.need_auth])
+                    tmp["permissions"].append(("no permissions", "read", "write", "read/write")[ac.permissions])
+                result.append(tmp)
+            else:
+                result.append({"ip" : d._ip_id.ip,
+                               "port" : d._port_id.port,
+                               "community_strings" : [""],
+                               "need_auth" : [""],
+                               "permissions" : [""]})
+        session.close()
+        return json_response(result)
+
+
     @BaseView.route('POST', '/SNMP_brute_communitystring')
     @project_require
     async def SNMP_brute_comunitystring_task(self, request: PMRequest):
         project = await get_project(request=request)
         db = project.db
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('snmp')
         params: dict = await request.json()
 
         ip = params.get("ip")
+        port = int(params.get("port"))
         community_strings_lst = []
         if params.get("community_string_lst"):
-            community_strings_lst = b64decode(params.pop("community_string_lst").split(',')[1]).decode().split('\n')
-
+            community_strings_lst = b64decode(params.pop("community_string_lst").split(',')[1]).decode()
+            if len(community_strings_lst) == 0:
+                await notify_client(request=request, queue_type='message',
+                                    message={'title': 'Error', 'type': 'error',
+                                                'text': 'File empty'})
+                return Response(status=400)
+            if magic.from_buffer(community_strings_lst)[:5] != "ASCII": 
+                await notify_client(request=request, queue_type='message',
+                                    message={'title': 'Error', 'type': 'error',
+                                                'text': 'Invalid file type'})
+                return Response(status=400)
+            community_strings_lst = community_strings_lst.splitlines()
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params), ret='id')
-        await scheduler.spawn_job(SNMP_brute_community_string_task(observer=project.observer,scheduler=scheduler, 
-                                                    name=f'Task {task_id}',task_id=task_id, 
-                                                    db=db, ip=ip, community_strings=community_strings_lst))
-        
-        
+        await scheduler.spawn_job(SnmpBruteCommunityStringTask(observer=project.observer,scheduler=scheduler,
+                                                    name=f'Task {task_id}',task_id=task_id,
+                                                    db=db, ip=ip, port=port, community_strings=community_strings_lst))
         return Response(status=201)
-    
+
 
     @BaseView.route('POST', '/SNMP_crawler')
     @project_require
     async def SNMP_crawler_task(self, request: PMRequest):
         project = await get_project(request=request)
         db = project.db
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('snmp')
         params: dict = await request.json()
 
         ip = params.get("ip")
+        port = int(params.get("port"))
         community_string = params.get("community_string")
 
-        print('\n', '-' * 30, 'SNMP_crawler_task' '-' * 30)
-        print(f"{params = }")
-
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params), ret='id')
-        await scheduler.spawn_job(SNMP_crawler_task(observer=project.observer,scheduler=scheduler, 
+        await scheduler.spawn_job(SnmpCrawlerTask(observer=project.observer,scheduler=scheduler, 
                                             name=f'Task {task_id}',task_id=task_id, 
-                                            db=db, ip=ip, community_string=community_string))
-        
+                                            db=db, ip=ip, port=port, community_string=community_string))
         return Response(status=201)

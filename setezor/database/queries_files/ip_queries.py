@@ -37,7 +37,7 @@ class IPQueries(BaseQueries):
         Returns:
             _type_: объект ip адреса
         """
-        mac_obj = self.mac.create(session=session, mac=mac if mac else '', **kwargs)
+        mac_obj = self.mac.get_or_create(session=session, mac=mac if mac else '', **kwargs)
         new_ip_obj = self.model(ip=ip, _mac=mac_obj,domain_name=domain_name) #domain_name=domain_name 
         session.add(new_ip_obj)
         session.flush()

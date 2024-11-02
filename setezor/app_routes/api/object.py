@@ -110,3 +110,24 @@ class ObjectView(BaseView):
 
         session.close()
         return Response(status=200)
+    
+    @BaseView.route('DELETE', '/demote_object')
+    @project_require
+    async def demote_object(self, request: PMRequest):
+        db = await get_db_by_session(request)
+        data = await request.json()
+        ip = data['ip']
+        ip_obj = db.ip.get_by_ip(ip=ip)
+        session = db.db.create_session()
+        agent_obj = session.query(db.agent.model).where(db.agent.model.ip_id == ip_obj.id).first()
+
+        if agent_obj:
+            cnt_agents = session.query(db.agent.model).count()
+            if cnt_agents > 1:
+                default_agent = data['default_agent']
+                db.agent.delete_by_id(id=agent_obj.id, default_agent=default_agent)
+            else:
+                return Response(status=500)
+
+        session.close()
+        return Response(status=200)

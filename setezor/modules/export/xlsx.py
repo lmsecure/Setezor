@@ -47,10 +47,18 @@ class XLSXReport:
         except:
             self.logger.error('Failed to generate IPs sheet with error\n%s', traceback.format_exc())
         
+
+    def _generate_pivot_sheet(self,tables,writer):
+        pivot = tables.get("pivot")
+        df_pivot = pd.DataFrame(pivot)
+        df_pivot.fillna('')
+        df_pivot.to_excel(writer, sheet_name='IPs',index=False)
+
     def generate_report(self, tables: dict):
         report = io.BytesIO()
         with pd.ExcelWriter(report, engine='openpyxl') as writer:
-            self._generate_ips_sheet(tables, writer)
+            self._generate_pivot_sheet(tables, writer)
+            #self._generate_ips_sheet(tables, writer)
             # self._generate_domains_sheet(tables.get('domains'))
             # self._generate_cve_sheet(tables.get('cve'))
             # self._generate_api_sheet(tables.get('api'))

@@ -9,7 +9,7 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from sqlalchemy import func, Column, select, desc
 
-from ..models import IP, BaseModel
+from ..models import IP, BaseModel, RouteList
 try:
     from exceptions.loggers import LoggerNames, get_logger
 except ImportError:
@@ -238,6 +238,16 @@ class BaseQueries(ABC):
         if not self.check_exists(session=session, query=obj_query, log_not_exists=True):
             return
         obj = obj_query.first()
+        routes = session.query(RouteList).filter(RouteList.ip_id == obj.id).all()
+        for route in routes:
+            affected_routes = session.query(RouteList).filter(
+            RouteList.route_id == route.route_id,
+            RouteList.position > route.position
+            ).all()
+            for affected_route in affected_routes:
+                affected_route.position -= 1
+            session.delete(route)
+
         obj_args = [f'{i.get("name")}={obj.__getattribute__(i.get("name"))}' for i in self.get_headers() if obj.__getattribute__(i.get('name'))]
         self.logger.info('Delete %s with args: %s ', self.model.__name__, ", ".join(obj_args))
         id = session.delete(obj)

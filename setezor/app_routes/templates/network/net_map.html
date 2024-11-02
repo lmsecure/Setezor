@@ -91,6 +91,79 @@
                 </li>
             </ul>
         </li>
+        <li class="dropdown dropend">
+            <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Node managment</a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.editNode()"> Edit Node
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" data-bs-toggle="modal" title="create agent" id="agentModalNetMapButton"    
+                            data-bs-target="#agentModalNetMap" data-testid="create_agent_net_map">Set Agent</a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.deleteSelected()">Delete Node</a>
+                    </li>
+                </ul>
+        </li>
+    </ul>
+</div>
+<div class="dropdown xs" id="agentDropdownMenu" style="display:none">
+    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
+                aria-expanded="false">Device
+                type</a>
+            <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
+                {% for device_type in device_types %}
+                <li><a class="dropdown-item" href="#" onclick="set_device_type(this)"
+                        value="{{device_type.value}}">{{device_type.label}}</a></li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Tools</a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();
+                        document.getElementById('acunetix_scan_target_id').value='';
+                        document.getElementById('acunetix_scan_group_id').value='';
+                        document.getElementById('scan_interval').required = false;
+                        document.getElementById('acunetix_scan_ports').style.display='';
+                        fillAcunetixScanSpeeds();
+                        fillAcunetixScanProfiles();
+                        fillAcunetixInstances('acunetix_scan_instances');
+                        document.getElementById('acunetix_scan_target_db_id').value=network.getSelectedNodes()[0];
+                        document.getElementById('acunetix_scan_interval_div').style.display='';">Acunetix
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <!-- network.body.nodes[1] -->
+        <li class="dropdown dropend">
+            <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Node managment</a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.editNode()"> Edit Node
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.deleteSelected()">Delete Node</a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" data-bs-toggle="modal" id="demoteAgentButton"    
+                            data-bs-target="#demoteAgent" onclick="demoteAgent()">Demote Agent</a>
+                    </li>
+                </ul>
+        </li>
     </ul>
 </div>
 
@@ -100,7 +173,74 @@
 </div>
 <div id="ModalDeleteLastAgent">
 </div>
+<div id="ModalDeleteNode">
+</div>
 
+<div class="modal fade" id="agentModalNetMap" tabindex="-1" aria-labelledby="agentModalNetMapLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentModalNetMapLabel">Create agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table style="margin: auto">
+                    <tbody>
+                        <tr>
+                            <td>Agent name</td>
+                            <td><input id="agent-name" class="form-control" value="" required></td>
+                        </tr>
+                        <tr>
+                            <td>Agent description</td>
+                            <td>
+                                <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Agent color</td>
+                            <td><input id="agent-color" type="color" class="form-control" value="#000000"></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="createAgent()">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="demoteAgent" tabindex="-1" aria-labelledby="demoteAgentLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="demoteAgentLabel">
+                    Are you sure you want to demote the agent to a node?</h5>
+                {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+            </div>
+            <form id='demoteAgentModal' onsubmit="confirmDemoteOfAgent(event)">
+                <div class="modal-body">
+                    
+                        <div id="node-popUp">
+                            <td>Confirm deleting agent by typing his IP</td>
+                            <input id="demote-agent-label" class="form-control" value="" name="ip" required>
+                        </div>
+
+                        <div class="mt-3" id="agent_interface_bar">
+                            <td> agent_id of all edges will be transferred to the selected agent</td>
+                            <div id="agent_bar3"></div>
+                        </div>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button id="node-demoteButton" type="submit" class="btn btn-primary">Demote Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
 
     // disable default context menu
@@ -211,23 +351,22 @@
     let deletionAgentCallback = undefined
     let modal = undefined
     async function deleteNodeInDatabase(data, callback) {
-        
         node = networkData.nodes.get(data.nodes[0])
         ip = node.label
         let nodeIsAgent = false;
 
         for (let i =0 ; i <agentData.agents.length; i++)
             {
-                if (node.address == agentData.agents[i].ip)
+                 if (node.address == agentData.agents[i].ip)
                 {   
                     nodeIsAgent = true;
                     break;
                 }
-            }
+             }
         if (nodeIsAgent){  
 
-            deletionAgentData = data
-            deletionAgentCallback = callback
+             deletionAgentData = data
+              deletionAgentCallback = callback
 
             if (agentData.agents.length > 1){
                 modal = createDeleteAgentModal(true)
@@ -238,8 +377,8 @@
                 callback()
             }
         }else{
-            resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: JSON.stringify({ ip })});
-            callback(data)
+            modal = createDeleteNodeModal(true)
+            modal.show()
         }
 
     }
@@ -263,8 +402,80 @@
             modal.hide();
             update_agent_bar();
             deletionAgentCallback(deletionAgentData);
+        }   
     }
-}
+    async function confirmDeletingOfNode(event) {
+        event.preventDefault();
+        resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: JSON.stringify({ ip })});
+        modal.hide();
+        get_nodes_and_edges()
+        callback(data)
+        }
+    
+    function demoteAgent() {
+        document.getElementById('node-cancelButton').onclick = function () {
+        };
+        let node = networkData.nodes.get(network.getSelectedNodes()[0])
+        let _agent = agentData.agents.filter(ag => ag.id == node.agent)[0];
+        let elem = document.getElementById('agent_bar3')
+        let result = `<select name="defaultAgent"  class='form-select'>`
+        for (const agent of agentData.agents){
+            if (agent.id != _agent.id){
+                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
+            }
+        }
+        result += '</select>'
+        elem.innerHTML = result
+    }
+    async function demoteAgentInDatabase(data, callback) {
+            node = networkData.nodes.get(data.nodes[0])
+            ip = node.label
+            let nodeIsAgent = false;
+
+            for (let i =0 ; i <agentData.agents.length; i++)
+                {
+                    if (node.label == agentData.agents[i].ip)
+                    {   
+                        nodeIsAgent = true;
+                        break;
+                    }
+                }
+            if (nodeIsAgent){  
+
+                deletionAgentData = data
+                deletionAgentCallback = callback
+
+                if (agentData.agents.length > 1){
+                    modal = createDemoteAgentModal(true)
+                    modal.show()
+                }else{
+                    modal = createDeleteLastAgentModal(true)
+                    modal.show()
+                    callback()
+                }
+        }}
+        async function confirmDemoteOfAgent(event) {
+            event.preventDefault();
+            let data = new FormData(event.target);
+            let node_id = network.getSelectedNodes()[0];
+            let node = networkData.nodes.get(node_id);
+
+            if (data.get('ip') == node.label) {
+                const defaultAgentId = data.get('defaultAgent');
+                
+                const resp = await fetch('/api/object/demote_object', { 
+                    method: 'DELETE', 
+                    body: JSON.stringify({ ip: node.label, default_agent: defaultAgentId }), 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                setDefaultAgent(defaultAgentId)
+                update_agent_bar();
+                document.getElementById('node-cancelButton').click()
+                get_nodes_and_edges()
+        }
+    }
 
     async function deleteEdgeInDatabase(data, callback) {
         edge = networkData.edges.get(data.edges[0])
@@ -525,6 +736,37 @@
         var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-label'))
         return modal
     };  
+    function createDeleteNodeModal(editing) {
+        if (editing) {
+            text = 'Are you sure you want to remove the node?'
+            action_button = 'Remove'
+        }
+        var modal_elem = document.getElementById('ModalDeleteNode')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <form id='deleteNodeModal' onsubmit="confirmDeletingOfNode(event)">
+                        <div class="modal-footer">
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `
+        
+        document.getElementById('node-cancelButton').onclick = function () {
+        modal_elem.innerHTML = '';
+        deletionAgentCallback()
+        };
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        return modal
+    };  
     function createDeleteLastAgentModal(editing) {
         if (editing) {
             text = 'Error'
@@ -561,6 +803,31 @@
         return modal
     };
 
+    async function createAgent() {
+        name = document.getElementById('agent-name').value
+        desc = document.getElementById('agent-description').value
+        let node = networkData.nodes.get(network.getSelectedNodes()[0]);
+        // node_id = node.id
+        ip = node.label
+        color = document.getElementById('agent-color').value
+        agent = hexToRgb(color)
+        agent.name = name
+        agent.description = desc
+        agent.ip = ip
+        resp = await fetch('/api/agent/create', { method: 'post', body: JSON.stringify(agent) })
+        if (resp.ok) {
+            close_button = document.getElementById('close-create-agent')
+            close_button.click()
+            get_nodes_and_edges()
+            update_agent_bar()
+        }else {
+            console.log(`Error on create agent, response status ${resp.status}`)
+            close_button = document.getElementById('close-create-agent')
+            close_button.click()
+            text = await resp.text()
+            create_toast('Error on create agent', text, 'error')
+        }
+    }  
     redrawAll("network_topology", true)
     function redrawAll(elem_name, to_update_data) {
         var network_topology = document.getElementById("network_topology")
@@ -708,16 +975,29 @@
         let node = network.getNodeAt(params.pointer.DOM)
         if (node != undefined) {
             network.selectNodes([node])
+            node_obj = network.body.nodes[node]
+            node_is_agent = node_obj.options.agent
+            if (node_is_agent == null)  { 
             node_menu = document.getElementById('nodeDropdownMenu')
             node_menu.style.position = 'absolute'
             node_menu.style.top = `${params.event.clientY - 5}px`
             node_menu.style.left = `${params.event.clientX - 5}px`
             node_menu.style.zIndex = 1000
             $('#nodeDropdownMenu').show()
+            }else{
+            agent_menu = document.getElementById('agentDropdownMenu')
+            agent_menu.style.position = 'absolute'
+            agent_menu.style.top = `${params.event.clientY - 5}px`
+            agent_menu.style.left = `${params.event.clientX - 5}px`
+            agent_menu.style.zIndex = 1000
+            $('#agentDropdownMenu').show()
+            }
         };
     });
     network.on('click',function(params){
         var dd_div = document.getElementById('nodeDropdownMenu')
+        var ddd_div = document.getElementById('agentDropdownMenu')
+        ddd_div.style.display = 'none'
         dd_div.style.display = 'none'
         let node = network.getNodeAt(params.pointer.DOM)
         if (node != undefined){

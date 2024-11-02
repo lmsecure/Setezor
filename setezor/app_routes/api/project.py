@@ -6,7 +6,7 @@ from uuid import uuid4
 import re
 from pathlib import Path
 import base64
-
+import magic
 from aiohttp.web import Response, json_response, HTTPFound
 from aiohttp_session import get_session
 
@@ -141,6 +141,16 @@ class ProjectView(BaseView):
         data = await request.content.read()
         data = data.split(b',')[1]
         data = base64.b64decode(data)
+        if len(data) == 0:
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'File empty'})            
+            return Response(status=400)
+        if magic.from_buffer(data)[:3] != "Zip":
+            await notify_client(request=request, queue_type='message',
+                                message={'title': 'Error', 'type': 'error',
+                                            'text': 'Invalid file type'})      
+            return Response(status=400)
         io_file = io.BytesIO()
         io_file.write(data)
         path = request.app.pm.projects_path
