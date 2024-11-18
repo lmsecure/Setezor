@@ -1,6 +1,7 @@
 import asyncio
 from time import time
 import traceback
+import json
 
 from .base_job import BaseJob, MessageObserver
 from setezor.database.queries import Queries
@@ -19,24 +20,36 @@ class  SnmpBruteCommunityStringTask(BaseJob):
         self.port = port
         self.community_strings = community_strings
         self._coro = self.run()
+    
+    async def _parse_task_result(self, item: list, snmp_version) -> dict:   # treatment, handling, refinement, adaptation ?
+        result = {"parameters": json.dumps({"snmp_version": snmp_version + 1}),
+                  "login": item[1],
+                  "need_auth": bool(item[2])}
+        permission = 0
+        if not item[2]:
+            permission += 1
+            if await SnmpGettingAccess.is_write_access(ip_address=self.ip, port=self.port, community_string=item[1], snmp_version=snmp_version):
+                permission += 2
+        result.update({"permissions": permission})
+        return result
 
-    async def _task_func(self):
-        return  await SnmpGettingAccess.community_string(ip_address=self.ip, port=self.port, community_strings=self.community_strings)
+    async def _task_func(self) -> list[dict]:
+        v1 = await SnmpGettingAccess.community_string(ip_address=self.ip, port=self.port, community_strings=self.community_strings, snmp_version=0)
+        v2 = await SnmpGettingAccess.community_string(ip_address=self.ip, port=self.port, community_strings=self.community_strings, snmp_version=1)
+        result = []
+        for item in v1:
+            result.append(await self._parse_task_result(item=item, snmp_version=0))
+        for item in v2:
+            result.append(await self._parse_task_result(item=item, snmp_version=1))
+        return  result
 
-    async def _write_result_to_db(self, data):
+    async def _write_result_to_db(self, data: list[dict]):
         resource = {"port" : 161, "ip" : self.ip}
         obj_resource = self.db.resource.get_or_create(**resource)
-        for d in data:
-            permission = 0
-            if not d[2]:
-                permission += 1
-                if await SnmpGettingAccess.is_write_access(ip_address=self.ip, port=self.port, community_string=d[1]):
-                    permission += 2
-            result = {"resource_id": obj_resource.id,
-                      "login": d[1],
-                      "need_auth": d[2] == "authorizationError",
-                      "permissions" : permission}
-            self.db.authentication_credentials.get_or_create(**result)
+        for item in data:
+            item.update({"resource_id": obj_resource.id})
+            self.db.authentication_credentials.get_or_create(**item)
+
 
     async def run(self):
         self.db.task.set_pending_status(index=self.task_id)

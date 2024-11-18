@@ -131,6 +131,7 @@ sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`
 
 python3.12 setezor/setezor.py
 ```
+
 #### From dockerhub image
 1. Скачать docker образ
 ```bash

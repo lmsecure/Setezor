@@ -44,6 +44,20 @@ class TaskView(BaseView):
     endpoint = '/task'
     queries_path = 'task'
 
+    @BaseView.route('GET', '/get_ip_info')
+    @project_require
+    async def get_ip_info(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        session = db.db.create_session()
+        result = []
+        ip_adresses = session.query(db.ip.model.ip).all()
+        for i in ip_adresses:
+            result.append(i[0])
+
+        session.close()
+        return json_response(result)
+    
     @BaseView.route('POST', '/nmap_scan')
     @project_require
     async def create_nmap_scan(self, request: PMRequest):
@@ -269,11 +283,25 @@ class TaskView(BaseView):
         db = project.db
         domain = params.get('targetDOMAIN') #домен или ip
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('dns_info')
         await scheduler.spawn_job(DNSTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                                domain= domain,
                                                db=db, task_id=task_id))
         return Response(status=201)
+    
+    @BaseView.route('GET', '/get_domains_info')
+    @project_require
+    async def get_domains_info(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        session = db.db.create_session()
+        result = []
+        data = session.query(db.domain.model.domain).all()
+        for d in data:
+            result.append(d[0])
+            
+        session.close()
+        return json_response(result)
     
     @BaseView.route('POST', '/sd_find')
     @project_require
@@ -285,7 +313,7 @@ class TaskView(BaseView):
         domain = params.get('targetDOMAIN')
         crtshtumb = params.get('crt_sh')
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('sd_find')
         await scheduler.spawn_job(SdFindTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                                task_id=task_id, domain = domain, crtshtumb = crtshtumb,
                                                db=db))
@@ -300,11 +328,28 @@ class TaskView(BaseView):
         db = project.db
         target = str(params.get('Target')) #домен или ip
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('whois')
         await scheduler.spawn_job(WhoisTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                                target = target,
                                                db=db, task_id=task_id))
         return Response(status=201)
+    
+    @BaseView.route('GET', '/get_domains_and_ip_info')
+    @project_require
+    async def get_domains_and_ip_info(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        session = db.db.create_session()
+        result = []
+        domains = session.query(db.domain.model.domain).all()
+        ip_adresses = session.query(db.ip.model.ip).all()
+        for d in domains:
+            result.append(d[0])
+        for i in ip_adresses:
+            result.append(i[0])
+
+        session.close()
+        return json_response(result)
     
     @BaseView.route('POST', '/cert_info')
     @project_require
@@ -316,7 +361,7 @@ class TaskView(BaseView):
         target = params.get('Target') #домен или ip
         port = params.get('Port')
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params, ensure_ascii=False), ret='id')
-        scheduler = project.schedulers.get('other')
+        scheduler = project.schedulers.get('cert_info')
         await scheduler.spawn_job(CertInfoTask(observer=project.observer, scheduler=scheduler, name=f'Task {task_id}',
                                                certificates_folder = project.configs.folders.certificates_folder, target = target, db=db, task_id=task_id, port=port))
         return Response(status=201)
@@ -468,10 +513,12 @@ class TaskView(BaseView):
             if d._authentication_credentials:
                 tmp = {"ip" : d._ip_id.ip,
                        "port" : d._port_id.port,
+                       "version" : [],
                        "community_strings": [],
                        "need_auth": [],
                        "permissions": []}
                 for ac in d._authentication_credentials:
+                    tmp["version"].append(json.loads(ac.parameters).get("snmp_version"))
                     tmp["community_strings"].append(ac.login)
                     tmp["need_auth"].append(("no", "yes")[ac.need_auth])
                     tmp["permissions"].append(("no permissions", "read", "write", "read/write")[ac.permissions])
@@ -479,9 +526,11 @@ class TaskView(BaseView):
             else:
                 result.append({"ip" : d._ip_id.ip,
                                "port" : d._port_id.port,
+                               "version" : [""],
                                "community_strings" : [""],
                                "need_auth" : [""],
                                "permissions" : [""]})
+        result = sorted(result, key=lambda x: tuple(map(int, x["ip"].split('.'))))
         session.close()
         return json_response(result)
 
@@ -525,12 +574,14 @@ class TaskView(BaseView):
         scheduler = project.schedulers.get('snmp')
         params: dict = await request.json()
 
+        agent_id = params.get("agent_id")
         ip = params.get("ip")
         port = int(params.get("port"))
+        snmp_version = int(params.get("version")) - 1
         community_string = params.get("community_string")
 
         task_id = db.task.write(status=TaskStatus.in_queue, params=json.dumps(params), ret='id')
         await scheduler.spawn_job(SnmpCrawlerTask(observer=project.observer,scheduler=scheduler, 
                                             name=f'Task {task_id}',task_id=task_id, 
-                                            db=db, ip=ip, port=port, community_string=community_string))
+                                            db=db, agent_id=agent_id, ip=ip, port=port, snmp_version=snmp_version, community_string=community_string))
         return Response(status=201)

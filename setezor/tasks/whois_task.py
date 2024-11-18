@@ -66,6 +66,9 @@ class WhoisTask(BaseJob):
         try:
             t1 = time()
             result = await self._task_func(target=target)
+            # TODO 
+            # if not result:
+            #     notify
             self.logger.debug('Task func "%s" finished after %.2f seconds',
                               self.__class__.__name__, time() - t1)
             self._write_result_to_db(db=db, result=result, target=target)

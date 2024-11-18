@@ -2,6 +2,9 @@ from sqlalchemy.orm.session import Session
 from ..models import IP, MAC, Object, Port
 from ..queries_files.base_queries import Mock, BaseQueries
 from ..queries_files.mac_queries import MACQueries
+from ..queries_files.network_queries import NetworkQueries
+
+import ipaddress
 
 try:
     from network_structures import IPv4Struct, IPv6Struct
@@ -14,7 +17,7 @@ class IPQueries(BaseQueries):
     
     model = IP
     
-    def __init__(self, mac: MACQueries, session_maker: Session):
+    def __init__(self, mac: MACQueries, network: NetworkQueries, session_maker: Session):
         """Инициализация объекта запросов
 
         Args:
@@ -23,6 +26,7 @@ class IPQueries(BaseQueries):
         """        
         super().__init__(session_maker)
         self.mac = mac
+        self.network = network
         
     @BaseQueries.session_provide
     def create(self, session: Session, ip: str, mac: str=None, domain_name: str=None, **kwargs):
@@ -37,8 +41,21 @@ class IPQueries(BaseQueries):
         Returns:
             _type_: объект ip адреса
         """
-        mac_obj = self.mac.get_or_create(session=session, mac=mac if mac else '', **kwargs)
-        new_ip_obj = self.model(ip=ip, _mac=mac_obj,domain_name=domain_name) #domain_name=domain_name 
+        if not mac:
+            mac_obj = self.mac.create(session=session, mac=None, **kwargs)
+        else:
+            mac_obj = self.mac.get_or_create(session=session, mac=mac, **kwargs)
+
+        mask = kwargs.get("mask", 24)
+        network = kwargs.get("network")
+        network = ipaddress.ip_network(f"{ip}/{mask}", strict=False)
+        start_ip = network.network_address
+        broadcast = network.broadcast_address
+
+        network_obj = self.network.get_or_create(session=session, mask=mask, network=str(network), start_ip=str(start_ip), broadcast=str(broadcast), type_id=kwargs.get("type_id", 2))
+
+        # mac_obj = self.mac.get_or_create(session=session, mac=mac if mac else '', **kwargs)
+        new_ip_obj = self.model(ip=ip, _mac=mac_obj, domain_name=domain_name, network_id=network_obj.id) #domain_name=domain_name 
         session.add(new_ip_obj)
         session.flush()
         self.logger.debug('Created "%s" with kwargs %s', self.model.__name__, {'ip': ip, 'mac': mac,'domain_name': domain_name}) #'domain_name': domain_name

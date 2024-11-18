@@ -62,10 +62,10 @@ Network Map
         }
         let result = ""
         for (let [key, value] of IPMap) {
-            if (key.startsWith(ip_addr)) {
+            if (value.startsWith(ip_addr)) {
                 result += `
                     <div class="col md-1">
-                        <button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${key}')">${key}</button>
+                        <button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${key}')">${value}</button>
                     </div>`
             }
         }
@@ -81,7 +81,7 @@ Network Map
         el.innerHTML = result
     }
     function findSingleNodeByIP(addr) {
-        network.focus(IPMap.get(addr), { scale: 5, locked: false, animation: { duration: 500 } })
+        network.focus(addr, { scale: 5, locked: false, animation: { duration: 500 } })
     }
 </script>
 {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}

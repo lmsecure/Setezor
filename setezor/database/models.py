@@ -107,6 +107,8 @@ class MAC(Base, TimeDependent):
 
     id = Column(Integer, primary_key=True)
     mac = Column(String(17))
+    interface_name = Column(String(100))
+    interface_speed = Column(Integer)
     object = Column(Integer, ForeignKey('objects.id'), nullable=False)
     vendor = Column(String)
     _obj = relationship(Object.__name__, back_populates='_mac', lazy='subquery')
@@ -340,7 +342,8 @@ class Network(Base, TimeDependent):
     
     id = Column(Integer, primary_key=True)
     mask = Column(SMALLINT)
-    network = Column(Text, unique=True)
+    network = Column(String)
+    # network = Column(Text, unique=True)
     start_ip = Column(Integer, nullable=False)
     broadcast = Column(Integer, nullable=False)
     gateway = Column(Integer, nullable=True)
@@ -638,4 +641,5 @@ class Authentication_Credentials(Base):
     need_auth = Column(BOOLEAN)
     role = Column(String)
     permissions = Column(Integer)
+    parameters = Column(String)
 

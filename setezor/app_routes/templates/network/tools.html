@@ -105,6 +105,24 @@
                     </div>
                 </div>
             </div>
+            <script>
+                let ip_lst = [];
+
+                async function get_ip_list()
+                {
+                    resp = await fetch('/api/task/get_ip_info', {method: 'GET'});
+                    data = await resp.json();
+
+                    let el = document.getElementById("IpList");
+                    let res = ``;
+                    for (const item of data)
+                    {
+                        res += `<option value="${item}">`;
+                    }
+                    el.innerHTML = res;
+                }
+                get_ip_list();
+            </script>
             <div class="col-10">
                 <div class="p2 tab-content w-100" id="v-pills-tabContent">
                     <div class="d-flex mb-2" id="agent_interface_bar">
@@ -132,10 +150,13 @@
                                     <form id="nmapScanSimpleForm" class="needs-validation" novalidate>
                                         <div class="input-group" id="ipTarget">
                                             <span class="input-group-text" id="basic-addon1">IP</span>
-                                            <input type="text" class="form-control" id='inputIP'
+                                            <datalist id="IpList"></datalist>
+                                            <input type="text" list="IpList" class="form-control" id='inputIP'
                                                 placeholder="IP address or netmask" aria-label="IP"
                                                 aria-describedby="basic-addon1" required name="targetIP">
+
                                         </div>
+
                                         <div class="d-flex justify-content-between py-2">
                                             <div class="form-check form-switch" id="portSwitch">
                                                 <input class="form-check-input" type="checkbox" id="portsScan">
@@ -413,9 +434,11 @@
                             <form id="masscanScanForm" class="needs-validation" novalidate>
                                 <div class="input-group" id="masscanIpTarget">
                                     <span class="input-group-text" id="basic-addon1">IP</span>
-                                    <input type="text" class="form-control" id='masscanInputIP'
+                                    <datalist id="IpList"></datalist>
+                                    <input type="text" list="IpList" class="form-control" id='masscanInputIP'
                                         placeholder="IP address or netmask" aria-label="IP"
                                         aria-describedby="basic-addon1" required name="target">
+
                                 </div>
                                 <div class="d-flex justify-content-between py-2">
                                     <div class="form-check form-switch" id="masscanPortSwitch">
@@ -529,16 +552,71 @@
                         {{ snmp.show() }}
                     </div>
 
+                    <script>
+                        let domain_lst = [];
+
+                        async function get_domains_list()
+                        {
+                            resp = await fetch('/api/task/get_domains_info', {method: 'GET'});
+                            data = await resp.json();
+
+                            let el = document.getElementById("DomainsList");
+                            let res = ``;
+                            for (const item of data)
+                            {
+                                res += `<option value="${item}">`;
+                            }
+                            el.innerHTML = res;
+                        }
+                        get_domains_list();
+                    </script>
+
+
                     <div class="tab-pane fade col-3" id="v-pills-domains" role="tabpanel"
                         aria-labelledby="v-pills-domains-tab">
                         <div class="d-flex flex-column">
                             <div class="tab-content" id="dsa">
                                 <form id="DomainForm" class="needs-validation" novalidate>
-                                    <div class="input-group" id="domainTarget">
+                                    <div id="DomainsInputContainer"></div>
+                                    <div class="input-group" style="padding-top: 7px;" id="domainTarget">
+
                                         <span class="input-group-text" id="basic-addon1">DOMAIN</span>
-                                        <input type="text" class="form-control" id='inputDOMAIN'
+                                        <datalist id="DomainsList"></datalist>
+                                        <input type="text" list="DomainsList" class="form-control" id='inputDOMAIN'
                                             placeholder="Domain name" aria-label="IP" aria-describedby="basic-addon1"
                                             required name="targetDOMAIN">
+
+                                            <button id="add_new_domains_form" onclick="(function() {
+                                                let original = document.getElementById('domainTarget');
+                                                let clone = original.cloneNode(true);
+                                                let newInput = clone.querySelector('input');
+                                                newInput.id = 'inputDOMAIN_' + Date.now(); // Уникальный ID
+                                                newInput.value = '';
+                                                // newInput.name = 'targetDOMAIN' + Date.now(); // Уникальный Name
+                                                
+                                                let existingMinusButton = clone.querySelector('.btn-danger');
+                                                if (existingMinusButton) {
+                                                    existingMinusButton.remove();
+                                                }
+
+                                                let removeButton = document.createElement('button');
+                                                removeButton.textContent = '-';
+                                                removeButton.type = 'button';
+                                                removeButton.className = 'btn btn-danger';
+                                                removeButton.style.width = '3rem';
+                                                removeButton.onclick = () => {
+                                                    clone.remove();
+                                                };
+
+                                                clone.appendChild(removeButton);
+
+                                                let addButton = clone.querySelector('#add_new_domains_form');
+                                                if (addButton) {
+                                                    addButton.remove();
+                                                }
+
+                                                document.getElementById('DomainsInputContainer').appendChild(clone);
+                                            })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
                                     </div>
                                     <div class="d-flex flex-column py-1">
                                         <div class="form-check form-switch  pe-2" id="traceSwitch"
@@ -567,20 +645,30 @@
                                         </div> -->
                                     <div class="btn-group d-flex my-2" role="group">
                                         <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
-                                        <button type="button" class="btn btn-primary w-50" id="startSdFind" onclick="var params = Object.fromEntries(new FormData(document.getElementById('DomainForm'), null).entries())                                   
-                                                    if (params['crt_sh']== 'on'){
-                                                        params['crt_sh'] = true
-                                                    } else {
-                                                        params['crt_sh'] = false
-                                                    }
-                                                    if (params['dns_search']== 'on'){                                     
-                                                        fetch('/api/task/dns_info', {
-                                                        method: 'POST', body: JSON.stringify(params)
-                                                    })
-                                                    }
-                                                fetch('/api/task/sd_find', {
-                                                    method: 'POST', body: JSON.stringify(params)
-                                                })">Start</button>
+                                        <button type="button" class="btn btn-primary w-50" id="startSdFind" onclick="
+                                            const requiredDomain = document.getElementById('DomainForm');
+                                            if (!form.checkValidity()) { 
+                                                form.reportValidity();
+                                                return;
+                                            }
+                                            const params = {};
+                                            params['crt_sh'] = document.getElementById('crt.sh').checked;
+                                            params['dns_search'] = document.getElementById('dns_search').checked;
+                                            const domains = [];
+                                            for (const d of document.getElementById('DomainForm').getElementsByClassName('form-control')) {
+                                                domains.push(d.value);
+                                            }
+                                            for (const domain of domains) {
+                                                let domainParams = {
+                                                    ...params,
+                                                    targetDOMAIN: domain
+                                                };
+                                                if (domainParams['dns_search']) {
+                                                fetch('/api/task/dns_info', {method: 'POST', body: JSON.stringify(domainParams)});
+                                                }
+                                                fetch('/api/task/sd_find', {method: 'POST', body: JSON.stringify(domainParams)});
+                                            }">Start</button>
+
                                     </div>
                                 </form>
                             </div>
@@ -592,49 +680,184 @@
                         <div class="d-flex flex-column">
                             <div class="tab-content" id="dsa">
                                 <form id="CertForm" class="needs-validation" novalidate>
-                                    <div class="input-group" id="Target">
+                                    <div id="TLSInputContainer"></div>
+                                    <div class="input-group" style="padding-top: 7px;" id="TargetTLS">
                                         <span class="input-group-text" id="basic-addon1">TARGET</span>
-                                        <input type="text" class="form-control" id='inputTARGET'
-                                            placeholder="Domain name or IP" aria-label="Target"
-                                            aria-describedby="basic-addon1" required name="Target">
+                                        <datalist id="DomainsAndIp"></datalist>
+                                        <input type="text" list="DomainsAndIp" class="form-control" id='inputTargetTLS'
+                                            placeholder="Domain name or IP" aria-label="TargetTLS"
+                                            aria-describedby="basic-addon1" required name="TargetTLS">
+
                                         <span class="input-group-text" id="basic-addon1">PORT</span>
                                         <input type="text" class="form-control" id='inputPort' placeholder="Port"
                                             aria-label="Port" aria-describedby="basic-addon1" required name="Port"
                                             value="443">
+                                            <button id="add_new_tls_form" onclick="(function() {
+                                                let original = document.getElementById('TargetTLS');
+                                                let clone = original.cloneNode(true);
+                                            
+                                                let newInputTarget = clone.querySelector('[id^=\'inputTargetTLS\']');
+                                                newInputTarget.id = 'inputTargetTLS_' + Date.now();
+                                                newInputTarget.value = '';
+                                                
+                                                let newInputPort = clone.querySelector('[id^=\'inputPort\']');
+                                                newInputPort.id = 'inputPort_' + Date.now();
+                                                newInputPort.value = '443';
+                                            
+                                                let existingMinusButton = clone.querySelector('.btn-danger');
+                                                if (existingMinusButton) {
+                                                    existingMinusButton.remove();
+                                                }
+                                            
+                                                let removeButton = document.createElement('button');
+                                                removeButton.textContent = '-';
+                                                removeButton.type = 'button';
+                                                removeButton.className = 'btn btn-danger';
+                                                removeButton.style.width = '3rem';
+                                                removeButton.onclick = () => {
+                                                    clone.remove();
+                                                };
+                                            
+                                                clone.appendChild(removeButton);
+                                            
+                                                let addButton = clone.querySelector('#add_new_tls_form');
+                                                if (addButton) {
+                                                    addButton.remove();
+                                                }
+                                            
+                                                document.getElementById('TLSInputContainer').appendChild(clone);
+                                            })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
                                     </div>
 
                                     <div class="btn-group d-flex my-2" role="group">
                                         <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
-                                        <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="var params = Object.fromEntries(new FormData(document.getElementById('CertForm'), null).entries())
+                                        <button type="button" class="btn btn-primary w-50" id="startScanCert" 
+                                        onclick="
+                                            // Проверяем все обязательные поля в форме
+                                            const requiredTLS = document.getElementById('CertForm');
+                                            if (!form.checkValidity()) { 
+                                                form.reportValidity();
+                                                return;
+                                            }
+
+                                            const params = {};
+                                            const domains_tls = [];
+                                            const ports_tls = [];
+
+                                            for (const d of form.elements) {
+                                                if (d.name === 'TargetTLS') {
+                                                    domains_tls.push(d.value);
+                                                }
+                                                if (d.name === 'Port') {
+                                                    ports_tls.push(d.value);
+                                                }
+                                            }
+
+                                            const combinedParams = domains_tls.map((domain, index) => ({
+                                                Target: domain,
+                                                Port: ports_tls[index] || null
+                                            }));
+
+                                            combinedParams.forEach(domainTlsParams => {
                                                 fetch('/api/task/cert_info', {
-                                                    method: 'POST', body: JSON.stringify(params)
-                                            })">Start</button>
+                                                    method: 'POST',
+                                                    body: JSON.stringify(domainTlsParams)
+                                                });
+                                            });
+                                        ">
+                                        Start
+                                    </button>
+
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
+                    <script>
+                        let domain_and_ip_lst = [];
 
+                        async function get_domain_and_ip_list()
+                        {
+                            resp = await fetch('/api/task/get_domains_and_ip_info', {method: 'GET'});
+                            data = await resp.json();
+
+                            let el = document.getElementById("DomainsAndIp");
+                            let res = ``;
+                            for (const item of data)
+                            {
+                                res += `<option value="${item}">`;
+                            }
+                            el.innerHTML = res;
+                        }
+                        get_domain_and_ip_list();
+                    </script>
                     <div class="tab-pane fade col-3" id="v-pills-whois" role="tabpanel"
                         aria-labelledby="v-pills-whois-tab">
                         <div class="d-flex flex-column">
                             <div class="tab-content" id="dsa">
                                 <form id="WhoisForm" class="needs-validation" novalidate>
-                                    <div class="input-group" id="Target">
+                                    <div id="WhoisInputContainer"></div>
+                                    <div class="input-group" style="padding-top: 7px;" id="TargetForWhois">
                                         <span class="input-group-text" id="basic-addon1">TARGET</span>
-                                        <input type="text" class="form-control" id='inputTARGET'
+                                        <datalist id="DomainsAndIp"></datalist>
+                                        <input type="text" list="DomainsAndIp" class="form-control" id='inputTARGET'
                                             placeholder="Domain name or IP" aria-label="Target"
                                             aria-describedby="basic-addon1" required name="Target">
+
+                                            <button id="add_new_whois_form" onclick="(function() {
+                                                const original = document.getElementById('TargetForWhois');
+                                                const clone = original.cloneNode(true);
+                                                const newInput = clone.querySelector('input');
+                                                newInput.id = 'inputTarget_' + Date.now(); // Уникальный ID
+                                                newInput.value = '';
+                                                // newInput.name = 'targetDOMAIN' + Date.now(); // Уникальный Name
+                                                
+                                                const existingMinusButton = clone.querySelector('.btn-danger');
+                                                if (existingMinusButton) {
+                                                    existingMinusButton.remove();
+                                                }
+
+                                                const removeButton = document.createElement('button');
+                                                removeButton.textContent = '-';
+                                                removeButton.type = 'button';
+                                                removeButton.className = 'btn btn-danger';
+                                                removeButton.style.width = '3rem';
+                                                removeButton.onclick = () => {
+                                                    clone.remove();
+                                                };
+
+                                                clone.appendChild(removeButton);
+
+                                                const addButton = clone.querySelector('#add_new_whois_form');
+                                                if (addButton) {
+                                                    addButton.remove();
+                                                }
+
+                                                document.getElementById('WhoisInputContainer').appendChild(clone);
+                                            })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
                                     </div>
 
                                     <div class="btn-group d-flex my-2" role="group">
                                         <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
                                         <button type="button" class="btn btn-primary w-50" id="startScanWhoisBtn"
-                                            onclick="var params = Object.fromEntries(new FormData(document.getElementById('WhoisForm'), null).entries())
-                                                
-                                                fetch('/api/task/whois', {
-                                                    method: 'POST', body: JSON.stringify(params)
-                                            })">Start</button>
+                                            onclick="
+                                            const requiredWhois = document.getElementById('WhoisForm');
+                                            if (!form.checkValidity()) { 
+                                                form.reportValidity();
+                                                return;
+                                            }
+                                                const params = {};
+                                                const domains_and_ips = [];
+                                                for (const d of document.getElementById('WhoisForm').getElementsByClassName('form-control')) {
+                                                    domains_and_ips.push(d.value);
+                                                }
+                                                for (const domain_and_ip of domains_and_ips) {
+                                                    let domainAndIpParams = {
+                                                        Target: domain_and_ip
+                                                    }
+                                                    fetch('/api/task/whois', {
+                                                    method: 'POST', body: JSON.stringify(domainAndIpParams)
+                                                })};">Start</button>
                                     </div>
                                 </form>
                             </div>
@@ -771,10 +994,10 @@
         return agent.id
     }
 
-    var mask = new Inputmask('ip').mask('InputLogIp')
-    var mask = new Inputmask('mac').mask('InputLogMac')
-    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
-    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
+    // var mask = new Inputmask('ip').mask('InputLogIp')
+    // var mask = new Inputmask('mac').mask('InputLogMac')
+    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
+    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
     $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
         document.getElementById('portsSelector').disabled = !e.target.checked;
         document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked

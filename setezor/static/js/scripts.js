@@ -13,6 +13,9 @@ function create_websocket(endpoint) {
         }
         if (window.location.pathname == '/tools/' && data.command === "update") {
             get_all_ips_with_open_port_snmp();
+            get_domains_list();
+            get_domain_and_ip_list();
+            get_ip_list();
             return;
         }
     };

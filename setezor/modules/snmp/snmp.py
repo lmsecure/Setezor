@@ -3,23 +3,22 @@ import asyncio
 from pysnmp.hlapi.v3arch.asyncio import *
 from pysnmp.smi import builder, view, compiler
 
-from concurrent.futures import ThreadPoolExecutor
 
 
 class SNMP:
 
     @classmethod
-    async def get(cls, ip_address: str, port: int, community_string: str, oid: str):
+    async def get(cls, ip_address: str, port: int, community_string: str, oid: str, snmp_version: int = 1):
         get_request = await getCmd(SnmpEngine(),
-                                CommunityData(community_string),
+                                CommunityData(community_string, mpModel=snmp_version),      # mpModel: 0 - for SNMP v1; 1 - for SNMP v2c
                                 await UdpTransportTarget.create((ip_address, port)),
                                 ContextData(),
                                 ObjectType(ObjectIdentity(oid)))
         return get_request
 
     @classmethod
-    async def get_value(cls, ip_address: str, port: int, community_string: str, oid: str):
-        error_indication, error_status, error_index, var_binds = await cls.get(ip_address=ip_address, port=port, community_string=community_string, oid=oid)
+    async def get_value(cls, ip_address: str, port: int, community_string: str, oid: str, snmp_version: int = 1):
+        error_indication, error_status, error_index, var_binds = await cls.get(ip_address=ip_address, port=port, community_string=community_string, oid=oid, snmp_version=snmp_version)
         if error_indication:
             raise Exception(error_indication)
         else:
@@ -40,9 +39,9 @@ class SNMP:
         return ObjectType(ObjectIdentity(oid), var)
 
     @classmethod
-    async def set(cls, ip_address: str, port: int, community_string: str, oid: str, var):
+    async def set(cls, ip_address: str, port: int, community_string: str, oid: str, var, snmp_version: int = 1):
         get_result = setCmd(SnmpEngine(),
-                            CommunityData(community_string),
+                            CommunityData(community_string, mpModel=snmp_version),
                             await UdpTransportTarget.create((ip_address, port)),
                             ContextData(),
                             ObjectType(ObjectIdentity(oid), var))
@@ -58,39 +57,16 @@ class SNMP:
             return var_binds[0][1]
 
     @classmethod
-    async def _walk(cls, ip_address: str, port: int, community_string: str, oid: str, limit: int = 0):
-        ObjID = ObjectIdentity(oid)
-        get_result = walkCmd(SnmpEngine(),
-                             CommunityData(community_string),
-                             await UdpTransportTarget.create((ip_address, port)),
-                             ContextData(),
-                             ObjectType(ObjID),
-                             maxCalls = limit) # ObjectType(ObjectIdentity('SNMPv2-MIB', 'sysDescr'))    ObjectType(ObjID)
-        async for item in get_result:
-            error_indication, error_status, error_index, var_binds = item
-            yield item
-
-    @classmethod
-    async def walk(cls, ip_address: str, port: int, community_string: str, oid: str, limit: int = 0) -> list:
-        result = []
-        async for item in cls._walk(ip_address=ip_address, port=port, community_string=community_string, oid=oid, limit=limit):
-            error_indication, error_status, error_index, var_binds = item
-            if not error_indication:
-                result.append(var_binds[0][1])
-        return result
-    
-
-    @classmethod
-    async def get_block(cls, ip_address: str, port: int, community_string: str, oid: str) -> list:
+    async def get_block(cls, ip_address: str, port: int, community_string: str, oid: str, snmp_version: int = 1) -> list:
         result = []
         stop = True
         next_oid = oid
         while stop:
             error_indication, error_status, error_index, var_binds = await bulkCmd(SnmpEngine(),
-                                                                                   CommunityData( community_string),
+                                                                                   CommunityData( community_string, mpModel=snmp_version),
                                                                                    await UdpTransportTarget.create((ip_address, port)),
                                                                                    ContextData(),
-                                                                                   0, 1,
+                                                                                   0, 25,
                                                                                    ObjectType( ObjectIdentity(next_oid)),
                                                                                    lexicographicMode=False)
             if error_indication:
@@ -107,31 +83,32 @@ class SNMP:
         return result
 
 
+
 class SnmpGettingAccess(SNMP):
 
     @classmethod
-    def _brute_community_string(cls, ip_address: str, port: int, community_string : str, oid: str) -> tuple[bool, str, str | None]:
+    def _brute_community_string(cls, ip_address: str, port: int, community_string : str, oid: str, snmp_version: int = 1) -> tuple[bool, str, str | None]:
         loop = asyncio.get_event_loop()
-        loop.set_default_executor(ThreadPoolExecutor(max_workers=250))
-        error_indication, error_status, error_index, var_binds = loop.run_until_complete(cls.get(ip_address = ip_address, port=port, community_string = community_string, oid=oid))
+        # loop.set_default_executor(ThreadPoolExecutor(max_workers=250))
+        error_indication, error_status, error_index, var_binds = loop.run_until_complete(cls.get(ip_address=ip_address, port=port, community_string=community_string, oid=oid, snmp_version=snmp_version))
         return not error_indication, community_string, error_status.prettyOut(error_status) if error_status else None
 
     @classmethod
-    async def community_string(cls, ip_address: str, port: int, community_strings: list = None) -> list[tuple[bool, str, str | None]]:
+    async def community_string(cls, ip_address: str, port: int, community_strings: list = None, snmp_version: int = 1) -> list[tuple[bool, str, str | None]]:
         if not community_strings: community_strings = ["public", "private"]
         oid = '1.3.6.1.2.1.1.1.0'
         tasks = []
         for community_string in community_strings:
-            tasks.append(asyncio.to_thread(cls._brute_community_string, ip_address, port, community_string, oid))
+            tasks.append(asyncio.to_thread(cls._brute_community_string, ip_address, port, community_string, oid, snmp_version))
         return list(filter(lambda x: x[0], await asyncio.gather(*tasks)))
 
     @classmethod
-    async def is_write_access(cls, ip_address: str, port: int, community_string: str) -> bool:
+    async def is_write_access(cls, ip_address: str, port: int, community_string: str, snmp_version: int = 1) -> bool:
         oid = '1.3.6.1.2.1.1.5.0'
-        error_indication, error_status, error_index, var_binds = await cls.get(ip_address=ip_address, port=port, community_string=community_string, oid=oid)
+        error_indication, error_status, error_index, var_binds = await cls.get(ip_address=ip_address, port=port, community_string=community_string, oid=oid, snmp_version=snmp_version)
         if error_indication:
             raise Exception(str(error_indication))
-        error_indication, error_status, error_index, var_binds = await cls.set(ip_address=ip_address, port=port, community_string=community_string, oid=oid, var=var_binds[0][1])
+        error_indication, error_status, error_index, var_binds = await cls.set(ip_address=ip_address, port=port, community_string=community_string, oid=oid, var=var_binds[0][1], snmp_version=snmp_version)
         if error_status:
             return False
         return True
@@ -146,27 +123,50 @@ class SnmpGet(SNMP):
     Methods:
         system_name
         number_of_interfaces
+        interface_index
         interface_description
-        phys_address
+        interface_speed
+        interface_phys_address
+        ip_ad_ent_addr
+        ip_add_ent_if_ind
+        udp_local_ports
+        ip_net_to_media_if_index
+        ip_net_to_media_phys_address
+        ip_net_to_media_net_address
     """
-    def __init__(self, ip_address: str, port: int, community_string: str, ifnumber: int):
+    def __init__(self, ip_address: str, port: int, snmp_version: int, community_string: str, ifnumber: int):
         self.ip_address = ip_address
         self.port = port
+        self.snmp_version = snmp_version
         self.community_string = community_string
         self.ifnumber = ifnumber
 
     @classmethod
-    async def create_obj(cls, ip_address: str, port: int, community_string: str):
-        ifnumber = await cls.number_of_interfaces(ip_address=ip_address, port=port, community_string=community_string)
-        return cls(ip_address=ip_address, port=port, community_string=community_string, ifnumber=ifnumber)
-
-    @classmethod
-    async def number_of_interfaces(cls, ip_address: str, port: int, community_string: str) -> int:
-        """The number of network interfaces (regardless of their
-            current state) present on this system.
+    async def create_obj(cls, ip_address: str, port: int, snmp_version: int, community_string: str):
+        """ Create SnmpGet object
 
         Args:
             ip_address (str): ip address
+            port (int): port
+            snmp_version (int): 0 - for SNMP v1; 1 - for SNMP v2c;
+            community_string (str): community string
+
+        Returns:
+            _type_: _description_
+        """
+        ifnumber = await cls.number_of_interfaces(ip_address=ip_address, port=port, snmp_version=snmp_version, community_string=community_string)
+        return cls(ip_address=ip_address, port=port, snmp_version=snmp_version, community_string=community_string, ifnumber=ifnumber)
+
+    @classmethod
+    async def number_of_interfaces(cls, ip_address: str, port: int, snmp_version: int, community_string: str) -> int:
+        """ The number of network interfaces (regardless of their current state) present on this system.
+
+        Args:
+            ip_address (str): ip address
+            port (int): port
+            snmp_version (int):
+                * 0 - for SNMP v1;
+                * 1 - for SNMP v2c;
             community_string (str): community string
 
         Returns:
@@ -175,7 +175,7 @@ class SnmpGet(SNMP):
         oid = "1.3.6.1.2.1.2.1.0"               # ifNumber
         result = 0
         try:
-            result = int(await cls.get_value(ip_address=ip_address, port=port, community_string=community_string, oid=oid))
+            result = int(await cls.get_value(ip_address=ip_address, port=port, community_string=community_string, oid=oid, snmp_version=snmp_version))
         finally:
             return result
 
@@ -188,13 +188,14 @@ class SnmpGet(SNMP):
 
         Args:
             ip_address (str): ip address
+            port (int): port
             community_string (str): community string
 
         Returns:
             str: sysName
         """
         oid = "1.3.6.1.2.1.1.5.0"               # sysName
-        return str(await self.get_value(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid))
+        return str(await self.get_value(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version))
     
     async def interface_index(self) -> list:
         """A unique value for each interface. Its value
@@ -210,8 +211,9 @@ class SnmpGet(SNMP):
 
         oid = "1.3.6.1.2.1.2.2.1.1"            # ifIndex
         result = []
-        for item in await self.walk(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, limit=self.ifnumber):
-            result.append(str(item))
+        if self.ifnumber:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                result.append(str(item))
         return result
 
     async def interface_description(self) -> list[str]:
@@ -222,6 +224,7 @@ class SnmpGet(SNMP):
 
         Args:
             ip_address (str): ip address
+            port (int): port
             community_string (str): community string
             count (int): number of interfaces
 
@@ -230,11 +233,35 @@ class SnmpGet(SNMP):
         """
         oid = "1.3.6.1.2.1.2.2.1.2"            # ifDescr
         result = []
-        for item in await self.walk(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, limit=self.ifnumber):
-            result.append(str(item))
+        if self.ifnumber:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                result.append(str(item))
         return result
 
-    async def phys_address(self) -> list[str]:
+    async def interface_speed(self) -> list[int]:
+        """An estimate of the interface's current bandwidth in bits
+            per second. For interfaces which do not vary in bandwidth
+            or for those where no accurate estimation can be made, this
+            object should contain the nominal bandwidth. If the
+            bandwidth of the interface is greater than the maximum value
+            reportable by this object then this object should report its
+            maximum value (4,294,967,295) and ifHighSpeed must be used
+            to report the interace's speed. For a sub-layer which has
+            no concept of bandwidth, this object should be zero.
+
+        Returns:
+            list[int]: [ifSpeed in bps]
+        """
+        
+        oid = "1.3.6.1.2.1.2.2.1.5"     # ifSpeed [bps]
+        result = []
+        if self.ifnumber:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                result.append(int(item))
+        return result
+
+
+    async def interface_phys_address(self) -> list[str]:
         """The interface's address at its protocol sub-layer.  For
             example, for an 802.x interface, this object normally
             contains a MAC address.  The interface's media-specific MIB
@@ -251,13 +278,16 @@ class SnmpGet(SNMP):
         Returns:
             list[str]: [ifPhysAddress]
         """
-        oid = "1.3.6.1.2.1.2.2.1.6"     # .ifPhysAddress
+        oid = "1.3.6.1.2.1.2.2.1.6"     # ifPhysAddress
         result = []
-        for tmp in await self.walk(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, limit=self.ifnumber):
-            result.append(':'.join([tmp.prettyPrint()[2:][i:i+2].upper() for i in range(0, len(tmp.prettyPrint()[2:]), 2)]))
+        if self.ifnumber:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                mac = ':'.join([item[2:][i:i+2].upper() for i in range(0, len(item[2:]), 2)])
+                if len(mac) != 17: mac = ""
+                result.append(mac)
         return result
 
-    async def ip_add_ent_addr(self) -> list[str]:
+    async def ip_ad_ent_addr(self) -> list[str]:
         """The IP address to which this entry's addressing
             information pertains. 
 
@@ -265,10 +295,29 @@ class SnmpGet(SNMP):
             list[str]: [ipAdEntAddr]
         """
         oid = "1.3.6.1.2.1.4.20.1.1"            # ipAdEntAddr
-        result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid)
-        return result
+        result = []
+        try:
+            result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version)
+        finally:
+            return result
+    
+    async def ip_ad_ent_net_mask(self) -> list:
+        """The subnet mask associated with the IPv4 address of this
+            entry.
 
-    async def ip_add_ent_if_ind(self) -> list:
+        Returns:
+            list[str]: [ipAdEntNetMask]
+        """
+
+        oid = "1.3.6.1.2.1.4.20.1.3"          # ipAdEntNetMask
+        result = []
+        try:
+            result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version)
+        finally:
+            return result
+
+
+    async def ip_add_ent_if_ind(self) -> list[str]:
         """The index value which uniquely identifies the interface to
             which this entry is applicable. The interface identified by
             a particular value of this index is the same interface as
@@ -278,47 +327,71 @@ class SnmpGet(SNMP):
             list: [ipAdEntIfIndex]
         """
         oid = "1.3.6.1.2.1.4.20.1.2"            # ipAdEntIfIndex
-        result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid)
-        return result
+        result = []
+        try:
+            result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version)
+        finally:
+            return result
 
 
+    async def udp_local_ports(self, ip) -> list[int]:
 
-    async def udp(self):
-        oid = "1.3.6.1.2.1.7" # udp
-        oid = "1.3.6.1.2.1.7.1.1" # ip's
-        oid = "1.3.6.1.2.1.7.1.2" # port's
+        oid = "1.3.6.1.2.1.7.5.1.2." + ip    # udpLocalPort
+        result = []
+        try:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                result.append(int(item))
+        finally:
+            return result
+        
+    async def ip_net_to_media_if_index(self) -> list:
+        """Each entry contains one IpAddress to `physical'
+            address equivalence.
 
-        ...
+        Returns:
+            list: [ipNetToMediaIfIndex]
+        """
 
+        oid = "1.3.6.1.2.1.4.22.1.1"        # ipNetToMediaIfIndex
+        result = []
+        try:
+            result = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version)
+        finally:
+            return result
 
+    async def ip_net_to_media_phys_address(self) -> list:
+        """The media-dependent `physical' address.
 
+        Returns:
+            list: [ipNetToMediaPhysAddress]
+        """
 
+        oid = "1.3.6.1.2.1.4.22.1.2"        # ipNetToMediaPhysAddress
+        result = []
+        try:
+            for item in await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version):
+                mac = ':'.join([item[2:][i:i+2].upper() for i in range(0, len(item[2:]), 2)])
+                if len(mac) != 17: mac = ""
+                result.append(mac)
+        finally:
+            return result
+        
+    async def ip_net_to_media_net_address(self) -> list:
+        """The IpAddress corresponding to the media-
+            dependent `physical' address.
 
+        Returns:
+            list: [ipNetToMediaNetAddress]
+        """
 
-
-
-
-
-
-
-    @classmethod
-    def ObjId(cls):
-        mib_builder = builder.MibBuilder()
-        mib_view = view.MibViewController(mib_builder)
-
-        # q = ObjectIdentity('1')
-        # q.prettyPrint
-
-        obj_ids = []
-        obj_ids.append(ObjectIdentity('SNMPv2-MIB', 'sysDescr'))
-        obj_ids.append(ObjectIdentity(None, 'sysName'))
-        obj_ids.append(ObjectIdentity(None, 'iso'))
-        obj_ids.append(ObjectIdentity('1.3.6.1.2.1.2.2.1.6')) # iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable.ifEntry.ifPhysAddress
-        obj_ids.append(ObjectIdentity(None, 'mib-2'))
-
-
-        for obj_id in obj_ids:
-            obj_id.resolveWithMib(mib_view)
-            print(obj_id.getLabel(), obj_id.getOid())
-
-        return obj_ids
+        oid = "1.3.6.1.2.1.4.22.1.3"        # ipNetToMediaNetAddress
+        result = []
+        try:
+            tmp = await self.get_block(ip_address=self.ip_address, port=self.port, community_string=self.community_string, oid=oid, snmp_version=self.snmp_version)
+            for item in tmp:
+                if all([len(str(item).split('.')) == 4] + list(map(lambda x: x.isdigit(),  str(item).split('.')))):     # TODO тут вместо IpAddrss как то пришло Counter32
+                    result.append(item)
+                else:
+                    result.append(None)
+        finally:
+            return result

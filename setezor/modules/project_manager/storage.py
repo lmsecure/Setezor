@@ -102,3 +102,20 @@ class MemoryProjectStorage(ProjectStorage):
                 continue
             project = Project.load(str(folder))
             self.projects[project.configs.variables.project_id] = project
+
+
+    def _load_new_for_import(self):
+        
+        # todo! нужно придумать способ подгрузки проектов из папки, или добавить метод в родительский класс
+        """Метод, который подгрузит новые проекты из папки, 
+        так не должно быть, нужно будет переделать"""
+        
+        folders = Path(self.projects_path).absolute().iterdir()
+        exists = set((i.configs.project_path for i in self.projects.values()))
+        for folder in folders:
+            if str(folder) in exists:
+                continue
+            if not folder.is_dir():
+                continue
+            project = Project.load_for_import(str(folder))
+            self.projects[project.configs.variables.project_id] = project

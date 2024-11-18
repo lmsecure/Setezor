@@ -59,6 +59,20 @@ class PortQueries(BaseQueries):
         else:
             return self.create(session=session, ip=ip, port=port, protocol=protocol, mac=mac, service_name=service_name, state=state)
     
+
+    @BaseQueries.session_provide
+    def get_or_create_by_ipid(self, session: Session, ip_id: int, port : int, protocol: str=None, mac: str=None,
+                      service_name: str=None, state: str=None, to_update: bool=False, **kwargs):
+        ip = self.ip.get_by_id(id= ip_id).get("ip")
+        port_query = session.query(self.model).filter(self.model.__table__.c.get('ip') == ip_id, self.model.__table__.c.get('port') == port)
+        if self.check_exists(session=session, query=port_query):
+            if to_update:
+                self.update_by_id(id=port_query.first().id, to_update=dict(ip=ip, port=port, protocol=protocol, mac=mac, service_name=service_name, state=state))
+            return port_query.first()
+        else:
+            return self.create(session=session, ip=ip, port=port, protocol=protocol, mac=mac, service_name=service_name, state=state)
+
+
     @BaseQueries.session_provide
     def get_ports_by_ip(self, session: Session, ip_ids: list) -> dict:
         """Метод получения всех портов по идентификатору ip адреса

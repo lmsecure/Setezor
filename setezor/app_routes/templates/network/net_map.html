@@ -298,7 +298,7 @@
         }
 
         nodes.forEach((node => {
-            IPMap.set(node.address,node.id)
+            IPMap.set(node.id,node.address)
             if (node.agent) {
                 node.icon = new AgentIcon(color = caclculateColor(node))
                 node.shape = 'icon'
@@ -852,12 +852,22 @@
                 keyboard: true
             },
             physics: {
-                stabilization: false,
+                enabled: true,
                 barnesHut: {
-                    gravitationalConstant: -30000,
-                    springConstant: 0.07,
+                    gravitationalConstant: -50000,
+                    centralGravity: 0.1,
                     springLength: 100,
+                    springConstant: 0.07,
+                    // damping: 0.1,
                 },
+                stabilization: {
+                    enabled: true,
+                    iterations: 50,
+                    updateInterval: 10,
+                },
+                timestep: 0.6,
+                adaptiveTimestep: false,
+                
             },
             /* !Редактирование карты, нужно изменить! */
              manipulation: {
@@ -935,10 +945,10 @@
             var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
             var cluster_options_by_data;
             for (var i = 0; i < unique_groups.length; i++) {
-                var group = unique_groups[i]
+                var gg = unique_groups[i];
                 cluster_options_by_data = {
                     joinCondition: function (childOptions) {
-                        return childOptions.group == group;
+                        return childOptions.group == gg;
                     },
                     processProperties: function (
                         clusterOptions,
@@ -947,19 +957,20 @@
                     ) {
                         var totalMass = 0;
                         for (var i = 0; i < childNodes.length; i++) {
-                            totalMass += childNodes[i].mass;
+                            totalMass += childNodes[i].mass || 1;
                         }
-                        clusterOptions.mass = 1;
+                        clusterOptions.mass = 1 + totalMass / 10;
                         return clusterOptions;
                     },
                     clusterNodeProperties: {
-                        id: group,
+                        id: gg,
                         borderWidth: 3,
                         shape: "dot",
-                        label: group + ".0/24"
+                        label: gg,
                     }
+                    
                 }
-                network.cluster(cluster_options_by_data)
+                network.clustering.cluster(cluster_options_by_data)
             }
             cluster = true
         } else {

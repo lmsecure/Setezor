@@ -92,6 +92,10 @@ class Configs:
             'cve_vulners': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'cve_nvd': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},   # <- увеличение limit приводит к database locked
             'snmp' : {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
+            'whois': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
+            'cert_info': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
+            'dns_info': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
+            'sd_find': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
             'search-vulns': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'screenshoter': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
@@ -124,6 +128,23 @@ class Configs:
         default = next((i for i in ifaces if i.name == default))
         return default
     
+    @classmethod
+    def load_config_from_file_for_import(cls, project_path):
+        if not os.path.exists(file_path:=os.path.join(project_path, FilesNames.config_file)):
+            raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
+        with open(file_path, 'r') as f:
+            configs_json: Dict[str, Dict[str, str]] = json.load(f)
+
+        new_path = project_path[:project_path.index('/.local/')]
+        for k, v in configs_json.get("folders").items():
+            configs_json["folders"][k] = new_path + v[v.index('/.local/'):]
+        for k, v in configs_json.get("files").items():
+            configs_json["files"][k] = new_path + v[v.index('/.local/'):]
+
+        with open(file_path, 'w') as f:
+            f.write(json.dumps(configs_json, indent=4))
+
+
     @classmethod
     def load_config_from_file(cls, project_path):
         """Метод загрузки конфигов из файла в объект

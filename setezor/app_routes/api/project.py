@@ -71,6 +71,7 @@ class ProjectView(BaseView):
             ifaces = get_interfaces()
             default_system_iface = next((i for i in ifaces if i.name == get_default_interface()), None)
             project.configs.variables.default_agent.ip = default_system_iface.ip_address
+            db.ip.create(ip=project.configs.variables.default_agent.ip)
             db_agent = db.agent.create(agent=project.configs.variables.default_agent)
             project.configs.variables.default_interface = default_system_iface.model_dump()
             project.configs.variables.default_agent.id = db_agent.id
@@ -155,7 +156,7 @@ class ProjectView(BaseView):
         io_file.write(data)
         path = request.app.pm.projects_path
         await asyncio.to_thread(unzip, io_file, path)
-        request.app.pm.project_storage._load_new() # todo переделать
+        request.app.pm.project_storage._load_new_for_import() # todo переделать
         return json_response(status=200)
     
     

@@ -16,7 +16,7 @@ class DNS:
     def proceed_records(responses:List):
         domain_records = []
         for response in responses:
-            if not isinstance(response,(dns.resolver.NoAnswer,dns.resolver.NoNameservers)):
+            if isinstance(response, tuple):
                 rtype:str = response[0]
                 answer:dns.resolver.Answer = response[1] # 'canonical_name', 'chaining_result', 'expiration', 'nameserver', 
                                                          # 'port', 'qname', 'rdclass', 'rdtype', 'response', 'rrset'

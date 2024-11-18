@@ -6,6 +6,8 @@ import aiohttp_jinja2
 from aiohttp_session import get_session, SESSION_KEY, STORAGE_KEY
 import orjson
 
+from setezor.app_routes.pages.project_dashboard import prepare_projects_info
+from setezor.app_routes.session import get_db_by_session
 from setezor.modules.project_manager.manager import ProjectManager
 from setezor.modules.application import PMRequest
 from setezor.tools.ip_tools import get_interfaces
@@ -34,8 +36,11 @@ async def projects_page(request: PMRequest) -> Response:
     if project_id == '*':
         hide_navbar = True
     projects = await project_manager.project_storage.get_projects()
-    projects = [{'project_id': i.configs.variables.project_id, 'project_name': i.configs.variables.project_name} for i in projects if i.configs.variables.project_name != '*']
+    all_project_info = await request.app.pm.get_projects_info()
+
+    projects = [i.to_dict() for i in all_project_info]
     projects_data = orjson.dumps(projects).decode()
-    context = {'projects': [i['project_name'] for i in projects], 'interfaces': [i.name for i in get_interfaces() if i.ip_address], 'hide_navbar': hide_navbar,
+    context = {'projects': projects, 'interfaces': [i.name for i in get_interfaces() if i.ip_address], 'hide_navbar': hide_navbar,
                'current_project': project_id, 'projects_data': projects_data}
-    return aiohttp_jinja2.render_template('projects.html', request=request, context=context)
+
+    return aiohttp_jinja2.render_template('projects/base_project.html', request=request, context=context)

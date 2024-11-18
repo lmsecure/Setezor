@@ -57,7 +57,9 @@ class MACQueries(BaseQueries):
             obj = self.object.create(session=session, **kwargs)
         if mac == '':
             mac = None
-        new_mac_obj = self.model(mac=mac, vendor=vendor, _obj=obj)
+        interface_name = kwargs.get("interface_name")
+        interface_speed = kwargs.get("interface_speed")
+        new_mac_obj = self.model(mac=mac, vendor=vendor, interface_name=interface_name, interface_speed=interface_speed, _obj=obj)
         session.add(new_mac_obj)
         session.flush()
         self.logger.debug('Created "%s" object with kwargs %s', self.model.__name__, {'mac': mac})
