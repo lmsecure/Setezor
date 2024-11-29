@@ -31,10 +31,10 @@ Network Map
                 <form class="d-flex" onsubmit="findNodesByIP(event)">
                     <div class="input-group" id="ipTarget">
                         <span class="input-group-text" id="basic-addon1">IP</span>
-                        <input type="text" class="form-control" id='inputIP' placeholder="IP address or netmask"
+                        <input type="text" class="form-control" id='inputIP' placeholder="Start typing IP or network"
                             aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
                     </div>
-                    <input type="submit" class="btn btn-success ms-1" value="Find">
+                    <input type="submit" class="btn btn-success ms-1" id="button_search_nodes" value="Find">
                 </form>
             </div>
             <div class="container-fluid">
@@ -50,10 +50,12 @@ Network Map
     </div>
 </div>
 <script>
-    var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('inputIP'))
+    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('inputIP'))
+    var status_search_nodes = false;
 
     function findNodesByIP(event) {
         event.preventDefault();
+        status_search_nodes = true;
         let payload = new FormData(event.target);
         let ip_addr = payload.get("targetIP");
         ip_addr = ip_addr.replaceAll("_", "")
@@ -61,12 +63,27 @@ Network Map
             ip_addr = ip_addr.replace("..", ".")
         }
         let result = ""
-        for (let [key, value] of IPMap) {
+        for (let obj of Object.values(network.body.nodes)) {
+            let key = obj.id;
+            let value = obj.options.label;
             if (value.startsWith(ip_addr)) {
-                result += `
-                    <div class="col md-1">
-                        <button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${key}')">${value}</button>
-                    </div>`
+                if (network.clustering.findNode(ip_addr))
+                {
+                    if (value.indexOf('/') != -1)
+                    {
+                        result += `
+                        <div class="col md-1">
+                            <button class="btn btn-sm btn-primary d-flex" onclick="findSingleNodeByIP('${key}')">${value}</button>
+                        </div>`
+                    }
+                    else
+                    {
+                        result += `
+                            <div class="col md-1">
+                                <button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${key}')">${value}</button>
+                            </div>`
+                    }
+                }
             }
         }
         let el = document.getElementById('search_ip_addresses')
@@ -81,7 +98,7 @@ Network Map
         el.innerHTML = result
     }
     function findSingleNodeByIP(addr) {
-        network.focus(addr, { scale: 5, locked: false, animation: { duration: 500 } })
+        network.focus(network.clustering.findNode(addr)[0], { scale: 2, locked: false, animation: { duration: 500 } })
     }
 </script>
 {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}

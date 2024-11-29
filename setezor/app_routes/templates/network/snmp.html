@@ -107,32 +107,35 @@
     }
 
 
-    async function startScan161udpPort(event) {
-    event.preventDefault();
+    async function startScan161udpPort(event)
+    {
+        event.preventDefault();
 
-    const ipInputs = document.querySelectorAll('[id^="inputIP_SNMPbrute"]');
-    const portInputs = document.querySelectorAll('[id^="inputPort_SNMPbrute"]');
+        const ipInputs = document.querySelectorAll('[id^="inputIP_SNMPbrute"]');
+        const portInputs = document.querySelectorAll('[id^="inputPort_SNMPbrute"]');
 
-    const ips = Array.from(ipInputs).map(input => input.value).filter(ip => ip.trim() !== '');
-    const ports = Array.from(portInputs).map(input => input.value).filter(port => port.trim() !== '') || ["161"];
-    
-    const pairs = ips.map((ip, index) => {
-        return {
-            ip: ip.trim(),
-            port: ports[index] ? ports[index].trim() : "161"
-        };
-    });
-
-    for (const {ip, port} of pairs) {
-        const params = {
-            "nmapCommand": `-sV -sU -p ${port} ${ip}`,
-            "iface": getIface(),
-            "agent_id": getAgent()
-        };
+        const ips = Array.from(ipInputs).map(input => input.value).filter(ip => ip.trim() !== '');
+        const ports = Array.from(portInputs).map(input => input.value).filter(port => port.trim() !== '') || ["161"];
         
-        await fetch('/api/task/nmap_scan', {method: 'POST', body: JSON.stringify(params)});
+        const pairs = ips.map((ip, index) => {
+            return {
+                ip: ip.trim(),
+                port: ports[index] ? ports[index].trim() : "161"
+            };
+        });
+
+        for (const {ip, port} of pairs)
+        {
+            const params = {
+                "targetIP" : ip,
+                "targetPorts" : "-p " + port,
+                "scanTechniques" : "-sU",
+                "iface" : getIface(),
+                "agent_id" : getAgent() };
+            
+            fetch('/api/task/nmap_scan', { method: 'POST', body: JSON.stringify(params)});
+        }
     }
-}
 
     async function startCrawlerSNMP(ip_target, port_target, version, community_string)
     {
@@ -262,12 +265,6 @@
 </script>
 
 <script>
-    const requiredSnmp = document.getElementById('SnmpForm');
-        if (!form.checkValidity()) { 
-            form.reportValidity();
-            return;
-        }
-
     let ip_lst_snmp = [];
 
     async function get_ip_list()

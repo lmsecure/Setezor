@@ -1,0 +1,61 @@
+{% macro main_scapy(is_scapy_running) %}
+
+        <div class="btn-group d-flex" role="group">
+            <button type="button" id="start_scapy" class="btn btn-primary w-50" {% if is_scapy_running> 0 %}
+                disabled{% endif %} onclick="fetch('/api/task/scapy_scan', {
+                method:'POST', body: JSON.stringify({iface: getIface(), 'agent_id': getAgent()})
+                });
+                document.getElementById('start_scapy').disabled = true;
+                document.getElementById('stop_scapy').disabled = false;">
+                Start</button>
+            <button type="button" id="stop_scapy" class="btn btn-primary w-50" {% if is_scapy_running==0 %} disabled{%
+                endif %} onclick="fetch('/api/task/scapy_scan_stop', {
+                            method: 'POST'
+                        }); 
+                        document.getElementById('start_scapy').disabled = false; 
+                        document.getElementById('stop_scapy').disabled = true;">
+                Stop</button>
+        </div>
+
+{% endmacro %}
+{% macro parse_scapy() %}
+
+        <button class="btn btn-primary w-100" id="nmap-dropdownMenuButton2" onclick="
+                var input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.accept = '.pcap'
+                input.onchange = e => { 
+                    for (var file of e.target.files)
+                    {
+                        var reader = new FileReader();
+                        reader.onload = (function (file) {
+                            return async function (e) {
+                                iface = interfaceData.interfaces.find((iface) => iface.id == interfaceData.default_interface)
+                                mac = iface.mac_addr
+                                ip = iface.ip_addr
+                                data = {log_file: e.target.result, filename: file.name, mac: mac, ip: ip, agent_id: agentData.default_agent}
+                                resp = await fetch('/api/task/scapy_log', {method: 'POST', body: JSON.stringify(data)});
+                            }
+                        })(file)
+                        reader.readAsDataURL(file);            
+                    }
+                }
+                input.click(); ">
+            Parse pcap logs
+        </button>
+
+{% endmacro %}
+
+
+{% macro show(is_scapy_running) %}
+<div class="d-flex flex-column">
+    <div class="py-2 bg-highlight">
+        <h3>Scapy sniffing</h3>
+        {{main_scapy(is_scapy_running) }}
+    </div>
+    <div class="py-2 bg-highlight">
+        {{parse_scapy() }}
+    </div>
+</div>
+{% endmacro %}

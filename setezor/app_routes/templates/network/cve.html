@@ -1,15 +1,11 @@
 {% macro show() %}
 
-<div class="tab-pane fade" id="v-pills-cve" role="tabpanel" aria-labelledby="v-pills-cve-setting-tab">
-    <div class="flex-column">
-        <div class="py-2 bg-highlight">
-            <button class="btn btn-primary" id="cve_crawler_button" onclick=" return async function () {await fetch('/api/task/cve_task', {method: 'POST'})} ()" style="min-width: 310px;">
-                SEARCH ALL CVE
-            </button>
-        </div>
+<div class="flex-column">
+    <div class="py-2 bg-highlight">
+        <button class="btn btn-primary" id="cve_crawler_button" onclick=" return async function () {await fetch('/api/task/cve_task', {method: 'POST'})} ()" style="min-width: 310px;">
+            SEARCH ALL CVE
+        </button>
     </div>
 </div>
-
-
 
 {% endmacro %}

@@ -1,0 +1,73 @@
+{% macro show() %}
+
+<div class="d-flex flex-column">
+    <div class="tab-content" id="dsa">
+        <form id="WhoisForm" class="needs-validation" novalidate>
+            <div id="WhoisInputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="TargetForWhois">
+                <span class="input-group-text" id="basic-addon1">TARGET</span>
+                <datalist id="DomainsAndIp"></datalist>
+                <input type="text" list="DomainsAndIp" class="form-control" id='inputTARGET'
+                    placeholder="Domain name or IP" aria-label="Target"
+                    aria-describedby="basic-addon1" required name="Target">
+
+                    <button id="add_new_whois_form" onclick="(function() {
+                        const original = document.getElementById('TargetForWhois');
+                        const clone = original.cloneNode(true);
+                        const newInput = clone.querySelector('input');
+                        newInput.id = 'inputTarget_' + Date.now(); // Уникальный ID
+                        newInput.value = '';
+                        // newInput.name = 'targetDOMAIN' + Date.now(); // Уникальный Name
+                        
+                        const existingMinusButton = clone.querySelector('.btn-danger');
+                        if (existingMinusButton) {
+                            existingMinusButton.remove();
+                        }
+
+                        const removeButton = document.createElement('button');
+                        removeButton.textContent = '-';
+                        removeButton.type = 'button';
+                        removeButton.className = 'btn btn-danger';
+                        removeButton.style.width = '3rem';
+                        removeButton.onclick = () => {
+                            clone.remove();
+                        };
+
+                        clone.appendChild(removeButton);
+
+                        const addButton = clone.querySelector('#add_new_whois_form');
+                        if (addButton) {
+                            addButton.remove();
+                        }
+
+                        document.getElementById('WhoisInputContainer').appendChild(clone);
+                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+            </div>
+
+            <div class="btn-group d-flex my-2" role="group">
+                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                <button type="button" class="btn btn-primary w-50" id="startScanWhoisBtn"
+                    onclick="
+                    const requiredWhois = document.getElementById('WhoisForm');
+                    if (!form.checkValidity()) { 
+                        form.reportValidity();
+                        return;
+                    }
+                        const params = {};
+                        const domains_and_ips = [];
+                        for (const d of document.getElementById('WhoisForm').getElementsByClassName('form-control')) {
+                            domains_and_ips.push(d.value);
+                        }
+                        for (const domain_and_ip of domains_and_ips) {
+                            let domainAndIpParams = {
+                                Target: domain_and_ip
+                            }
+                            fetch('/api/task/whois', {
+                            method: 'POST', body: JSON.stringify(domainAndIpParams)
+                        })};">Start</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endmacro %}

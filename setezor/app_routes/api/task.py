@@ -2,6 +2,7 @@ import json
 from base64 import b64decode
 import magic
 import copy
+import ipaddress
 from aiohttp.web import Response, json_response
 from setezor.app_routes.session import (
     project_require,
@@ -584,4 +585,87 @@ class TaskView(BaseView):
         await scheduler.spawn_job(SnmpCrawlerTask(observer=project.observer,scheduler=scheduler, 
                                             name=f'Task {task_id}',task_id=task_id, 
                                             db=db, agent_id=agent_id, ip=ip, port=port, snmp_version=snmp_version, community_string=community_string))
+        return Response(status=201)
+    
+
+    @BaseView.route('POST', '/network_division')
+    @project_require
+    async def network_division(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        params: dict = await request.json()
+
+        network = params.get("network")
+        new_masks = params.get("buttonValues")
+
+        network = ipaddress.ip_network(network)
+        new_networks = []
+        curent_address = network.network_address
+        for mask in new_masks:
+            new_subnet = ipaddress.ip_network(f"{curent_address}/{mask}")
+            new_networks.append(new_subnet)
+            if str(new_subnet.broadcast_address) != "255.255.255.255":
+                curent_address = new_subnet.broadcast_address + 1
+
+        session = db.db.create_session()
+        ip_net_list = session.query(db.ip.model, db.network.model).join(db.network.model, db.ip.model.network_id == db.network.model.id).all()
+        session.close()
+
+        for ip_obj, network_obj in ip_net_list:
+            curent_ip = ipaddress.ip_interface(f"{ip_obj.ip}/{network_obj.mask}")
+            if curent_ip in network:
+                for new_network in new_networks:
+                    if curent_ip in new_network:
+                        new_network_obj = db.network.get_or_create(ip=ip_obj.ip, mask=new_network.prefixlen, type_id=network_obj.type_id)
+                        db.ip.update_by_id(id = ip_obj.id, to_update={"network_id" : new_network_obj.id})
+
+        return Response(status=201)
+    
+
+    @BaseView.route('GET', '/get_merged_networks')
+    @project_require
+    async def get_merged_networks(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        params: dict = request.rel_url.query
+
+        ip_target = params.get("ip_target")
+        new_mask = params.get("new_mask")
+
+        new_subnetwork = ipaddress.ip_network(f"{ip_target}/{new_mask}", strict=False)
+
+        session = db.db.create_session()
+        ip_net_list = session.query(db.ip.model, db.network.model).join(db.network.model, db.ip.model.network_id == db.network.model.id).all()
+        session.close()
+
+        result = set()
+        for ip_obj, network_obj in ip_net_list:
+            if ipaddress.ip_interface(f"{ip_obj.ip}/{network_obj.mask}") in new_subnetwork:
+                result.add(network_obj.network)
+        
+        return json_response(list(result))
+
+    
+    @BaseView.route('POST', '/network_merge')
+    @project_require
+    async def network_merge(self, request: PMRequest):
+        project = await get_project(request=request)
+        db = project.db
+        params: dict = await request.json()
+
+        ip_target = params.get("ip_target")
+        network = params.get("network")
+        new_mask = params.get("new_mask")
+
+        new_subnetwork = ipaddress.ip_network(f"{ip_target}/{new_mask}", strict=False)
+
+        session = db.db.create_session()
+        ip_net_list = session.query(db.ip.model, db.network.model).join(db.network.model, db.ip.model.network_id == db.network.model.id).all()
+        session.close()
+
+        for ip_obj, network_obj in ip_net_list:
+            if ipaddress.ip_interface(f"{ip_obj.ip}/{network_obj.mask}") in new_subnetwork:
+                new_network_obj = db.network.get_or_create(ip=ip_obj.ip, mask=new_mask, type_id=network_obj.type_id)
+                db.ip.update_by_id(id = ip_obj.id, to_update={"network_id" : new_network_obj.id})
+
         return Response(status=201)

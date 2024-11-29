@@ -45,16 +45,10 @@ class IPQueries(BaseQueries):
             mac_obj = self.mac.create(session=session, mac=None, **kwargs)
         else:
             mac_obj = self.mac.get_or_create(session=session, mac=mac, **kwargs)
-
-        mask = kwargs.get("mask", 24)
-        network = kwargs.get("network")
-        network = ipaddress.ip_network(f"{ip}/{mask}", strict=False)
-        start_ip = network.network_address
-        broadcast = network.broadcast_address
-
-        network_obj = self.network.get_or_create(session=session, mask=mask, network=str(network), start_ip=str(start_ip), broadcast=str(broadcast), type_id=kwargs.get("type_id", 2))
-
         # mac_obj = self.mac.get_or_create(session=session, mac=mac if mac else '', **kwargs)
+
+        network_obj = self.network.get_or_create(session=session, ip=ip, mask=kwargs.get("mask", 24), type_id = kwargs.get("type_id", 2))
+
         new_ip_obj = self.model(ip=ip, _mac=mac_obj, domain_name=domain_name, network_id=network_obj.id) #domain_name=domain_name 
         session.add(new_ip_obj)
         session.flush()
@@ -81,6 +75,13 @@ class IPQueries(BaseQueries):
             return ip_obj.to_vis_node()
         else:
             return ip_obj
+        
+    @BaseQueries.session_provide
+    def update_by_id(self, session: Session, *, id: int, to_update: dict, merge_mode='merge'):
+        obj_ip = session.query(self.model).filter(self.model.id == id)
+        obj_ip.update(to_update)
+        session.flush()
+
         
     @BaseQueries.session_provide
     def get_by_ip(self, session: Session, ip: str):

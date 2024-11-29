@@ -1,0 +1,91 @@
+{%macro show()%}
+
+<div class="modal fade" id="divisionNetmaskModal" tabindex="-1" aria-labelledby="divisionNetmaskModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="divisionNetmaskModalLabel">Division Netmask</h5>
+                {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal"
+                    aria-label="Close"></button> #}
+            </div>
+            <form id='divisionNetmaskModalForm'>
+                <div class="modal-body">
+                    <div class="input-group" style="padding-bottom: 0.5rem;" id="divisionIpInput">
+                        <input type="text" class="form-control" id='divisionNetmaskIp' placeholder="Netmask IP"
+                            aria-label="NetmaskIp" aria-describedby="basic-addon1" name="NetmaskIp" disabled>
+
+                    </div>
+                    <div class="row">
+                    </div>
+                    <div class="col-12">
+                        <div id="buttonContainer"></div>
+                    </div>
+                </div>
+
+        <div class="modal-footer">
+            <button id="node-cancelButton" type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal">Close</button>
+            <button id="changeMaskButton" type="button" class="btn btn-primary"
+                onclick="division_mask(network_mask_data, ip)">Division</button>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+<script>
+    function division_netmask_modal_window(network_mask_data, ip) {
+        let [ipAddress, networkMask] = network_mask_data.split('/');
+
+        var myModal = new bootstrap.Modal(document.getElementById('divisionNetmaskModal'));
+        if (ipAddress || networkMask) {
+            document.getElementById("divisionNetmaskIp").value = "Network - " + network_mask_data;
+            createButtons([Number(networkMask)]);
+
+        } else {
+            alert("Mask or Ip not found");
+        }
+        myModal.show();
+    }
+
+    let buttonValues = [];
+
+    function createButtons(values) {
+        const buttonContainer = document.getElementById('buttonContainer');
+        buttonContainer.innerHTML = "";
+        buttonValues = values;
+
+        values.forEach((value, index) => {
+            const button = document.createElement('button');
+            button.textContent = value;
+            button.className = 'btn btn-success';
+            button.style = 'margin-bottom: 0.2rem; margin-right: 0.2rem'
+            button.addEventListener('click', () => handleClickMask(index));
+            buttonContainer.appendChild(button);
+        });
+    }
+
+    function handleClickMask(index) {
+        if (buttonValues[index] < 32) {
+            buttonValues[index] += 1;
+            buttonValues.splice(index, 0, buttonValues[index]);
+        }
+        createButtons(buttonValues);
+    }
+
+    async function division_mask(network_mask_data, ip) {
+        var network = network_mask_data;
+        // var ip_target = ip; 
+        await fetch('/api/task/network_division', {
+            method: 'POST',
+            body: JSON.stringify({ network, buttonValues })
+        });
+        get_nodes_and_edges();
+        var myModal = bootstrap.Modal.getInstance(document.getElementById('divisionNetmaskModal'));
+        if (myModal) {
+            myModal.hide();
+        }
+    }
+</script>
+
+{% endmacro %}

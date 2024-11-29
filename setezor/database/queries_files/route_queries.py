@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, computed_field
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm import aliased
 from sqlalchemy import select, join, alias, and_, asc
-from ..models import Route, IP, RouteList, Agent, Network
+from ..models import Route, IP, MAC, Object, RouteList, Agent, Network
 from .base_queries import BaseQueries
 from ..queries_files.ip_queries import IPQueries
 
@@ -187,10 +187,10 @@ class RouteQueries(BaseQueries):
                     agents_ips[address]["agents"].add(agent_id)
                 if agent:
                     agents_ips[address]["agent"] = agent
-        ips: list[IP] = session.query(IP, Network).join(Network, IP.network_id == Network.id).all()
+        ips: list[IP] = session.query(IP, Object, Network).join(MAC, IP.mac == MAC.id).join(Object, Object.id == MAC.object).join(Network, IP.network_id == Network.id).all()
         nodes = []
-        for ip, network in ips:
-            node = ip.to_struct().model_dump()
+        for ip, obj, network in ips:
+            node = {"id" : ip.id, "mac_address" : {"object" : { "object_type" : obj.object_type}}, "address" : ip.ip}
             vis_node = VisNode.model_validate(node)
             vis_node.agents = list(agents_ips[ip.ip]["agents"])
             vis_node.agent = agents_ips[ip.ip]["agent"]

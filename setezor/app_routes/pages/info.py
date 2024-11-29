@@ -26,11 +26,12 @@ async def info_page(request: PMRequest) -> Response:
     project_id = project.configs.variables.project_id
     context = {'tabs': [{'name': i.model.get_name().lower(),
                          'base_url': f'/api/{i.model.__name__.lower()}',
+                         'is_hide': i in [db.ip, db.mac, db.port, db.task],
                          # ! Добавить db.network как будет готово
-                         'columns': i.model.get_headers_for_table()} for i in [db.ip, db.mac, db.port, db.task,
-                                                                                db.pivot, db.pivot_ip_mac_port,
+                         'columns': i.model.get_headers_for_table()} for i in [db.pivot, db.pivot_ip_mac_port,
                                                                                 db.pivot_domain_ip,
-                                                                                db.pivot_software_vulnerability_link]],
+                                                                                db.pivot_software_vulnerability_link,
+                                                                                db.ip, db.mac, db.port, db.task,]],
                'current_project': project_name, 'current_project_id': project_id,
                'interfaces': [i for i in get_interfaces() if i.ip_address]}
 

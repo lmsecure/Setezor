@@ -2,7 +2,7 @@ from pandas.core.api import DataFrame as DataFrame
 from sqlalchemy.orm.session import Session
 from sqlalchemy import Column, select, func
 
-from ..models import IP, MAC, Object, Port, Resource, Resource_Software, Software, Domain
+from ..models import IP, MAC, Object, Port, Resource, Resource_Software, Software, Domain, Network
 from .base_queries import QueryFilter
 from .base_queries import BaseQueries
 from sqlalchemy import desc
@@ -114,6 +114,9 @@ class PivotResourceSoftwareQueries(BaseQueries):
                 ports.append(port)
             if ports:
                 result['ports'] = ports
+            network_obj: Network = session.query(Network).where(Network.id == res.network_id).first()
+            network = network_obj.network
+            result.update({"network" : network})
         return result
 
     @BaseQueries.session_provide

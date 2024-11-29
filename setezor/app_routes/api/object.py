@@ -44,6 +44,7 @@ class ObjectView(BaseView):
         db = await get_db_by_session(request)
         data: NodeCreateJsonResponse = await request.json()
         ip = data.get('label')
+        mask = data.get('mask', 24)
         os = data.get('os')
         mac = data.get('mac')
         domain = data.get('domain')
@@ -56,7 +57,7 @@ class ObjectView(BaseView):
             mac_object = db.mac.get_by_mac(mac=mac)
             if mac_object:
                 return Response(status=404, reason='На данный момент нельзя добавлять mac к существующему ip')
-        ip_obj: IP = db.ip.create(ip=ip, mac=mac, domain_name=domain)
+        ip_obj: IP = db.ip.create(ip=ip, mac=mac, mask=mask, domain_name=domain)
         if vendor:
             db.mac.add_vendor(mac=ip_obj._mac, vendor=vendor)
             

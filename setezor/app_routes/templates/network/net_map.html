@@ -1,37 +1,41 @@
 {% macro net_map(device_types) %}
+{% import 'network/union_netmask.html' as union_netmask %}
+{{ union_netmask.show() }}
+{% import 'network/division_netmask.html' as division_netmask %}
+{{ division_netmask.show() }}
+<div class="d-flex flex-row">
+    <div class="btn-group" role="group" style="padding-left: 0.47rem;">
+        <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
+                if (cluster) {
+                    this.textContent = 'Decluster'
+                } else {
+                    this.textContent = 'Cluster'
+                }">Cluster</button>
+        <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
+            title="Fullscreen mode" onclick="fullscreen_network()"><i class="bi bi-arrows-fullscreen"></i></button>
+        <button class="btn btn-primary" data-bs-toggle="tooltip" data-bs-toggle="top" title="Import from JSON"
+            onclick="openFile()"><i class="bi bi-upload"></i></button>
+        <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
+            </ul>
+        </div>
+        <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top"
+            title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
 
-<div class="btn-group" role="group">
-    <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
-            if (cluster) {
-                this.textContent = 'Decluster'
-            } else {
-                this.textContent = 'Cluster'
-            }">Cluster</button>
-    <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
-        title="Fullscreen mode" onclick="fullscreen_network()"><i class="bi bi-arrows-fullscreen"></i></button>
-    <button class="btn btn-primary" data-bs-toggle="tooltip" data-bs-toggle="top" title="Import from JSON"
-        onclick="openFile()"><i class="bi bi-upload"></i></button>
-    <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
-    <div class="btn-group" role="group">
-        <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
-            aria-expanded="false">
-            <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-            <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
-            <li><a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a></li>
-            <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
-        </ul>
     </div>
-    <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top"
-        title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
-            <div class="ms-2 ms-md-4" id="agent_interface_bar">
-                <div id="agent_bar">
-                </div>
-            </div>
+    <div class="ms-2 ms-md-4" id="agent_interface_bar">
+        <div id="agent_bar">
+        </div>
+    </div>
 </div>
-
-
 
 <div id="edge-popUp" style="display: none;">
     <span id="edge-operation">Add Edge</span> <br>
@@ -532,6 +536,7 @@
         document.getElementById("node-vendor").value = ''
         document.getElementById("node-domain").value = ''
         document.getElementById("node-os").value = ''
+        document.getElementById("node-mask").value = ''
     }
 
     function cancelNodeEdit(callback) {
@@ -577,6 +582,13 @@
         else {
             data.domain = null
         }
+        mask = document.getElementById("node-mask").value;
+        if (mask) {
+            data.mask = mask
+        }
+        else {
+            data.mask = null
+        }
         data.value = 1
         data.shape = 'dot'
         data.group = create_group_for_node(data.label)
@@ -597,6 +609,7 @@
                     data.id = value.object_id
                     callback(data)
                     createNodeInformation(data.id)
+                    get_nodes_and_edges()
                 })
             }
         })
@@ -620,6 +633,7 @@
     //     createEdgeInDatabase(data, callback)
     // }
     function createCreateNodeModal(editing) {
+        let text, action_button;
         if (editing) {
             text = 'Editing node'
             action_button = 'Edit'
@@ -664,6 +678,11 @@
                                         <td>vendor</td>
                                         <td><input id="node-vendor" class="form-control" value=""></td>
                                     </tr>
+                                    ${!editing ? 
+                                        `<tr>
+                                            <td>mask</td>
+                                            <td><input id="node-mask" class="form-control" value=""></td>
+                                        </tr>` : ``}
                                 </tbody></table>
                             </div>
                         </form>
@@ -915,6 +934,18 @@
         if (params.nodes.length == 1) {
             if (network.isCluster(params.nodes[0]) == true) {
                 network.openCluster(params.nodes[0]);
+                let cluster_status = false;
+                for (const [key, node] of Object.entries(network.body.nodes))
+                {
+                    if (network.isCluster(key) == true)
+                    {
+                        cluster_status = true;
+                    }
+                }
+                cluster = cluster_status;
+                if (!cluster_status) { document.getElementById("cluster_nodes").textContent = 'Cluster'; }
+                    
+                if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
             }
             else {
                 network.moveTo({ position: network.getPosition(params.nodes[0]), scale: 2 })
@@ -943,12 +974,10 @@
     function cluster_by_netmask() {
         if (cluster != true) {
             var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
-            var cluster_options_by_data;
-            for (var i = 0; i < unique_groups.length; i++) {
-                var gg = unique_groups[i];
-                cluster_options_by_data = {
+            for (const group of unique_groups) {
+                let cluster_options_by_data = {
                     joinCondition: function (childOptions) {
-                        return childOptions.group == gg;
+                        return childOptions.group == group;
                     },
                     processProperties: function (
                         clusterOptions,
@@ -963,14 +992,14 @@
                         return clusterOptions;
                     },
                     clusterNodeProperties: {
-                        id: gg,
+                        id: group,
                         borderWidth: 3,
                         shape: "dot",
-                        label: gg,
+                        label: group,
                     }
                     
                 }
-                network.clustering.cluster(cluster_options_by_data)
+                network.clustering.cluster(cluster_options_by_data);
             }
             cluster = true
         } else {
@@ -981,6 +1010,7 @@
             }
             cluster = false
         }
+        if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
     };
     network.on('oncontext', function (params) {
         let node = network.getNodeAt(params.pointer.DOM)
@@ -1143,6 +1173,8 @@
     async function createNodeInformation(node_id) {
         if (Number.isInteger(node_id)) {
             params = { ip_id: JSON.stringify(node_id) }
+            let node = networkData.nodes.get(network.getSelectedNodes()[0]);
+            ip = node.label
             url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
             resp = await fetch(url_address, { method: 'GET' })
             json = await resp.json()
@@ -1155,6 +1187,7 @@
                         <tr>
                             <td> ip </td>
                             <td> ${json.ip} </td>
+                            <td>  </td>
                         </tr>`
             }
             if (json.domain != undefined) {
@@ -1162,6 +1195,7 @@
                         <tr>
                             <td> domain </td>
                             <td> ${json.domain} </td>
+                            <td>  </td>
                         </tr>`
             }
             if (json.mac != undefined) {
@@ -1169,6 +1203,7 @@
                         <tr>
                             <td> mac </td>
                             <td> ${json.mac} </td>
+                            <td>  </td>
                         </tr>`
             }
             if (json.os != undefined) {
@@ -1176,6 +1211,7 @@
                         <tr>
                             <td> os </td>
                             <td> ${json.os} </td>
+                            <td>  </td>
                         </tr>`
             }
             if (json.vendor != undefined) {
@@ -1183,6 +1219,17 @@
                         <tr>
                             <td> vendor </td>
                             <td> ${json.vendor} </td>
+                            <td>  </td>
+                        </tr>`
+            }
+            if (json.network != undefined) {
+                network_mask_data = json.network
+                table += `
+                        <tr>
+                            <td> network mask </td>
+                            <td> ${json.network} </td>
+                            <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">Union</button>
+                            <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">Division</button></td>
                         </tr>`
             }
             table += '</table>\n'
