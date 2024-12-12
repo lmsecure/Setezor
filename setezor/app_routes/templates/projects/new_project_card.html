@@ -1,0 +1,154 @@
+{% macro show() %}
+{% import 'projects/donut_card.html' as charts %}
+<script src="/static/js/plotly-2.29.1.min.js.js"></script>
+<script>
+
+    function createDashboardChar(elementId, values, labels, text_inside = '') {
+        let data;
+
+        if (values.length === 0 || labels.length === 0) {
+            data = [{
+                values: [1],
+                labels: ['No Data'],
+                type: 'pie',
+                textinfo: "label",
+                textposition: "inside",
+                hole: 0.4,
+                marker: { colors: ['#ddd'] }
+            }];
+        } else {
+            data = [{
+                values: values,
+                labels: labels,
+                type: 'pie',
+                textinfo: "label",
+                textposition: "inside",
+                hole: 0.4,
+            }];
+        }
+
+        layout = {
+            margin: { "t": 5, "b": 5, "l": 5, "r": 5 },
+            showlegend: false,
+
+            annotations: [{ text: text_inside, showarrow: false }]
+        };
+
+        const sizeInRem = 12;
+        layout.height = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+        layout.width = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+        Plotly.newPlot(elementId, data, layout, { displayModeBar: false });
+
+        return chart;
+    }
+</script>
+<div class="card mb-3 h-100">
+    <h6 class="card-header"
+        style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+        <label class="form-check-label me-2" style="flex-grow: 1;">
+
+        </label>
+        <div class="dropdown">
+            <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
+                aria-expanded="false">
+            </i>
+        </div>
+    </h6>
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <div class="text-center">
+            Top ports
+
+            {{ charts.create_donut('Top ports', 'top_ports_' ~ project_id,
+            0 | map(attribute='count') | list | tojson,
+            0 | map(attribute='value') | list | tojson,
+            project_id=None) }}
+
+        </div>
+    </div>
+    <div class="card-body d-flex flex-column" style="padding-top: 0px;">
+        <div class="mt-auto" style="padding-top: 0px;">
+
+            <h4 class="card-title">New Project</h4>
+
+            <!-- Форма для создания проекта -->
+
+            <div class="pb-2">
+                <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
+                    placeholder="Project name" required onkeydown="preventEnter(event)">
+                <div class="invalid-feedback">Please, type project name</div>
+            </div>
+
+            <button class="btn btn-success w-100 mb-2" id="createProjectButton" onclick="createProject()">
+                Create
+            </button>
+
+            <button class="btn btn-success w-100" id="importProjectButton" onclick="importProject()">
+                Import Project
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function preventEnter(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            document.getElementById("createProjectButton").click();
+        }
+    }
+
+    function createProject() {
+        if (document.getElementById('new_project_name').value.trim() === "") {
+            document.getElementById('new_project_name').classList.add('was-validated');
+            return false;
+        }
+
+        fetch('/api/project/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                project_name: document.getElementById('new_project_name').value
+            })
+        })
+            .then(response => {
+                if (response.ok && response.redirected) {
+                    window.location.href = response.url
+                }
+                throw new Error("Network response was not ok");
+            })
+
+            .catch(function (err) {
+                console.log(err);
+            });
+    }
+
+    function importProject(){
+        
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = false;
+        input.accept = '.zip'
+        input.onchange = e => { 
+            for (var file of e.target.files)
+            {
+                var reader = new FileReader();
+                reader.onload = (function (file) {
+                    return async function (e) {
+                        resp = await fetch('/api/project/import_project', {method: 'POST', body: e.target.result});
+                        if (resp.status == 200) {
+                            location.reload();
+                        }
+                    }
+                })(file)
+                reader.readAsDataURL(file);
+            }
+        }
+        input.click();
+    }
+    
+</script>
+
+{% endmacro %}
