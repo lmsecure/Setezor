@@ -112,7 +112,7 @@ class ProjectManager:
         )
         return stat
 
-    async def get_projects_info(self, top_limit: int | None = 7):
+    async def get_projects_info(self, top_limit: int | None = None):
         
         projects = (i for i in await self.project_storage.get_projects() if i.configs.variables.project_id != '*')
         stats: list[ProjectInfo] = []

@@ -1,0 +1,1426 @@
+{% macro net_map(device_types) %}
+{% import 'network/union_netmask.html' as union_netmask %}
+{{ union_netmask.show() }}
+{% import 'network/division_netmask.html' as division_netmask %}
+{{ division_netmask.show() }}
+<div class="d-flex flex-row">
+    <div class="btn-group" role="group" style="padding-left: 0.47rem;">
+        <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
+                if (cluster) {
+                    this.textContent = 'Decluster'
+                } else {
+                    this.textContent = 'Cluster'
+                }">Cluster</button>
+        <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
+            title="Fullscreen mode" onclick="fullscreen_network()"><i class="bi bi-arrows-fullscreen"></i></button>
+        <button class="btn btn-primary" data-bs-toggle="tooltip" data-bs-toggle="top" title="Import from JSON"
+            onclick="openFile()"><i class="bi bi-upload"></i></button>
+        <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
+            </ul>
+        </div>
+        <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top"
+            title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
+
+    </div>
+    <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
+        <div data-agent-bar="agent_net_map"></div>
+    </div>
+</div>
+<script>
+    async function getScans(){
+        let resp = await fetch("/api/v1/scan")
+        let scans = await resp.json()
+        return scans
+    }
+    getScans()
+    async function showMapForScans(event){
+        event.preventDefault()
+        let formData = new FormData(event.target)
+        let arr = new Array()
+        for (const [k,scan_id] of formData){
+            arr.push(scan_id)
+        }
+        await get_nodes_and_edges(arr)
+    }
+</script>
+
+<div id="edge-popUp" style="display: none;">
+    <span id="edge-operation">Add Edge</span> <br>
+    <table style="margin: auto">
+        <tbody>
+            <tr>
+                <td>label</td>
+                <td><input id="edge-label" value="new value"></td>
+            </tr>
+        </tbody>
+    </table>
+    <input type="button" value="save" id="edge-saveButton">
+    <input type="button" value="cancel" id="edge-cancelButton">
+</div>
+
+
+<div id="netwrok_container" class="p-2 bd-highlight h-100">
+    <div id="network_topology">
+        <div class="vis-network"
+            style="position: relative; overflow: hidden; touch-action: pan-y; user-select: none; width: 100%; height: 100%;"
+            tabindex="0">
+            <canvas
+                style="position: relative; touch-action: none; user-select: none; width: 100%; height: 100%;"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
+    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
+                aria-expanded="false">Device
+                type</a>
+            <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
+                {% for device_type in device_types %}
+                <li><a class="dropdown-item" href="#" onclick="set_device_type(this)"
+                        value="{{device_type.value}}">{{device_type.label}}</a></li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Tools</a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();
+                        document.getElementById('acunetix_scan_target_id').value='';
+                        document.getElementById('acunetix_scan_group_id').value='';
+                        document.getElementById('scan_interval').required = false;
+                        document.getElementById('acunetix_scan_ports').style.display='';
+                        fillAcunetixScanSpeeds();
+                        fillAcunetixScanProfiles();
+                        fillAcunetixInstances('acunetix_scan_instances');
+                        document.getElementById('acunetix_scan_target_db_id').value=network.getSelectedNodes()[0];
+                        document.getElementById('acunetix_scan_interval_div').style.display='';">Acunetix
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <li class="dropdown dropend">
+            <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Node managment</a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.editNode()"> Edit Node
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" data-bs-toggle="modal" title="create agent" id="agentModalNetMapButton"    
+                            data-bs-target="#agentModalNetMap" data-testid="create_agent_net_map">Set Agent</a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.deleteSelected()">Delete Node</a>
+                    </li>
+                </ul>
+        </li>
+    </ul>
+</div>
+<div class="dropdown xs" id="agentDropdownMenu" style="display:none">
+    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
+                aria-expanded="false">Device
+                type</a>
+            <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
+                {% for device_type in device_types %}
+                <li><a class="dropdown-item" href="#" onclick="set_device_type(this)"
+                        value="{{device_type.value}}">{{device_type.label}}</a></li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li class="dropdown dropend">
+            <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Tools</a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();
+                        document.getElementById('acunetix_scan_target_id').value='';
+                        document.getElementById('acunetix_scan_group_id').value='';
+                        document.getElementById('scan_interval').required = false;
+                        document.getElementById('acunetix_scan_ports').style.display='';
+                        fillAcunetixScanSpeeds();
+                        fillAcunetixScanProfiles();
+                        fillAcunetixInstances('acunetix_scan_instances');
+                        document.getElementById('acunetix_scan_target_db_id').value=network.getSelectedNodes()[0];
+                        document.getElementById('acunetix_scan_interval_div').style.display='';">Acunetix
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <!-- network.body.nodes[1] -->
+        <li class="dropdown dropend">
+            <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
+                aria-expanded="false">Node managment</a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.editNode()"> Edit Node
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="network.manipulation.deleteSelected()">Delete Node</a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" data-bs-toggle="modal" id="demoteAgentButton"    
+                            data-bs-target="#demoteAgent" onclick="demoteAgent()">Demote Agent</a>
+                    </li>
+                </ul>
+        </li>
+    </ul>
+</div>
+
+<div id="ModalCreateNode">
+</div>
+<div id="ModalDeleteAgent">
+</div>
+<div id="ModalDeleteLastAgent">
+</div>
+<div id="ModalDeleteNode">
+</div>
+
+<div class="modal fade" id="agentModalNetMap" tabindex="-1" aria-labelledby="agentModalNetMapLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentModalNetMapLabel">Create agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table style="margin: auto">
+                    <tbody>
+                        <tr>
+                            <td>Agent name</td>
+                            <td><input id="agent-name" class="form-control" value="" required></td>
+                        </tr>
+                        <tr>
+                            <td>Agent description</td>
+                            <td>
+                                <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Agent color</td>
+                            <td><input id="agent-color" type="color" class="form-control" value="#000000"></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="createAgent()">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="demoteAgent" tabindex="-1" aria-labelledby="demoteAgentLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="demoteAgentLabel">
+                    Are you sure you want to demote the agent to a node?</h5>
+                {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+            </div>
+            <form id='demoteAgentModal' onsubmit="confirmDemoteOfAgent(event)">
+                <div class="modal-body">
+                    
+                        <div id="node-popUp">
+                            <td>Confirm deleting agent by typing his IP</td>
+                            <input id="demote-agent-label" class="form-control" value="" name="ip" required>
+                        </div>
+
+                        <div class="mt-3" id="agent_interface_bar">
+                            <td> agent_id of all edges will be transferred to the selected agent</td>
+                            <div id="agent_bar3"></div>
+                        </div>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button id="node-demoteButton" type="submit" class="btn btn-primary">Demote Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+
+    // disable default context menu
+    document.onkeydown = keyboardDown;
+    document.onkeyup = keyboardUp;
+    document.oncontextmenu = function (e) {
+        var evt = new Object({ keyCode: 93 });
+        stopEvent(e);
+        keyboardUp(evt);
+    }
+    function stopEvent(event) {
+        if (event.preventDefault != undefined)
+            event.preventDefault();
+        if (event.stopPropagation != undefined)
+            event.stopPropagation();
+    };
+    function keyboardDown(e) {
+    };
+    function keyboardUp(e) {
+    };
+
+    update_agent_bar()
+    var cluster = false;
+    var network;
+    var networkData = { nodes: new vis.DataSet(), edges: new vis.DataSet() }
+    function set_device_type(elem) {
+        var value = elem.attributes.value.value
+        var node_id = network.getSelectedNodes()[0]
+        var request = ajax_and_toast('/api/object/', 'put', { ip_id: node_id, to_update: { object_type: value } }, 'Device type setted', 'info', `To node with id "${node_id}" set device type "${value}"`)
+        networkData.nodes.update(ajax_request(`/api/ip/vis/${node_id}`, 'get').node)
+    }
+    function fullscreen_network() {
+        var node_info_map_div = document.getElementById("node_info_map_div");
+        var network_map_div = document.getElementById("network_map_div")
+        if (node_info_map_div.style.display != "none") {
+            node_info_map_div.style.display = "none";
+            network_map_div.classList = "col"
+        } else {
+            node_info_map_div.style.display = "";
+            network_map_div.classList = "col-9"
+        }
+    }
+    let IPMap = new Map();
+    async function get_nodes_and_edges(scans=[], update = false) {
+        const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+        var nodes = ajax_request(`/api/v1/vis/nodes?${params}`, 'get', async = true);
+        var edges = ajax_request(`/api/v1/vis/edges?${params}`, 'get', async = true);
+        try {
+            await waitForAgentData()
+            nodes.forEach((node) => {
+                caclculateNodeColor(node)
+            })
+        }
+        catch {
+            console.log('Can not fill color')
+        }
+
+        nodes.forEach((node => {
+            IPMap.set(node.id,node.address)
+            if (node.agent) {
+                if (node.id == "Server"){
+                    node.shape="image"
+                    node.image=`/static/assets/command_center.svg`
+                    node.scaling = {
+                        min:100,
+                        max:100
+                    }
+                }
+                else {
+                    node.icon = new AgentIcon(color = caclculateColor(node))
+                    node.shape = 'icon'
+                }
+            } else if (node.object_type != null){
+                node.shape="image"
+                node.image=`/static/assets/${node.object_type}.svg`
+                node.size=50
+            }
+        }))
+        {% for col in table %} {% if col.editor_entity %}
+        foriegnData{ { col.field } } = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %} {% endfor %}
+        if (update == true) {
+            nodes.forEach(elem => {
+                networkData.nodes.update(elem)
+            }
+            )
+            edges.forEach(elem => {
+                networkData.edges.update(elem)
+            })
+        }
+        else {
+            networkData.nodes.clear()
+            networkData.edges.clear()
+            networkData.nodes.add(nodes)
+            networkData.edges.add(edges)
+        }
+    }
+    function get_last_node_id() {
+        if (networkData.nodes) {
+            return networkData.nodes.max('id').id
+        }
+        else {
+            return 0
+        }
+
+    }
+    function get_id_for_next_node() {
+        return get_last_node_id() + 1
+    }
+    function create_group_for_node(label) {
+        parts = label.split('.')
+        if (parts.lenght == 4) {
+            return parts.slice(0, -1).join('.')
+        }
+        else {
+            return ''
+        }
+    }
+    let deletionAgentData = undefined
+    let deletionAgentCallback = undefined
+    let modal = undefined
+    async function deleteNodeInDatabase(data, callback) {
+        node = networkData.nodes.get(data.nodes[0])
+        ip = node.label
+        let nodeIsAgent = false;
+
+        for (let i =0 ; i <agentData.agents.length; i++)
+            {
+                 if (node.address == agentData.agents[i].ip)
+                {   
+                    nodeIsAgent = true;
+                    break;
+                }
+             }
+        if (nodeIsAgent){  
+
+             deletionAgentData = data
+              deletionAgentCallback = callback
+
+            if (agentData.agents.length > 1){
+                modal = createDeleteAgentModal(true)
+                modal.show()
+            }else{
+                modal = createDeleteLastAgentModal(true)
+                modal.show()
+                callback()
+            }
+        }else{
+            modal = createDeleteNodeModal(true)
+            modal.show()
+        }
+
+    }
+    async function confirmDeletingOfAgent(event) {
+        event.preventDefault();
+        let data = new FormData(event.target);
+        let node_id = network.getSelectedNodes()[0];
+        let node = networkData.nodes.get(node_id);
+
+        if (data.get('ip') == node.address) {
+            const defaultAgentId = data.get('defaultAgent');
+            
+            const resp = await fetch('/api/object/delete_object', { 
+                method: 'DELETE', 
+                body: JSON.stringify({ ip: node.address, default_agent: defaultAgentId }), 
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            setDefaultAgent(defaultAgentId)
+            modal.hide();
+            update_agent_bar();
+            deletionAgentCallback(deletionAgentData);
+        }   
+    }
+    async function confirmDeletingOfNode(event) {
+        event.preventDefault();
+        resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: JSON.stringify({ ip })});
+        modal.hide();
+        get_nodes_and_edges()
+        callback(data)
+        }
+    
+    function demoteAgent() {
+        document.getElementById('node-cancelButton').onclick = function () {
+        };
+        let node = networkData.nodes.get(network.getSelectedNodes()[0])
+        let _agent = agentData.agents.filter(ag => ag.id == node.agent)[0];
+        let elem = document.getElementById('agent_bar3')
+        let result = `<select name="defaultAgent"  class='form-select'>`
+        for (const agent of agentData.agents){
+            if (agent.id != _agent.id){
+                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
+            }
+        }
+        result += '</select>'
+        elem.innerHTML = result
+    }
+    async function demoteAgentInDatabase(data, callback) {
+            node = networkData.nodes.get(data.nodes[0])
+            ip = node.label
+            let nodeIsAgent = false;
+
+            for (let i =0 ; i <agentData.agents.length; i++)
+                {
+                    if (node.label == agentData.agents[i].ip)
+                    {   
+                        nodeIsAgent = true;
+                        break;
+                    }
+                }
+            if (nodeIsAgent){  
+
+                deletionAgentData = data
+                deletionAgentCallback = callback
+
+                if (agentData.agents.length > 1){
+                    modal = createDemoteAgentModal(true)
+                    modal.show()
+                }else{
+                    modal = createDeleteLastAgentModal(true)
+                    modal.show()
+                    callback()
+                }
+        }}
+        async function confirmDemoteOfAgent(event) {
+            event.preventDefault();
+            let data = new FormData(event.target);
+            let node_id = network.getSelectedNodes()[0];
+            let node = networkData.nodes.get(node_id);
+
+            if (data.get('ip') == node.label) {
+                const defaultAgentId = data.get('defaultAgent');
+                
+                const resp = await fetch('/api/object/demote_object', { 
+                    method: 'DELETE', 
+                    body: JSON.stringify({ ip: node.label, default_agent: defaultAgentId }), 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                setDefaultAgent(defaultAgentId)
+                update_agent_bar();
+                document.getElementById('node-cancelButton').click()
+                get_nodes_and_edges()
+        }
+    }
+
+    async function deleteEdgeInDatabase(data, callback) {
+        edge = networkData.edges.get(data.edges[0])
+        first = networkData.nodes.get(edge.from).label
+        second = networkData.nodes.get(edge.to).label
+        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent}
+        resp = await fetch('/api/route/delete_edge', { method: 'DELETE', body: JSON.stringify(data) })
+    }
+    async function createEdgeInDatabase(data, callback) {
+        nodes = networkData.nodes
+        first = nodes.get(data.from).label
+        second = nodes.get(data.to).label
+        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent }
+        // send request for getting agent for node with ip=first.ip
+        resp = await fetch('/api/route/vis_add_edges', { method: 'POST', body: JSON.stringify(data) })
+    }
+    async function editNode(data, cancelAction, callback, create) {
+        params = { ip_id: JSON.stringify(data.id) }
+        url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
+        resp = await fetch(url_address, { method: 'GET' })
+        json = await resp.json()
+        if (json.ip) {
+            document.getElementById("node-label").value = json.ip
+        }
+        if (json.mac) {
+            document.getElementById("node-mac").value = json.mac
+        }
+        if (json.domain) {
+            document.getElementById("node-domain").value = json.domain
+        }
+        if (json.os) {
+            document.getElementById("node-os").value = json.os
+        }
+        if (json.vendor) {
+            document.getElementById("node-vendor").value = json.vendor
+        }
+        document.getElementById("node-saveButton").onclick = saveNodeData.bind(
+            this,
+            data,
+            callback,
+            create
+        );
+        document.getElementById("node-cancelButton").onclick =
+            cancelAction.bind(this, callback);
+    }
+
+    // Callback passed as parameter is ignored
+    function clearNodePopUp() {
+        document.getElementById("node-saveButton").onclick = null;
+        document.getElementById("node-cancelButton").onclick = null;
+        document.getElementById("node-popUp").style.display = "none";
+        document.getElementById("node-label").value = ''
+        document.getElementById("node-mac").value = ''
+        document.getElementById("node-vendor").value = ''
+        document.getElementById("node-domain").value = ''
+        document.getElementById("node-os").value = ''
+        document.getElementById("node-mask").value = ''
+    }
+
+    function cancelNodeEdit(callback) {
+        clearNodePopUp();
+        callback(null);
+    }
+    const nodes_data = {
+        size: 50,
+        scaling: {
+            min: 10,
+            max: 30,
+        },
+        font: {
+            size: 12,
+            face: "Tahoma",
+        },
+    }
+    function saveNodeData(data, callback, create) {
+        data.id = get_id_for_next_node();
+        data.label = document.getElementById("node-label").value
+        mac = document.getElementById("node-mac").value;
+        if (mac) {
+            data.mac = mac
+        }
+        os = document.getElementById("node-os").value;
+        if (os) {
+            data.os = os
+        }
+        else {
+            data.os = null
+        }
+        vendor = document.getElementById("node-vendor").value;
+        if (vendor) {
+            data.vendor = vendor
+        }
+        else {
+            data.vendor = null
+        }
+        domain = document.getElementById("node-domain").value;
+        if (domain) {
+            data.domain = domain
+        }
+        else {
+            data.domain = null
+        }
+        mask = document.getElementById("node-mask").value;
+        if (mask) {
+            data.mask = mask
+        }
+        else {
+            data.mask = null
+        }
+        data.value = 1
+        data.shape = 'dot'
+        data.group = create_group_for_node(data.label)
+        modal.hide()
+        clearNodePopUp();
+        if (create) {
+            prom = saveNodeInDatabase(data)
+        }
+        else {
+            prom = editNodeInDatabase(data)
+        }
+
+
+        prom.then((response) => {
+            if (response.status == 200) {
+                obj_id = null
+                response.json().then((value) => {
+                    data.id = value.object_id
+                    callback(data)
+                    createNodeInformation(data.id)
+                    get_nodes_and_edges()
+                })
+            }
+        })
+    }
+    async function saveNodeInDatabase(data) {
+        resp = await fetch('/api/object/create_object', { method: 'PUT', body: JSON.stringify(data) })
+        return resp
+    }
+
+    async function editNodeInDatabase(data) {
+        body = JSON.stringify(data)
+        resp = await fetch('/api/object/update_object', { method: 'PUT', body: body })
+        return resp
+    }
+
+    // function saveEdgeData(data, callback) {
+    //     Функция была промежуточной между addEdges и createEdgeInDatabase, зачем она хз
+    //     if (typeof data.to === "object") data.to = data.to.id;
+    //     if (typeof data.from === "object") data.from = data.from.id;
+    //     data.label = '';
+    //     createEdgeInDatabase(data, callback)
+    // }
+    function createCreateNodeModal(editing) {
+        let text, action_button;
+        if (editing) {
+            text = 'Editing node'
+            action_button = 'Edit'
+        }
+        else {
+            text = 'Add node info'
+            action_button = 'Create'
+        }
+
+        var modal_elem = document.getElementById('ModalCreateNode')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <div class="modal-body">
+                        <form id='createNodeModal'>
+                            <div id="node-popUp" style="">
+                                <table style="margin: auto">
+                                <tbody>
+                                    <tr>
+                                        <td>ip</td>
+                                        <td><input id="node-label" class="form-control" value="" required></td>
+                                        <td id="invalid-ip" class="invalid-feedback">Please, type correct ip</td>
+                                    </tr>
+                                    <tr>
+                                        <td>mac</td>
+                                        <td><input id="node-mac" class="form-control" value="" required></td>
+                                        <td id="invalid-mac" class="invalid-feedback">Please, type correct mac</td>
+                                    </tr>
+                                    <tr>
+                                        <td>domain</td>
+                                        <td><input id="node-domain" class="form-control" value=""></td>
+                                    </tr>
+                                    <tr>
+                                        <td>os</td>
+                                        <td><input id="node-os" class="form-control" value=""></td>
+                                    </tr>
+                                    <tr>
+                                        <td>vendor</td>
+                                        <td><input id="node-vendor" class="form-control" value=""></td>
+                                    </tr>
+                                    ${!editing ? 
+                                        `<tr>
+                                            <td>mask</td>
+                                            <td><input id="node-mask" class="form-control" value=""></td>
+                                        </tr>` : ``}
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button id="node-saveButton" type="button" class="btn btn-primary">${action_button}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        var maskMAC = new Inputmask("ip").mask(document.getElementById('node-label'))
+        var maskMAC = new Inputmask("mac").mask(document.getElementById('node-mac'))
+        return modal
+    };
+  function createDeleteAgentModal(editing) {
+        if (editing) {
+            text = 'Are you sure you want to remove the agent?'
+            action_button = 'Remove'
+        }
+        var modal_elem = document.getElementById('ModalDeleteAgent')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <form id='deleteAgentModal' onsubmit="confirmDeletingOfAgent(event)">
+                        <div class="modal-body">
+                            
+                                <div id="node-popUp" style="">
+                                    <td>Confirm deleting agent by typing his IP</td>
+                                    <input id="agent-label" class="form-control" value="" name="ip" required>
+                                </div>
+
+                                   <div class="mt-3" id="agent_interface_bar">
+                                    <td> agent_id of all edges will be transferred to the selected agent</td>
+                                    <select name="defaultAgent" id="agent_bar2" class='form-select'>
+                                    </select>
+                                </div>
+                            
+                        </div>
+                        <div class="modal-footer">
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `
+        
+        document.getElementById('node-cancelButton').onclick = function () {
+        modal_elem.innerHTML = '';
+        deletionAgentCallback()
+        };
+        let elem = document.getElementById('agent_bar2')
+        let result = ''
+        for (const agent of agentData.agents){
+            if (agent.id != node.id){
+                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
+            }
+        }
+        elem.innerHTML = result
+
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-label'))
+        return modal
+    };  
+    function createDeleteNodeModal(editing) {
+        if (editing) {
+            text = 'Are you sure you want to remove the node?'
+            action_button = 'Remove'
+        }
+        var modal_elem = document.getElementById('ModalDeleteNode')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <form id='deleteNodeModal' onsubmit="confirmDeletingOfNode(event)">
+                        <div class="modal-footer">
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `
+        
+        document.getElementById('node-cancelButton').onclick = function () {
+        modal_elem.innerHTML = '';
+        deletionAgentCallback()
+        };
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        return modal
+    };  
+    function createDeleteLastAgentModal(editing) {
+        if (editing) {
+            text = 'Error'
+        }
+        var modal_elem = document.getElementById('ModalDeleteLastAgent')
+        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
+                        {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
+                    </div>
+                    <div class="modal-body">
+                        <form id='deleteLastAgentModal'>
+                            <div id="node-popUp" style="">
+                                <table style="margin: auto">
+                                <tbody>
+                                    <tr>
+                                        <td >You cannot remove the last agent</td>
+
+                                    </tr>
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `
+        var modal = new bootstrap.Modal(modal_elem.children[0])
+        return modal
+    };
+
+    async function createAgent() {
+        name = document.getElementById('agent-name').value
+        desc = document.getElementById('agent-description').value
+        let node = networkData.nodes.get(network.getSelectedNodes()[0]);
+        // node_id = node.id
+        ip = node.label
+        color = document.getElementById('agent-color').value
+        agent = hexToRgb(color)
+        agent.name = name
+        agent.description = desc
+        agent.ip = ip
+        resp = await fetch('/api/agent/create', { method: 'post', body: JSON.stringify(agent) })
+        if (resp.ok) {
+            close_button = document.getElementById('close-create-agent')
+            close_button.click()
+            get_nodes_and_edges()
+            update_agent_bar()
+        }else {
+            console.log(`Error on create agent, response status ${resp.status}`)
+            close_button = document.getElementById('close-create-agent')
+            close_button.click()
+            text = await resp.text()
+            create_toast('Error on create agent', text, 'error')
+        }
+    }  
+    redrawAll("network_topology", true)
+    function redrawAll(elem_name, to_update_data) {
+        var network_topology = document.getElementById("network_topology")
+        var container = document.getElementById(elem_name);
+        container.style.cssText = `height: 80vh; width:100%;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`
+        var options = {
+            nodes: nodes_data,
+            edges: {
+                color: { inherit: true },
+                width: 0.15,
+                length: 500,  // длина грани
+                hoverWidth: 3, // ширина грани при наведении
+                smooth: {
+                    type: "continuous",
+                },
+            },
+            interaction: {
+                hideEdgesOnDrag: false,
+                tooltipDelay: 100,
+                hover: true,
+                navigationButtons: true,
+                keyboard: true
+            },
+            physics: {
+                enabled: true,
+                barnesHut: {
+                    gravitationalConstant: -50000,
+                    centralGravity: 0.1,
+                    springLength: 100,
+                    springConstant: 0.07,
+                    // damping: 0.1,
+                },
+                stabilization: {
+                    enabled: true,
+                    iterations: 50,
+                    updateInterval: 10,
+                },
+                timestep: 0.6,
+                adaptiveTimestep: false,
+                
+            },
+            /* !Редактирование карты, нужно изменить! */
+             manipulation: {
+              addNode: function (data, callback) {
+                // filling in the popup DOM elements
+                modal = createCreateNodeModal(false)
+                modal.show()
+                editNode(data, clearNodePopUp, callback, true);
+                modal.hide()
+              },
+              editNode: function (data, callback) {
+                // filling in the popup DOM elements
+                modal = createCreateNodeModal(true)
+                modal.show()
+                editNode(data, cancelNodeEdit, callback, false);
+                modal.hide()
+              },
+              addEdge: function (data, callback) {
+                  createEdgeInDatabase(data, callback)
+                  callback(data)
+              },
+              deleteNode: function (data, callback) {
+                deleteNodeInDatabase(data, callback)
+              },
+              deleteEdge: function (data, callback) {
+                  deleteEdgeInDatabase(data, callback)
+                  callback(data)
+              },
+              editEdge: {
+                editWithoutDrag: function (data, callback) {
+                  document.getElementById("edge-operation").innerText =
+                    "Edit Edge";
+                  saveEdgeData(data, callback);
+                }
+              }, 
+            },
+        };
+
+        if (to_update_data == true) {
+            get_nodes_and_edges()
+        }
+        network = new vis.Network(container, networkData, options);
+    };
+    network.on("doubleClick", function (params) {
+        if (params.nodes.length == 1) {
+            if (network.isCluster(params.nodes[0]) == true) {
+                network.openCluster(params.nodes[0]);
+                let cluster_status = false;
+                for (const [key, node] of Object.entries(network.body.nodes))
+                {
+                    if (network.isCluster(key) == true)
+                    {
+                        cluster_status = true;
+                    }
+                }
+                cluster = cluster_status;
+                if (!cluster_status) { document.getElementById("cluster_nodes").textContent = 'Cluster'; }
+                    
+                if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
+            }
+            else {
+                network.moveTo({ position: network.getPosition(params.nodes[0]), scale: 2 })
+            }
+        }
+    });
+    /*
+    network.on("click", function (params) {
+        if (params.nodes.length == 1) {
+            createNodeInformation(params.nodes[0])
+            node = networkData.nodes.get(params.nodes[0])
+            if (node.agent) {
+                agent = agentData.agents.find((a) => a.id == node.agent)
+                drowAgentNodes(agent)
+            }
+        }
+        else {
+            nodes = networkData.nodes
+            nodes.forEach((node) => {
+                color = caclculateColor(node)
+                colorizeNode(node, color)
+                networkData.nodes.update(node)
+            })
+        }
+    });*/   // убрал, чтобы не крашилось
+    function cluster_by_netmask() {
+        if (cluster != true) {
+            var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
+            for (const group of unique_groups) {
+                let cluster_options_by_data = {
+                    joinCondition: function (childOptions) {
+                        return childOptions.group == group;
+                    },
+                    processProperties: function (
+                        clusterOptions,
+                        childNodes,
+                        childEdges
+                    ) {
+                        var totalMass = 0;
+                        for (var i = 0; i < childNodes.length; i++) {
+                            totalMass += childNodes[i].mass || 1;
+                        }
+                        clusterOptions.mass = 1 + totalMass / 10;
+                        return clusterOptions;
+                    },
+                    clusterNodeProperties: {
+                        id: group,
+                        borderWidth: 3,
+                        shape: "dot",
+                        label: group,
+                    }
+                    
+                }
+                network.clustering.cluster(cluster_options_by_data);
+            }
+            cluster = true
+        } else {
+            for (const [key, node] of Object.entries(network.body.nodes)) {
+                if (network.isCluster(key) == true) {
+                    network.openCluster(key)
+                }
+            }
+            cluster = false
+        }
+        if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
+    };
+    network.on('oncontext', function (params) {
+        let node = network.getNodeAt(params.pointer.DOM)
+        if (node != undefined) {
+            network.selectNodes([node])
+            node_obj = network.body.nodes[node]
+            node_is_agent = node_obj.options.agent
+            if (node_is_agent == null)  { 
+            node_menu = document.getElementById('nodeDropdownMenu')
+            node_menu.style.position = 'absolute'
+            node_menu.style.top = `${params.event.clientY - 5}px`
+            node_menu.style.left = `${params.event.clientX - 5}px`
+            node_menu.style.zIndex = 1000
+            $('#nodeDropdownMenu').show()
+            }else{
+            agent_menu = document.getElementById('agentDropdownMenu')
+            agent_menu.style.position = 'absolute'
+            agent_menu.style.top = `${params.event.clientY - 5}px`
+            agent_menu.style.left = `${params.event.clientX - 5}px`
+            agent_menu.style.zIndex = 1000
+            $('#agentDropdownMenu').show()
+            }
+        };
+    });
+    network.on('click',function(params){
+        var dd_div = document.getElementById('nodeDropdownMenu')
+        var ddd_div = document.getElementById('agentDropdownMenu')
+        ddd_div.style.display = 'none'
+        dd_div.style.display = 'none'
+        let node = network.getNodeAt(params.pointer.DOM)
+        if (node == undefined){
+            return
+        }
+        let obj = networkData.nodes.get(node)
+        createNodeInformation(obj)
+    })
+    function create_node_table(ports_data) {
+        function generateTableHead(table, data) {
+            let thead = table.createTHead();
+            let row = thead.insertRow();
+            for (let key of data) {
+                let th = document.createElement("th");
+                let text = document.createTextNode(key);
+                th.appendChild(text);
+                row.appendChild(th);
+            };
+        };
+        function generateTable(table, data) {
+            tbody = table.createTBody();
+            for (let element of data) {
+                let row = tbody.insertRow();
+                for (key of element) {
+                    let cell = row.insertCell();
+                    let text = document.createTextNode(key);
+                    cell.appendChild(text);
+                };
+            };
+        };
+        let table = document.getElementById("node_info");
+        generateTableHead(table, ports_data.headers);
+        generateTable(table, ports_data.data);
+    }
+    function export_to_svg() {
+        var networkContainer = network.body.container;
+        var ctx = new C2S({ width: networkContainer.clientWidth, height: networkContainer.clientWidth, embedImages: true });
+        var canvasProto = network.canvas.__proto__;
+        var currentGetContext = canvasProto.getContext;
+        canvasProto.getContext = function () {
+            return ctx;
+        }
+        var svgOptions = {
+            nodes: {
+                shapeProperties: {
+                    interpolation: false //so images are not scaled svg will get full image
+                },
+                scaling: { label: { drawThreshold: 0 } },
+                font: { color: '#000000' }
+            },
+            edges: {
+                scaling: { label: { drawThreshold: 0 } }
+            }
+        };
+        network.setOptions(svgOptions);
+        network.redraw();
+        canvasProto.getContext = currentGetContext;
+        ctx.waitForComplete(function () {
+            var svg = ctx.getSerializedSvg();
+            showSvg(svg);
+        });
+    };
+    function showSvg(svg) {
+        var svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+        openBlob(svgBlob, "network.svg");
+    }
+    function openBlob(blob, fileName) {
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+
+            //blobToDataURL(blob, function(dataurl){window.open(dataurl);});
+            window.navigator.msSaveOrOpenBlob(blob, fileName);
+        }
+        else {
+            var a = document.getElementById("blobLink");
+            if (!a) {
+                a = document.createElement("a");
+                document.body.appendChild(a);
+                a.setAttribute("id", "blobLink");
+                a.style = "display: none";
+            }
+            var data = window.URL.createObjectURL(blob);
+            a.href = data;
+            a.download = fileName;
+            a.click();
+            setTimeout(function () {
+                window.URL.revokeObjectURL(data);
+            }
+                , 100);
+        }
+    }
+    function exportNetwork() {
+        var nodes = []
+        Object.values(network.body.nodes).forEach(element => nodes.push(element.options))
+        var edges = []
+        Object.values(network.body.edges).forEach(element => edges.push(element.options))
+        var exportValue = JSON.stringify({ data: { nodes: nodes, edges: edges } }, undefined, 4);
+        download(exportValue, 'network.json', 'text/plain')
+    }
+    function importNetwork(inputValue) {
+        var inputData = JSON.parse(inputValue);
+        networkData.nodes.clear()
+        networkData.edges.clear()
+        networkData.nodes.add(inputData.data.nodes)
+        networkData.edges.add(inputData.data.edges)
+    }
+    function download(content, fileName, contentType) {
+        var a = document.createElement("a");
+        if (contentType === 'image/png') {
+            a.href = content
+        } else {
+            var file = new Blob([content], { type: contentType });
+            a.href = URL.createObjectURL(file);
+        }
+        a.download = fileName;
+        a.click();
+    }
+    function openFile() {
+        document.getElementById('inp').click();
+    }
+    function readFile(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+
+        reader.onload = function (e) {
+            importNetwork(e.target.result)
+        }
+        reader.readAsText(file)
+    }
+    function exportToPNG() {
+        download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
+    }
+
+    async function createNodeInformation(node) {
+        if (node.agent == null) {
+            params = { ip_id: JSON.stringify(node.id) }
+            ip = node.label
+            // url_address = '/api/v1/vis/node_info?' + new URLSearchParams(params)
+            url_address = '/api/v1/vis/node_info/' + node.id
+            resp = await fetch(url_address, { method: 'GET' })
+            json = await resp.json()
+            source_table = document.getElementById('div_node_info')
+            html_text = `<div><h5>Node ${node.label}</h5></div>\n`
+            table = '<table class="table table-bordered table-hover" style="min-width: 325px; max-width: 325px;">'
+
+            if (json.ip) {
+                table += `
+                        <tr>
+                            <td> ip </td>
+                            <td>${json.ip}</td>
+                            <td></td>
+                        </tr>`
+            }
+            if (json.domain) {
+                table += `
+                        <tr>
+                            <td> domain </td>
+                            <td> ${json.domain} </td>
+                            <td>  </td>
+                        </tr>`
+            }
+            if (json.mac) {
+                table += `
+                        <tr>
+                            <td> mac </td>
+                            <td> ${json.mac} </td>
+                            <td>  </td>
+                        </tr>`
+            }
+            if (json.os) {
+                table += `
+                        <tr>
+                            <td> os </td>
+                            <td> ${json.os} </td>
+                            <td>  </td>
+                        </tr>`
+            }
+            if (json.vendor) {
+                table += `
+                        <tr>
+                            <td> vendor </td>
+                            <td> ${json.vendor} </td>
+                            <td>  </td>
+                        </tr>`
+            }
+            if (json.network) {
+                network_mask_data = json.network
+                table += `
+                        <tr>
+                            <td> network mask </td>
+                            <td> ${json.network} </td>
+                            <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">Union</button>
+                            <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">Division</button></td>
+                        </tr>`
+            }
+            table += '</table>\n'
+            html_text += table
+            if (json.ports) {
+                html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover align-middle"">\n'
+                html_ports += `
+                        <tr>
+                            <td> Number </td>
+                            <td> Protocol </td>
+                            <td> Soft </td>
+                            <td> Product </td>
+                            <td> Version </td>
+                        </tr>`
+
+                json.ports.forEach((port) => {
+                    html_ports += `
+                        <tr>
+                            <td> ${port.number} </td>
+                            <td> ${port.protocol} </td>
+                            <td> ${port.name} </td>
+                            <td> ${port.product} </td>
+                            <td> ${port.version} </td>
+                        </tr>
+                    `
+                })
+                html_ports += '</table>\n'
+                html_text += html_ports
+            }
+            source_table.innerHTML = html_text
+        }
+        else {
+            document.getElementById('div_node_info').innerHTML = ``;
+        }
+    }
+
+    const DEFAULT_COLOR = '#2B7CE9'
+
+    function caclculateColor(node) {
+        agents = []
+        if (node.agent) {
+            if (!node.agents.includes(node.agent)) {
+                node.agents.push(node.agent)
+            }
+        }
+
+        node.agents.forEach((agent_id) => {
+            agent = agentData.agents.find((i) => i.id == agent_id)
+            if (agent) {
+                agents.push(agent)
+            }
+        })
+
+        if (agents) {
+            r = 0;
+            g = 0;
+            b = 0;
+            agents.forEach((agent) => {
+                r += agent.red;
+                g += agent.green;
+                b += agent.blue;
+            })
+            color = rgbToHex(parseInt(r / agents.length), parseInt(g / agents.length), parseInt(b / agents.length));
+            return color;
+        }
+        else {
+            return DEFAULT_COLOR
+        }
+    }
+
+    function caclculateNodeColor(node) {
+        node.color = caclculateColor(node)
+    }
+
+    /* Окрашивает ноду*/
+    function colorizeNode(node, color) {
+        if (node.icon) {
+            node.icon.color = color
+        }
+        else {
+            node.color = color
+        }
+        networkData.nodes.update(node)
+    }
+
+    const GRAY_COLOR = '#888888'
+
+    /* Функция, которая бежит по нодам и окрашивает их в цвет агента, иначе делает серыми */
+    function drowAgentNodes(agent) {
+        agent_color = rgbToHex(agent.red, agent.green, agent.blue)
+        networkData.nodes.forEach((node) => {
+            if (node.agents.includes(agent.id) | node.agent == agent.id) {
+                colorizeNode(node, agent_color)
+            }
+            else {
+                colorizeNode(node, GRAY_COLOR)
+            }
+        })
+    }
+
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function waitForAgentData() {
+        while (typeof agentData == "undefined") {
+            await sleep(100)
+        }
+    }
+
+    class AgentIcon {
+
+        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF591') {
+            this.color = color
+            this.shape = 'icon'
+            this.size = size
+            this.face = face
+            this.code = code
+        }
+    }
+
+    class ServerIcon {
+
+        constructor(color = '#2B7CE9', size = 80, face = '"bootstrap-icons"', code = '\uf592') {
+            this.color = color
+            this.shape = 'icon'
+            this.size = size
+            this.face = face
+            this.code = code
+        }
+    }
+
+    
+    async function fillAcunetixInstances(acunetix_id){
+        resp = await fetch("/api/v1/acunetix/apis/")
+        data = await resp.json()
+
+        let parent = `<div class="col-4">
+                            <label for="acunetix_scan_instances" class="col-form-label">Acunetix Name</label>
+                        </div>
+                        <div class="col-6" id="acunetix_scan_instances">
+                        </div>`
+
+        document.getElementById('acunetix_scan_instances_parent').innerHTML = parent
+
+        result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
+            <option value=''>Acunetix Name</option>`
+        for (const instance of data){
+            result += `<option value='${instance.name}'>${instance.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById(acunetix_id).innerHTML = result;
+    }
+    function update_agent_bar() {
+        createAgentBar('agent_bar')
+        getAgentData().then((data) => {
+            agentData = data
+            fillAgentBar('agent_bar')
+        })
+    }
+
+</script>
+
+{% endmacro %}

@@ -7,5 +7,4 @@ RUN playwright install-deps
 COPY ./setezor/ /setezor/
 WORKDIR /
 EXPOSE 16661
-ENV APPIMAGE=/setezor/
 ENTRYPOINT ["python3", "setezor/setezor.py"]

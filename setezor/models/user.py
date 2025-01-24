@@ -1,0 +1,15 @@
+from sqlmodel import Field, Relationship
+from setezor.models import IDDependent, TimeDependent
+from typing import List
+
+
+class User(IDDependent, TimeDependent, table=True):
+    __tablename__ = "user"
+    __table_args__ = {
+        "comment": "Таблица предназначена для хранения пользователей"
+    }
+    
+    login: str = Field(sa_column_kwargs={"comment": "Логин пользователя"})
+    hashed_password: str = Field(sa_column_kwargs={"comment": "Хеш пароля"})
+
+    projects: List["UserProject"] = Relationship(back_populates="user")

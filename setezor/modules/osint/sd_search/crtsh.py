@@ -1,12 +1,12 @@
 import aiohttp
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 class CrtSh:
     @staticmethod
     async def crt_sh(domain:str):
-        logger.debug('Start crt.sh [%s] ', domain)
+        # logger.debug('Start crt.sh [%s] ', domain)
         url = f'https://crt.sh/?q={domain}&output=json'
         result = set()
         async with aiohttp.ClientSession() as session:  

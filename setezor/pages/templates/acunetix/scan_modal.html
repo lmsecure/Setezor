@@ -1,0 +1,154 @@
+{% macro show()%}
+<div class="modal fade" id="addScan" tabindex="-1" aria-labelledby="addScanLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScanLabel">Adding scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="add_scan(event)" id="scanAddForm">
+                <input type="hidden" name="group_id" id="acunetix_scan_group_id">
+                <input type="hidden" name="target_id" id="acunetix_scan_target_id">
+                <input type="hidden" name="target_db_id" id="acunetix_scan_target_db_id">
+                <div class="modal-body">
+                    <div class="row mb-1" id="acunetix_scan_instances_parent">
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="scan_speed" class="col-form-label">Scan Speed</label>
+                        </div>
+                        <div class="col-6" id="scanspeed">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="scan_date" class="col-form-label">Scan Start Date</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="date" id="scan_date" class="form-control mt-1" name="date" required
+                                placeholder="Start Date">
+                        </div>
+                    </div>
+
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="scan_time" class="col-form-label">Scan Start Time</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="time" id="scan_time" class="form-control mt-1" name="start_time" required
+                                placeholder="Start Time">
+                        </div>
+                    </div>
+                    <div class="row mb-1" id="acunetix_scan_interval_div">
+                        <div class="col-4">
+                            <label for="scan_interval" class="col-form-label">Scan Interval</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="time" id="scan_interval" class="form-control mt-1" name="interval" required
+                                placeholder="Interval">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="scan_profile_id" class="col-form-label">Scan Profile</label>
+                        </div>
+                        <div class="col-6" id="scan_profile_id">
+
+                        </div>
+                    </div>
+                    <div id="acunetix_scan_ports">
+                        <div class="row mb-1">
+                            <div class="col-4">
+                                <label for="scan_http_ports" class="col-form-label">HTTP Ports</label>
+                            </div>
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" id="scan_http_ports" name="http_ports"
+                                    data-allow-clear="1" data-allow-new="1" data-regex="^[0-9,\-]+[^,]$" multiple>
+                                    <option hidden disabled value="1">Choose a ports...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div class="col-4">
+                                <label for="scan_https_ports" class="col-form-label">HTTPS Ports</label>
+                            </div>
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" id="scan_https_ports" name="https_ports"
+                                    data-allow-clear="1" data-allow-new="1" data-regex="^[0-9,\-]+[^,]$" multiple>
+                                    <option hidden disabled value="1">Choose a ports...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_adding_scans"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    async function fillAcunetixScanSpeeds() {
+        resp = await fetch("/api/v1/acunetix/scans/speeds")
+        scan_speeds = await resp.json()
+        result = `<select name="scan_speed"  class="form-select mt-1" required>
+                                    <option selected value=""></option>`
+        for (const speed of scan_speeds) {
+            result += `<option value="${speed}">${speed}</option>`
+        }
+        result += "</select>"
+        document.getElementById("scanspeed").innerHTML = result
+    }
+    async function fillAcunetixScanProfiles() {
+        resp = await fetch("/api/v1/acunetix/scans/profiles")
+        profiles = await resp.json()
+        result = `<select name="profile_id"  class="form-select mt-1" required>
+                                    <option selected value=""></option>`
+        for (const profile of profiles) {
+            result += `<option value="${profile.profile_id}">${profile.name}</option>`
+        }
+        result += "</select>"
+        document.getElementById("scan_profile_id").innerHTML = result
+    }
+    async function add_scan(event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        if (((payload.getAll("http_ports").length + payload.getAll("https_ports").length) === 0) && window.location.pathname === "/network-map/") {
+            create_toast('Error', `Add HTTP or HTTPS ports!`, 'error')
+            return;
+        }
+        if (payload.getAll("http_ports").length !== 0) {
+            let http_ports = payload.getAll("http_ports");
+            payload.delete("http_ports")
+            payload.set("http_ports", http_ports.join(","))
+        }
+        if (payload.getAll("https_ports").length !== 0) {
+            let http_ports = payload.getAll("https_ports");
+            payload.delete("https_ports")
+            payload.set("https_ports", http_ports.join(","))
+        }
+        let data = Array
+        .from(payload)
+        .filter(function([k, v]) { 
+            return v 
+        });
+
+        resp = await fetch(`/api/v1/acunetix/scans/?acunetix_id=${currentAcunetixName}`, 
+        { method: 'post', 
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(payload)) }
+        )
+        if (resp.status === 201) {
+            document.getElementById("cancel_adding_scans").click();
+            scans_table.dataLoader.reloadData();
+        }
+    }
+</script>
+{% endmacro %}

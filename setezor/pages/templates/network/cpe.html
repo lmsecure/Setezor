@@ -1,0 +1,69 @@
+{% macro show() %}
+<div class="p2 tab-content">
+    <div class="row d-flex flex-row">
+        <div class="col-3">
+            <form onsubmit="findCPE(event)" id="cpeFinder">
+                <div class="mb-3">
+                    <label for="cpeVendorInput" class="form-label">Vendor</label>
+                    <input type="text" class="form-control" id="cpeVendorInput" name="vendor">
+                </div>
+                <div class="mb-3">
+                    <label for="cpeProductInput" class="form-label">Product</label>
+                    <input type="text" class="form-control" id="cpeProductInput" name="product" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cpeVersionInput" class="form-label">Version</label>
+                    <input type="text" class="form-control" id="cpeVersionInput" name="version" required>
+                </div>
+                <div class="form-check mb-3">
+                    <label for="cpeExactInput" class="form-check-label">Exact</label>
+                    <input type="checkbox" class="form-check-input" id="cpeExactInput" name="mode">
+                </div>
+                <div class="btn-group d-flex my-2" role="group">
+                    <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                    <button type="submit" class="btn btn-success w-50">Search</button>
+                </div>
+                
+            </form>
+
+        </div>
+        <div class="col-9 overflow-auto" style="max-height: 500px;">
+            <h5>CPE's</h5>
+            <ul id="cpeList" class="list-group">
+
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    document.getElementById("cpeFinder").reset()
+    async function findCPE(event) {
+        event.preventDefault()
+        let el = document.getElementById("cpeList")
+        let data = new FormData(event.target)
+        params = new URLSearchParams()
+
+        el.innerHTML = `<div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>`
+        for (const [key, value] of data) {
+            params.set(key, value)
+        }
+        let resp = await fetch("/api/v1/vulnerability/cpe/?" + params)
+        data = await resp.json()
+        if (resp.status == 200) {
+            let result = ""
+            for (let cpe of data) {
+                result += `<li class="list-group-item">${cpe}</li>`
+            }
+            el.innerHTML = result
+        }else{
+            create_toast('Error', data.error, 'error')
+        }
+
+    }
+</script>
+{% endmacro %}

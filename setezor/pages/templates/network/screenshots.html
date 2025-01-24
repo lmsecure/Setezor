@@ -1,0 +1,90 @@
+{% macro screenshot_main() %}
+<div class="d-flex flex-column">
+    <div class="tab-content" id="dsa">
+        <form id="ScreenshotForm" class="needs-validation" onsubmit="createScreenshotTask(event)">
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputScreenshotURL-addon1">URL</span>
+                <input type="text" class="form-control" id='inputScreenshotURL'
+                    placeholder="e.g. https://192.168.15.15:8055/users/1"
+                    aria-describedby="inputScreenshotURL-addon1" required name="url">
+            </div>
+            <div class="input-group">
+                <span class="input-group-text" id="inputScreenshotTimeout-addon1">Timeout(sec)</span>
+                <input type="number" class="form-control" id='inputScreenshotTimeout' value="5.0" min="5.0" max="60" step="0.1"
+                    aria-describedby="inputScreenshotTimeout-addon1" required name="timeout">
+            </div>
+
+            <div class="btn-group d-flex my-2" role="group">
+                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                <button type="submit" class="btn btn-primary w-50">Start</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    async function createScreenshotTask(event){
+        event.preventDefault()
+        let data = new FormData(event.target)
+        await fetch('/api/task/screenshot', {method: 'POST', body: JSON.stringify(Object.fromEntries(data))})
+    }
+</script>
+{% endmacro %}
+
+{% macro screenshoter_full_modal() %}
+<div id="screenshoterModalWindow" class="modal fade" tabindex="-1" aria-labelledby="screenshoterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshoterModalLabel">Screenshoter</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_screenshoter">
+                    <div data-agent-bar="agent_screenshoter"></div>
+                    <div data-interface-bar="interface_screenshoter" class="ms-3"></div>
+                    <div id="scans_bar_screenshoter" class="ms-3"></div>
+                </div>
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa">
+                        <form id="DomainForm" class="needs-validation" novalidate>
+                            {{ screenshot_main() }}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function screenshoter_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('screenshoterModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('screenshoterModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("screenshoterModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
+
+
+
+{% macro show() %}
+
+{{ screenshot_main() }}
+
+{% endmacro %}

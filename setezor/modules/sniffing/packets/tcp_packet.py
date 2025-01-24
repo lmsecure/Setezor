@@ -1,10 +1,10 @@
 from scapy.layers.inet import TCP, UDP
 from scapy.packet import Packet
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 
 class TCPPacket(AbstractPacket):
@@ -25,7 +25,8 @@ class TCPPacket(AbstractPacket):
             res.update({'parent_mac': pkt['Ether'].src, 'parent_ip': pkt['IP'].src})
             res.update({'child_mac': pkt['Ether'].dst, 'child_ip': pkt['IP'].dst, })
         except:
-            logger.error('Cannot parse package %s by "%s"', pkt.summary(), TCPPacket.__name__)
+            pass
+            # logger.error('Cannot parse package %s by "%s"', pkt.summary(), TCPPacket.__name__)
         return res
 
     @staticmethod

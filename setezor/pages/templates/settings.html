@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+{% block title %}
+Projects
+{% endblock title %}
+{% block scripts %}
+
+{% endblock %}
+{% block content %}
+<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
+<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
+
+
+<div class="d-flex flex-row">
+    <h2 class="p-2">All Agents</h2>
+    <div class="d-flex align-items-start" style="margin-top: 0.5rem;">
+    <button type="button" class="btn btn-primary p-2" data-bs-toggle="modal" title="create agent"
+        onclick="fillParentAgents()" data-bs-target="#agentModal" data-testid="create_agent">
+        <i class="bi bi-plus-square-fill" style="font-family: 'Times New Roman', Times, serif;"></i>
+    </button>
+    </div>
+</div>
+
+
+<!--Creation agent modal window-->
+<div class="modal fade" id="agentModal" tabindex="-1" aria-labelledby="agentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentModalLabel">Create agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table style="margin: auto">
+                    <tbody>
+                        <tr>
+                            <td>Parent agent</td>
+                            <td>
+                                <select name="" id="parent-agent-id" class="form-select">
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Agent name</td>
+                            <td><input id="agent-name" class="form-control" value="" required></td>
+                        </tr>
+                        <tr>
+                            <td>Agent description</td>
+                            <td>
+                                <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Agent REST URL</td>
+                            <td><input id="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:00000"></td>
+                        </tr>
+                        <tr>
+                            <td>Agent color</td>
+                            <td><input id="agent-color" type="color" class="form-control" value=""></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button id="close-create-agent" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="createAgent()">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="editAgentInterfaces" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentModalLabel">Add agent interfaces</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="interfaces_list_container">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-create-agent" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveInterfaces()">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form onsubmit="saveSynthInterface(event)">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agentModalLabel">Agent is unreachable. You can create synthetic
+                        interface</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label for="synthAgentInterfaceName" class="form-label">Interface name</label>
+                        <input class="form-control" type="text" id="synthAgentInterfaceName" required name="name">
+                    </div>
+                    <div class="mb-2">
+                        <label for="synthAgentInterfaceIP" class="form-label">Interface ip</label>
+                        <input class="form-control" type="text" id="synthAgentInterfaceIP" required name="ip">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-create-agent" type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var message_sock = create_websocket(`/api/v1/project/ws`)
+
+    /* ip mask */
+    var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-ip'))
+    /* Agent create callback */
+    async function fillParentAgents() {
+        let resp = await fetch("/api/v1/agents")
+        let agents = await resp.json()
+        let _select = document.getElementById("parent-agent-id")
+        let result = ""
+        for (const agent of agents) {
+            result += `<option value=${agent.id}>${agent.name}</option>`
+        }
+        _select.innerHTML = result
+    }
+    async function createAgent() {
+        parent_agent_id = document.getElementById('parent-agent-id').value
+        name = document.getElementById('agent-name').value
+        desc = document.getElementById('agent-description').value
+        color = document.getElementById('agent-color').value
+        rest_url = document.getElementById('agent-rest-url').value
+        agent = new Object()
+        agent.color = color
+        agent.name = name
+        agent.description = desc
+        agent.rest_url = rest_url
+        agent.parent_agent_id = parent_agent_id
+        resp = await fetch('/api/v1/agents',
+            {
+                method: 'post',
+                body: JSON.stringify(agent),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }
+        )
+        if (resp.ok) {
+            location.reload()
+        }
+        else {
+            console.log(`Error on create agent, response status ${resp.status}`)
+            close_button = document.getElementById('close-create-agent')
+            close_button.click()
+            text = await resp.text()
+            create_toast('Error on create agent', text, 'error')
+        }
+    }
+    async function saveInterfaces(){
+        let el = document.getElementById("interfaces_list_container")
+        let result = []
+        for (const children of el.children){
+            for (const sub_child of children.children){
+                if (sub_child.tagName == "INPUT"){
+                    if (sub_child.checked){
+                        let new_interface = new Object()
+                        new_interface.mac = sub_child.attributes.mac.value
+                        new_interface.ip = sub_child.attributes.ip.value
+                        new_interface.name = sub_child.attributes.name.value
+                        result.push(new_interface)
+                    }
+                }
+            }
+        }
+        let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
+        { method: 'PATCH',
+        headers: {"Content-Type": "application/json",},
+        body: JSON.stringify(result) 
+        }
+        )
+        $('#editAgentInterfaces').modal('hide');
+    }
+    async function saveSynthInterface(event){
+        event.preventDefault()
+        let data = new FormData(event.target)
+        let new_interface = new Object()
+        data.forEach(function(value, key){
+            new_interface[key] = value;
+        });
+        new_interface.mac=''
+        let result = [new_interface]
+        let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
+        { method: 'PATCH',
+        headers: {"Content-Type": "application/json",},
+        body: JSON.stringify(result) 
+        }
+        )
+        $('#editAgentInterfacesWhichDoesNotExist').modal('hide');
+        console.log(event)
+    }
+</script>
+
+
+<div id="agent_table">
+
+</div>
+
+<script>
+
+    var headerMenu = function () {
+        var menu = [];
+        var columns = this.getColumns();
+        for (let column of columns) {
+            if (column.getDefinition().field) {
+                let icon = document.createElement("i");
+                icon.classList.add("bi");
+                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                let label = document.createElement("span");
+                let title = document.createElement("span");
+                title.textContent = " " + column.getDefinition().title;
+                label.appendChild(icon);
+                label.appendChild(title);
+                menu.push({
+                    label: label,
+                    action: function (e) {
+                        e.stopPropagation();
+                        column.toggle();
+                        if (column.isVisible()) {
+                            icon.classList.remove("bi-square");
+                            icon.classList.add("bi-check-square");
+                        } else {
+                            icon.classList.remove("bi-check-square");
+                            icon.classList.add("bi-square");
+                        }
+                        { { tab.name } } _table.redraw()
+                    }
+                });
+            }
+        }
+        return menu;
+    }
+
+    /* color functions */
+    function hexToRgb(hex) {
+        result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
+    function componentToHex(color) {
+        hex = color.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+    function rgbToHex(r, g, b) {
+        return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    }
+
+    /* change color callback */
+    async function changeAgentData(agent_id) {
+        element = document.getElementById(`agent-${agent_id}`)
+        value = element.value
+        body = { color: value }
+        resp = await fetch(
+            '/api/v1/agents/' + agent_id + '/update_color', 
+            { method: 'PATCH',
+            headers: {"Content-Type": "application/json",},
+            body: JSON.stringify(body) })
+        if (resp.ok) {
+            console.log(`Agent ${agent_id} successfuly updated with color <${JSON.stringify(value)}>`)
+        }
+        else {
+            console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
+        }
+    }
+
+    /* color input creater */
+    function formatColor(cell, formatterParams, onRendered) {
+        agent_id = cell.getRow().getData().id
+        value = cell.getValue()
+        return `<input id="agent-${agent_id}" type="color" value="${value}" onchange="changeAgentData('${agent_id}')"/>`; //return the contents of the cell;
+    }
+
+    /* default cell edit callback */
+    async function editCell(cell) {
+        agent_id = cell.getRow().getCells()[0].getValue()
+        value = cell.getValue()
+        field = cell.getField()
+        body = { id: agent_id, field: field, value: value }
+        resp = await fetch('/api/agent/update', { method: 'put', body: JSON.stringify(body) })
+        text = await resp.text()
+        if (resp.ok) {
+            console.log(`Agent ${agent_id} successfuly updated with value ${field}: <${value}>`)
+        }
+        else {
+            console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
+            create_toast('Error on edit cell', text, 'error')
+            cell.restoreOldValue();
+        }
+    }
+
+    let currentAgent = 0
+    function configureAgentFormatter(cell) {
+        agent_id = cell.getRow().getData().id
+        if (cell.getRow().getData().parent_agent_name == ""){
+            return ''
+        }
+        return `<div class="d-flex justify-content-start align-items-center">
+                    <div class="btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';getAgentInterfaces(currentAgent)">
+                        Configure interfaces
+                    </div>
+                    <div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
+                        Connect
+                    </div>
+                </div>
+                
+                `
+    }
+    let currentAgentInterfaces = []
+    async function getAgentInterfaces(id) {
+        currentAgentInterfaces = []
+        resp = await fetch(`/api/v1/agents/${id}/remote_interfaces`)
+        if (resp.ok) {
+            data = await resp.json()
+            if (data.length == 0){
+                $('#editAgentInterfacesWhichDoesNotExist').modal('show');
+            }else{
+                currentAgentInterfaces = data
+                fillInterfacesTable()
+                $('#editAgentInterfaces').modal('show');
+            }
+        }
+    }
+    async function connectAgent(id) {
+        resp = await fetch(`/api/v1/agents/${id}/connect`, {method:"POST"})
+    }
+    function fillInterfacesTable(){
+        let el = document.getElementById("interfaces_list_container")
+        let result = ``
+        for (const [index, interface] of currentAgentInterfaces.entries()){
+            let checkboxId = `interface-checkbox-${index}`;
+            result += `
+                <div class="form-check" style="margin-bottom:-1rem">
+                    <input id="${checkboxId}" class="form-check-input" type="checkbox" mac="${interface.mac}" ip="${interface.ip}" name="${interface.name}">
+                    <label for="${checkboxId}"><pre style="font-size:1.05rem" class="form-check-label">${interface.ip != null ? interface.ip.padEnd(18):""}${interface.name}</pre></label>
+                </div>
+            `
+        }
+        el.innerHTML = result
+    }
+
+    /* delete row callback */
+    async function delteRowCallback(element) {
+        attributes = element.attributes
+        agent_id = attributes['agent_id'].value
+        row_id = attributes['row_id'].value
+        body = JSON.stringify({ id: agent_id })
+        resp = await fetch(`/api/agent/`, { method: 'delete', body: body })
+        if (resp.ok) {
+            agent_table.getRow(row_id).delete()
+            console.log(`Successfuly delete agent ${agent_id}`)
+        }
+        else {
+            console.log(`Error on deleting agent ${agent_id}`)
+        }
+    }
+
+    var agent_table = new Tabulator('#agent_table', {
+        layout: "fitColumns",
+        ajaxURL: "{{tab.base_url}}",
+        selectable: false,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "local",
+        paginationSize: 10,
+        paginationInitialPage: 1,
+        paginationSizeSelector: [5, 10, 25, 50, 100],
+        columns: [
+            { title: 'ID', field: 'id', headerMenu: headerMenu },
+            { title: 'NAME', field: 'name', headerMenu: headerMenu },
+            { title: 'DESCRIPTION', field: 'description', headerMenu: headerMenu },
+            { title: 'PARENT_AGENT', field: 'parent_agent_name', headerMenu: headerMenu },
+            { title: 'URL', field: 'rest_url', headerMenu: headerMenu },
+            { title: 'COLOR', field: 'color', headerMenu: headerMenu, editor: true, formatter: formatColor },
+            { title: 'CONFIGURE', field: 'configure', headerMenu: headerMenu, formatter: configureAgentFormatter }
+
+        ]
+    }
+    )
+</script>
+
+{% endblock content %}

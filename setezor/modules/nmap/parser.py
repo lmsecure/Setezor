@@ -1,21 +1,26 @@
 from dataclasses import dataclass, field
 from typing import TypedDict    
 from typing_extensions import deprecated
-
 import re
+
+from setezor.tools.ip_tools import get_network
     
 try:
-    from exceptions.loggers import get_logger
+    # from exceptions.loggers import get_logger
     from tools.xml_utils import XMLParser
     from network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 except ImportError:
-    from ...exceptions.loggers import get_logger
+    # from ...exceptions.loggers import get_logger
     from ...tools.xml_utils import XMLParser
     from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 
 from cpeguess.cpeguess import CPEGuess
 
-logger = get_logger(__package__, handlers=[])
+from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network
+
+# logger = get_logger(__package__, handlers=[])
+
+
 
 class NmapRunResult(TypedDict):
 
@@ -28,8 +33,8 @@ class NmapStructure:
     """
     addresses: list = field(default_factory=list)
     hostnames: list  = field(default_factory=list)
-    ports: list = field(default_factory=list)
-    softwares: list = field(default_factory=list)
+    ports: dict = field(default_factory=dict)
+    softwares: dict = field(default_factory=dict)
     traces: list[RouteStruct] = field(default_factory=list)
 
 
@@ -143,7 +148,7 @@ class NmapParser(XMLParser):
         ports = NmapParser.to_list(ports.get('port') if ports else None)
         if ports:
             for port in ports:
-                result.append({'port': port.get('portid'), 'ip': address.get('ip'), 
+                result.append({'port': port.get('portid'),
                                'mac': address.get('mac'), 'service_name' : port.get('service', {}).get('name'),
                                 'state': port.get('state', {}).get('state'),
                                 'protocol': port.get('protocol')})
@@ -196,7 +201,7 @@ class NmapParser(XMLParser):
                         else: # str
                             cpe = cpe.replace('/', '2.3:')
 
-                        if len(cpe.split(', ')) == 1:
+                        if cpe and len(cpe.split(', ')) == 1:
                             vendor = cpe.split(':')[3]
                             product = cpe.split(':')[4]
                             cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.split(':')[2])
@@ -218,7 +223,7 @@ class NmapParser(XMLParser):
                     else:
                         cpe = ', '.join(service.get('cpe')) if isinstance(service.get('cpe'), list) else service.get('cpe')
 
-                    tmp_soft.update({'ip' : address.get('ip'),'port' : port.get('portid'),
+                    tmp_soft.update({'port' : port.get('portid'),
                                      'vendor' : vendor,
                                      'product' : product,
                                      'type' : cpe_type,
@@ -257,7 +262,7 @@ class NmapParser(XMLParser):
         hosts = self.to_list(scan.get('host'))
         if len(hosts) == 0:
             hosts = self.to_list(scan.get('hosthint'))
-        logger.debug('Start parse %s hosts', len(hosts))
+        # logger.debug('Start parse %s hosts', len(hosts))
         for h in hosts:
             address_data = self.parse_addresses(h.get('address'))
             hostname_data = self.parse_hostname(h.get('hostnames'))
@@ -268,10 +273,70 @@ class NmapParser(XMLParser):
             software_data = self.parse_softwares(h.get('ports',{}), address_data[0])
             result.addresses += address_data
             result.hostnames += hostname_data
-            result.ports += ports_data
-            result.softwares += software_data
+            result.ports.update({address_data[0].get('ip') : ports_data})
+            result.softwares.update({address_data[0].get('ip')  : software_data})
             result.traces.append(trace_data)
-        logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s software, %s traces', 
-                     len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
+        # logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s software, %s traces', 
+        #              len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
         # res = self.convert_to_structures(result)
+        return result
+    
+    @classmethod
+    def restruct_result(cls, data, interface_ip_id: int):
+        result = []
+        address_in_traceses = dict()
+        vendors = {}
+        softwares = {}
+
+        for i in range(len(data.addresses)):
+            mac_obj = MAC(mac=data.addresses[i].get('mac', ''))
+            result.append(mac_obj)
+            start_ip, broadcast = get_network(ip=data.addresses[0].get('ip'), mask=24)
+            network_obj = Network(start_ip=start_ip, mask=24)
+            result.append(network_obj)
+            ip_obj = IP(ip=data.addresses[i].get('ip'), mac=mac_obj, network=network_obj)
+
+            ports = data.ports.get(data.addresses[i].get('ip'), [])
+            softs = data.softwares.get(data.addresses[i].get('ip'), [])
+            for port, soft in zip(ports, softs):
+                l4_obj = Port(ip=ip_obj, **port)
+                result.append(l4_obj)
+                if any([v for k, v in soft.items() if k != 'port']):
+                    soft.pop('port', None)
+                    vendor_name = soft.pop('vendor')
+                    
+                    if vendor_name and vendor_name in vendors:
+                        vendor_obj = vendors.get(vendor_name)
+                    else:
+                        vendor_obj = Vendor(name=vendor_name)
+                        vendors[vendor_name] = vendor_obj
+                        result.append(vendor_obj)
+                    
+                    hash_string = vendor_name or "" + "_" + "_".join([v for v in soft.values() if v])
+
+                    if not (hash_string and hash_string in softwares):
+                        soft_obj = Software(vendor=vendor_obj, **soft)
+                        softwares[hash_string] = soft_obj
+                        result.append(soft_obj)
+                        L4Software_obj = L4Software(l4=l4_obj, software=soft_obj)
+                        result.append(L4Software_obj)
+
+            trace_ips = []
+            for r in data.traces[i].routes[1:-1]:
+                start_ip, broadcast = get_network(ip=str(r.address), mask=24)
+                if not (ip_obj_in_trace := address_in_traceses.get(str(r.address))):
+                    network_obj = Network(start_ip=start_ip, mask=24)
+                    result.append(network_obj)
+                    ip_obj_in_trace = IP(ip=str(r.address), network=network_obj)
+                    trace_ips.append(ip_obj_in_trace)
+                    address_in_traceses.update({str(r.address) : ip_obj_in_trace})
+                else:
+                    trace_ips.append(ip_obj_in_trace)
+            trace_ips.append(ip_obj)
+            result.extend(trace_ips)
+            route_obj = Route(agent_id=data.traces[i].agent_id)
+            result.append(route_obj)
+            result.append(RouteList(ip_id_from=interface_ip_id, ip_to=trace_ips[0], route=route_obj))
+            for i in range(1, len(trace_ips)):
+                result.append(RouteList(ip_from=trace_ips[i-1], ip_to=trace_ips[i], route=route_obj))
         return result

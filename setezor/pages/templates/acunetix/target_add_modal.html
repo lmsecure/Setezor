@@ -1,0 +1,84 @@
+{% macro show()%}
+<div class="modal fade" id="addTarget" tabindex="-1" aria-labelledby="addScanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScanLabel">Adding target</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="add_target(event)" id="targetAddForm">
+                <div class="modal-body">
+                    <div id="acunetix_instance_target_add">
+                    </div>
+                    <div id="acunetixTargetGroupAdd">
+                    </div>
+                    <div id="outerTargetsParent">
+                        <div class="form-group">
+                            <div class="row mb-1">
+                                <div class="col-6">
+                                    <label for="target_name" class="col-form-label">Target address</label>
+                                    <input type="text" id="target_name" class="form-control" name="address1" required
+                                        placeholder="https://localhost:8080">
+                                </div>
+                                <div class="col-6">
+                                    <label for="target_description" class="col-form-label">Target description</label>
+                                    <input type="text" id="target_description" name="description1" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-1" onclick="addTargetInList()">+</button>
+                    <button class="btn btn-danger mt-1" onclick="clearTargetsList()">Clear</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_adding_target"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    let targetsCount = 2;
+    function addTargetInList() {
+        let container = document.getElementById("outerTargetsParent")
+        let div = document.createElement("div")
+        div.classList = "form-group"
+        div.innerHTML = `<div class="row mb-1">
+                                <div class="col-6">
+                                    <label for="target_name" class="col-form-label">Target address</label>
+                                    <input type="text" id="target_name" class="form-control" name="address${targetsCount}" required
+                                        placeholder="https://localhost:8080">
+                                </div>
+                                <div class="col-6">
+                                    <label for="target_description" class="col-form-label">Target description</label>
+                                    <input type="text" id="target_description" name="description${targetsCount}" class="form-control">
+                                </div>
+                            </div>`
+        container.appendChild(div)
+        targetsCount++;
+    }
+    function clearTargetsList() {
+        let container = document.getElementById("outerTargetsParent")
+        container.innerHTML = ""
+        targetsCount = 1
+        addTargetInList()
+    }
+    let add_target = async function (event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        let params = (new URLSearchParams({acunetix_id:payload.get("acunetix_id")})).toString()
+        payload.delete("acunetix_id")
+        resp = await fetch("/api/v1/acunetix/targets?" + params, { method: 'post', headers: {"Content-Type": "application/json",}, body: JSON.stringify(Object.fromEntries(payload)) })
+        if (resp.status === 200) {
+            document.getElementById("cancel_adding_target").click();
+            create_toast('Success', `Target was added`, 'success')
+            groups_table.dataLoader.reloadData();
+            targets_table.dataLoader.reloadData();
+        }
+    }
+</script>
+{% endmacro %}

@@ -1,0 +1,367 @@
+{% macro tools(is_scapy_running) %}
+
+<div id="main_bar" class="d-flex bd-highlight mb-3" style="height: auto;">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-2">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <h4>Tools</h4>
+                    <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist"
+                        aria-orientation="vertical">
+                        <div class="accordion" id="accordionExample">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        Network
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse show"
+                                    aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                                    <div class="accordion-body">
+                                        <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-nmap" type="button" role="tab"
+                                            aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
+                                        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-scapy" type="button" role="tab"
+                                            aria-controls="v-pills-scapy" aria-selected="false"
+                                            tabindex="-1">SCAPY</button>
+                                        <button class="nav-link" id="v-pills-masscan-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-masscan" type="button" role="tab"
+                                            aria-controls="v-pills-masscan" aria-selected="false"
+                                            tabindex="-1">MASSCAN</button>
+                                        <button class="nav-link" id="v-pills-snmp-tab" hidden data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-snmp" type="button" role="tab"
+                                            aria-controls="v-pills-snmp" aria-selected="false"
+                                            onclick=get_all_ips_with_open_port_snmp() tabindex="-1">SNMP</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        Web
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                                    data-bs-parent="#accordionExample">
+                                    <div class="accordion-body">
+                                        <button class="nav-link" id="v-pills-domains-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-domains" type="button" role="tab"
+                                            aria-controls="v-pills-domains" aria-selected="false"
+                                            tabindex="-1">DOMAINS</button>
+                                        <button class="nav-link" id="v-pills-cert-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-cert" type="button" role="tab"
+                                            aria-controls="v-pills-cert" aria-selected="false" tabindex="-1">TLS/SSL
+                                            CERT</button>
+                                        <button class="nav-link" id="v-pills-whois-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-whois" type="button" role="tab"
+                                            aria-controls="v-pills-whois" aria-selected="false"
+                                            tabindex="-1">WHOIS</button>
+                                        <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-acunetix" type="button" role="tab"
+                                            aria-controls="v-pills-acunetix" aria-selected="false"
+                                            tabindex="-1">ACUNETIX</button>
+                                        <button class="nav-link" id="v-pills-screenshoter-tab" hidden data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-screenshoter" type="button" role="tab"
+                                            aria-controls="v-pills-screenshoter" aria-selected="false"
+                                            tabindex="-1">SCREENSHOTER</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingThree">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseThree" aria-expanded="false"
+                                        aria-controls="collapseThree">
+                                        Vulnerability
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse"
+                                    aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+                                    <div class="accordion-body">
+                                        <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-wappalyzer" type="button" role="tab"
+                                            aria-controls="v-pills-wappalyzer" aria-selected="false"
+                                            tabindex="-1">WAPPALYZER</button>
+                                        <button class="nav-link" id="v-pills-cpe-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-cpe" type="button" role="tab"
+                                            aria-controls="v-pills-cpe" aria-selected="false"
+                                            tabindex="-1">CPEGuess</button>
+                                        <button class="nav-link" id="v-pills-search-vulns-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-search-vulns" type="button" role="tab"
+                                            aria-controls="v-pills-search-vulns" aria-selected="false"
+                                            tabindex="-1">SearchVulns</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-10">
+                <div class="p2 tab-content w-100" id="v-pills-tabContent">
+                    <div class="d-flex mb-2" id="agent_interface_bar">
+                        <div data-agent-bar="agent_tools" class="ms-3"></div>
+                        <div data-interface-bar="interface_tools" class="ms-3"></div>
+                        <div id="scans_bar_tools" class="ms-3">
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade show active col-3" id="v-pills-nmap" role="tabpanel"
+                        aria-labelledby="v-pills-nmap-tab">
+                        {% import 'network/nmap.html' as nmap%}
+                        {{ nmap.show() }}
+                    </div>
+
+                    <div class="tab-pane fade col-3" id="v-pills-scapy" role="tabpanel"
+                        aria-labelledby="v-pills-scapy-tab">
+                        {% import 'network/scapy.html' as scapy%}
+                        {{scapy.show(is_scapy_running)}}
+                    </div>
+
+                    <div class="tab-pane fade col-3" id="v-pills-masscan" role="tabpanel"
+                        aria-labelledby="v-pills-masscan-tab">
+                        {% import 'network/masscan.html' as masscan%}
+                        {{ masscan.show() }}
+                    </div>
+
+                    <div class="tab-pane fade" id="v-pills-snmp" role="tabpanel"
+                        aria-labelledby="v-pills-snmp-setting-tab">
+                        {% import 'network/snmp.html' as snmp%}
+                        {{ snmp.show() }}
+                    </div>
+
+                    <div class="tab-pane fade col-3" id="v-pills-domains" role="tabpanel"
+                        aria-labelledby="v-pills-domains-tab">
+                        {% import 'network/domains.html' as domains%}
+                        {{domains.show()}}
+                    </div>
+
+                    <div class="tab-pane fade col-4" id="v-pills-cert" role="tabpanel"
+                        aria-labelledby="v-pills-cert-tab">
+                        {% import 'network/cert.html' as cert%}
+                        {{ cert.show() }}
+                    </div>
+
+                    <div class="tab-pane fade col-3" id="v-pills-whois" role="tabpanel"
+                        aria-labelledby="v-pills-whois-tab">
+                        {% import 'network/whois.html' as whois%}
+                        {{whois.show()}}
+                    </div>
+
+                    <div class="tab-pane fade col-3" id="v-pills-screenshoter" role="tabpanel"
+                        aria-labelledby="v-pills-screenshoter-tab">
+                        {% import 'network/screenshots.html' as screenshots%}
+                        {{screenshots.show()}}
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-acunetix" role="tabpanel"
+                        aria-labelledby="v-pills-acunetix-tab">
+                        <div class="row ms-1">
+                            <ul class="nav nav-pills">
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill"
+                                        data-bs-target="#v-pills-acunetix-groups" type="button" role="tab"
+                                        aria-controls="v-pills-acunetix-groups" aria-selected="false"
+                                        id="acunetix_groups_pill" tabindex="-1">Groups</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill"
+                                        data-bs-target="#v-pills-acunetix-targets" type="button" role="tab"
+                                        aria-controls="v-pills-acunetix-targets" aria-selected="false"
+                                        id="acunetix_targets_pill" tabindex="-1">Targets</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill"
+                                        data-bs-target="#v-pills-acunetix-scans" id="acunetix_scans_pill" type="button"
+                                        role="tab" aria-controls="" aria-selected="false" tabindex="-1">Scans</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill"
+                                        data-bs-target="#v-pills-acunetix-reports" type="button" role="tab"
+                                        aria-controls="" aria-selected="false" id="acunetix_reports_pill"
+                                        tabindex="-1">Reports</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill"
+                                        data-bs-target="#v-pills-acunetix-settings" type="button" role="tab"
+                                        aria-controls="" aria-selected="false" onclick="refreshConfigsTable()"
+                                        tabindex="-1">Settings</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="p2 tab-content" id="v-pills-acunetixContent">
+                            <div class="tab-pane fade" id="v-pills-acunetix-groups" role="tabpanel"
+                                aria-labelledby="v-pills-acunetix-groups-tab">
+                                {% import 'acunetix/groups.html' as acunetix_groups with context%}
+                                {{acunetix_groups.show()}}
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-acunetix-targets" role="tabpanel"
+                                aria-labelledby="v-pills-acunetix-targets-tab">
+                                {% import 'acunetix/targets.html' as acunetix_targets with context%}
+                                {{acunetix_targets.show()}}
+                            </div>
+
+                            <div class="tab-pane fade" id="v-pills-acunetix-scans" role="tabpanel"
+                                aria-labelledby="v-pills-acunetix-scans-tab">
+                                {% import 'acunetix/scans.html' as acunetix_scans with context%}
+                                {{acunetix_scans.show()}}
+                            </div>
+
+                            <div class="tab-pane fade" id="v-pills-acunetix-reports" role="tabpanel"
+                                aria-labelledby="v-pills-acunetix-reports-tab">
+                                {% import 'acunetix/reports.html' as acunetix_reports with context%}
+                                {{acunetix_reports.show()}}
+                            </div>
+
+                            <div class="tab-pane fade" id="v-pills-acunetix-settings" role="tabpanel"
+                                aria-labelledby="v-pills-acunetix-settings-tab">
+                                {% import 'acunetix/settings.html' as acunetix_settings%}
+                                {{acunetix_settings.show()}}
+                            </div>
+                            {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}
+                            {{acunetix_scan_modal.show()}}
+
+                            {% import 'acunetix/target_add_modal.html' as acunetix_target_modal%}
+                            {{acunetix_target_modal.show()}}
+
+                            {% import 'acunetix/target_proxy_modal.html' as acunetix_target_proxy_modal%}
+                            {{acunetix_target_proxy_modal.show()}}
+
+                            {% import 'acunetix/target_cookies_modal.html' as acunetix_target_cookies_modal%}
+                            {{acunetix_target_cookies_modal.show()}}
+
+                            {% import 'acunetix/target_headers_modal.html' as acunetix_target_headers_modal%}
+                            {{acunetix_target_headers_modal.show()}}
+
+                            {% import 'acunetix/report_modal.html' as acunetix_report_modal with context%}
+                            {{acunetix_report_modal.show()}}
+
+                            {% import 'acunetix/targets_import_csv_modal.html' as acunetix_targets_import_csv_modal%}
+                            {{acunetix_targets_import_csv_modal.show()}}
+
+                            {% import 'acunetix/set_group_targets_modal.html' as acunetix_set_group_targets_modal%}
+                            {{acunetix_set_group_targets_modal.show()}}
+                        </div>
+                    </div>
+
+                    {% import 'network/wappalyzer.html' as wappalyzer with context%}
+                    {{wappalyzer.show()}}
+                    <div class="tab-pane fade" id="v-pills-cpe" role="tabpanel"
+                        aria-labelledby="v-pills-cpe-setting-tab">
+                        {% import 'network/cpe.html' as cpe%}
+                        {{ cpe.show() }}
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-search-vulns" role="tabpanel"
+                        aria-labelledby="v-pills-search-vulns-tab">
+                        {% import 'network/search_vulns.html' as search_vulns %}
+                        {{ search_vulns.show() }}
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-cve" role="tabpanel"
+                        aria-labelledby="v-pills-cve-setting-tab">
+                        {% import 'network/cve.html' as cve with context%}
+                        {{cve.show()}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="modal fade" id="addScanModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Adding scan</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+            </div>
+            <form onsubmit="addScan(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="scanNameID" class="col-form-label">Scan name</label>
+                        <input type="text" class="form-control" id="scanNameID" name="name" required>
+                      </div>
+                      <div class="mb-3">
+                        <label for="scanDescriptionID" class="col-form-label">Description</label>
+                        <input type="text" class="form-control" id="scanDescriptionID" name="description">
+                      </div>                        
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeAddScanModalButton">Close</button>
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    // ЭТА ШТУКА НУЖНА ЗАКОМЕНТИЛ ПОКА ЧТОБЫ НЕ МЕШАЛАСЬ 
+    // let ip_lst = [];
+
+    // async function get_ip_list() {
+    //     resp = await fetch('/api/task/get_ip_info', { method: 'GET' });
+    //     data = await resp.json();
+
+    //     let el = document.getElementById("IpList");
+    //     let res = ``;
+    //     for (const item of data) {
+    //         res += `<option value="${item}">`;
+    //     }
+    //     el.innerHTML = res;
+    // }
+
+    // let domain_lst = [];
+
+    // async function get_domains_list() {
+    //     resp = await fetch('/api/task/get_domains_info', { method: 'GET' });
+    //     data = await resp.json();
+
+    //     let el = document.getElementById("DomainsList");
+    //     let res = ``;
+    //     for (const item of data) {
+    //         res += `<option value="${item}">`;
+    //     }
+    //     el.innerHTML = res;
+    // }
+
+    // let domain_and_ip_lst = [];
+
+    // async function get_domain_and_ip_list() {
+    //     resp = await fetch('/api/task/get_domains_and_ip_info', { method: 'GET' });
+    //     data = await resp.json();
+
+    //     let el = document.getElementById("DomainsAndIp");
+    //     let res = ``;
+    //     for (const item of data) {
+    //         res += `<option value="${item}">`;
+    //     }
+    //     el.innerHTML = res;
+    // }
+    // get_ip_list();
+
+    // get_domains_list();
+
+    // get_domain_and_ip_list();
+</script>
+
+
+
+<script>
+
+    // var mask = new Inputmask('ip').mask('InputLogIp')
+    // var mask = new Inputmask('mac').mask('InputLogMac')
+    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
+    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
+
+    // $('#nmapExtendedCommand').on('change', function (e, data) {
+    //     if (e.target.value != '') {
+    //         document.getElementById('startScanExtendedBtn').disabled = false
+    //     } else {
+    //         document.getElementById('startScanExtendedBtn').disabled = true
+    //     }
+    // })
+</script>
+{% endmacro %}

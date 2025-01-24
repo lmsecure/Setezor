@@ -71,11 +71,6 @@ class Project:
         # ToDo check project_structure
         return cls(name=configs.variables.project_id, path=path, configs=configs, acunetix_manager=acunetix_manager)
 
-    @classmethod
-    def load_for_import(cls, path: str):
-        Configs.load_config_from_file_for_import(project_path=path)
-        return cls.load(path=path)
-
     @staticmethod
     def check_project(name: str) -> bool:
         return True, 'All Right'

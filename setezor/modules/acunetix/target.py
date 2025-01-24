@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from typing import Union
 from .utils import send_request
 from .schemes.target import Target as TargetScheme, TargetForm, TargetFormBase
@@ -152,11 +153,37 @@ class Target:
                                   data=data)
 
     @classmethod
+    async def get_target_scans(cls, id: str, credentials: dict):
+        params = {"l": 100, "c": 0, "q": f"target_id:{id};"}
+        raw_data = await send_request(base_url=credentials["url"],
+                                      token=credentials["token"],
+                                      url="/api/v1/scans",
+                                      method="GET",
+                                      params=params)
+        if raw_data.get("code"):
+            return {}
+        scans: list[TargetScheme] = raw_data.get("scans")
+        if not scans:
+            return scans
+        while True:
+            params["c"] += 100
+            raw_data = await send_request(base_url=credentials["url"],
+                                          token=credentials["token"],
+                                          url="/api/v1/scans",
+                                          method="GET",
+                                          params=params)
+            raw_targets = raw_data.get("scans")
+            if not raw_targets:
+                break
+            scans.extend(raw_targets)
+        return scans
+
+    @classmethod
     def parse_url(cls, url: str) -> dict:
         scheme, addr_port = url.split("://")
         if ':' in addr_port:
             addr, port = addr_port.split(":")
-            data = {"port": int(port)}
+            data = {"port": int(re.sub("[^0-9]","", port))}
         else:
             addr = addr_port
             data = {}
@@ -179,3 +206,5 @@ class Target:
                 address = f"https://{payload.get("target_ip_address")}:{port}"
                 new_targets.append(address)
         return new_targets
+
+

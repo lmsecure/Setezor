@@ -72,13 +72,22 @@ class Scan:
                                               result_id}/vulnerabilities",
                                           method="GET",
                                           params=params)
-            for vuln in raw_data.get("vulnerabilities"):
+            for vuln in raw_data.get("vulnerabilities", []):
                 vulnerabilities.append(vuln)
             pagination = raw_data.get("pagination")
-            cursors = pagination["cursors"]
+            if not pagination: break
+            cursors = pagination.get("cursors")
             if len(cursors) == 1:
-                return vulnerabilities
+                break
             params.update({"c": cursors[1]})
+        return vulnerabilities
+
+    @classmethod
+    async def get_statistics(cls, credentials: dict, scan_id: str, result_id: str):
+        return await send_request(base_url=credentials["url"],
+                                          token=credentials["token"],
+                                          url=f"/api/v1/scans/{scan_id}/results/{result_id}/statistics",
+                                          method="GET")
 
     @classmethod
     async def create_for_targets(cls, credentials: dict, profile_id: str, targets_ids: list[str], start_date: datetime.date,

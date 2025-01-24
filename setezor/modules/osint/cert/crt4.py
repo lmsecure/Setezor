@@ -5,10 +5,10 @@ import OpenSSL.crypto
 import json
 import aiofiles
 from datetime import datetime
-from setezor.exceptions.loggers import get_logger
+#from setezor.exceptions.loggers import get_logger
 from typing import Dict
 
-logger = get_logger(__package__, handlers=[])
+#logger = get_logger(__package__, handlers=[])
 
 
 class CertInfo:
@@ -21,14 +21,14 @@ class CertInfo:
     @classmethod
     def get_cert(cls, host: str, port: int) -> str:
         try:
-            logger.debug('Try get cert from  %s:%s ', (host, port))
+            #logger.debug('Try get cert from  %s:%s ', (host, port))
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_OPTIONAL
             cert = ssl.get_server_certificate((host, port), timeout=1)
             return cert
         except Exception as e:
-            logger.error(f'[-] HOST: {host}, PORT: {port} {type(e).__name__}')
+            #logger.error(f'[-] HOST: {host}, PORT: {port} {type(e).__name__}')
             return None
 
     @classmethod
@@ -55,11 +55,13 @@ class CertInfo:
         return cert_data
 
     @classmethod
-    def get_cert_and_parse(cls, host: str, port: int, certificates_folder: str):
+    def get_cert_and_parse(cls, resource:dict): #certificates_folder: str):
+        port = resource.get("port")
+        host = resource.get("domain") if resource.get("domain") else resource.get("ip")
         cert = cls.get_cert(host=host, port=port)
         if not cert:
-            return None
-        cls.write_to_file(certificates_folder, host, port, cert)
+            return []
+        #cls.write_to_file(certificates_folder, host, port, cert)
         return cls.parse_cert(cert=cert)
 
     @classmethod

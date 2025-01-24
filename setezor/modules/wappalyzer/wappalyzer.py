@@ -1,8 +1,9 @@
 import re
 
+from setezor.models import IP, Port, Domain, Software, Vendor, L7, L7Software
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
-
+from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from ipaddress import IPv4Address
 
 from cpeguess.cpeguess import CPEGuess
@@ -64,7 +65,7 @@ class WappalyzerParser:
 
 
     @staticmethod
-    async def parse_json(wappalyzer_log: dict, groups: list[str]) -> dict:
+    def parse_json(wappalyzer_log: dict, groups: list[str]) -> dict:
         # to do - берется url со статусом 200, но его может не быть...
         url = ''                   
         for k, v in wappalyzer_log.get('urls').items():
@@ -102,6 +103,8 @@ class WappalyzerParser:
                     cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
                     vendor = cpe.replace('/', '2.3:').split(':')[3]
                     product = cpe.replace('/', '2.3:').split(':')[4]
+                else:
+                    product = tech.get("slug")
                 version = tech.get('version')
                 if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
                 if product and version:
@@ -110,7 +113,8 @@ class WappalyzerParser:
                         cpe = ', '.join(list_cpe)
                     else:
                         cpe = None
-
+                    if cpe:
+                        vendor = cpe.replace('/', '2.3:').split(':')[3]
                 if any([int(category.get('id')) in categories_id for category in tech.get('categories')]):
                     tmp_soft = SoftwareStruct()
                     tmp_soft.type = cpe_type
@@ -122,6 +126,60 @@ class WappalyzerParser:
             result.update({'softwares' : softwares})
         return result
 
+
+    @classmethod
+    async def restruct_result(cls, data: dict):
+        if not data.get("softwares"):
+            return []
+        
+        vendors = {}
+        softwares = {}
+
+        result = []
+        port = data.get("port")
+        domain = data.get("domain")
+        ip = data.get("ip")
+
+        if domain:
+            new_domain = Domain(domain=domain)
+            responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
+            new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses)
+            result.extend([new_domain, new_ip, dns_a])
+        else:
+            new_domain = Domain(domain="")
+            result.append(new_domain)
+        if ip:
+            new_ip = IP(ip=ip)
+            result.append(new_ip)
+        if port:
+            new_port = Port(port=port, ip=new_ip)
+            result.append(new_port)
+
+        new_l7 = L7(port=new_port, domain=new_domain)
+        result.append(new_l7)
+        for software in data["softwares"]:
+            soft = software.model_dump()
+            if all(v is None for v in soft.values()) or (not software.vendor and not software.product):
+                continue
+            
+            vendor_name = soft.pop("vendor")
+                    
+            if vendor_name and vendor_name in vendors:
+                vendor_obj = vendors.get(vendor_name)
+            else:
+                vendor_obj = Vendor(name=vendor_name)
+                vendors[vendor_name] = vendor_obj
+                result.append(vendor_obj)
+            
+            hash_string = vendor_name or "" + "_" + "_".join([v for v in soft.values() if v])
+
+            if not (hash_string and hash_string in softwares):
+                soft_obj = Software(vendor=vendor_obj, **soft)
+                softwares[hash_string] = soft_obj
+                result.append(soft_obj)
+                new_l7_soft = L7Software(l7=new_l7, software=soft_obj)
+                result.append(new_l7_soft)
+        return result
 
     @staticmethod
     def get_groups():

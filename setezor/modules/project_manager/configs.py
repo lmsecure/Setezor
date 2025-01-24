@@ -72,7 +72,7 @@ class Configs:
     def generate_configs(cls, project_path:str, project_name: str):
         """Метод генерации конфигов класса
         """
-        uid = str(uuid.uuid4())
+        uid = uuid.uuid4().hex
         format_path =  os.path.join(project_path, uid, '%s')
         folders = Folders(nmap_logs=format_path % FilesNames.nmap_logs,
                           scapy_logs=format_path % FilesNames.scapy_logs,
@@ -91,11 +91,6 @@ class Configs:
             'masscan': {'limit': 1, 'pending_limit': 10, 'close_timeout': 0.1},
             'cve_vulners': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'cve_nvd': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},   # <- увеличение limit приводит к database locked
-            'snmp' : {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
-            'whois': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
-            'cert_info': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
-            'dns_info': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
-            'sd_find': {'limit': 1, 'pending_limit': 100, 'close_timeout': 0.1},
             'other': {'limit': 10, 'pending_limit': 500, 'close_timeout': 0.1},
             'search-vulns': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
             'screenshoter': {'limit': 1, 'pending_limit': 500, 'close_timeout': 0.1},
@@ -129,23 +124,6 @@ class Configs:
         return default
     
     @classmethod
-    def load_config_from_file_for_import(cls, project_path):
-        if not os.path.exists(file_path:=os.path.join(project_path, FilesNames.config_file)):
-            raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
-        with open(file_path, 'r') as f:
-            configs_json: Dict[str, Dict[str, str]] = json.load(f)
-
-        new_path = project_path[:project_path.index('/.local/')]
-        for k, v in configs_json.get("folders").items():
-            configs_json["folders"][k] = new_path + v[v.index('/.local/'):]
-        for k, v in configs_json.get("files").items():
-            configs_json["files"][k] = new_path + v[v.index('/.local/'):]
-
-        with open(file_path, 'w') as f:
-            f.write(json.dumps(configs_json, indent=4))
-
-
-    @classmethod
     def load_config_from_file(cls, project_path):
         """Метод загрузки конфигов из файла в объект
 
@@ -156,7 +134,7 @@ class Configs:
             raise FileNotExistsError(f'Config file dont exists by path "{file_path}"')
         with open(file_path, 'r') as f:
             configs_json: Dict[str, Dict[str, str]] = json.load(f)
-        uid_filler = ConfigsFiller(lambda x: str(uuid.uuid4()))
+        uid_filler = ConfigsFiller(uuid.uuid4().hex)
         agent_filler = ConfigsFiller(lambda x: AgentStruct(name='Default agent'))
         interface_filler = ConfigsFiller(cls.fill_interface)
         search_vulns_token_filler = ConfigsFiller(lambda x: "")

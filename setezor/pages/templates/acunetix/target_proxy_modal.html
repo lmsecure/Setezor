@@ -1,0 +1,82 @@
+{% macro show()%}
+<div class="modal fade" id="setProxy" tabindex="-1" aria-labelledby="addScanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScanLabel">Setting proxy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="set_proxy(event)" id="setProxyForm">
+                <input type="hidden" name="target_id" id="acunetix_proxy_target_id">
+                <input type="hidden" name="group_id" id="acunetix_proxy_group_id">
+                <div class="modal-body">
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_proxy_address" class="col-form-label">Address</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="text" id="target_proxy_address" class="form-control mt-1" name="address" required
+                                placeholder="e.g. 127.0.0.1">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_proxy_port" class="col-form-label">Port</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="number" min="1" max="65535" id="target_proxy_port" class="form-control mt-1" name="port" required>
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_proxy_username" class="col-form-label">Username</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="text" id="target_proxy_username" class="form-control mt-1" name="username">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-4">
+                            <label for="target_proxy_password" class="col-form-label">Password</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="password" id="target_proxy_password" class="form-control mt-1" name="password">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_setting_proxy"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    async function set_proxy(event) {
+        event.preventDefault();
+        let params = (new URLSearchParams({acunetix_id:currentAcunetixName})).toString()
+        let payload = new FormData(event.target);
+        if (payload.get("group_id") === ''){
+            let target_id = payload.get("target_id")
+            payload.delete("target_id")
+            payload.delete("group_id")
+            resp = await fetch(`/api/v1/acunetix/targets/${target_id}/proxy?`+params, { method: 'put', headers: {"Content-Type": "application/json",}, body: JSON.stringify(Object.fromEntries(payload))})
+        }
+        if (payload.get("target_id") === ''){
+            let group_id = payload.get("group_id")
+            payload.delete("group_id")
+            payload.delete("target_id")
+            resp = await fetch(`/api/v1/acunetix/groups/${group_id}/proxy?`+params, { method: 'put', headers: {"Content-Type": "application/json",}, body: JSON.stringify(Object.fromEntries(payload))})
+        }
+        if (resp.status === 204) {
+            document.getElementById("cancel_setting_proxy").click();
+            targets_table.dataLoader.reloadData();
+            create_toast('Success', `Proxy was set`, 'success')
+        }
+    }
+</script>
+{% endmacro %}

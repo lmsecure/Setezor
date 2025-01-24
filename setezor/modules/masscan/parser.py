@@ -1,120 +1,123 @@
-from setezor.exceptions.loggers import get_logger
+import asyncio
 import json
 import xmltodict
 import re
-from dataclasses import dataclass
-from typing import List, Type, Dict
-from abc import abstractstaticmethod
 
-
-@dataclass
-class PortStructure:
-    ip: str
-    port: int
-    state: str
-    protocol: str
-    ttl: int
-    
-    def __str__(self) -> str:
-        return json.dumps(self.__dict__)
-    
-    def to_dict(self) -> dict:
-        d = self.__dict__
-        d.pop('ttl')  #FixMe add ttl to model
-        return d
-    
-
-@dataclass
-class NetworkLink:
-    child_ip: str
-    parent_ip: str
-    
-    def __str__(self) -> str:
-        return json.dumps(self.__dict__)
-    
-    def to_dict(self) -> dict:
-        return self.__dict__
+from setezor.tools.ip_tools import get_network
+from setezor.models import IP, Port, MAC, Route, RouteList, Network, Object
 
 
 class BaseMasscanParser:
     
-    @abstractstaticmethod
-    def parse(input_data: str, parent_ip: str):
+    async def parse(input_data: str):
         pass
 
+    @classmethod
+    async def _parser_results(cls, format: str, input_data: str):
+        parsers: dict = {
+            'xml': XMLParser,
+            'oX': XMLParser,
+            'json': JsonParser,
+            'oJ': JsonParser,
+            'list': ListParser,            
+            'oL': ListParser,
+        }
+        loop = asyncio.get_event_loop()
+        parser = parsers.get(format)
+        return await parser.parse(input_data=input_data)
+    
+    @classmethod
+    async def restruct_result(cls, data: dict, agent_id: int, interface_ip_id: int):
+        result = []
+        ips_objs = dict()
+        for ip_target, ports_target in data.items():
+            if not (ip_obj := ips_objs.get(ip_target, None)):
+                start_ip, broadcast = get_network(ip = ip_target, mask = 24)
+                network_obj = Network(start_ip=start_ip, mask=24)
+                ip_obj = IP(ip=ip_target, network=network_obj)
+                ips_objs.update({ip_target : ip_obj})
+                result.extend([network_obj, ip_obj])
+                for port in ports_target:
+                    port_obj = Port(ip=ip_obj, **port)
+                    result.append(port_obj)
+            route_obj = Route(agent_id=agent_id)
+            result.append(RouteList(ip_id_from=interface_ip_id, ip_to=ip_obj, route=route_obj))
+        print()
+        return result
 
-logger = get_logger(__package__, handlers=[])
 
 class XMLParser(BaseMasscanParser):
     
-    @staticmethod
-    def parse(input_data: str, parent_ip: str) -> List[Type[PortStructure]]:
-        port_result: List[Type[PortStructure]] = []
-        link_result: List[Type[NetworkLink]] = []
+    @classmethod
+    async def parse(cls, input_data: str) -> dict[str, list]:
+        if not input_data:
+            raise Exception("Masscan xml log file empty")
+        port_result = dict()
         try:
             json_string_data = json.dumps(xmltodict.parse(input_data))
         except:
-            logger.error('XML data parsing error')
-            return []
+            raise Exception("Masscan xml log parse error")
         dict_data = json.loads(re.sub(r'\"@([^"]+)\":', r'"\1":', json_string_data))
-        ports_data: List[Dict] = dict_data['nmaprun']['host']
-        for i in ports_data:  # ToDo remake to async
+        ports_data: list[dict] = dict_data['nmaprun']['host']
+        for i in ports_data:
             try:
-                port_result.append(PortStructure(ip=i['address'].get('addr'),
-                                            port=i['ports']['port'].get('portid'),
-                                            protocol=i['ports']['port'].get('protocol'),
-                                            state=i['ports']['port']['state'].get('state'),
-                                            ttl=i['ports']['port']['state'].get('reason_ttl')))
-                link_result.append(NetworkLink(child_ip=i['address'].get('addr'),
-                                               parent_ip=parent_ip))
+                if i['address'].get('addr') not in port_result:
+                    port_result[i['address'].get('addr')] = []
+                port_result[i['address'].get('addr')].append({
+                    "port": i['ports']['port'].get('portid'),
+                    "protocol": i['ports']['port'].get('protocol'),
+                    "state": i['ports']['port']['state'].get('state'),
+                    "ttl": i['ports']['port']['state'].get('reason_ttl')})
             except:
-                logger.error(f'Cannot convert to PortStructure next data: {str(i)}')
                 continue
-        return (port_result, link_result)
+        return port_result
+
 
 class JsonParser(BaseMasscanParser):
     
-    @staticmethod
-    def parse(input_data: str, parent_ip: str) -> List[Type[PortStructure]]:
-        port_result: List[Type[PortStructure]] = []
-        link_result: List[Type[NetworkLink]] = []
+    @classmethod
+    async def parse(cls, input_data: str) -> dict[str, list]:
+        if not input_data:
+            raise Exception("Masscan json log file empty")
+        port_result = dict()
         try:
-            data: List[Dict] = json.loads(input_data)
+            data: list[dict] = json.loads(input_data)
         except:
-            logger.error('Json data parsing error')
             raise Exception("Masscan json log parse error")
-        for i in data:  # ToDo remake to async
+        for i in data:
             try:
-                port_result.append(PortStructure(ip=i.get('ip', None),
-                                            port=i['ports'][0].get('port', None),
-                                            protocol=i['ports'][0].get('proto', None),
-                                            state=i['ports'][0].get('status', None),
-                                            ttl=i['ports'][0].get('ttl', None)))
-                link_result.append(NetworkLink(child_ip=i.get('ip', None),
-                                               parent_ip=parent_ip))
+                if i.get('ip', None):
+                    if i.get('ip') not in port_result:
+                        port_result[i.get('ip')] = []
+                    port_result[i.get('ip', None)].append({
+                        "port": i['ports'][0].get('port', None),
+                        "protocol": i['ports'][0].get('proto', None),
+                        "state": i['ports'][0].get('status', None),
+                        "ttl": i['ports'][0].get('ttl', None)})
             except:
-                logger.error(f'Cannot convert to PortStricture next data: {str(i)}')
                 continue
-        return (port_result, link_result)
+        return port_result
+
 
 class ListParser(BaseMasscanParser):
     
-    @staticmethod
-    def parse(input_data: str, parent_ip: str) -> List[Type[PortStructure]]:
+    @classmethod
+    async def parse(cls, input_data: str) -> dict[str, list]:
+        if not input_data:
+            raise Exception("Masscan list log file empty")
         if isinstance(input_data, bytes):
             input_data = input_data.decode()
-        port_result: List[Type[PortStructure]] = []
-        link_result: List[Type[NetworkLink]] = []
+        port_result = dict()
         data = [i.split() for i in input_data.splitlines()[1:-1]]
-        for i in data:  # ToDo remake to async
+        for i in data:
             try:
-                port_result.append(PortStructure(ip=i[3],
-                                            port=int(i[2]),
-                                            state=i[0],
-                                            protocol=i[1],
-                                            ttl=None))
-                link_result.append(NetworkLink(child_ip=i[3],
-                                               parent_ip=parent_ip))
+                if i[3] not in port_result:
+                    port_result[i[3]] = []
+                port_result[i[3]].append({
+                    "port": int(i[2]),
+                    "state": i[0],
+                    "protocol": i[1],
+                    "ttl": None})
             except:
-                logger.error(f'Cannot convert to PortStricture next data: {str(i)}')
-        return (port_result, link_result)
+                raise Exception("Masscan list log parse error")
+        return port_result

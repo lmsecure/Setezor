@@ -3,7 +3,7 @@
 """
 
 
-from setezor.app_routes.api.acunetix.schemes.target_config import ScanSpeedValues
+from setezor.api.acunetix.schemes.target_config import ScanSpeedValues
 from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.acunetix_config import Config
 from setezor.modules.acunetix.report import Report
@@ -11,7 +11,7 @@ from setezor.modules.acunetix.report import Report
 
 def acunetix_groups_context() -> dict:
     context = {'groups_tab': {'name': 'groups',
-                              'base_url': f'/api/acunetix/groups/',
+                              'base_url': f'/api/v1/acunetix/groups',
                               'columns': [{'field': 'acunetix_name', 'title': 'AcunetixName'},
                                           {'field': 'name', 'title': 'Group Name'},
                                           {'field': 'description',
@@ -24,7 +24,7 @@ def acunetix_groups_context() -> dict:
 
 def acunetix_targets_context() -> dict:
     context = {'targets_tab': {'name': 'targets',
-                               'base_url': f'/api/acunetix/targets/',
+                               'base_url': f'/api/v1/acunetix/targets',
                                'columns': [{'field': 'acunetix_name', 'title': 'AcunetixName'},
                                            {'field': 'address', 'title': 'Address'},
                                            # {'field': 'description','title': 'Description'},
@@ -39,7 +39,7 @@ def acunetix_targets_context() -> dict:
 
 def acunetix_scans_context() -> dict:
     context = {'scans_tab': {'name': 'scans',
-                             'base_url': f'/api/acunetix/scans/',
+                             'base_url': f'/api/v1/acunetix/scans',
                              'columns': [{'field': 'acunetix_name', 'title': 'AcunetixName'},
                                          {'field': 'target', 'title': 'Address',
                                              'formatter': 'link', 'headerSort': False},
@@ -53,9 +53,9 @@ def acunetix_scans_context() -> dict:
     return context
 
 
-async def acunetix_reports_context(path) -> dict:
+async def acunetix_reports_context() -> dict:
     context = {'reports_tab': {'name': 'reports',
-                               'base_url': f'/api/acunetix/reports/',
+                               'base_url': f'/api/v1/acunetix/reports',
                                'columns': [{'field': 'acunetix_name', 'title': 'AcunetixName'},
                                    {'field': 'template_name', 'title': 'Report Template'},
                                            {'field': 'source.description',

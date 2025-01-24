@@ -1,10 +1,10 @@
 from scapy.layers.l2 import ARP
 from scapy.packet import Packet
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 
 class ARPPacket(AbstractPacket):
@@ -26,7 +26,8 @@ class ARPPacket(AbstractPacket):
             res.update({'parent_mac': pkt['ARP'].hwsrc, 'parent_ip': pkt['ARP'].psrc})
             res.update({'child_mac': pkt['ARP'].hwdst, 'child_ip': pkt['ARP'].pdst})
         except:
-            logger.error('Cannot parse package %s by "%s"', pkt.summary(), ARPPacket.__name__)
+            pass
+            # logger.error('Cannot parse package %s by "%s"', pkt.summary(), ARPPacket.__name__)
         return res
 
     @staticmethod

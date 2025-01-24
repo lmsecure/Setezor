@@ -1,0 +1,233 @@
+{% macro show() %}
+<div class="d-flex flex-row">
+    <div class="card mt-1" style="width: 30rem;">
+        <div class="card-header">
+            Acunetix Settings
+        </div>
+        <form onsubmit="set_config(event)" id="acunetix_config_form">
+            <div class="mb-3 mt-3 mx-2">
+                <input type="text" class="form-control mt-1" id="acunetixSettingsInstanceName" name="name" required
+                    placeholder="Acunetix Instance Name">
+            </div>
+            <div class="mb-3 mx-2">
+                <input type="text" id="acunetixSettingsPassword" class="form-control mt-1" name="url" required
+                    placeholder="Acunetix URL (e.g. https://localhost:8080)">
+            </div>
+            <div class="mb-2 mx-2">
+                <input type="password" id="acunetixSettingsToken" class="form-control mt-1" name="token" required
+                    placeholder="Acunetix Token">
+            </div>
+            <div class="mb-2 mx-2">
+                <input type="text" id="acunetixSettingsUTCOffset" placeholder="UTC offset e.g. +05:00 or -03:30"
+                    class="form-control mt-1" name="offset" value="+05:00" required>
+            </div>
+            <div class="mb-1 mx-2 d-flex justify-content-center">
+                <button type="submit" class="btn btn-success mt-1">Save</button>
+            </div>
+        </form>
+    </div>
+    <div class="ms-4">
+        <h3>Registered Acunetix</h3>
+        <table class="table table-bordered mt-2">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>URL</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="acunetix_configs">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="acunetixTargetsSettingsContainer" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="acunetixSettingsModalTitle">Acunetix targets</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="acunetixTargetsSettingsContainerBody">
+                <div id="scopesPickAcunetix" class="col-5"></div>
+                <div id="acunetixTargetsWhenScopeIsPicked"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="syncTargetsFromAcunetixAndGetVulnerabilities()">Save changes</button>
+              </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var mask = new Inputmask({regex: "([+-])([0-9][0-9]:[0-9][0-9])"}).mask(document.getElementById('acunetixSettingsUTCOffset'))
+    document.getElementById("acunetix_config_form").reset();
+    let set_config = async function (event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        let resp = await fetch('/api/v1/acunetix/config', { 
+            method: 'post', 
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(payload)) 
+    })
+        if (resp.status === 200) {
+            create_toast('Success', `Credentials were saved`, 'success')
+            document.getElementById("acunetix_targets_pill").style.display = '';
+            document.getElementById("acunetix_groups_pill").style.display = '';
+            document.getElementById("acunetix_reports_pill").style.display = '';
+            document.getElementById("acunetix_scans_pill").style.display = '';
+            document.getElementById("updateTargets").click();
+            document.getElementById("updateGroups").click();
+            document.getElementById("updateReports").click();
+            document.getElementById("updateScans").click();
+            refreshConfigsTable();
+            document.getElementById("acunetix_config_form").reset();
+        } else {
+            create_toast('Error', `Wrong credentials`, 'error')
+        }
+    }
+
+    async function getScopes(id){
+        let scopes
+        await axios.get(`/api/v1/scope`).then(resp =>{
+            scopes = resp.data
+        })
+        let result = "Scopes"
+        let el = document.getElementById("scopesPickAcunetix")
+        result += `<select name="scope" class="form-select mb-3" onchange="getAcunetixTargetsData(event, '${id}')">`
+        result += `<option></option>`
+        for (scope of scopes){
+            result += `<option value="${scope.id}">${scope.name}</option>`
+        }
+        result += `</select>`
+        el.innerHTML = result
+        let modalBody = document.getElementById('acunetixTargetsWhenScopeIsPicked')
+        modalBody.innerHTML = ''
+        var myModal = new bootstrap.Modal(document.getElementById('acunetixTargetsSettingsContainer'));
+        myModal.show();
+    }
+
+    async function getAcunetixTargetsData(event, acunetix_id){
+        let targets = []
+        let scope_id = event.target.value
+        let modalBody = document.getElementById('acunetixTargetsWhenScopeIsPicked')
+        modalBody.innerHTML = `<div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                    </div>`
+        if (scope_id != ""){
+            await axios.get(`/api/v1/acunetix/targets/sync?acunetix_id=${acunetix_id}`).then(resp =>{
+                targets = resp.data
+            })
+        }
+        if (targets.length != 0){
+            modalBody.innerHTML = '<hr>'
+            for (const [gr_id, gr_data] of Object.entries(targets)){
+                let group_name = gr_data.name
+                let inner_targets = gr_data.targets
+                modalBody.innerHTML += `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" 
+                    onchange="pickGroupTargets(event, '${gr_id}')"
+                    id="${gr_id}">
+                    <label class="form-check-label" for="${gr_id}">
+                    ${group_name}
+                    </label>
+                </div>
+                `
+                for (target of inner_targets){
+                    modalBody.innerHTML += `
+                    <div class="form-check ms-5">
+                        <input class="form-check-input" type="checkbox" value="" 
+                        id="${target.target_id}" 
+                        group_id="${gr_id}"
+                        scope_id="${scope_id}" 
+                        in_setezor_id="${target.in_setezor_id}" 
+                        address="${target.address}"
+                        target=true
+                        acunetix_id="${target.acunetix_id}" ${target.in_setezor_id != null ? "checked":""}>
+                        <label class="form-check-label" for="${gr_id}_${target.target_id}">
+                        ${target.address}
+                        </label>
+                    </div>
+                    `
+                }
+            }
+        }
+    }
+
+    function pickGroupTargets(event, group_id){
+        let el = document.getElementById("acunetixTargetsWhenScopeIsPicked")
+        for (const container of el.childNodes){
+            if (container.localName == "div"){
+                for (const _el of container.childNodes){
+                    if (_el.localName == "input" && _el.attributes.target != undefined){
+                        if (_el.attributes.target.value == "true" && _el.attributes.group_id.value == group_id){
+                            _el.checked = event.target.checked
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    async function syncTargetsFromAcunetixAndGetVulnerabilities(){
+        let el = document.getElementById("acunetixTargetsWhenScopeIsPicked")
+        let targetsToSync = []
+        for (const container of el.childNodes){
+            if (container.localName == "div"){
+                for (const _el of container.childNodes){
+                    if (_el.localName == "input" && _el.checked == true && _el.attributes.target != undefined){
+                        let attrs = _el.attributes
+                        let in_acunetix_id = attrs.id.value
+                        let scope_id = attrs.scope_id.value
+                        let address = attrs.address.value
+                        let acunetix_id = attrs.acunetix_id.value
+                        let in_setezor_id = attrs.in_setezor_id.value
+                        if (in_setezor_id == "null"){
+                            in_setezor_id = null
+                        }
+                        targetsToSync.push({
+                            scope_id:scope_id,
+                            in_acunetix_id: in_acunetix_id,
+                            in_setezor_id: in_setezor_id,
+                            acunetix_id: acunetix_id,
+                            address: address
+                        })
+                    }
+                }
+            }
+        }
+        await axios.post("/api/v1/acunetix/targets/sync", {targets: targetsToSync}, {headers: {'Content-Type': 'application/json'}}).then(resp =>{
+            if (resp.status == 200){
+                var myModalEl = document.getElementById('acunetixTargetsSettingsContainer')
+                var myModal = bootstrap.Modal.getInstance(myModalEl)
+                myModal.hide();
+            }
+        })
+    }
+
+    async function refreshConfigsTable() {
+        let configs
+        await axios.get("/api/v1/acunetix/config").then(resp =>{
+            configs = resp.data
+        })
+        let result = ""
+        
+        // getAcunetixTargetsData('${config.id}')
+        for (config of configs) {
+            result += `
+            <tr>
+                <td>${config.name}</td>
+                <td>${config.url}</td>
+                <td><button class="btn btn-success" onclick="getScopes('${config.id}')">Sync</button></td>
+                </tr>`
+        }
+        document.getElementById("acunetix_configs").innerHTML = result
+    }
+</script>
+{% endmacro %}

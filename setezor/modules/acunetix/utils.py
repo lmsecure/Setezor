@@ -26,9 +26,9 @@ async def send_request(base_url: str,
                     if resp.content_type == "application/json":
                         return await resp.json()
                     else:
-                        filename = resp.content_disposition.parameters["filename"]
+                        filename = resp.content_disposition.parameters.get("filename", "") if resp.content_disposition else ""
                         data = await resp.read()
-                        return filename, data, 200
+                        return filename, data, resp.status
             case "POST":
                 async with session.post(base_url + url,
                                         params=params,

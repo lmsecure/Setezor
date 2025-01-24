@@ -1,28 +1,37 @@
 import asyncio
 from time import time
 
-from setezor.tasks.base_job import BaseJob, MessageObserver, CustomScheduler
-from setezor.modules.sniffing.base_sniffer import Sniffer
-from setezor.tools.ip_tools import get_ipv4
-from setezor.database.queries import Queries
-from setezor.network_structures import IPv4Struct, MacStruct, RouteStruct, ObjectStruct
+from setezor.tasks.base_job import BaseJob
+from setezor.modules.sniffing.scapy_sniffer import ScapySniffer
+from setezor.modules.sniffing.scapy_parser import ScapyParser
 
-class ScapyScanTask(BaseJob):
+
+
+class ScapySniffTask(BaseJob):
+
+    JOB_URL = "scapy_sniff_task"
     
-    def __init__(self, agent_id: int, observer: MessageObserver, 
-                 scheduler: CustomScheduler, name: str, db: Queries, 
-                 iface: str, log_path: str, task_id: int):
-        super().__init__(agent_id=agent_id, observer = observer, scheduler = scheduler, name = name)
+    def __init__(self, scheduler, iface: str, agent_id: int, task_id: int, name: str, project_id: str):
+        super().__init__(scheduler=scheduler, name=name)
+        self.agent_id = agent_id
+        self.project_id = project_id
         self.iface = iface
-        self.sniffer = Sniffer(iface=iface, log_path=log_path, write_packet_to_db=self.write_packet_to_db)
-        self._coro = self.run()
-        self.db = db
         self.task_id = task_id
         self.is_stoped = False
+        self.sniffer = ScapySniffer(iface=iface)
+        self._coro = self.run()
 
-    async def _start_sniffing(self):
+
+    async def soft_stop(self):
+        self.is_stoped = True
+        logs = self.sniffer.stop_sniffing()
+        result = ScapyParser.parse_logs(data=logs)
+        result = ScapyParser.restruct_result(data=result, agent_id=self.agent_id)
+        await self.send_result_to_parent_agent(result=result)
+
+
+    async def run(self):
         self.sniffer.start_sniffing()
-        self.logger.debug('Scapy scan task started')
         self.t1 = time()
         while self.sniffer.sniffer.running:
             await asyncio.sleep(2)
@@ -30,23 +39,3 @@ class ScapyScanTask(BaseJob):
                 return
             if not self.sniffer.sniffer.thread.is_alive():
                 raise Exception('Sniffing was failed. Maybe you dont have permission?')
-        
-    async def soft_stop(self):
-        self.is_stoped = True
-        self.sniffer.stop_sniffing()
-        self.logger.debug('Scapy scan task stopped')
-        self.db.task.set_finished_status(index=self.task_id)
-        self.logger.debug('Finish scapy task with name "%s" after %.2f seconds', self.name, time() - self.t1)
-
-    def write_packet_to_db(self, pkt: dict):
-        if any(['ip' in j for j in list(pkt.keys())]):
-            host = IPv4Struct(address=pkt['child_ip'],mac_address = MacStruct(mac = pkt['child_mac'], object=ObjectStruct()))
-            target = IPv4Struct(address=pkt['parent_ip'],mac_address = MacStruct(mac = pkt['parent_mac'], object=ObjectStruct()))
-            route = RouteStruct(agent_id=self.agent_id, routes=[host, target])
-            self.db.route.create(route=route, task_id=self.task_id)
-        else:
-            self.db.mac.write(mac=pkt.get('child_mac'), agent_id=self.agent_id)
-            self.db.mac.write(mac=pkt.get('parent_mac'), agent_id=self.agent_id)
-
-    async def run(self):
-        return await self._start_sniffing()

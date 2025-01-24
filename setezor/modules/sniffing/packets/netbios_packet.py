@@ -1,10 +1,10 @@
 from scapy.layers.l2 import LLC
 from scapy.packet import Packet
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 
 class NetBOISPacket(AbstractPacket):

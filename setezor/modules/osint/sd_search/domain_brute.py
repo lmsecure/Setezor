@@ -1,10 +1,11 @@
 import aiodns
 import asyncio
 import os
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
+from setezor.models import Domain
 from typing import List
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 class Domain_brute:
     @classmethod
@@ -21,7 +22,7 @@ class Domain_brute:
             async with sem:
                 return await resolve(resolver,subdomain,name,query_type)
             
-        logger.debug('Start domain_brute [%s]', name)    
+        # logger.debug('Start domain_brute [%s]', name)    
         resolver = aiodns.DNSResolver(loop=asyncio.get_event_loop())
         filename = cls.get_subdomains_file_path()
         with open(filename,'r') as file:
@@ -43,3 +44,11 @@ class Domain_brute:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(current_dir, filename)
         return file_path
+    
+
+    @classmethod
+    def restruct_result(cls, domains: list[str]) -> List[Domain]:
+        result: List[Domain] = []
+        for domain in domains:
+            result.append(Domain(domain=domain))
+        return result

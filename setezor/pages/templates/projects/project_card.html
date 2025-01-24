@@ -1,0 +1,260 @@
+{% macro show(project, analytics) %}
+{% import 'projects/donut_card.html' as charts %}
+<script>
+
+    function createDashboardChar(elementId, values, labels, text_inside = '') {
+        let data;
+        if (values.length === 0 || labels.length === 0) {
+            data = [{
+                values: [1],
+                labels: ['No Data'],
+                type: 'pie',
+                textinfo: "label",
+                textposition: "inside",
+                hole: 0.4,
+                marker: { colors: ['#ddd'] }
+            }];
+        } else {
+            data = [{
+                values: values,
+                labels: labels,
+                type: 'pie',
+                textinfo: "label",
+                textposition: "inside",
+                hole: 0.4,
+            }];
+        }
+
+        layout = {
+            margin: { "t": 5, "b": 5, "l": 5, "r": 5 },
+            showlegend: false,
+
+            annotations: [{ text: text_inside, showarrow: false }]
+        };
+
+        const sizeInRem = 12;
+        layout.height = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+        layout.width = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+        Plotly.newPlot(elementId, data, layout, { displayModeBar: false });
+
+        return chart;
+    }
+</script>
+
+<div id="{{project.id}}" class="h-100">
+    <div class="card mb-3 h-100">
+        <h6 class="card-header"
+            style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+            <label class="form-check-label me-2" for="{{ project.name }}" style="flex-grow: 1;">
+                {{ project.name }}
+            </label>
+            <div class="dropdown">
+                <i class="bi bi-three-dots" type="button" id="dropdownMenuButton_{{ project.id }}"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                </i>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ project.id }}">
+                    <li>
+                        <a class="dropdown-item" href="#">
+                            <button type="button" class="btn btn-danger flex-fill w-100"
+                                onclick="deleteProject('{{ project.id }}')">
+                                Delete
+                            </button>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </h6>
+        <div id="projectCarousel{{ project.id }}" class="carousel slide"  data-bs-ride="carousel">
+            <div id="carouselExampleIndicators{{ project.id }}" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators" style="margin-bottom: -2rem;">
+                  <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                  <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                  <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                  <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="3" aria-label="Slide 4"></button>
+                </div>
+                
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div class="text-center">
+
+                            Top ports
+                            {% if analytics.top_ports %}
+                                {{ charts.create_donut('Top ports', 'analytics.top_ports' + '_' + project.id,
+                                analytics.top_ports.data | safe ,
+                                analytics.top_ports.labels | safe,
+                                project.id | safe)
+                                }}
+                            {% else %}
+                                {{charts.create_donut('Top ports', 'analytics.top_ports' + '_' + project.id,
+                                '[]',
+                                '[]',
+                                project.id | safe)}}
+                            {% endif %}
+                
+
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div class="text-center">
+
+                            Top protocols
+                            {% if analytics.top_protocols %}
+                            {{ charts.create_donut('Top protocols', 'analytics.top_protocols' + '_' + project.id,
+                            analytics.top_protocols.data | safe ,
+                            analytics.top_protocols.labels | safe ,
+                            project.id | safe)
+                            }}
+                            {% else %}
+                            {{charts.create_donut('Top protocols', 'analytics.top_protocols' + '_' + project.id,
+                            '[]',
+                            '[]',
+                            project.id | safe)}}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div class="text-center">
+
+                            Top objects
+                            {% if analytics.device_types %}
+                            {{ charts.create_donut('Top objects', 'analytics.device_types' + '_' + project.id,
+                            analytics.device_types.data | safe ,
+                            analytics.device_types.labels | safe ,
+                            project.id | safe
+                           ) }}
+                           {% else %}
+                           {{charts.create_donut('Top objects', 'analytics.device_types' + '_' + project.id,
+                           '[]',
+                           '[]',
+                           project.id | safe)}}
+                           {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+                <div class="carousel-item">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div class="text-center">
+
+                            Top products
+                            {% if analytics.top_products %}
+                            {{ charts.create_donut('Top products', 'analytics.top_products' + '_' + project.id,
+                            analytics.top_products.data | safe ,
+                            analytics.top_products.labels | safe ,
+                            project.id | safe
+                            ) }}
+                            {% else %}
+                            {{charts.create_donut('Top products', 'analytics.top_products' + '_' + project.id,
+                            '[]',
+                            '[]',
+                            project.id | safe)}}
+                            {% endif %}
+                        </div>
+                    </div>  
+                </div>
+            </div>
+        </div>
+            <!-- <button class="carousel-control-prev" type="button"
+                data-bs-target="#projectCarousel{{ project.id }}" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            </button>
+            <button class="carousel-control-next" type="button"
+                data-bs-target="#projectCarousel{{ project.id }}" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            </button> -->
+        </div>
+        <div class="card-body d-flex flex-column" style="padding-top: 0px;">
+            <div class="mt-auto" style="padding-top: 0px;">
+
+
+                <ul style="padding-left: 1rem;">
+                    <li><strong>Node count: </strong>{{ analytics.ip_count | safe }}</li>
+                    <li><strong>Port count: </strong>{{ analytics.port_count | safe }}</li>
+                </ul>
+
+
+                <button type="button" class="btn btn-success flex-fill w-100"
+                    onclick="chooseProject('{{ project.id }}')">Choose
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="deleteProjectModal"></div>
+<script>
+function chooseProject(projectId) {
+    const formData = new FormData();
+    formData.set('project_id', projectId);
+
+    fetch('/api/v1/project/set_current', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/projects_dashboard';
+        } else {
+            console.error('Failed to set the current project.');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteProject(projectId, projectName) {
+    const modalContent = `
+        <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalLabel">Project Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete the project "{{project.name}}"?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" onclick="confirmDeleteProject('${projectId}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('deleteProjectModal').innerHTML = modalContent;
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+    modal.show();
+}
+
+function confirmDeleteProject(projectId) {
+    const formData = new FormData();
+    formData.set('project_id', projectId);
+
+    fetch('/api/v1/project/', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            console.error('Failed to delete the project.');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+{% endmacro %}

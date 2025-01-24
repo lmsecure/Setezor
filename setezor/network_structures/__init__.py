@@ -9,6 +9,7 @@ from ipaddress import (
     ip_address,
 )
 
+
 from pydantic import (
     BaseModel,
     Field,
@@ -28,7 +29,6 @@ from pydantic_extra_types.mac_address import MacAddress
 
 class BaseStructModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: int | None = Field(ge=0, default=None)
 
 
 # todo Разобраться с параметрами global, link_local, loopback, multicast, private, reserved
@@ -242,15 +242,16 @@ class AgentStruct(BaseStructModel):
 
 
 class InterfaceStruct(BaseStructModel):
-    
+    id: str | None = None
     name: str
-    ip_address: str | None = None
-    mac_address: str | None = None
+    ip: str | None = None
+    ip_id: str | None = None
+    mac: str | None = None
     
     
 class RouteStruct(BaseStructModel):
     
     """Структура роутов"""
     
-    agent_id: int
+    agent_id: str
     routes: list[IPv4Struct] = Field(min_length=2)

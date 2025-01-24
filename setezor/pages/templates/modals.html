@@ -1,0 +1,118 @@
+{% macro create_close_modal(name, on_save='', title_text='Are you shure?', body_text=none, cancel_text='Close', save_text='Delete') %}
+<button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#close_modal_{{name}}">
+</button>
+
+<div class="modal fade" id="close_modal_{{name}}" tabindex="-1" aria-labelledby="#close_modal_label_{{name}}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="close_modal_label_{{name}}">{{title_text}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            {% if body_text %}
+                <div class="modal-body">
+                    {{body_text}}
+                </div>
+            {% endif %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel_text}}</button>
+                <button type="button" class="btn btn-primary" onclick={{on_save|safe}}>{{save_text}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro create_rename_modal(name, on_save='', title_text='Renaming', body_text=none, cancel_text='Close', save_text='Rename') %}
+{# <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#rename_modal_{{name}}">
+</button> #}
+{# Создаст модальное окно, которое будет тригириться от кнопки, у которой задан data-bs-target с форматом #rename_modal_<name> #}
+
+
+<div class="modal fade" id="rename_modal_{{name}}" tabindex="-1" aria-labelledby="#rename_modal_label_{{name}}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rename_modal_label_{{name}}">{{title_text}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input id="rename_modal_input{{name}}", title="New name">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel_text}}</button>
+                <button type="button" class="btn btn-primary" onclick={{on_save|safe}}>{{save_text}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro create_vulnerabilities_add_modal() %}
+<div class="modal fade" id="vulnerabilityAddModal" tabindex="-1" aria-labelledby="vulnerabilityAddModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" data-dismiss="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotsModalLabel">Adding vulnerability</h5>
+                <button type="button" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" class="btn-close"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="addVulnerability(event)" id="addingVulnerabilityForm">
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityName" name="name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityCVE" class="form-label">CVE</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityCVE" name="cve">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityCWE" class="form-label">CWE</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityCWE" name="cwe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityDescription" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityDescription" name="description">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputVulnerabilityDetails" class="form-label">Details</label>
+                        <input type="text" class="form-control" id="InputVulnerabilityDetails" name="details">
+                    </div>
+                    <div class="mb-3">
+                        <label for="InputSoftwaresDict" class="form-label">Software</label>
+                        <select class="form-select" id="InputSoftwaresDict" name="software_id" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    async function addVulnerability(event) {
+        event.preventDefault()
+        let data = new FormData(event.target)
+        let resp = await fetch(`/api/v1/resource/${currentResourceID}/vulnerabilities`, { method: "POST", headers: {"Content-Type": "application/json",},body: JSON.stringify(Object.fromEntries(data)) })
+        if (resp.status == 201){
+            await getVulnerabilities(currentResourceID)
+            resource_table.dataLoader.reloadData()
+            $('#vulnerabilityAddModal').modal('hide');
+        }
+    }
+    async function fillSoftwares() {
+        let resp = await fetch("/api/v1/software")
+        let softwares = await resp.json()
+        let el = document.getElementById("InputSoftwaresDict")
+        el.innerHTML += "<option selected></option>"
+        for (const software of softwares) {
+            el.innerHTML += `
+                <option value="${software.id}">Vendor: ${software.vendor}, Product: ${software.product}, Version: ${software.version}</option>
+            `
+        }
+    }
+    fillSoftwares()
+</script>
+{% endmacro %}

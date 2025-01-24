@@ -1,0 +1,89 @@
+{% macro show() %}
+<div class="modal fade" id="setCookies" tabindex="-1" aria-labelledby="setCookiesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="setCookiesLabel">Setting cookies</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form onsubmit="set_cookies(event)" id="setCookiesForm">
+                <input type="hidden" name="target_id" id="acunetix_cookies_target_id">
+                <div class="modal-body">
+                    <div id="outerCookiesParent">
+                        <div class="form-group">
+                            <div class="row">
+                                <div class="col-4">
+                                    <label class="col-form-label">Url</label>
+                                    <input type="text" class="form-control" name="url1" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="col-form-label">Key</label>
+                                    <input type="text" class="form-control" name="key1" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="col-form-label">Value</label>
+                                    <input type="text" class="form-control" name="value1" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-1" onclick="addCookieInList()">+</button>
+                    <button class="btn btn-danger mt-1" onclick="clearCookiesList()">Clear</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel_setting_cookies"
+                        data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    async function set_cookies(event) {
+        event.preventDefault();
+        let payload = new FormData(event.target);
+        let params = (new URLSearchParams({ acunetix_id: currentAcunetixName })).toString()
+        let target_id = payload.get("target_id")
+        payload.delete("target_id")
+        resp = await fetch(`/api/v1/acunetix/targets/${target_id}/cookies?` + params, { method: 'put', headers: {"Content-Type": "application/json",}, body: JSON.stringify(Object.fromEntries(payload)) })
+        if (resp.status === 204) {
+            create_toast('Success', `Cookies was set`, 'success')
+            targets_table.dataLoader.reloadData();
+            document.getElementById("cancel_setting_cookies").click();
+        } else {
+            create_toast('Error', `Wrong format`, 'error')
+        }
+    }
+    let cookiesCount = 2;
+    function addCookieInList() {
+        let container = document.getElementById("outerCookiesParent")
+        let div = document.createElement("div")
+        div.classList = "form-group"
+        div.innerHTML = `<div class="row">
+                                <div class="col-4">
+                                    <label class="col-form-label">Url</label>
+                                    <input type="text" class="form-control" name="url${cookiesCount}" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="col-form-label">Key</label>
+                                    <input type="text" class="form-control" name="key${cookiesCount}" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="col-form-label">Value</label>
+                                    <input type="text" class="form-control" name="value${cookiesCount}" required>
+                                </div>
+                            </div>`
+        container.appendChild(div)
+        cookiesCount++;
+    }
+    function clearCookiesList() {
+        let container = document.getElementById("outerCookiesParent")
+        container.innerHTML = ""
+        cookiesCount = 1
+        addCookieInList()
+    }
+</script>
+{% endmacro %}

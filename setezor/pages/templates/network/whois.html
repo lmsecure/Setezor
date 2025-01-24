@@ -1,0 +1,152 @@
+{% macro main_whois() %}
+
+<div class="d-flex flex-column">
+    <div class="tab-content" id="dsa">
+        <form id="WhoisForm" class="needs-validation" novalidate>
+            <div id="WhoisInputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="TargetForWhois">
+                <span class="input-group-text" id="basic-addon1">TARGET</span>
+                <datalist id="DomainsAndIp"></datalist>
+                <input type="text" list="DomainsAndIp" class="form-control" id='inputTARGET'
+                    placeholder="Domain name or IP" aria-label="Target"
+                    aria-describedby="basic-addon1" required name="Target">
+
+                    <!-- <button id="add_new_whois_form" onclick="(function() {
+                        const original = document.getElementById('TargetForWhois');
+                        const clone = original.cloneNode(true);
+                        const newInput = clone.querySelector('input');
+                        newInput.id = 'inputTarget_' + Date.now(); // Уникальный ID
+                        newInput.value = '';
+                        // newInput.name = 'targetDOMAIN' + Date.now(); // Уникальный Name
+                        
+                        const existingMinusButton = clone.querySelector('.btn-danger');
+                        if (existingMinusButton) {
+                            existingMinusButton.remove();
+                        }
+
+                        const removeButton = document.createElement('button');
+                        removeButton.textContent = '-';
+                        removeButton.type = 'button';
+                        removeButton.className = 'btn btn-danger';
+                        removeButton.style.width = '3rem';
+                        removeButton.onclick = () => {
+                            clone.remove();
+                        };
+
+                        clone.appendChild(removeButton);
+
+                        const addButton = clone.querySelector('#add_new_whois_form');
+                        if (addButton) {
+                            addButton.remove();
+                        }
+
+                        document.getElementById('WhoisInputContainer').appendChild(clone);
+                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button> -->
+            </div>
+
+            <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
+                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                <button type="button" class="btn btn-primary w-50" id="startScanWhoisBtn"
+                onclick="
+                const button = this; // Сохраняем ссылку на кнопку
+                const form = button.closest('form'); // Находим ближайшую форму
+                
+                if (!form.checkValidity()) { 
+                    form.reportValidity();
+                    return;
+                }
+                
+                const params = {};
+                const domains_and_ips = [];
+                
+                // Собираем данные из формы
+                for (const d of form.getElementsByClassName('form-control')) {
+                    domains_and_ips.push(d.value);
+                }
+                
+                // Отправляем данные для каждого домена или IP
+                for (const domain_and_ip of domains_and_ips) {
+                    let domainAndIpParams = {
+                        target: domain_and_ip,
+                        agent_id: getAgent()
+                    };
+                    fetch('/api/v1/task/whois_task', {
+                        method: 'POST', 
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(domainAndIpParams)
+                    });
+                }
+                
+                // Закрытие модального окна
+                var myModal = bootstrap.Modal.getInstance(document.getElementById('whoisModalWindow'));
+                if (myModal) {
+                    myModal.hide();
+                }
+            ">Start</button>
+            
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endmacro %}
+
+{% macro whois_full_modal() %}
+
+<div id="whoisModalWindow" class="modal fade" tabindex="-1" aria-labelledby="whoisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="whoisModalLabel">Whois</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_whois">
+                    <div data-agent-bar="agent_whois"></div>
+                    <div data-interface-bar="interface_whois" class="ms-3"></div>
+                    <div id="scans_bar_whois" class="ms-3"></div>
+                </div>
+                <!-- <form id="whoisScanForm" class="needs-validation" style="padding-top: 7px;" novalidate> -->
+                    {{ main_whois() }}
+                <!-- </form> -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function whois_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("whoisModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+
+
+
+
+{% macro show() %}
+
+{{ main_whois() }}
+
+{% endmacro %}

@@ -6,6 +6,12 @@ from datetime import datetime
 from ipaddress import IPv4Address, AddressValueError
 from pprint import pprint
 
+from setezor.models.domain import Domain
+from setezor.models.ip import IP
+from setezor.models.whois_domain import WhoIsDomain
+from setezor.models.whois_ip import WhoIsIP
+from setezor.tools import ip_tools
+
 # class WhoisResult(TypedDict):
     
 #     domain: str
@@ -14,6 +20,7 @@ from pprint import pprint
 # res['']
 
 class Whois:
+
     @classmethod
     def socket_connect(cls, addr, ip):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -78,3 +85,43 @@ class Whois:
         except ConnectionResetError as ex:
             print(ex)
 
+    @classmethod
+    def restruct_result(self, target, result: dict):
+            data = dict()
+            output = []
+            data.update({'data': json.dumps(result),
+                        'domain_crt': result.get('domain', target),
+                        'org_name': result.get('org', ''),
+                        'AS': '',
+                        'range_ip': '',
+                        'netmask': ''})
+            alias_org_name = ['OrgName', 'Organization', 'organization']
+            alias_range = ['NetRange', 'inetnum']
+            alias_netmask = ['CIDR', 'route']
+            alias_origin = ['OriginAS', 'origin']
+            for org_name in alias_org_name:
+                if org_name in result:
+                    data.update({'org_name': result[org_name]})
+                    break
+            for _origin in alias_origin:
+                if _origin in result:
+                    data.update({'AS': result[_origin]})
+                    break
+            for _range in alias_range:
+                if _range in result:
+                    data.update({'range_ip': result[_range]})
+            for _net_mask in alias_netmask:
+                if _net_mask in result:
+                    # _netmask = result[i].split('/')[1]
+                    #print(_net_mask)
+                    break
+            if ip_tools.is_ip_address(target):
+                ip = IP(ip=target)
+                output.append(ip)
+                obj = WhoIsIP(**data, ip=ip)
+            else:
+                domain = Domain(domain=target)
+                output.append(domain)
+                obj = WhoIsDomain(**data, domain=domain)
+            output.append(obj)
+            return output

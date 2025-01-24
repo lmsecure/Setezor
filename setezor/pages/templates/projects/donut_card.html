@@ -1,0 +1,13 @@
+{% macro create_donut(title, main_id, data, labels, id) %}
+
+<div id="{{main_id|safe}}" style="padding-right: 2px;">
+
+        <div id="{{main_id|safe}}_donut"></div>
+
+</div>
+
+<script>
+        createDashboardChar("{{main_id|safe}}_donut", {{data}}, {{labels}})
+</script>
+
+{% endmacro %}

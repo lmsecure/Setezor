@@ -1,0 +1,291 @@
+{% macro masscan_ip() %}
+
+
+<div class="input-group" id="masscanIpTarget">
+    <span class="input-group-text" id="basic-addon1">IP</span>
+    <datalist id="IpList"></datalist>
+    <input type="text" list="IpList" class="form-control" id='masscanInputIP' placeholder="IP address or netmask"
+        aria-label="IP" aria-describedby="basic-addon1" required name="target">
+
+</div>
+<!-- <script>
+    $('#masscanIpTarget').on('change', function (e, data) {
+        if ($('#masscanInputIP').inputmask('isComplete')) {
+            document.getElementById('startMasscanScanBtn').disabled = false
+        } else {
+            document.getElementById('startMasscanScanBtn').disabled = true
+        }
+    })
+</script> -->
+{% endmacro %}
+{% macro masscan_main() %}
+
+<div class="d-flex justify-content-between py-2">
+    <div class="form-check form-switch" id="masscanPortSwitch">
+        <input class="form-check-input" type="checkbox" id="masscanPortsScan">
+        <label class="form-check-label" for="masscanPortsScan">Ports</label>
+    </div>
+
+    <div class="w-50" id="masscanPortsSelectorDiv">
+        <datalist id="masscanPortsSelectorList">
+            <option hidden disabled value="1"></option>
+            <option value="80,443,8080,8443">web ports</option>
+            <option value="25,465,587,110,143,993,995">email ports</option>
+            <option value="0-65535">All</option>
+        </datalist>
+        <input type="text" list="masscanPortsSelectorList" id="masscanPortsSelector" name="ports" class="form-control"
+            placeholder="Ports" />
+    </div>
+</div>
+<div class="d-flex justify-content-between py-2">
+    <div class="form-check form-switch" id="sourcePortSwitch">
+        <input class="form-check-input" type="checkbox" id="sourcePortScan">
+        <label class="form-check-label" for="sourcePortScan">Source Port</label>
+    </div>
+
+    <div class="w-50" id="masscanSourcePortSelectorDiv">
+        <input type="text" id="masscanSourcePortSelector" name="source_port" class="form-control"
+            placeholder="Source port" />
+    </div>
+</div>
+<div class="d-flex justify-content-between py-2">
+    <div class="form-check form-switch" id="maxRateSwitch">
+        <input class="form-check-input" type="checkbox" id="maxRate">
+        <label class="form-check-label" for="maxRate">maxRate</label>
+    </div>
+
+    <div class="w-50" id="masscanMaxRateSelectorDiv">
+        <input type="text" id="masscanMaxRateSelector" name="max_rate" class="form-control"
+            placeholder="Max rate" />
+    </div>
+</div>
+<div class="invalid-feedback">Please select a valid tag.</div>
+<div class="form-check form-switch" id="searchUdpPort">
+    <input class="form-check-input" type="checkbox" id="searchUdpPortInput">
+    <label class="form-check-label" for="searchUdpPortInput">Search Udp ports</label>
+</div>
+<div class="my-2">
+    <div class="d-flex justify-content-between" id="masscanOutputGroup">
+        <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+            <div class="form-check" style="padding-left: 0;" data-bs-toggle="tooltip" data-bs-placement="top" title="List format">
+                <input class="btn-check" type="radio" name="format" id="ol" value="oL" autocomplete="off">
+                <label class="btn btn-outline-primary" for="ol">List</label>
+            </div>
+            <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="XML format">
+                <input class="btn-check" type="radio" name="format" id="ox" value="oX" autocomplete="off">
+                <label class="btn btn-outline-primary" for="ox">XML</label>
+            </div>
+            <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="Json format">
+                <input class="btn-check" type="radio" name="format" id="oj" value="oJ" autocomplete="off" checked>
+                <label class="btn btn-outline-primary" for="oj">JSON</label>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="my-2">
+    <div class="d-flex justify-content-between">
+        <label for="masscanWaitRange" class="form-label">Wait after scan</label>
+        <input type="range" class="form-range" name="wait" min="0" max="20" step="0.5" id="masscanWaitRange">
+    </div>
+</div>
+<div class="btn-group d-flex my-2" role="group">
+    <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+    <button type="button" class="btn btn-primary w-50" onclick="
+    const button = this;
+    const form = button.closest('form');
+
+    var params = Object.fromEntries(new FormData(form).entries());
+
+    const UDPcheckbox = form.querySelector('#searchUdpPortInput');
+    let ping = !params.ports || params.ports.trim() === '';
+    let search_udp_port = UDPcheckbox.checked;
+
+    const source_port = params.source_port && params.source_port.trim() !== '' ? params.source_port : null;
+    const max_rate = params.max_rate && params.max_rate.trim() !== '' ? params.max_rate : null;
+
+    const {
+        target = null,
+        ports = null,
+        format = null,
+        wait = null,
+    } = params;
+
+    fetch('/api/v1/task/masscan_scan_task', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            interface_ip_id: getIface().ip_id,
+            interface: getIface().name,
+            agent_id: getAgent(),
+            format,
+            wait,
+            target,
+            search_udp_port,
+            source_port,
+            max_rate,
+            ports,
+            ping
+        })
+    });
+
+    var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+    if (myModal) {
+        myModal.hide();
+    }
+">Start scan</button>
+</div>
+<script>
+    // $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
+    //     document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
+    //     document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    // })
+    // $('#sourcePortSwitch').on('change.bootstrapSwitch', function (e, data) {
+    //     document.getElementById('masscanSourcePortSelector').disabled = !e.target.checked;
+    //     document.getElementById('masscanSourcePortSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    // })
+    // $('#maxRateSwitch').on('change.bootstrapSwitch', function (e, data) {
+    //     document.getElementById('masscanMaxRateSelector').disabled = !e.target.checked;
+    //     document.getElementById('masscanMaxRateSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    // })
+
+</script>
+{% endmacro %}
+
+
+{% macro masscan_parse() %}
+
+<button class="btn btn-primary w-100" type="button" onclick="
+                                var input = document.createElement('input');
+                                input.type = 'file';
+                                input.multiple = true;
+                                input.accept = '.xml,.list,.json'
+                                input.onchange = e => { 
+                                    for (var file of e.target.files)
+                                    {
+                                        var reader = new FileReader();
+                                        reader.onload = (function (file) {
+                                            return async function (e) {                
+                                                iface = getIface()
+                                                data = {file: e.target.result, filename: file.name, interface_ip_id: iface.ip_id, ip: iface.ip, mac: iface.mac, agent_id: agentData.default_agent}
+                                                await fetch('/api/v1/task/masscan_log_task', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(data)});
+                                            }
+                                        })(file)
+                                        reader.readAsDataURL(file);            
+                                    }
+                                }
+                                input.click();
+                                var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+                                    if (myModal) {
+                                        myModal.hide();
+                                    }
+                                ">Parse logs</button>
+
+{% endmacro %}
+
+{% macro masscan_modal() %}
+
+<div id="masscanModalWindow" class="modal fade" tabindex="-1" aria-labelledby="masscanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="masscanModalLabel">Masscan Сканирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+                    {{ masscan_main() }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function masscan_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("masscanModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+{% macro masscan_full_modal() %}
+
+<div id="masscanModalWindow" class="modal fade" tabindex="-1" aria-labelledby="masscanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="masscanModalLabel">Masscan Сканирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_masscan">
+                    <div data-agent-bar="agent_masscan"></div>
+                    <div data-interface-bar="interface_masscan" class="ms-3"></div>
+                    <div id="scans_bar_masscan" class="ms-3"></div>
+                </div>
+                <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+                    {{ masscan_ip() }}
+                    {{ masscan_main() }}
+                </form>
+                {{ masscan_parse() }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function masscan_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("masscanModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+
+
+{% macro show() %}
+<form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+    <div class="d-flex flex-column">
+        {{ masscan_ip() }}
+        {{ masscan_main() }}
+    </div>
+    {{ masscan_parse() }}
+</form>
+{% endmacro %}

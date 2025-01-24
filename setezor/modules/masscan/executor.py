@@ -1,16 +1,19 @@
+import json
 import traceback
 import re
 from datetime import datetime
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 from time import time
 from dataclasses import dataclass
 from typing import List, Type
-from logging import Logger
+# from logging import Logger
 import aiofiles
 from subprocess import Popen, PIPE
 import re
 from asyncio import create_subprocess_shell as async_shell
 from asyncio.subprocess import PIPE as asyncPIPE
+from setezor.models.port import Port
+from setezor.models.ip import IP
 
 class SubrocessError(Exception):
     
@@ -113,7 +116,7 @@ class ListConsoleArgument:
 class ConsoleCommandExecutor:
     arguments: ListConsoleArgument
     command: str
-    logger: Logger
+    # logger: Logger
     
     
     def __init__(self) -> None:
@@ -133,21 +136,22 @@ class ConsoleCommandExecutor:
         result, error = process.communicate()
         code = process.returncode
         # ToDo add save source data
-        self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
+        # self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
         return result, error, code
     
     async def async_execute(self, log_path: str=None, extension: str='log'):
         self.arguments.clear_empty_args()
         execution_command = self.arguments.prepare_command(self.command)
-        start_time = time()
+        # start_time = time()
+
         process = await create_async_shell_subprocess(execution_command)
         result, error = await process.communicate()
         result = result.decode(encoding='utf8', errors='backslashreplace')
         error = error.decode(encoding='utf8', errors='backslashreplace')
         code= process.returncode
-        if log_path:
-            await self.__class__.save_source_data(path=log_path, source_data=result, command='masscan', extension=extension)
-        self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
+        # if log_path:
+        #     await self.__class__.save_source_data(path=log_path, source_data=result, command='masscan', extension=extension)
+        # self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
         return result, error, code
     
     @classmethod
@@ -163,27 +167,26 @@ class ConsoleCommandExecutor:
             bool: _description_
         """
         full_path = f'{path}/{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {command.replace("/", "_")}.{extension}'
-        cls.logger.info('Save scan_data to file by path "%s"', full_path)
+        # cls.logger.info('Save scan_data to file by path "%s"', full_path)
         try:
             async with aiofiles.open(full_path, 'wb' if isinstance(source_data, bytes) else 'w') as f:
                 await f.write(source_data)
             return True
         except:
-            cls.logger.error('Failed save source scan to path "%s" with error\n%s', full_path, traceback.format_exc())
+            # cls.logger.error('Failed save source scan to path "%s" with error\n%s', full_path, traceback.format_exc())
             raise Exception('Failed save source scan to path "%s"' % full_path)
 
 
 class MasscanScanner(ConsoleCommandExecutor):
     
     command = 'masscan'
-    logger = get_logger(__package__, handlers=[])
+    # logger = get_logger(__package__, handlers=[])
     
-    def __init__(self, target: List[Type[str]], interface_addr: str, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None,
+    def __init__(self, target: List[Type[str]], interface_addr: str, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None, search_udp_port: bool=False,
                  only_open: bool=None, max_rate: int=None, ttl: int=None, retries: int=None, wait: int=10, ping: bool=False, format: str='oX') -> None:
         
         self.arguments = ListConsoleArgument()
-        args = [{'argument': '-p', 'value': ports,},
-                {'argument': '--rate', 'value': rate},
+        args = [{'argument': '--rate', 'value': rate},
                 {'argument': '--source-port', 'value': source_port},
                 {'argument': '--connection-timeout', 'value': timeout},
                 {'argument': '-e', 'value': interface},
@@ -197,6 +200,11 @@ class MasscanScanner(ConsoleCommandExecutor):
                 {'argument': f'-{format}', 'value': '-'},
                 {'argument': '--adapter-ip', 'value': interface_addr}
                 ]
+        if search_udp_port:
+            args.insert(0, {'argument': '-p', 'value': 'U:' + ports.replace(',', ',U:')})
+        else:
+            args.insert(0, {'argument': '-p', 'value': ports })
+
         for i in args:
             self.arguments.append(ConsoleArgument(**i))
             
@@ -220,4 +228,3 @@ class MasscanScanner(ConsoleCommandExecutor):
             raise SubrocessError(res, err, code)
         # ToDo check errors
         return res
-        

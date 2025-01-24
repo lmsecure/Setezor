@@ -1,9 +1,9 @@
 from scapy.layers.llmnr import LLMNRQuery
 from scapy.packet import Packet
-from setezor.exceptions.loggers import get_logger
+# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
-logger = get_logger(__package__, handlers=[])
+# logger = get_logger(__package__, handlers=[])
 
 
 class LLMNRPacket(AbstractPacket):
@@ -25,7 +25,8 @@ class LLMNRPacket(AbstractPacket):
             res.update({'parent_mac': pkt['Ether'].src, 'parent_ip': pkt['IP'].src})
             res.update({'child_mac': pkt['Ether'].dst, 'child_ip': pkt['IP'].dst})
         except:
-            logger.error('Cannot parse package %s by "%s"', pkt.summary(), LLMNRPacket.__name__)
+            pass
+            # logger.error('Cannot parse package %s by "%s"', pkt.summary(), LLMNRPacket.__name__)
         return res
 
     @staticmethod

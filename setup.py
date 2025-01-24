@@ -38,7 +38,7 @@ setup(
     package_data={"": extra_files},
     install_requires=requirements,
     entry_points={
-        "console_scripts": ["setezor = setezor.__init__:run_app"],
+        "console_scripts": ["setezor = setezor.setezor:run_app"],
     },
     python_requires='>=3.12',
 )
