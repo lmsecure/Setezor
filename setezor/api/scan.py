@@ -24,4 +24,4 @@ async def get_picked_scan(
     project_id: str = Depends(get_current_project),
     scan_id: str = Depends(get_current_scan_id),
 ) -> Scan:
-    return await ScanService.get(uow=uow, id=scan_id)
+    return await ScanService.get(uow=uow, id=scan_id, project_id=project_id)

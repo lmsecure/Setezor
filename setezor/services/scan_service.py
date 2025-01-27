@@ -29,6 +29,12 @@ class ScanService(IService):
             return await uow.scan.filter(project_id=project_id)
         
     @classmethod
-    async def get(cls, uow: UnitOfWork, id: str):
+    async def get(cls, uow: UnitOfWork, id: str, project_id: str):
         async with uow:
-            return await uow.scan.find_one(id=id)
+            return await uow.scan.find_one(id=id, project_id=project_id)
+        
+
+    @classmethod
+    async def get_latest(cls, uow: UnitOfWork, project_id: str) -> Scan:
+        async with uow:
+            return await uow.scan.last(project_id=project_id)

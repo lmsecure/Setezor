@@ -42,7 +42,8 @@ async def set_current(
     response: Response,
     user_id: str = Depends(get_user_id)
 ) -> bool:
-    token_pairs = await AuthService.set_current_project(uow=uow, project_id=project.project_id, user_id=user_id)
+    scan = await ScanService.get_latest(uow=uow, project_id=project.project_id)
+    token_pairs = await AuthService.set_current_scan(uow=uow, project_id=project.project_id, user_id=user_id, scan_id=scan.id)
     if not token_pairs:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -5,3 +5,4 @@ __pycache__
 tmp_chain.py
 config.json
 .env
+build.sh

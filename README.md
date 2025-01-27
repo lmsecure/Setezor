@@ -1,18 +1,16 @@
 ### Содержание
 1. [Что такое Сетезор?](#Что_такое_Сетезор?)
 2. [Возможности Сетезор](#Возможности_Сетезор)
-3. [Установка_и_запуск](#Установка_и_запуск)
-
+3. [Установка и запуск](#Установка_и_запуск)
+4. [Контакты](#Контакты)
+5. [Донаты](#Донаты)
 
 ##### Снимки экрана
-![5.png](setezor/docs/5.png)
+![дешборд](setezor/docs/dashboard.png)
 
-![1.jpeg](setezor/docs/1.jpeg)
+![нетворкмап](setezor/docs/network_map.jpeg)
 
-
-![7.png](setezor/docs/7.png)
-
-![[2025-01-24_17-00.png]](setezor/docs/2025-01-24_17-00.png)
+![2025-01-24_17-00.png](setezor/docs/info_tables.png)
 ### Что_такое_Сетезор?
  **Setezor** (Сетезор, ранее LMS.NetMap)- швейцарский нож для анализа и проектирования сетевой инфраструктуры. Данный инструмент будет полезен пентестерам, сетевикам, системным администраторам.
 ##### Возможности_Сетезор:
@@ -47,7 +45,7 @@
 ### Установка_и_запуск
 Существуют 3 варианта установки «Сетезор» на свой компьютер: GitHub, DEB-пакет и Docker образ:
 1. GitHub: https://github.com/lmsecure/Setezor
-3. DEB-пакет, расположенного в «Релизы» на GitHub в ZIP-архиве: https://github.com/lmsecure/Setezor/releases/tag/0.12.0b
+3. DEB-пакет, расположенного в «Релизы» на GitHub в ZIP-архиве: https://github.com/lmsecure/Setezor/releases
 4. Docker образ: https://hub.docker.com/r/lmsecure/setezor
 
 ###### Установка и запуск с DEB-пакета:
@@ -83,30 +81,39 @@ mkdir ~/setezor && cd $_
 SECRET_KEY=abcdef
 SERVER_REST_URL=https://<ip/doamin>:<port>
 ```
-Первоначальное создание сервера и агентов происходит в терминале:
 4. Запуск Сервера
-docker
 ```bash
 docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
 ```
 5. Запуск агента
-docker
 ```bash
 docker run --network=host -d lmsecure/setezor:latest -s -p 16662
 ```
 
-Добавление агента на сервере
+**Добавление агента**
 На странице «Settings находятся все агенты проекта и сервер. Для создания нового агента нажать на «+» возле надписи «All Agents» выбрать: 
 - какой агент (родитель) имеет доступ к создаваемому агенту: сервер или другой агент;
 - задать имя агента;
 - описание;
 - ввести IP-адрес машины, на которой будет агент;
 - выбрать цвет агента на карте сети.
-![9.png](setezor/docs/9.png)
+![создатьагента](setezor/docs/create_agent.png)
 Каждый агент имеет свой уникальный зашифрованный номер в столбце, который отображается в столбце в первом столбце таблицы «ID».
 В последнем столбце таблицы есть две кнопки: 
 - Configure interfaces - позволяет выбрать интерфейс агента;
 - Connect - подключить агента.
 Сам агент отображается в разделе «Network Map» на Карте сети. Все агенты имеют связь с сервером, у каждого агента есть интерфейс из которого идут ноды.
 
-![image_2025-01-15_11-59-52.png](setezor/docs/image_2025-01-15_11-59-52.png)
+![агентынакартесети](setezor/docs/agent_on_net_map.png)
+
+### Контакты
+- Telegram-канал: https://t.me/setezor  
+- Telegram-чат: https://t.me/netmap_chat  
+- Сайт проекта: https://setezor.ru
+
+
+### Донаты
+- Bitcoin: bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz
+- Dash: XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT
+
+Принимаем любые криптовалюты - пишите добавим другие.

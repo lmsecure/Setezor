@@ -4,7 +4,7 @@ export PYBUILD_NAME=setezor
 export PYBUILD_SYSTEM=distutils
 export DH_VIRTUALENV_INSTALL_ROOT=/usr/local/share/setezor/venv
 %:
-	dh $@ --with python3.12,python-virtualenv --buildsystem=pybuild
+	dh $@ --with python3,python-virtualenv --buildsystem=pybuild
 override_dh_virtualenv:
 	dh_virtualenv --builtin-venv --python /usr/bin/python3.12 --requirements setezor/requirements.txt --extra-pip-arg --no-compile
 override_dh_usrlocal:
