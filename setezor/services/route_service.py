@@ -30,11 +30,12 @@ class NodeService(IService):
             agents = await uow.agent.list(project_id=project_id)
             for agent in agents:
                 result.append({
-                    "id" : agent.name,
+                    "id" : agent.id,
                     "mac_address" : "",
                     "address" : "",
                     "agents" : [agent.id],
                     "agent" : agent.id,
+                    "parent_agent_id": agent.parent_agent_id,
                     "group" : "agents_group",
                     "value" : 1,
                     "shape" : "dot",
@@ -82,7 +83,7 @@ class EdgeService(IService):
             edges: list = [{"from" : row[0], "to" : row[1]} for row in vis_edge_agent_to_agent]
 
             vis_edge_agent_to_interface = await uow.route_list.vis_edge_agent_to_interface(project_id=project_id)
-            edges.extend([{"from" : row.name, "to" : row.id, "length" : 100} for row in vis_edge_agent_to_interface])
+            edges.extend([{"from" : row[0], "to" : row[1], "length" : 100} for row in vis_edge_agent_to_interface])
 
             vis_edge_node_to_node = await uow.route_list.vis_edge_node_to_node(project_id=project_id, scans=scans)
             seen = set()

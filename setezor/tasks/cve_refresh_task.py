@@ -3,8 +3,7 @@ import traceback
 import asyncio
 from time import time
 
-from setezor.managers.websocket_manager import WS_MANAGER
-from setezor.schemas.task import TaskStatus, WebSocketMessage
+from setezor.schemas.task import TaskStatus
 from setezor.services.data_structure_service import DataStructureService
 from setezor.services.task_service import TasksService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
@@ -95,9 +94,7 @@ class CVERefresher(BaseJob):
             project = await uow.project.find_one(id=self.project_id)
             token = project.search_vulns_token
         if not token:
-            message = WebSocketMessage(title="Warning", text=f"No token provided", type="warning")
-            await WS_MANAGER.send_message(project_id=self.project_id, message=message) 
-            return []
+            return
         new_vulnerabilities = []
         async with self.uow as uow:
             l4_soft_with_cpe23, l7_soft_with_cpe23 = await uow.software.for_search_vulns(project_id=self.project_id, 
@@ -115,21 +112,6 @@ class CVERefresher(BaseJob):
         new_vulnerabilities.extend(l7_software_vulnerabilities)
         return new_vulnerabilities
 
-    async def _write_result_to_db(self, result):
-        service = DataStructureService(uow=self.uow, 
-                                       result=result, 
-                                       project_id=self.project_id, 
-                                       scan_id=self.scan_id)
-        await service.make_magic()
-        await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.finished, project_id=self.project_id)
-
+    @BaseJob.local_task_notifier
     async def run(self):
-        try:
-            t1 = time()
-            result = await self._task_func()
-            print(f'Task func "{self.__class__.__name__}" finished after {time() - t1:.2f} seconds')
-            await self._write_result_to_db(result=result)
-        except Exception as e:
-            print('Task "%s" failed with error\n%s',
-                  self.__class__.__name__, traceback.format_exc())
-            raise e
+        return await self._task_func()

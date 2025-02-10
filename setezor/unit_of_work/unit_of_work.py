@@ -31,19 +31,21 @@ from setezor.repositories import \
     L7SoftwareRepository, \
     SoftwareRepository, \
     ASN_Repository, \
-    AcunetixTargetsRepository, \
     L7SoftwareVulnerabilityRepository, \
     VulnerabilityRepository, \
     ScopeRepository, \
     TargetRepository, \
     L4SoftwareRepository, \
     L4SoftwareVulnerabilityRepository, \
-    VulnerabilityLinkRepository
+    VulnerabilityLinkRepository, \
+    RoleRepository, \
+    AuthLog_Repository, \
+    InviteLinkRepository
     
 
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel.ext.asyncio.session import AsyncSession
-
+from setezor.logger import logger
 from setezor.repositories.scan_repository import ScanRepository
 
 class UnitOfWork(IUnitOfWork):
@@ -58,8 +60,10 @@ class UnitOfWork(IUnitOfWork):
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         if exc_type is not None:
+            logger.error(exc_value)
             await self.rollback()
         await self.__session.close()
+        return True
 
     async def commit(self):
         await self.__session.commit()
@@ -75,6 +79,9 @@ class UnitOfWork(IUnitOfWork):
 
     @property
     def user(self) -> UserRepository: return UserRepository(self.__session)
+
+    @property
+    def role(self) -> RoleRepository: return RoleRepository(self.__session)
 
     @property
     def task(self) -> TasksRepository: return TasksRepository(self.__session)
@@ -166,8 +173,6 @@ class UnitOfWork(IUnitOfWork):
     @property
     def asn(self) -> ASN_Repository: return ASN_Repository(self.__session)
 
-    @property
-    def acunetix_targets(self) -> AcunetixTargetsRepository: return AcunetixTargetsRepository(self.__session)
 
     @property
     def vulnerability(self) -> VulnerabilityRepository: return VulnerabilityRepository(self.__session)
@@ -193,6 +198,11 @@ class UnitOfWork(IUnitOfWork):
     @property
     def vulnerability_link(self) -> VulnerabilityLinkRepository: return VulnerabilityLinkRepository(self.__session)
 
+    @property
+    def invite_link(self) -> InviteLinkRepository: return InviteLinkRepository(self.__session)
+    
+    @property
+    def auth_log(self) -> AuthLog_Repository: return AuthLog_Repository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():

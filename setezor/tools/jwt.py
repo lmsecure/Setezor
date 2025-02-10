@@ -2,20 +2,19 @@ import os
 import datetime
 import jwt
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev")
-ALGORITHM = "HS256"  # Алгоритм для подписи
-ACCESS_TOKEN_EXPIRE_MINUTES = datetime.timedelta(days=7)
-REFRESH_TOKEN_EXPIRE_MINUTES = datetime.timedelta(days=30)
+from setezor.settings import ACCESS_TOKEN_EXPIRE_TIME, ALGORITHM, REFRESH_TOKEN_EXPIRE_TIME, SECRET_KEY
 
 
-class JWTManager:
+
+
+class JWT_Tool:
     @classmethod
     def create_access_token(cls, data: dict):
-        return cls.create_jwt(data=data, expires_delta=ACCESS_TOKEN_EXPIRE_MINUTES)
+        return cls.create_jwt(data=data, expires_delta=ACCESS_TOKEN_EXPIRE_TIME)
 
     @classmethod
     def create_refresh_token(cls, data: dict):
-        return cls.create_jwt(data=data, expires_delta=REFRESH_TOKEN_EXPIRE_MINUTES)
+        return cls.create_jwt(data=data, expires_delta=REFRESH_TOKEN_EXPIRE_TIME)
 
     @classmethod
     def create_jwt(cls, data: dict, expires_delta: datetime.timedelta):

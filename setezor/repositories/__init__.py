@@ -29,7 +29,6 @@ from .vendor_repository import VendorRepository
 from .software_repository import SoftwareRepository
 from .l7_software_repository import L7SoftwareRepository
 from .asn_repository import ASN_Repository
-from .acunetix_targets_repository import AcunetixTargetsRepository
 from .vulnerability_repository import VulnerabilityRepository
 from .l7_software_vulnerability_repository import L7SoftwareVulnerabilityRepository
 from .scan_repository import ScanRepository
@@ -38,3 +37,6 @@ from .target_repository import TargetRepository
 from .l4_software_repository import L4SoftwareRepository
 from .l4_software_vulnerability_repository import L4SoftwareVulnerabilityRepository
 from .vulnerability_link_repository import VulnerabilityLinkRepository
+from .role_repository import RoleRepository
+from .auth_log_repository import AuthLog_Repository
+from .invite_link_repository import InviteLinkRepository

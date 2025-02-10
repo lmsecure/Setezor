@@ -2,10 +2,9 @@ import json
 import os
 from typing import Any, Generic, Literal, Callable, ParamSpec, TypeVar
 import inspect
-from setezor.setezor import path_prefix
+from setezor.settings import PATH_PREFIX
 from fastapi import FastAPI, Request, Response
-
-
+from setezor.logger import logger
 _P = ParamSpec("_P")
 _Returns = TypeVar("_Returns")
 
@@ -70,9 +69,9 @@ class Spy:
     @classmethod
     def from_file(cls):
         try: 
-            with open(os.path.join(path_prefix, "config.json"), 'r') as f:
+            with open(os.path.join(PATH_PREFIX, "config.json"), 'r') as f:
                 config = json.load(f)
             cls.PARENT_AGENT_URL = config["parent_agent_url"]
             cls.SECRET_KEY = config["key"]
         except (FileNotFoundError, KeyError, json.decoder.JSONDecodeError):
-            print("Agent has no secret_key")
+            logger.warning("Agent is not connected yet")

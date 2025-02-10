@@ -1,81 +1,114 @@
-import io
+import os
+import base64
+import json
 import pickle
 import aiohttp
-from fastapi import HTTPException
+from fastapi import HTTPException, Request, BackgroundTasks
+import aiofiles
+import orjson
+from setezor.managers.scheduler_manager import SchedulerManager
 from setezor.managers.websocket_manager import WS_MANAGER
+from setezor.services.agent_service import AgentService
 from setezor.services.data_structure_service import DataStructureService
-from setezor.tasks.base_job import BaseJob, CustomScheduler
+from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import Task
 from setezor.services import TasksService
 from setezor.schemas.task import TaskPayload, \
-    TaskStatus, WebSocketMessage, \
-    WebSocketMessageForProject
+    TaskStatus, WebSocketMessage
 from setezor.tasks import get_task_by_class_name
 from setezor.spy import Spy
-from setezor.managers import agent_manager as AM
+from setezor.managers.agent_manager import AgentManager
+from setezor.managers.sender_manager import HTTPManager
+from setezor.managers.cipher_manager import Cryptor
+from setezor.schemas.agent import BackWardData
+from setezor.settings import PATH_PREFIX
+from setezor.interfaces.observer import Observer
+from setezor.logger import logger
 
+class TaskManager(Observer):
 
-class RestrictedUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        full_name = f"{module}.{name}"
-        if (full_name.startswith("setezor") or
-                full_name.startswith("sqlalchemy") or
-                full_name.startswith("datetime")
-            ):
-            return super().find_class(module, name)
-        raise pickle.UnpicklingError(f"Недопустимый класс: {full_name}")
+    schedulers = {}
+    tasks = {}
 
-def restricted_loads(data):
-    file_like = io.BytesIO(data)
-    return RestrictedUnpickler(file_like).load()
-
-class TaskManager:
-
-    scheduler = None
-
-    @classmethod  # метод сервера на создание локальной
-    async def create_local_job(cls, job: BaseJob, uow: UnitOfWork, project_id: str, scan_id: str, **kwargs) -> Task:
+    @classmethod  # метод сервера на создание локальной задачи
+    async def create_local_job(cls, job: BaseJob,
+                               uow: UnitOfWork,
+                               project_id: str,
+                               scan_id: str,
+                               **kwargs) -> Task:
         agent_id = kwargs.pop("agent_id", None)
-        task: Task = await TasksService.create(uow=uow, project_id=project_id, scan_id=scan_id, params=kwargs, agent_id=agent_id, created_by=job.__name__)
-        await cls.start_local_job(uow=uow, job=job, id=task.id, agent_id=agent_id, project_id=project_id, scan_id=scan_id, **kwargs)
-        return task
+        task: Task = await TasksService.create(uow=uow,
+                                               project_id=project_id,
+                                               scan_id=scan_id,
+                                               params=kwargs,
+                                               agent_id=agent_id,
+                                               created_by=job.__name__)
 
-    @classmethod  # метод сервера на запуск локальной джобы
-    async def start_local_job(cls, job: BaseJob, uow: UnitOfWork, project_id: str, id: str, agent_id: str, **kwargs):
-        if not cls.scheduler:
-            cls.scheduler = await cls.create_new_scheduler()
+        message = WebSocketMessage(title="Task status", text=f"Task {task.id} {TaskStatus.created}", type="info")
+        await WS_MANAGER.send_message(project_id=project_id, message=message)
+        logger.debug(f"CREATED TASK {job.__qualname__}. {kwargs}")
+        scheduler = cls.create_new_scheduler(job)
         new_job: BaseJob = job(
             agent_id=agent_id,
-            name=f"Task {id}",
-            scheduler=cls.scheduler,
+            name=f"Task {task.id}",
+            scheduler=scheduler,
             uow=uow,
-            task_id=id,
+            task_id=task.id,
             project_id=project_id,
+            scan_id=scan_id,
             **kwargs
         )
-        job: BaseJob = await cls.scheduler.spawn_job(new_job)
-        await TasksService.set_status(uow=uow, id=id, status=TaskStatus.started, project_id=project_id)
-        await new_job._start()
-        return id
+        job: BaseJob = await scheduler.spawn_job(new_job)
 
-    @classmethod # метод сервера на создание джобы на агенте
-    async def create_job(cls, job: BaseJob, uow: UnitOfWork, project_id: str, scan_id: str, **kwargs) -> Task:
+        return task
+
+    @classmethod  # метод сервера на создание джобы на агенте
+    async def create_job(cls, job: BaseJob,
+                         uow: UnitOfWork,
+                         project_id: str,
+                         scan_id: str,
+                         **kwargs) -> Task:
         agent_id = kwargs.get("agent_id")
-        async with uow:
-            agent = await uow.agent.find_one(id=agent_id, project_id=project_id)
+        agent = await AgentService.get_by_id(uow=uow, id=agent_id)
+        if not agent.rest_url:
+            message = WebSocketMessage(title="Error",
+                                       text=f"Agent {agent.name} is synthetic",
+                                       type="error")
+            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            raise HTTPException(status_code=403, 
+                                detail=f"Agent {agent.name} is synthetic")
         if not agent.parent_agent_id:
-            message = WebSocketMessage(title="Error", text=f"Agent {agent.name} has no parent agent", type="error")
-            await WS_MANAGER.send_message(project_id=project_id, message=message) 
-            raise HTTPException(status_code=403, detail="No scan picked")
+            message = WebSocketMessage(title="Error",
+                                       text=f"Agent {
+                                           agent.name} has no parent agent",
+                                       type="error")
+            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            raise HTTPException(status_code=403, 
+                                detail=f"Agent {agent.name} has no parent agent")
         if not agent.secret_key:
-            message = WebSocketMessage(title="Error", text=f"Agent {agent.name} has no secret key", type="error")
-            await WS_MANAGER.send_message(project_id=project_id, message=message) 
-            raise HTTPException(status_code=403, detail="No scan picked")
-        task: Task = await TasksService.create(uow=uow, project_id=project_id, 
+            message = WebSocketMessage(title="Error",
+                                       text=f"Agent {
+                                           agent.name} has no secret key",
+                                       type="error")
+            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            raise HTTPException(status_code=403, 
+                                detail=f"Agent {agent.name} has no secret key")
+        task: Task = await TasksService.create(uow=uow, project_id=project_id,
                                                scan_id=scan_id,
-                                               params=kwargs, agent_id=agent_id, created_by=job.__name__)
-        agents_chain = await AM.AgentManager.get_agents_chain(uow=uow, agent_id=agent_id, project_id=project_id)
+                                               params=kwargs,
+                                               agent_id=agent_id,
+                                               created_by=job.__name__)
+
+        message = WebSocketMessage(title="Task status", 
+                                   text=f"Task {task.id} {TaskStatus.created}", 
+                                   type="info")
+        logger.debug(f"CREATED TASK {job.__qualname__}. {kwargs}")
+        await WS_MANAGER.send_message(project_id=project_id, message=message)
+
+        agents_chain = await AgentService.get_agents_chain(uow=uow,
+                                                           agent_id=agent_id,
+                                                           project_id=project_id)
         task_in_agent_chain = TaskPayload(
             task_id=task.id,
             project_id=project_id,
@@ -89,120 +122,188 @@ class TaskManager:
             "project_id": project_id,
             **task_in_agent_chain.model_dump()
         }
-        payload = AM.AgentManager.cipherPayload(agents_chain=agents_chain, data=data, close_connection=True)
+        payload = AgentManager.cipher_chain(agents_chain=agents_chain,
+                                            data=data,
+                                            close_connection=True)
         body = payload["data"].encode()
-        data = await AM.AgentManager.send_bytes(url=payload["next_agent_url"], data=body)
+        data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
         return task
-    
-    @classmethod # метод сервера на запуск джобы на агенте
-    async def start_job(cls, uow: UnitOfWork, id: str, project_id: str):
-        task: Task = await TasksService.get(uow=uow, id=id, project_id=project_id)
-        agents_chain = await AM.AgentManager.get_agents_chain(uow=uow, agent_id=task.agent_id, project_id=project_id)
-        data = {
-            "signal": "start_task",
-            "id": task.id,
-            "agent_id": task.agent_id,
-            "project_id": task.project_id
-        }
-        payload = AM.AgentManager.cipherPayload(agents_chain=agents_chain, data=data, close_connection=True)
-        body = payload["data"].encode()
-        data = await AM.AgentManager.send_bytes(url=payload["next_agent_url"], data=body)
 
-        await TasksService.set_status(uow=uow, id=id, status=TaskStatus.started, project_id=task.project_id)
-        
-        return True
-    
-    
-
-    @classmethod # метод агента на создание джобы
+    @classmethod  # метод агента на создание джобы
     async def create_job_on_agent(cls, payload: TaskPayload) -> Task:
-        if not cls.scheduler:
-            cls.scheduler = await cls.create_new_scheduler()
         job_cls = get_task_by_class_name(payload.job_name)
+        scheduler = cls.create_new_scheduler(job_cls)
         task_id = payload.task_id
         project_id = payload.project_id
-        agent_id = payload.agent_id
         new_job: BaseJob = job_cls(
             name=f"Task {task_id}",
-            scheduler=cls.scheduler,
+            scheduler=scheduler,
             task_id=task_id,
             project_id=project_id,
             **payload.job_params
         )
-        job: BaseJob = await cls.scheduler.spawn_job(new_job)
-        ws_message = WebSocketMessageForProject(project_id=project_id, title="Info from agent", text=f"I registered task with {task_id = }", type="info")
-        data_for_server = AM.AgentManager.generate_websocket_message(agent_id=agent_id, message=ws_message)
-        await cls.send_request(url=f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward", data=data_for_server)
+        job: BaseJob = await scheduler.spawn_job(new_job)
+        cls.tasks[task_id] = job
         return task_id
 
-    @classmethod # метод агента на запуск джобы
-    async def start_job_on_agent(cls, id: str) -> str:
-        for task in cls.scheduler.jobs:
-            if task.task_id == id:
-                await task._start()
-                message = WebSocketMessageForProject(project_id=task.project_id, title="Info from agent", text=f"I started task with task_id = {task.task_id}", type="info")
-                data_for_server = AM.AgentManager.generate_websocket_message(agent_id=task.agent_id, message=message)
-                await cls.send_request(url=f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward", data=data_for_server)
-                break
-        return id
-
-    
     @classmethod
     async def soft_stop_task(cls, uow: UnitOfWork, id: str, project_id: str) -> bool:
         task: Task = await TasksService.get(uow=uow, id=id, project_id=project_id)
-        agents_chain = await AM.AgentManager.get_agents_chain(uow=uow, agent_id=task.agent_id, project_id=project_id)
+        agents_chain = await AgentService.get_agents_chain(uow=uow,
+                                                           agent_id=task.agent_id,
+                                                           project_id=project_id)
         data = {
             "signal": "soft_stop_task",
             "id": id,
         }
-        payload = AM.AgentManager.cipherPayload(agents_chain=agents_chain, data=data, close_connection=True)
+        payload = AgentManager.cipher_chain(
+            agents_chain=agents_chain, data=data, close_connection=True)
         body = payload["data"].encode()
-        data = await AM.AgentManager.send_bytes(url=payload["next_agent_url"], data=body)
+        data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
         return True
 
-    @classmethod # метод агента на мягкое завершение таски
+    @classmethod  # метод агента на мягкое завершение таски
     async def soft_stop_task_on_agent(cls, id: str) -> str:
-        for task in cls.scheduler.jobs:
-            if task.task_id == id:
-                await task.soft_stop()
-                message = WebSocketMessageForProject(project_id=task.project_id, title="Info from agent", text=f"I stopped task with task_id = {task.task_id}", type="info")
-                data_for_server = AM.AgentManager.generate_websocket_message(agent_id=task.agent_id, message=message)
-                await cls.send_request(url=f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward", data=data_for_server)
-                break
+        task = cls.tasks.get(id)
+        await task.soft_stop()
         return id
 
-    @classmethod # метод агента на создание шедулера
-    async def create_new_scheduler(cls):
-        return CustomScheduler()
+    @classmethod  # метод агента на создание шедулера
+    def create_new_scheduler(cls, job: BaseJob):
+        if job in cls.schedulers:
+            return cls.schedulers[job]
+        new_scheduler = SchedulerManager.for_job(job=job)
+        cls.schedulers[job] = new_scheduler
+        new_scheduler.attach(cls)
+        return new_scheduler
 
-
-    @classmethod # метод сервера на запись результата на сервере
-    async def write_result(cls, task_id: str, data: bytes, uow: UnitOfWork):
-        result = restricted_loads(data)
-        async with uow:
-            task = await uow.task.find_one(id=task_id)
-        project_id = task.project_id
-        scan_id = task.scan_id
-        service = DataStructureService(uow=uow, project_id=project_id, scan_id=scan_id, result=result)
-        await service.make_magic()
-        await TasksService.set_status(uow=uow, id=task_id, status=TaskStatus.finished, project_id=project_id)
-
-
-    @staticmethod # метод агента на отправку результата на предыдущего агента
-    async def send_bytes(url: str, data: dict | list[dict]):
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=data, ssl=False) as resp:
-                return resp.status
-            
-    
-    @classmethod # метод сервера и агента на отправку следующему звену
-    async def send_request(cls, url: str, data: dict | list[dict]):
+    @Spy.spy_func(method="POST", endpoint="/api/v1/agents/forward")
+    @staticmethod  # метод агента на отправку сигнала следующему звену
+    async def forward_request(
+        request: Request,
+        background_tasks: BackgroundTasks = None
+    ) -> bytes:
+        body: bytes = await request.body()
+        data: bytes = base64.b64decode(body)
+        if not Spy.SECRET_KEY:
+            try:
+                data = data.decode()
+                payload = orjson.loads(data)
+                if not payload.pop("signal", None) == "connect":
+                    raise Exception("Invalid packet")
+                Spy.SECRET_KEY = payload.get("key")
+                Spy.PARENT_AGENT_URL = payload.get("parent_agent_url")
+                async with aiofiles.open(os.path.join(PATH_PREFIX, "config.json"), 'w') as file:
+                    await file.write(json.dumps(payload))
+                return base64.b64encode(b'OK')
+            except Exception as e:
+                logger.error(str(e))
+                return b'You are suspicious'
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=data, ssl=False) as resp:
-                    return resp.status
-        except:
-            if project_id := data.get("project_id"):
-                message = WebSocketMessageForProject(project_id=project_id, title="Info", text=f"{url} is unreachable", type="error")
-                await cls.notify_server(message=message)
+            deciphered_data: bytes = Cryptor.decrypt(data=data, key=Spy.SECRET_KEY)
+        except Exception as e:
+            logger.error(str(e))
+            return b''
 
+        json_data: dict = orjson.loads(deciphered_data)
+        close_connection = json_data.get("close_connection")
+        if url := json_data.get("next_agent_url"):  # если мы посредник
+            if close_connection:
+                background_tasks.add_task(HTTPManager.send_bytes,
+                                          url=url,
+                                          data=json_data['data'].encode())
+                logger.debug(f"Redirected payload to {url}")
+                return b''
+            else:
+                logger.debug(f"Redirected payload to {url}")
+                return await HTTPManager.send_bytes(url=url, data=json_data['data'].encode())
+
+        signal = json_data.pop("signal", None)
+        match signal:
+            case "interfaces":
+                return AgentManager.interfaces()
+            case "create_task":
+                payload = TaskPayload(**json_data)
+                await TaskManager.create_job_on_agent(payload=payload)
+                return b''
+            case "soft_stop_task":
+                task_id = json_data.get("id")
+                await TaskManager.soft_stop_task_on_agent(id=task_id)
+                return b''
+            case _:
+                return b''
+
+    @Spy.spy_func(method="POST", endpoint="/api/v1/agents/backward")
+    @staticmethod  # метод агента на отправку данных родителю
+    async def backward_request(
+        data: BackWardData,
+        background_tasks: BackgroundTasks = None
+    ) -> bool:
+        background_tasks.add_task(HTTPManager.send_json,
+                                  url=f"{
+                                      Spy.PARENT_AGENT_URL}/api/v1/agents/backward",
+                                  data=data.model_dump())
+        return True
+
+    @classmethod
+    async def send_result_to_parent_agent(cls,
+                                          agent_id: str,
+                                          task_id: str,
+                                          result: list,
+                                          raw_result: bytes = b'',
+                                          raw_result_extension: str = ''):
+        data = pickle.dumps(result)
+        b64encoded_entities = base64.b64encode(data).decode()
+        b64encoded_raw_result = base64.b64encode(raw_result).decode()
+        result = {
+            "signal": "result_entities",
+            "task_id": task_id,
+            "entities": b64encoded_entities,
+            "raw_result": b64encoded_raw_result,
+            "raw_result_extension": raw_result_extension,
+        }
+        ciphered_data = AgentManager.single_cipher(
+            key=Spy.SECRET_KEY, data=result).decode()
+        data_for_parent_agent = {
+            "sender": agent_id,
+            "data": ciphered_data
+        }
+        url = f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward"
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data_for_parent_agent, ssl=False) as resp:
+                return resp.status
+
+    @classmethod
+    async def notify(cls, agent_id: str, data: dict):
+        data_for_server = AgentManager.generate_data_for_server(agent_id=agent_id,
+                                                                data=data)
+        await HTTPManager.send_json(url=f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward",
+                                    data=data_for_server)
+
+    @classmethod
+    async def task_status_changer_for_local_job(cls, data: dict, uow: UnitOfWork, project_id: str):
+        await AgentManager.proceed_signal(dict_data=data, uow=uow, project_id=project_id)
+
+    @classmethod
+    async def local_writer(cls,
+                           uow: UnitOfWork,
+                           result: list,
+                           project_id: str,
+                           task_id: str,
+                           scan_id: str):
+        service = DataStructureService(uow=uow,
+                                       result=result,
+                                       project_id=project_id,
+                                       scan_id=scan_id)
+        await service.make_magic()
+        await TasksService.set_status(uow=uow,
+                                      id=task_id,
+                                      status=TaskStatus.finished,
+                                      project_id=project_id)
+        payload = WebSocketMessage(
+            title="Task status",
+            text=f"Task with {task_id=} {TaskStatus.finished}",
+            type="info"
+        )
+        await WS_MANAGER.send_message(project_id=project_id,
+                                      message=payload)

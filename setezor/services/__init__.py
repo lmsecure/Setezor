@@ -17,3 +17,5 @@ from .l7_vulnerability_service import L7VulnerabilityService
 from .software import SoftwareService
 from .scope_service import ScopeService
 from .target_service import TargetService
+from .auth_log_service import Auth_Log_Service
+from .role_service import RoleService

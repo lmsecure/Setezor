@@ -5,7 +5,7 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 rounds = 300_000
 
 
-class PasswordManager:
+class PasswordTool:
     @classmethod
     def hash(cls, plain_password: str):
         return pwd_context.hash(plain_password, rounds=rounds)

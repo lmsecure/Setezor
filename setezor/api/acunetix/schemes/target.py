@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional
 from pydantic import BaseModel
 
@@ -31,6 +32,8 @@ class TargetToSync(BaseModel):
     address: str
 
 class SyncPayload(BaseModel):
+    dt_from: datetime.date
+    dt_to: datetime.date
     targets: list[TargetToSync]
 
 

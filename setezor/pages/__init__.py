@@ -1,6 +1,6 @@
 import os
 from fastapi.templating import Jinja2Templates
-from setezor.setezor import base_path
+from setezor.settings import BASE_PATH
 
 
-TEMPLATES_DIR = Jinja2Templates(directory=os.path.join(base_path, 'pages/templates'))
+TEMPLATES_DIR = Jinja2Templates(directory=os.path.join(BASE_PATH, 'pages/templates'))

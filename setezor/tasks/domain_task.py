@@ -34,20 +34,8 @@ class SdFindTask(BaseJob):
         result = await asyncio.gather(*tasks)
         return list(set(itertools.chain.from_iterable(result)))
 
-
+    @BaseJob.remote_task_notifier
     async def run(self):
-        """Метод выполнения задачи
-        1. Произвести операции согласно методу self._task_func
-        2. ...
-        3. Вернуть результат родительскому агенту
-        """
-        try:
-            t1 = time()
-            result = await self._task_func()
-            print(f'Task func "{self.__class__.__name__}" finished after {time() - t1:.2f} seconds')
-            data = Domain_brute.restruct_result(domains=result)
-            await self.send_result_to_parent_agent(result=data)
-            return result
-        except Exception as e:
-            print('Task "%s" failed with error\n%s', self.__class__.__name__, traceback.format_exc())
-            raise e
+        result = await self._task_func()
+        data = Domain_brute.restruct_result(domains=result)
+        return data, b'', ''

@@ -7,7 +7,7 @@
     <input type="text" list="DomainsList" class="form-control" id='inputDOMAIN' placeholder="Domain name"
         aria-label="IP" aria-describedby="basic-addon1" required name="targetDOMAIN">
 
-    <!-- <button id="add_new_domains_form" onclick="(function() {
+    <button id="add_new_domains_form" onclick="(function() {
                         let original = document.getElementById('domainTarget');
                         let clone = original.cloneNode(true);
                         let newInput = clone.querySelector('input');
@@ -37,7 +37,7 @@
                         }
 
                         document.getElementById('DomainsInputContainer').appendChild(clone);
-                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button> -->
+                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
 </div>
 {% endmacro %}
 {% macro domains_main() %}
@@ -67,152 +67,39 @@
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startSdFind" onclick="
-    const button = this; // Сохраняем ссылку на кнопку
-    const form = button.closest('form'); // Находим ближайшую форму
+                    const requiredDomain = document.getElementById('DomainForm');
 
-    if (!form.checkValidity()) { 
-        form.reportValidity();
-        return;
-    }
-
-    const params = {};
-    params['crt_sh'] = form.querySelector('#crt\\.sh').checked; // Экранируем точку в ID
-    params['dns_search'] = form.querySelector('#dns_search').checked;
-
-    const domains = [];
-    for (const input of form.getElementsByClassName('form-control')) {
-        domains.push(input.value);
-    }
-
-    for (const domain of domains) {
-        let domainParams = {
-            ...params,
-            domain: domain,
-            agent_id: getAgent()
-        };
-
-        if (domainParams['dns_search']) {
-            fetch('/api/v1/task/dns_task', {
-                method: 'POST', 
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(domainParams)
-            });
-        }
-
-        fetch('/api/v1/task/sd_find', {
-            method: 'POST', 
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(domainParams)
-        });
-    }
-
-    var myModal = bootstrap.Modal.getInstance(document.getElementById('domainsModalWindow'));
-    if (myModal) {
-        myModal.hide();
-    }
-">Start</button>
+                    const params = {};
+                    params['crt_sh'] = document.getElementById('crt.sh').checked;
+                    params['dns_search'] = document.getElementById('dns_search').checked;
+                    const domains = [];
+                    for (const d of document.getElementById('DomainForm').getElementsByClassName('form-control')) {
+                        domains.push(d.value);
+                    }
+                    for (const domain of domains) {
+                        let domainParams = {
+                            ...params,
+                            domain: domain,
+                            agent_id: getAgent()
+                        };
+                        if (domainParams['dns_search']) {
+                        fetch('/api/v1/task/dns_task', {method: 'POST', 
+                        headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                        body: JSON.stringify(domainParams)});
+                        }
+                        fetch('/api/v1/task/sd_find', {method: 'POST', 
+                        headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                        body: JSON.stringify(domainParams)});
+                    }var myModal = bootstrap.Modal.getInstance(document.getElementById('domainsModalWindow'));
+                                    if (myModal) {
+                                        myModal.hide();
+                                    }">Start</button>
 
 </div>
-{% endmacro %}
-
-{% macro domains_modal() %}
-<div id="domainsModalWindow" class="modal fade" tabindex="-1" aria-labelledby="domainsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="domainsModalLabel">Domains Сканирование</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa">
-                        <form id="DomainForm" class="needs-validation" novalidate>
-                            {{ domains_main() }}
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-    function domains_modal_window() {
-        var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
-        myModal.show();
-    }
-
-    // Код для закрытия модалки
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'), {
-            keyboard: false
-        });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("domainsModalWindow")) {
-                myModal.hide();
-            }
-        };
-    });
-</script>
-{% endmacro %}
-
-{% macro domains_full_modal() %}
-<div id="domainsModalWindow" class="modal fade" tabindex="-1" aria-labelledby="domainsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="domainsModalLabel">Domains Сканирование</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex mb-2" id="agent_interface_bar_domains">
-                    <div data-agent-bar="agent_domains"></div>
-                    <div data-interface-bar="interface_domains" class="ms-3"></div>
-                    <div id="scans_bar_domains" class="ms-3"></div>
-                </div>
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa">
-                        <form id="DomainForm" class="needs-validation" novalidate>
-                            {{ domains_input() }}
-                            {{ domains_main() }}
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-    function domains_full_modal_window() {
-        var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
-        myModal.show();
-    }
-
-    // Код для закрытия модалки
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'), {
-            keyboard: false
-        });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("domainsModalWindow")) {
-                myModal.hide();
-            }
-        };
-    });
-</script>
 {% endmacro %}
 
 {% macro show() %}

@@ -11,5 +11,6 @@ class User(IDDependent, TimeDependent, table=True):
     
     login: str = Field(sa_column_kwargs={"comment": "Логин пользователя"})
     hashed_password: str = Field(sa_column_kwargs={"comment": "Хеш пароля"})
+    is_superuser: bool = Field(default=False, sa_column_kwargs={"comment": "Является ли суперпользователем"})
 
     projects: List["UserProject"] = Relationship(back_populates="user")

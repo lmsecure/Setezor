@@ -1,2 +1,2 @@
-from .password import PasswordManager
-from .jwt import JWTManager
+from .password import PasswordTool
+from .jwt import JWT_Tool

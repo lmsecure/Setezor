@@ -1,12 +1,8 @@
 import asyncio
 from abc import abstractmethod
-import base64
 from aiojobs._job import Job
-from aiojobs._scheduler import Scheduler
-import aiohttp
-import pickle
-from setezor.spy import Spy
-from setezor.managers import agent_manager as AM, cipher_manager as CM
+from setezor.schemas.task import TaskStatus
+from setezor.logger import logger
 
 class BaseJob(Job):
     def __init__(self, scheduler, name: str, update_graph: bool = True, agent_id: int | None = None):
@@ -38,8 +34,74 @@ class BaseJob(Job):
     async def close(self, *, timeout=None):
         return await super().close(timeout=timeout)
 
-    async def _start(self):
-        return super()._start()
+    @staticmethod
+    def remote_task_notifier(func):
+        async def wrapped(self, *args, **kwargs):
+            task_id = self.task_id
+            agent_id = self.agent_id
+            task_status_data = {
+                "signal": "task_status",
+                "task_id": task_id,
+                "status": TaskStatus.started,
+                "type": "success",
+                "traceback": ""
+            }
+            await self._scheduler.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
+                                         data=task_status_data)
+            logger.debug(f"STARTED TASK {func.__qualname__}")
+            try:
+                result, raw_result, raw_result_extension = await func(self, *args, **kwargs)
+            except Exception as e:
+                task_status_data["status"] = TaskStatus.failed
+                task_status_data["traceback"] = str(e)
+                task_status_data["type"] = "error"
+
+                await self._scheduler.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
+                                             data=task_status_data)
+                logger.error(f"TASK {func.__qualname__} FAILED", extra={**task_status_data})
+                return
+            await self._scheduler.give_result_to_task_manager(
+                task_id=task_id,
+                agent_id=agent_id,
+                result=result,
+                raw_result=raw_result,
+                raw_result_extension=raw_result_extension
+            )
+            return result
+        return wrapped
+
+    @staticmethod
+    def local_task_notifier(func):
+        async def wrapped(self, *args, **kwargs):
+            task_id = self.task_id
+            scan_id = self.scan_id
+            project_id = self.project_id
+            uow = self.uow
+            task_status_data = {
+                "signal": "task_status",
+                "task_id": task_id,
+                "status": TaskStatus.started,
+                "type": "success",
+                "traceback": ""
+            }
+            await self._scheduler.change_task_status_local(data=task_status_data, project_id=project_id, uow=uow)
+            logger.debug(f"STARTED TASK {func.__qualname__}. {task_status_data}")
+            try:
+                result = await func(self, *args, **kwargs)
+            except Exception as e:
+                task_status_data["status"] = TaskStatus.failed
+                task_status_data["traceback"] = str(e)
+                task_status_data["type"] = "error"
+                await self._scheduler.change_task_status_local(data=task_status_data, project_id=project_id, uow=uow)
+                logger.error(f"TASK {func.__qualname__} FAILED. {task_status_data}")
+                return
+            await self._scheduler.write_local_result(uow=self.uow,
+                                                     project_id=project_id,
+                                                     task_id=task_id,
+                                                     scan_id=scan_id,
+                                                     result=result)
+            return result
+        return wrapped
 
     async def _close(self, timeout):
         return await super()._close(timeout)
@@ -59,47 +121,3 @@ class BaseJob(Job):
                 ...
         self._scheduler = None
         self._closed = True
-
-    async def send_result_to_parent_agent(self, result):
-        data = pickle.dumps(result)
-        b64encoded_entities = base64.b64encode(data).decode()
-        result = {
-            "signal": "result_entities",
-            "task_id": self.task_id,
-            "entities": b64encoded_entities
-        }
-        ciphered_data = AM.AgentManager.single_cipher(key=Spy.SECRET_KEY, data=result).decode()
-        data_for_parent_agent = {
-            "sender": self.agent_id,
-            "data": ciphered_data
-        }
-        url = f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward"
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=data_for_parent_agent, ssl=False) as resp:
-                return resp.status
-
-
-class CustomScheduler(Scheduler):
-    async def spawn_job(self, job: BaseJob) -> Job:
-        if self._closed:
-            raise RuntimeError("Scheduling a new job after closing")
-        # should_start = self._limit is None or self.active_count < self._limit
-        # if should_start:
-        #     await job._start()
-        # else:
-        #     try:
-        #         await self._pending.put(job)
-        #     except asyncio.CancelledError:
-        #         await job.close()
-        #         raise
-        try:
-            await self._pending.put(job)
-        except asyncio.CancelledError:
-            await job.close()
-            raise
-        self._jobs.add(job)
-        return job
-
-    @property
-    def jobs(self):
-        return self._jobs

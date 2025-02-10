@@ -10,3 +10,6 @@ class ProjectCreateForm(BaseModel):
 
 class SearchVulnsSetTokenForm(BaseModel):
     token: str
+
+class EnterTokenForm(BaseModel):
+    token: str

@@ -1,20 +1,27 @@
 
 from fastapi import HTTPException, status
 from setezor.interfaces.service import IService
+from setezor.schemas.auth import RegisterForm
+from setezor.services.invite_link_service import InviteLinkService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from setezor.tools import JWTManager, PasswordManager
-from setezor.services import UsersService, UserProjectService
+from setezor.tools import JWT_Tool, PasswordTool
+from setezor.services import UsersService, UserProjectService, Auth_Log_Service
 from setezor.managers import ProjectManager
+from setezor.models import User
 
 class AuthService(IService):
     @classmethod
     async def login(cls, uow: UnitOfWork, username: str, password: str):
+        await Auth_Log_Service.log_event(uow=uow, login=username, event="LOGIN ATTEMPT")
         if not (user_in_db := await UsersService.get_by_login(uow=uow, login=username)):
+            await Auth_Log_Service.log_event(uow=uow, login=username, event="LOGIN DOES NOT EXIST")
             return None
-        if not PasswordManager.verify_password(password, user_in_db.hashed_password):
+        if not PasswordTool.verify_password(password, user_in_db.hashed_password):
+            await Auth_Log_Service.log_event(uow=uow, login=username, event="INVALID PASSWORD")
             return None
-        access_token = JWTManager.create_access_token(data={"user_id": user_in_db.id})
-        refresh_token = JWTManager.create_refresh_token(data={"user_id": user_in_db.id})
+        await Auth_Log_Service.log_event(uow=uow, login=username, event="SUCCESSFUL LOGIN")
+        access_token = JWT_Tool.create_access_token(data={"user_id": user_in_db.id})
+        refresh_token = JWT_Tool.create_refresh_token(data={"user_id": user_in_db.id})
         return {
             "refresh_token": refresh_token,
             "access_token": access_token
@@ -23,14 +30,19 @@ class AuthService(IService):
 
     @classmethod
     async def set_current_project(cls, uow: UnitOfWork, project_id: str, user_id: str):
+        user = await UsersService.get(uow=uow, id=user_id)
+        await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"PROJECT PICK ATTEMPT {project_id}")
         if not (await ProjectManager.get_by_id(uow=uow, project_id=project_id)):
+            await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"NONEXISTENT PROJECT {project_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Проект с ID={project_id} не существует")
         if not (await UserProjectService.is_project_available_for_user(uow=uow, project_id=project_id, user_id=user_id)):
+            await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"UNAVAILABLE PROJECT {project_id} FOR USER")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Тебе сюда нельзя")
-        access_token = JWTManager.create_access_token(data={"user_id": user_id, "project_id": project_id})
-        refresh_token = JWTManager.create_refresh_token(data={"user_id": user_id, "project_id": project_id})
+        await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"SUCCESSFUL PROJECT {project_id} PICK")
+        access_token = JWT_Tool.create_access_token(data={"user_id": user_id, "project_id": project_id})
+        refresh_token = JWT_Tool.create_refresh_token(data={"user_id": user_id, "project_id": project_id})
         return {
             "refresh_token": refresh_token,
             "access_token": access_token
@@ -44,20 +56,56 @@ class AuthService(IService):
         if not (await UserProjectService.is_project_available_for_user(uow=uow, project_id=project_id, user_id=user_id)):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Тебе сюда нельзя")
-        access_token = JWTManager.create_access_token(data={"user_id": user_id, "project_id": project_id, "scan_id": scan_id})
-        refresh_token = JWTManager.create_refresh_token(data={"user_id": user_id, "project_id": project_id, "scan_id": scan_id})
+        access_token = JWT_Tool.create_access_token(data={"user_id": user_id, "project_id": project_id, "scan_id": scan_id})
+        refresh_token = JWT_Tool.create_refresh_token(data={"user_id": user_id, "project_id": project_id, "scan_id": scan_id})
         return {
             "refresh_token": refresh_token,
             "access_token": access_token
         }
     
     @classmethod
-    async def logout(cls, access_token: str):
-        access_token_payload = JWTManager.get_payload(access_token)
+    async def logout_from_project(cls, access_token: str):
+        access_token_payload = JWT_Tool.get_payload(access_token)
         user_id = access_token_payload.get("user_id")
-        access_token = JWTManager.create_access_token(data={"user_id": user_id})
-        refresh_token = JWTManager.create_refresh_token(data={"user_id": user_id})
+        access_token = JWT_Tool.create_access_token(data={"user_id": user_id})
+        refresh_token = JWT_Tool.create_refresh_token(data={"user_id": user_id})
         return {
             "refresh_token": refresh_token,
             "access_token": access_token
         }
+    
+
+    @classmethod
+    async def generate_register_token(cls, uow: UnitOfWork, user_id: str) -> dict:
+        user = await UsersService.get(uow=uow, id=user_id)
+        if not user.is_superuser:
+            raise HTTPException(status_code=403, detail="You are not superuser")
+        payload = {"event": "register"}
+        return await InviteLinkService.create_token(uow=uow, payload=payload)
+
+    @classmethod
+    async def register_by_invite_token(cls, uow: UnitOfWork, register_form: RegisterForm):
+        async with uow:
+            invite_link = await uow.invite_link.find_one(token_hash=register_form.invite_token, used=False)
+        if not invite_link:
+            raise HTTPException(status_code=400, detail="Token not found")
+        if register_form.password != register_form.password_confirmation:
+            raise HTTPException(status_code=400, detail="Password and password confirmation mismatch")
+        token_payload = JWT_Tool.get_payload(invite_link.token)
+        if not token_payload:
+            raise HTTPException(status_code=403, detail="Token is expired")
+        if await UsersService.get_by_login(uow=uow, login=register_form.login):
+            raise HTTPException(status_code=400, detail="Username is already taken")
+        event = token_payload.get("event")
+        if event == "register":
+            hashed_password = PasswordTool.hash(register_form.password)
+            new_user_model = User(
+                login=register_form.login,
+                hashed_password=hashed_password
+            )
+            await UsersService.create(uow=uow, user=new_user_model)
+            async with uow:
+                await uow.invite_link.edit_one(id=invite_link.id, data={"used": True})
+                await uow.commit()
+            return True
+        raise HTTPException(status_code=400, detail="Invalid register token")

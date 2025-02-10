@@ -1,7 +1,7 @@
 from typing import List, Literal
 from fastapi import APIRouter, BackgroundTasks, Depends, Body
-from setezor.api.dependencies import UOWDep
-from setezor.dependencies.project import get_current_project, get_current_scan_id
+from setezor.dependencies.uow_dependency import UOWDep
+from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.models import Task
 from setezor.schemas.task import DNSTaskPayload, MasscanScanTaskPayload, NmapParseTaskPayload, ScapySniffTaskPayload, WHOISTaskPayload, DomainTaskPayload, NmapScanTaskPayload, WappalyzerParseTaskPayload, WebSocketMessage, WebSocketMessageForProject, CertInfoTaskPayload, ScapyParseTaskPayload, MasscanLogTaskPayload
@@ -28,33 +28,28 @@ router = APIRouter(
 async def list_tasks(
     uow: UOWDep,
     status: Literal["STARTED", "IN QUEUE", "FINISHED", "FAILED","CREATED"],
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ) -> List[Task]:
     tasks = await TasksService.list(uow=uow, project_id=project_id, status=status)
     return tasks
-
-@router.post("/{id}/start")
-async def start_task(
-    uow: UOWDep,
-    id: str,
-    project_id: str = Depends(get_current_project)
-) -> bool:
-    return await TaskManager.start_job(uow=uow, id=id, project_id=project_id)
 
 @router.post("/{id}/soft_stop")
 async def soft_stop_task(
     uow: UOWDep,
     id: str,
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> bool:
     return await TaskManager.soft_stop_task(uow=uow, id=id, project_id=project_id)
 
-@router.post("/dns_task")
+@router.post("/dns_task", status_code=201)
 async def create_dns_task(
     uow: UOWDep,
     dns_task_payload: DNSTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> Task:
     task: Task = await TaskManager.create_job(
         job=DNSTask,
@@ -66,12 +61,13 @@ async def create_dns_task(
     return task
 
 
-@router.post('/sd_find')
+@router.post('/sd_find', status_code=201)
 async def create_sd_find(
     uow: UOWDep,
     domain_task_payload: DomainTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> Task:
     task: Task = await TaskManager.create_job(
         job=SdFindTask,
@@ -83,12 +79,13 @@ async def create_sd_find(
     return task
 
 
-@router.post("/whois_task")
+@router.post("/whois_task", status_code=201)
 async def create_whois_task(
     uow: UOWDep,
     whois_task_payload: WHOISTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> Task:
     task: Task = await TaskManager.create_job(
         job=WhoisTask,
@@ -100,12 +97,13 @@ async def create_whois_task(
     return task
 
 
-@router.post("/masscan_scan_task")
+@router.post("/masscan_scan_task", status_code=201)
 async def create_masscan_scan_task(
     uow: UOWDep,
     masscan_scan_task_payload: MasscanScanTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> Task:
     task: Task = await TaskManager.create_job(
         job=MasscanScanTask,
@@ -117,12 +115,13 @@ async def create_masscan_scan_task(
     return task
 
 
-@router.post("/masscan_log_task")
+@router.post("/masscan_log_task", status_code=201)
 async def create_masscan_log_task(
     uow: UOWDep,
     masscan_log_task_payload: MasscanLogTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_local_job(
         job=MasscanLogTask,
@@ -134,12 +133,13 @@ async def create_masscan_log_task(
     return 1
     
 
-@router.post("/nmap_scan_task")
+@router.post("/nmap_scan_task", status_code=201)
 async def create_nmap_scan_task(
     uow: UOWDep,
     nmap_scan_task_payload: NmapScanTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> Task:
     task: Task = await TaskManager.create_job(
         job=NmapScanTask,
@@ -150,12 +150,13 @@ async def create_nmap_scan_task(
     )
     return task
 
-@router.post("/nmap_parse_task")
+@router.post("/nmap_parse_task", status_code=201)
 async def create_nmap_parse_task(
     uow: UOWDep,
     nmap_parse_task_payload: NmapParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_local_job(
         job=NmapParseTask,
@@ -166,12 +167,13 @@ async def create_nmap_parse_task(
     )
     return 1
 
-@router.post("/cert_info_task")
+@router.post("/cert_info_task", status_code=201)
 async def create_cert_info_task(
     uow: UOWDep,
     cert_info_task_payload: CertInfoTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_job(
         job=CertTask,
@@ -182,12 +184,13 @@ async def create_cert_info_task(
     )
     return 1
 
-@router.post("/scapy_sniff_task")
+@router.post("/scapy_sniff_task", status_code=201)
 async def create_scapy_sniff_task(
     uow: UOWDep,
     scapy_sniff_task_payload: ScapySniffTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_job(
         job=ScapySniffTask,
@@ -198,12 +201,13 @@ async def create_scapy_sniff_task(
     )
     return 1
 
-@router.post("/scapy_parse_task")
+@router.post("/scapy_parse_task", status_code=201)
 async def create_scapy_parse_task(
     uow: UOWDep,
     scapy_parse_task_payload: ScapyParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_local_job(
         job=ScapyLogsTask,
@@ -215,12 +219,13 @@ async def create_scapy_parse_task(
     return 1
 
 
-@router.post("/wappalyzer_log_parse")
+@router.post("/wappalyzer_log_parse", status_code=201)
 async def create_wappalyzer_parse_task(
     uow: UOWDep,
     wappalyzer_parse_task_payload: WappalyzerParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_local_job(
         job=WappalyzerLogsTask,
@@ -231,11 +236,12 @@ async def create_wappalyzer_parse_task(
     )
     return 1
 
-@router.post("/refresh_cve")
+@router.post("/refresh_cve", status_code=201)
 async def cve_refresh_task(
     uow: UOWDep,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ) -> int:
     task: Task = await TaskManager.create_local_job(
         job=CVERefresher,

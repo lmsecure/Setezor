@@ -4,14 +4,6 @@ import struct
 import ipaddress
 from setezor.network_structures import InterfaceStruct
 
-from pyroute2 import IPDB
-
-
-# ipdb = IPDB() # эта хуйня при инициализации создает 2 сокета и 4 пайпа
-# Так же поиск занимает около 0.03 сек, что при постоянном использовании может влиять на производительность,
-# Поэтому интерфейс выбирается при запуске приложения
-# with  IPDB() as db:
-#     DEFAULT_INTERFACE = db.interfaces[db.routes['default']['oif']]['ifname']
     
 def get_default_interface():
     return ''

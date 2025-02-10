@@ -12,7 +12,8 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
 
     async def exists(self, object_obj: Object):
         if object_obj.agent_id:
-            stmt = select(Object).filter(Object.agent_id == object_obj.agent_id)
+            stmt = select(Object).filter(Object.agent_id == object_obj.agent_id,
+                                         Object.project_id == object_obj.project_id)
             result = await self._session.exec(stmt)
             return result.first()
         return False
@@ -37,7 +38,6 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
             WHERE object.project_id = :project_id
             GROUP BY d_object_type.name
             ORDER BY count DESC
-            LIMIT 7;
         """)
 
         result = await self._session.exec(device_types_query, params={'project_id': project_id})

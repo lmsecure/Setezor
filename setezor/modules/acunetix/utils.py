@@ -15,8 +15,8 @@ async def send_request(base_url: str,
     cookies = {
         "ui_session": token
     }
-
-    async with aiohttp.ClientSession(cookies=cookies) as session:
+    timeout = aiohttp.ClientTimeout(total=60)
+    async with aiohttp.ClientSession(cookies=cookies, timeout=timeout) as session:
         match method:
             case "GET":
                 async with session.get(base_url + url,

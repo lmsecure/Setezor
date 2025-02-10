@@ -1,9 +1,12 @@
-
+import os
 from setezor.interfaces.service import IService
+from setezor.managers.project_manager.files import FilesStructure
+from setezor.managers.project_manager import ProjectFolders
 from setezor.models.scan import Scan
 from setezor.schemas.scan import ScanCreateForm
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from typing import List, Dict
+from typing import List, Dict, Tuple
+import pprint
 
 
 class ScanService(IService):
@@ -19,9 +22,12 @@ class ScanService(IService):
             project_id=project_id
         )
         async with uow:
-            new_scan = await uow.scan.add(new_scan_model.model_dump())
+            new_scan = uow.scan.add(new_scan_model.model_dump())
             await uow.commit()
-            return new_scan
+        project_path = ProjectFolders.get_path_for_project(project_id=project_id)
+        scan_project_path = os.path.join(project_path, new_scan.id)
+        FilesStructure.create_project_structure(scan_project_path)
+        return new_scan
         
     @classmethod
     async def list(cls, uow: UnitOfWork, project_id: str):

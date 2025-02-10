@@ -1,6 +1,7 @@
 
 from sqlalchemy import func
-from setezor.models import L7Software, Port, IP, L7, Software, Domain, Vendor, MAC, DNS_NS, Vulnerability, L7SoftwareVulnerability
+from setezor.models import L7Software, Port, IP, L7, Software, Domain, Vendor, Vulnerability, L7SoftwareVulnerability
+from setezor.models.l4_software import L4Software
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select
 from sqlmodel.sql._expression_select_cls import Select
@@ -14,6 +15,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             return False
         stmt = select(L7Software).filter(L7Software.l7_id == L7Software_obj.l7_id,
                                          L7Software.software_id == L7Software_obj.software_id,
+                                         L7Software.scan_id == L7Software_obj.scan_id,
                                          L7Software.project_id == L7Software_obj.project_id)
         result = await self._session.exec(stmt)
         return result.first() 
@@ -43,7 +45,6 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
                 Port.protocol,
             )
             .order_by(func.count(Port.port).desc())
-            .limit(7)
         )
         result = await self._session.exec(ports_software)
         return result.all()
@@ -51,22 +52,27 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
     async def get_product_service_name_info(self, project_id: str):
         products_service_name: Select = (
             select(
-                IP.ip,
                 Port.service_name,
                 Software.product,
                 func.count(Port.service_name).label("software_product_count")
             )
-            .join(Port, IP.id == Port.ip_id)
-            .join(L7, Port.id == L7.port_id, isouter=True)
-            .join(L7Software, L7.id == L7Software.l7_id, isouter=True)
-            .join(Software, L7Software.software_id == Software.id, isouter=True)
-            .filter(IP.project_id == project_id, Software.product != None)
+            .join(L7, Port.id == L7.port_id)
+            .join(L7Software, L7.id == L7Software.l7_id)
+            .join(Software, L7Software.software_id == Software.id)
+            .filter(Port.project_id == project_id, Software.product != None)
+            .union(select(
+                Port.service_name,
+                Software.product,
+                func.count(Port.service_name).label("software_product_count")
+            )
+            .join(L4Software, Port.id == L4Software.l4_id)
+            .join(Software, L4Software.software_id == Software.id)
+            .filter(Port.project_id == project_id, Software.product != None))
             .group_by(
                 Port.service_name,
                 Software.product,
             )
             .order_by(func.count(Port.service_name).desc())
-            .limit(7)
         )
         result = await self._session.exec(products_service_name)
         return result.all()

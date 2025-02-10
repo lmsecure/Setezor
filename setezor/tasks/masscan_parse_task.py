@@ -1,9 +1,6 @@
-
 from base64 import b64decode
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.tasks.base_job import BaseJob
-from setezor.services import DataStructureService, TasksService
-from setezor.schemas.task import TaskStatus
 from setezor.modules.masscan.parser import BaseMasscanParser
 
 
@@ -34,14 +31,6 @@ class MasscanLogTask(BaseJob):
         result = await BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
         return result
 
-    async def _write_result_to_db(self, result):
-        service = DataStructureService(uow=self.uow, 
-                                       result=result, 
-                                       project_id=self.project_id,
-                                       scan_id=self.scan_id)
-        await service.make_magic()
-        await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.finished, project_id=self.project_id)
-
+    @BaseJob.local_task_notifier
     async def run(self):
-        result = await self._task_func()
-        await self._write_result_to_db(result=result)
+        return await self._task_func()

@@ -20,7 +20,7 @@ class ScopeService(IService):
             project_id=project_id
         )
         async with uow:
-            new_scope = await uow.scope.add(new_scope_model.model_dump())
+            new_scope = uow.scope.add(new_scope_model.model_dump())
             await uow.commit()
             return new_scope
         
@@ -66,7 +66,7 @@ class ScopeService(IService):
                         project_id=project_id,
                         scope_id=id,
                         **params )
-                    await uow.target.add(new_target.model_dump())
+                    uow.target.add(new_target.model_dump())
                 await uow.commit()
             return await uow.target.filter(scope_id=id, project_id=project_id)
     

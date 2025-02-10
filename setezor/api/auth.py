@@ -1,8 +1,9 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from setezor.api.dependencies import UOWDep
-from setezor.dependencies.project import access_token_getter
+from setezor.dependencies.uow_dependency import UOWDep
+from setezor.dependencies.project import access_token_getter, get_user_id
+from setezor.schemas.auth import RegisterForm
 from setezor.services.auth_service import AuthService
 
 router = APIRouter(
@@ -24,17 +25,41 @@ async def login(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    response.set_cookie(key="access_token", value=token_pairs.get("access_token"), secure=False, httponly=True)
-    response.set_cookie(key="refresh_token", value=token_pairs.get("refresh_token"), secure=False, httponly=True)
+    response.set_cookie(key="access_token", value=token_pairs.get("access_token"), secure=True, httponly=True)
+    response.set_cookie(key="refresh_token", value=token_pairs.get("refresh_token"), secure=True, httponly=True)
     return True
 
 
-@router.post("/logout", status_code=200)
-async def logout(
+@router.post("/logout_from_project", status_code=200)
+async def logout_from_project(
     response: Response,
     access_token: str = Depends(access_token_getter),
 ) -> bool:
-    token_pairs = await AuthService.logout(access_token=access_token)
-    response.set_cookie(key="access_token", value=token_pairs.get("access_token"), secure=False, httponly=True)
-    response.set_cookie(key="refresh_token", value=token_pairs.get("refresh_token"), secure=False, httponly=True)
+    token_pairs = await AuthService.logout_from_project(access_token=access_token)
+    response.set_cookie(key="access_token", value=token_pairs.get("access_token"), secure=True, httponly=True)
+    response.set_cookie(key="refresh_token", value=token_pairs.get("refresh_token"), secure=True, httponly=True)
     return True
+
+@router.post("/logout_from_profile", status_code=200)
+async def logout_from_profile(
+    response: Response,
+    access_token: str = Depends(access_token_getter),
+) -> bool:
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return True
+
+@router.post("/generate_register_token", status_code=200)
+async def generate_register_token(
+    uow: UOWDep, 
+    user_id: str = Depends(get_user_id)
+) -> dict:
+    return await AuthService.generate_register_token(uow=uow, user_id=user_id)
+
+
+@router.post("/register")
+async def register(
+    register_form: RegisterForm,
+    uow: UOWDep
+) -> bool:
+    return await AuthService.register_by_invite_token(uow=uow, register_form=register_form)

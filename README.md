@@ -83,7 +83,7 @@ SERVER_REST_URL=https://<ip/doamin>:<port>
 ```
 4. Запуск Сервера
 ```bash
-docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor/projects:/setezor/projects -v ~/setezor/logs:/setezor/logs -d lmsecure/setezor:latest
+docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor:/root/.local/share/setezor -d lmsecure/setezor:latest
 ```
 5. Запуск агента
 ```bash

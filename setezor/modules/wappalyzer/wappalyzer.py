@@ -67,69 +67,66 @@ class WappalyzerParser:
     @staticmethod
     def parse_json(wappalyzer_log: dict, groups: list[str]) -> dict:
         # to do - берется url со статусом 200, но его может не быть...
-        url = ''                   
-        for k, v in wappalyzer_log.get('urls').items():
-            if v.get('status') == 200:
-                url = k
-
+        if not wappalyzer_log.get('technologies', []):
+            return {}
+        url = list(wappalyzer_log.get('urls').keys())[-1]                   
         result = {}
-        if url:
-            protocol, addr = url.split('://')
-            addr = addr.split('/')[0]
-            if ':' in addr:
-                addr, port = addr.split(':')
-                result.update({'port' : int(port)})
+        protocol, addr = url.split('://')
+        addr = addr.split('/')[0]
+        if ':' in addr:
+            addr, port = addr.split(':')
+            result.update({'port' : int(port)})
+        else:
+            result.update({'port' : 443 if protocol == 'https' else 80})
+
+        try:
+            IPv4Address(addr)
+            # to do bag с resolve домена, если в логах стутус 200, а при парсинге нет (пока отправляется либо домен, либо ip)
+            # result.update({'ip' : DNS.proceed_records([await DNS.resolve_domain(addr, 'A')])[0].get("record_value")})
+            result.update({'ip' : addr})
+        except:
+            result.update({'domain' : addr})
+
+        categories_id = set()
+        for name_categoty in groups:
+            categories_id = set.union(categories_id, WappalyzerParser.groups.get(name_categoty))
+        softwares: list[SoftwareStruct] = []
+        for tech in wappalyzer_log.get('technologies', {}):
+            cpe = tech.get('cpe')
+            cpe_type = None
+            vendor = None
+            product = None
+            if cpe:
+                cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
+                vendor = cpe.replace('/', '2.3:').split(':')[3]
+                product = cpe.replace('/', '2.3:').split(':')[4]
             else:
-                result.update({'port' : 443 if protocol == 'https' else 80})
-
-            try:
-                IPv4Address(addr)
-                # to do bag с resolve домена, если в логах стутус 200, а при парсинге нет (пока отправляется либо домен, либо ip)
-                # result.update({'ip' : DNS.proceed_records([await DNS.resolve_domain(addr, 'A')])[0].get("record_value")})
-                result.update({'ip' : addr})
-            except:
-                result.update({'domain' : addr})
-
-            categories_id = set()
-            for name_categoty in groups:
-                categories_id = set.union(categories_id, WappalyzerParser.groups.get(name_categoty))
-            softwares: list[SoftwareStruct] = []
-            for tech in wappalyzer_log.get('technologies', {}):
-                cpe = tech.get('cpe')
-                cpe_type = None
-                vendor = None
-                product = None
-                if cpe:
-                    cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
-                    vendor = cpe.replace('/', '2.3:').split(':')[3]
-                    product = cpe.replace('/', '2.3:').split(':')[4]
+                product = tech.get("slug")
+            version = tech.get('version')
+            if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+            if product and version:
+                list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
+                if list_cpe:
+                    cpe = ', '.join(list_cpe)
                 else:
-                    product = tech.get("slug")
-                version = tech.get('version')
-                if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
-                if product and version:
-                    list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
-                    if list_cpe:
-                        cpe = ', '.join(list_cpe)
-                    else:
-                        cpe = None
-                    if cpe:
-                        vendor = cpe.replace('/', '2.3:').split(':')[3]
-                if any([int(category.get('id')) in categories_id for category in tech.get('categories')]):
-                    tmp_soft = SoftwareStruct()
-                    tmp_soft.type = cpe_type
-                    tmp_soft.vendor = vendor
-                    tmp_soft.product = product
-                    tmp_soft.version = version
-                    tmp_soft.cpe23 = cpe
-                    softwares.append(tmp_soft)
-            result.update({'softwares' : softwares})
+                    cpe = None
+                if cpe:
+                    vendor = cpe.replace('/', '2.3:').split(':')[3]
+            if any([int(category.get('id')) in categories_id for category in tech.get('categories')]):
+                tmp_soft = SoftwareStruct()
+                tmp_soft.type = cpe_type
+                tmp_soft.vendor = vendor
+                tmp_soft.product = product
+                tmp_soft.version = version
+                tmp_soft.cpe23 = cpe
+                softwares.append(tmp_soft)
+        result.update({'softwares' : softwares})
         return result
 
 
     @classmethod
     async def restruct_result(cls, data: dict):
-        if not data.get("softwares"):
+        if not data:
             return []
         
         vendors = {}

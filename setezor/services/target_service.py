@@ -14,7 +14,7 @@ class TargetService(IService):
             project_id=project_id
         )
         async with uow:
-            new_target = await uow.target.add(new_target_model.model_dump())
+            new_target = uow.target.add(new_target_model.model_dump())
             await uow.commit()
             return new_target
         

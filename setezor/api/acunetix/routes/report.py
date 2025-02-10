@@ -2,8 +2,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import FileResponse, JSONResponse
 from setezor.api.acunetix.schemes.report import ReportAddForm
-from setezor.api.dependencies import UOWDep
-from setezor.dependencies.project import get_current_project
+from setezor.dependencies.uow_dependency import UOWDep
+from setezor.dependencies.project import get_current_project, role_required
 from setezor.services import AcunetixService
 from ..schemes.group import GroupForm
 
@@ -17,6 +17,7 @@ async def get_acunetix_reports(
     uow: UOWDep,
     acunetix_id: Optional[str] = None,
     project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ):
     return await AcunetixService.get_reports(uow=uow, project_id=project_id, acunetix_id=acunetix_id)
 
@@ -26,6 +27,7 @@ async def create_acunetix_report(
     create_report_form: ReportAddForm, 
     acunetix_id: Optional[str] = None,
     project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ):
     status, msg = await AcunetixService.create_report(uow=uow, project_id=project_id, acunetix_id=acunetix_id, create_report_form=create_report_form)
     return JSONResponse(status_code=status, content=msg)
@@ -38,6 +40,7 @@ async def download_report(
     format: str,
     acunetix_id: str,
     project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ):
     filename, data = await AcunetixService.get_report_file(uow=uow, project_id=project_id, acunetix_id=acunetix_id, report_id=report_id, format=format)
     if format == "pdf":
@@ -52,5 +55,6 @@ async def download_report(
 async def get_reports_templates(
     uow: UOWDep,
     project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ):
     return await AcunetixService.get_report_templates(uow=uow, project_id=project_id)

@@ -3,7 +3,6 @@ function create_websocket(endpoint) {
     var sock = new WebSocket('wss://' + window.location.host + endpoint);
     
     sock.onmessage = function (message) {
-        console.log(message)
         data = JSON.parse(message.data)
         if (window.location.pathname == '/network-map/' && data.command === "update") {
             get_nodes_and_edges([], true)
@@ -34,10 +33,10 @@ async function getScans(){
 
 async function getCurrentScan(){
     let resp = await fetch("/api/v1/scan/current")
-    let scan = await resp.json()
-    if (!resp.ok){
+    if (resp.redirected){
         return null
     }
+    let scan = await resp.json()
     return scan
 }
 

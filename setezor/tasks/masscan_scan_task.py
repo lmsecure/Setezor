@@ -34,8 +34,9 @@ class MasscanScanTask(BaseJob):
             masscan_obj = MasscanScanner(target=self.target, ports=self.ports, search_udp_port=self.search_udp_port, max_rate=self.max_rate, source_port=self.source_port, format=self.format, wait=self._wait, interface_addr=self.interface_addr, interface=self.interface)
         return await masscan_obj.async_execute(log_path = None)
         
+    @BaseJob.remote_task_notifier    
     async def run(self):
         result = await self._task_func()
         ports = await BaseMasscanParser._parser_results(format=self.format, input_data=result)
         result_data = await BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
-        await self.send_result_to_parent_agent(result=result_data)
+        return result_data, result.encode(), self.format

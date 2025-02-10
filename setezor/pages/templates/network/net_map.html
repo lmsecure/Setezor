@@ -12,13 +12,11 @@
                     this.textContent = 'Cluster'
                 }">Cluster</button>
         <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
-            title="Fullscreen mode" onclick="fullscreen_network()"><i class="bi bi-arrows-fullscreen"></i></button>
-        <button class="btn btn-primary" data-bs-toggle="tooltip" data-bs-toggle="top" title="Import from JSON"
-            onclick="openFile()"><i class="bi bi-upload"></i></button>
+            title="Fullscreen mode" onclick="fullscreen_network()" style="font-family: 'Times New Roman', Times, serif;"><i class="bi bi-arrows-fullscreen"></i></button>
         <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
         <div class="btn-group" role="group">
             <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
-                aria-expanded="false">
+                aria-expanded="false" style="font-family: 'Times New Roman', Times, serif;">
                 <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
@@ -27,7 +25,7 @@
                 <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
             </ul>
         </div>
-        <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top"
+        <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top" style="font-family: 'Times New Roman', Times, serif;"
             title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
 
     </div>
@@ -41,7 +39,22 @@
         let scans = await resp.json()
         return scans
     }
-    getScans()
+    getScans().then(data=>{
+        let el = document.getElementById("scansContainer")
+        let result = ""
+        for (const scan of data){
+            scan_html = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="scan_label_${scan.id}">
+                    <label class="form-check-label" for="scan_label_${scan.id}">
+                        ${scan.name} - ${scan.created_at}
+                    </label>
+                </div>
+            `
+            result += scan_html
+        }
+        el.innerHTML = result
+    })
     async function showMapForScans(event){
         event.preventDefault()
         let formData = new FormData(event.target)
@@ -321,9 +334,10 @@
         nodes.forEach((node => {
             IPMap.set(node.id,node.address)
             if (node.agent) {
-                if (node.id == "Server"){
-                    node.shape="image"
-                    node.image=`/static/assets/command_center.svg`
+                if (node.parent_agent_id == null)
+                {
+                    node.icon = new ServerIcon(color = caclculateColor(node))
+                    node.shape="icon"
                     node.scaling = {
                         min:100,
                         max:100
@@ -1372,7 +1386,7 @@
 
     class AgentIcon {
 
-        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF591') {
+        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF5C2') {
             this.color = color
             this.shape = 'icon'
             this.size = size
@@ -1383,7 +1397,7 @@
 
     class ServerIcon {
 
-        constructor(color = '#2B7CE9', size = 80, face = '"bootstrap-icons"', code = '\uf592') {
+        constructor(color = '#2B7CE9', size = 100, face = '"bootstrap-icons"', code = '\uF67A') {
             this.color = color
             this.shape = 'icon'
             this.size = size

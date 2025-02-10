@@ -10,7 +10,7 @@ class UsersService(IService):
     async def create(cls, uow: UnitOfWork, user: User) -> User:
         users_dict = user.model_dump()
         async with uow:
-            user = await uow.user.add(users_dict)
+            user = uow.user.add(users_dict)
             await uow.commit()
             return user
 

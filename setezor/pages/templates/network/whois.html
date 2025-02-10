@@ -11,7 +11,7 @@
                     placeholder="Domain name or IP" aria-label="Target"
                     aria-describedby="basic-addon1" required name="Target">
 
-                    <!-- <button id="add_new_whois_form" onclick="(function() {
+                    <button id="add_new_whois_form" onclick="(function() {
                         const original = document.getElementById('TargetForWhois');
                         const clone = original.cloneNode(true);
                         const newInput = clone.querySelector('input');
@@ -41,51 +41,34 @@
                         }
 
                         document.getElementById('WhoisInputContainer').appendChild(clone);
-                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button> -->
+                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
             </div>
 
             <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
                 <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
                 <button type="button" class="btn btn-primary w-50" id="startScanWhoisBtn"
-                onclick="
-                const button = this; // Сохраняем ссылку на кнопку
-                const form = button.closest('form'); // Находим ближайшую форму
-                
-                if (!form.checkValidity()) { 
-                    form.reportValidity();
-                    return;
-                }
-                
-                const params = {};
-                const domains_and_ips = [];
-                
-                // Собираем данные из формы
-                for (const d of form.getElementsByClassName('form-control')) {
-                    domains_and_ips.push(d.value);
-                }
-                
-                // Отправляем данные для каждого домена или IP
-                for (const domain_and_ip of domains_and_ips) {
-                    let domainAndIpParams = {
-                        target: domain_and_ip,
-                        agent_id: getAgent()
-                    };
-                    fetch('/api/v1/task/whois_task', {
-                        method: 'POST', 
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(domainAndIpParams)
-                    });
-                }
-                
-                // Закрытие модального окна
-                var myModal = bootstrap.Modal.getInstance(document.getElementById('whoisModalWindow'));
-                if (myModal) {
-                    myModal.hide();
-                }
-            ">Start</button>
-            
+                    onclick="
+                    const requiredWhois = document.getElementById('WhoisForm');
+                        const params = {};
+                        const domains_and_ips = [];
+                        for (const d of document.getElementById('WhoisForm').getElementsByClassName('form-control')) {
+                            domains_and_ips.push(d.value);
+                        }
+                        for (const domain_and_ip of domains_and_ips) {
+                            let domainAndIpParams = {
+                                target: domain_and_ip,
+                                agent_id : getAgent()
+                            }
+                            fetch('/api/v1/task/whois_task', {
+                            method: 'POST', 
+                            headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            body: JSON.stringify(domainAndIpParams)
+                        })};var myModal = bootstrap.Modal.getInstance(document.getElementById('whoisModalWindow'));
+                                    if (myModal) {
+                                        myModal.hide();
+                                    }">Start</button>
             </div>
         </form>
     </div>

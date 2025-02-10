@@ -12,11 +12,11 @@ class RouteListRepository(SQLAlchemyRepository[RouteList]):
     
     async def vis_edge_agent_to_agent(self, project_id: str):
         a1 = aliased(Agent)
-        query = select(Agent.name, a1.name).join(a1, Agent.id == a1.parent_agent_id).filter(Agent.project_id==project_id)
+        query = select(Agent.id, a1.id).join(a1, Agent.id == a1.parent_agent_id).filter(Agent.project_id==project_id)
         return (await self._session.exec(query)).all()
     
     async def vis_edge_agent_to_interface(self, project_id: str):
-        query = select(IP.id, Agent.name)\
+        query = select(IP.id, Agent.id)\
         .join(MAC, IP.mac_id == MAC.id)\
         .join(Agent, Agent.object_id == MAC.object_id).filter(IP.project_id==project_id)
         return await self._session.exec(query)

@@ -9,7 +9,7 @@ class IPService(IService):
     async def create(cls, uow: UnitOfWork, ip: IP) -> int:
         ip_dict = ip.model_dump()
         async with uow:
-            ip = await uow.ip.add(ip_dict)
+            ip = uow.ip.add(ip_dict)
             await uow.commit()
             return ip
 

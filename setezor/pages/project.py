@@ -1,10 +1,11 @@
 
 from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Depends, Request
-from setezor.api.dependencies import UOWDep
+from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_user_id
 from setezor.services import UserProjectService
 from setezor.services.analytics_service import AnalyticsService
+from setezor.services.user_service import UsersService
 from .import TEMPLATES_DIR
 import pprint
 
@@ -27,6 +28,7 @@ async def projects_page(
     """
     
     projects = await UserProjectService.get_user_projects(uow=uow, user_id=user_id)
+    user = await UsersService.get(uow=uow, id=user_id)
     analytics_lst = []
     result = []
     for project_obj in projects:
@@ -46,4 +48,5 @@ async def projects_page(
         project_obj.id = project_obj.id
         result.append({"project" : project_obj, "analytics" : analytics})
     return TEMPLATES_DIR.TemplateResponse(name="projects/base_project.html", context={"request": request,
+                                                                                      "is_superuser": user.is_superuser,
                                                                                       "projects": result})

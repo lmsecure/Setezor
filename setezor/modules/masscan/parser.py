@@ -42,7 +42,6 @@ class BaseMasscanParser:
                     result.append(port_obj)
             route_obj = Route(agent_id=agent_id)
             result.append(RouteList(ip_id_from=interface_ip_id, ip_to=ip_obj, route=route_obj))
-        print()
         return result
 
 

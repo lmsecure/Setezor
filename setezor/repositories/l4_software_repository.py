@@ -1,9 +1,8 @@
 
 from sqlalchemy import func
-from setezor.models import L4Software, Port, IP, Software, Domain, Vendor, MAC, DNS_NS, Vulnerability, L4SoftwareVulnerability
+from setezor.models import L4Software, Port, IP, Software, Vendor, Vulnerability, L4SoftwareVulnerability
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select
-from sqlmodel.sql._expression_select_cls import Select
 
 class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
     model = L4Software
@@ -11,9 +10,10 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
     async def exists(self, L4Software_obj: L4Software):
         if not (L4Software_obj.l4_id and L4Software_obj.software_id):
             return False
-        stmt = select(L4Software).filter(L4Software_obj.l4_id == L4Software_obj.l4_id,
-                                         L4Software_obj.software_id == L4Software_obj.software_id,
-                                         L4Software_obj.project_id == L4Software_obj.project_id)
+        stmt = select(L4Software).filter(L4Software.l4_id == L4Software_obj.l4_id,
+                                         L4Software.software_id == L4Software_obj.software_id,
+                                         L4Software.scan_id == L4Software_obj.scan_id,
+                                         L4Software.project_id == L4Software_obj.project_id)
         result = await self._session.exec(stmt)
         return result.first()
 

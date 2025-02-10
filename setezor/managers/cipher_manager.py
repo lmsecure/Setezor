@@ -1,16 +1,17 @@
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-class CipherManager:
+
+class Cryptor:
     @classmethod
-    def cipher(cls, data: bytes, key: str):
+    def encrypt(cls, data: bytes, key: str):
         bytes_key = bytes.fromhex(key)
         cipher = AES.new(bytes_key, AES.MODE_ECB)
         data = pad(data, AES.block_size)
         return cipher.encrypt(data)
-    
+
     @classmethod
-    def decipher(cls, data: bytes, key: str):
+    def decrypt(cls, data: bytes, key: str):
         bytes_key = bytes.fromhex(key)
         cipher = AES.new(bytes_key, AES.MODE_ECB)
         deciphered_data = cipher.decrypt(data)

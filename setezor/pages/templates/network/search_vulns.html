@@ -88,10 +88,12 @@
                         <td>${k}</td>
                         <td>${v.description}</td>
                         <td>`
-                    for (let link of v.exploits) {
-                        result += `<p>
-                        <a href="${link}">${link}</a>
-                        </p>`
+                    if (v.exploits != undefined){
+                        for (let link of v.exploits) {
+                            result += `<p>
+                            <a href="${link}">${link}</a>
+                            </p>`
+                        }
                     }
                     result += `</td></tr>`
                 }

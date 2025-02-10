@@ -17,7 +17,7 @@ class SQLAlchemyRepository(Generic[T]):
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def add(self, data: dict) -> T:
+    def add(self, data: dict) -> T:
         new_instance = self.model(**data)
         self._session.add(new_instance)
         return new_instance

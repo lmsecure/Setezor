@@ -26,7 +26,7 @@ class CertTask(BaseJob):
     async def _task_func(self):
         return CertInfo.get_cert_and_parse(resource=self.data)
 
-    async def _write_result_to_db(self, cert_data:dict):
+    async def _restruct_result(self, cert_data:dict):
         result = []
         data:dict = {
             'data': json.dumps(cert_data),
@@ -62,23 +62,10 @@ class CertTask(BaseJob):
             result.append(l7_obj)
             cert_obj = Cert(l7 = l7_obj, **data)
             result.append(cert_obj)
-        await self.send_result_to_parent_agent(result=result)
-
+        return result
+        
+    @BaseJob.remote_task_notifier
     async def run(self):
-        """Метод выполнения задачи
-        1. Произвести операции согласно методу self._task_func
-        2. Записать результаты в базу согласно методу self._write_result_to_db
-        3. Попутно менять статут задачи
-
-        Args:
-            db (Queries): объект запросов к базе
-            task_id (int): идентификатор задачи
-        """
-        try:
-            t1 = time()
-            result = await self._task_func()
-            await self._write_result_to_db(cert_data=result)
-        except Exception as e:
-            print('Task "%s" failed with error\n%s',
-                  self.__class__.__name__, traceback.format_exc())
-            raise e
+        cert_data, raw_result = await self._task_func()
+        result = await self._restruct_result(cert_data=cert_data)
+        return result, raw_result.encode(), "pem"

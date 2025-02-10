@@ -14,7 +14,6 @@ from setezor import managers as M
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.models import Acunetix
 from setezor.interfaces.service import IService
-from setezor.models.acunetix_targets import AcunetixTargets
 from setezor.models.d_software import Software
 from setezor.models.domain import Domain
 from setezor.models.ip import IP
@@ -53,7 +52,7 @@ class AcunetixService(IService):
         async with uow:
             if (await uow.acunetix.find_one(project_id=project_id, url=config.url)):
                 raise HTTPException(status_code=500, detail=f"Acunetix with url={config.url} is already registered")
-            new_config = await uow.acunetix.add(config_dict)
+            new_config = uow.acunetix.add(config_dict)
             await uow.commit()
 
         # api = AcunetixApi.from_config(new_config.model_dump())
@@ -253,24 +252,6 @@ class AcunetixService(IService):
                         })
                         await uow.commit()
 
-                acunetix_target_in_setezor = await uow.acunetix_targets.find_one(project_id=project_id,
-                                                                                 target_id=target_in_setezor.id,
-                                                                                 acunetix_target_id=acunetix_target_id,
-                                                                                 acunetix_id=acunetix_id,
-                                                                                 scan_id=scan_id
-                                                                                 )
-
-                if acunetix_target_in_setezor:  # если таргет есть в сетезоре, то и уязвимости получены
-                    continue
-                acunetix_target_in_setezor = await uow.acunetix_targets.add({
-                    "project_id": project_id,
-                    "target_id": target_in_setezor.id,
-                    "scan_id": scan_id,
-                    "acunetix_target_id": acunetix_target_id,
-                    "acunetix_id": acunetix_id
-                })
-                await uow.commit()
-
                 config = await uow.acunetix.find_one(project_id=project_id, id=acunetix_id)
                 api = AcunetixApi.from_config(config.model_dump())
 
@@ -328,12 +309,14 @@ class AcunetixService(IService):
                 new_l7_software = L7Software(l7=new_l7, software=new_software)
                 result.append(new_l7_software)
 
-                target_in_acunetix = await api.get_target_by_id(target_id=acunetix_target_id)
-                last_scan_id = target_in_acunetix["last_scan_id"]
-                last_scan_result_id = target_in_acunetix["last_scan_session_id"]
-
-                vulnerabilities = []
-                if not (last_scan_id and last_scan_result_id):
+                scans = await api.get_target_scans(target_id=acunetix_target_id)
+                for scan in scans:
+                    start_datetime = datetime.datetime.fromisoformat(scan["current_session"]["start_date"])
+                    if start_datetime.date() >= sync_payload.dt_from and start_datetime.date() <= sync_payload.dt_to:
+                        last_scan_id = scan["scan_id"]
+                        last_scan_result_id = scan["current_session"]["scan_session_id"]
+                        break
+                else:
                     continue
                 
                 vulnerabilities = await api.get_scan_vulnerabilities(scan_id=last_scan_id, result_id=last_scan_result_id)
@@ -357,13 +340,13 @@ class AcunetixService(IService):
             await ds.make_magic()
 
     @classmethod
-    async def add_targets(cls, uow: UnitOfWork, project_id: str, acunetix_id: int, payload: dict, scan_id: str):
+    async def add_targets(cls, uow: UnitOfWork, project_id: str, acunetix_id: int, payload: dict):
         async with uow:
             config = await uow.acunetix.find_one(project_id=project_id, id=acunetix_id)
             api = AcunetixApi.from_config(config.model_dump())
             status, msg, result = await api.add_target(payload=payload)
             result = await cls.parse_targets(result)
-            ds = DataStructureService(uow=uow, result=result, scan_id=scan_id, project_id=project_id)
+            ds = DataStructureService(uow=uow, result=result, scan_id=None, project_id=project_id)
             await ds.make_magic()
             return status
     
@@ -471,7 +454,7 @@ class AcunetixService(IService):
         
 
     @classmethod
-    async def create_scan(cls, uow: UnitOfWork, project_id: str, acunetix_id: int, scan_id:str, form: TargetScanStart | GroupScanStart):
+    async def create_scan(cls, uow: UnitOfWork, project_id: str, acunetix_id: int, scan_id: str, form: TargetScanStart | GroupScanStart):
         async with uow:
             config = await uow.acunetix.find_one(project_id=project_id, id=acunetix_id)
             api = AcunetixApi.from_config(config.model_dump())
@@ -480,15 +463,17 @@ class AcunetixService(IService):
         if hasattr(form, 'target_id'):
             raw_data = await api.create_scan_for_target(payload=form.model_dump())
         async with uow:
-            for status, scan in raw_data:
+            for _, scan in raw_data:
                 target_id = scan.get("target_id")
-                l7 = await uow.acunetix_targets.find_one(target_id=target_id, project_id=project_id)
+                target = await api.get_target_by_id(target_id=target_id)
+                target_address = target.get("address")
                 acunetix_scan_id = scan.get("scan_id")
                 task: Task = await M.TaskManager.create_local_job(
                     job=AcunetixScanTask,
                     agent_id = None,
                     uow=uow,
                     project_id=project_id,
+                    target_address=target_address,
                     credentials=api.credentials,
                     scan_id=scan_id,
                     acunetix_scan_id=acunetix_scan_id

@@ -9,7 +9,7 @@ class DNSService(IService):
     async def create(cls, uow: UnitOfWork, dns: DNSSchemaAdd) -> int:
         dns_dict = dns.model_dump()
         async with uow:
-            dns_id = await uow.dns.add(dns_dict)
+            dns_id = uow.dns.add(dns_dict)
             await uow.commit()
             return dns_id
 

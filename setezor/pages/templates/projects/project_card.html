@@ -67,7 +67,7 @@
         </h6>
         <div id="projectCarousel{{ project.id }}" class="carousel slide"  data-bs-ride="carousel">
             <div id="carouselExampleIndicators{{ project.id }}" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-indicators" style="margin-bottom: -2rem;">
+                <div class="carousel-indicators" style="margin-bottom: -1.25rem;">
                   <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
                   <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="1" aria-label="Slide 2"></button>
                   <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators{{ project.id }}" data-bs-slide-to="2" aria-label="Slide 3"></button>
@@ -79,15 +79,15 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            Top ports
+                            All ports
                             {% if analytics.top_ports %}
-                                {{ charts.create_donut('Top ports', 'analytics.top_ports' + '_' + project.id,
+                                {{ charts.create_donut('All ports', 'analytics.top_ports' + '_' + project.id,
                                 analytics.top_ports.data | safe ,
                                 analytics.top_ports.labels | safe,
                                 project.id | safe)
                                 }}
                             {% else %}
-                                {{charts.create_donut('Top ports', 'analytics.top_ports' + '_' + project.id,
+                                {{charts.create_donut('All ports', 'analytics.top_ports' + '_' + project.id,
                                 '[]',
                                 '[]',
                                 project.id | safe)}}
@@ -101,15 +101,15 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            Top protocols
+                            All protocols
                             {% if analytics.top_protocols %}
-                            {{ charts.create_donut('Top protocols', 'analytics.top_protocols' + '_' + project.id,
+                            {{ charts.create_donut('All protocols', 'analytics.top_protocols' + '_' + project.id,
                             analytics.top_protocols.data | safe ,
                             analytics.top_protocols.labels | safe ,
                             project.id | safe)
                             }}
                             {% else %}
-                            {{charts.create_donut('Top protocols', 'analytics.top_protocols' + '_' + project.id,
+                            {{charts.create_donut('All protocols', 'analytics.top_protocols' + '_' + project.id,
                             '[]',
                             '[]',
                             project.id | safe)}}
@@ -121,15 +121,15 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            Top objects
+                            All objects
                             {% if analytics.device_types %}
-                            {{ charts.create_donut('Top objects', 'analytics.device_types' + '_' + project.id,
+                            {{ charts.create_donut('All objects', 'analytics.device_types' + '_' + project.id,
                             analytics.device_types.data | safe ,
                             analytics.device_types.labels | safe ,
                             project.id | safe
                            ) }}
                            {% else %}
-                           {{charts.create_donut('Top objects', 'analytics.device_types' + '_' + project.id,
+                           {{charts.create_donut('All objects', 'analytics.device_types' + '_' + project.id,
                            '[]',
                            '[]',
                            project.id | safe)}}
@@ -142,15 +142,15 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            Top products
+                            All products
                             {% if analytics.top_products %}
-                            {{ charts.create_donut('Top products', 'analytics.top_products' + '_' + project.id,
+                            {{ charts.create_donut('All products', 'analytics.top_products' + '_' + project.id,
                             analytics.top_products.data | safe ,
                             analytics.top_products.labels | safe ,
                             project.id | safe
                             ) }}
                             {% else %}
-                            {{charts.create_donut('Top products', 'analytics.top_products' + '_' + project.id,
+                            {{charts.create_donut('All products', 'analytics.top_products' + '_' + project.id,
                             '[]',
                             '[]',
                             project.id | safe)}}

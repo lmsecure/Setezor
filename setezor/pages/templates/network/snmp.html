@@ -263,11 +263,6 @@
 
 <script>
     const requiredSnmp = document.getElementById('SnmpForm');
-        if (!form.checkValidity()) { 
-            form.reportValidity();
-            return;
-        }
-
     let ip_lst_snmp = [];
 
     async function get_ip_list()
@@ -283,7 +278,7 @@
         }
         el.innerHTML = res;
     }
-    get_ip_list();
+    // get_ip_list();
 </script>
 
 {% endmacro %}

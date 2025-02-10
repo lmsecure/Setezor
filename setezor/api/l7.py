@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends, Response
-from setezor.api.dependencies import UOWDep
-from setezor.dependencies.project import get_current_project
+from setezor.dependencies.uow_dependency import UOWDep
+from setezor.dependencies.project import get_current_project, role_required
 from setezor.services import L7Service
 
 router = APIRouter(
@@ -12,7 +12,8 @@ router = APIRouter(
 @router.get("")
 async def list_resources(
     uow: UOWDep,
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ) -> list[dict]:
     return await L7Service.list(uow=uow, project_id=project_id)
 
@@ -21,7 +22,8 @@ async def list_resources(
 async def list_resource_vulnerabilities(
     uow: UOWDep,
     l7_id: str,
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ):
     return await L7Service.list_vulnerabilities(uow=uow, l7_id=l7_id, project_id=project_id)
 
@@ -30,7 +32,8 @@ async def add_resource_vulnerability(
     uow: UOWDep,
     l7_id: str,
     data: dict,
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner"]))
 ):
     await L7Service.add_vulnerability(uow=uow, project_id=project_id, id=l7_id, data=data)
     return Response(status_code=201)

@@ -1,9 +1,9 @@
 from typing import List, Optional
 
 from sqlmodel import Field, Relationship
-from .import Base, IDDependent
+from .import TimeDependent, ProjectDependent, IDDependent
 
-class Agent(IDDependent, Base, table=True):
+class Agent(IDDependent, TimeDependent, ProjectDependent, table=True):
     __tablename__ = "agent"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения информации об агенте"

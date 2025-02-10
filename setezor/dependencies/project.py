@@ -3,7 +3,9 @@ from typing import Optional
 from fastapi import Depends, Request, WebSocket, HTTPException
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.schemas.task import WebSocketMessage
-from setezor.tools import JWTManager
+from setezor.services.role_service import RoleService
+from setezor.services.user_project_service import UserProjectService
+from setezor.tools import JWT_Tool
 from fastapi.security import OAuth2PasswordBearer
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.exceptions.exceptions import RequiresLoginException, RequiresProjectException, RequiresScanException
@@ -26,47 +28,68 @@ async def get_current_scan_id(access_token: str = Depends(access_token_getter)):
     return await get_scan_id(access_token=access_token, project_id=project_id)
 
 async def get_scan_id(access_token: str, project_id: str):
-    payload = JWTManager.get_payload(access_token)
+    payload = JWT_Tool.get_payload(access_token)
     scan_id = payload.get("scan_id")
     if not scan_id:
         message = WebSocketMessage(title="Info", text=f"Create scan or pick it", type="info")
         await WS_MANAGER.send_message(project_id=project_id, message=message) 
-        raise RequiresScanException(status_code=403, detail="No scan picked")
+        raise RequiresScanException(status_code=404, detail="No scan picked")
     uow = UnitOfWork()
     async with uow:
         if not await uow.scan.find_one(id=scan_id, project_id=project_id):
             message = WebSocketMessage(title="Error", text=f"Scan with id={scan_id} does not exist",type="error")
             await WS_MANAGER.send_message(project_id=project_id, message=message) 
-            raise RequiresScanException(status_code=403, detail="Scan not found")
+            raise RequiresScanException(status_code=404, detail="Scan not found")
     return scan_id
 
 async def check_availability(access_token: str):
-    if JWTManager.is_expired(access_token):
-        raise RequiresLoginException
-    payload = JWTManager.get_payload(access_token)
+    if JWT_Tool.is_expired(access_token):
+        raise RequiresLoginException(status_code=403, detail="Not authenticated")
+    payload = JWT_Tool.get_payload(access_token)
     if not payload:
-        raise RequiresLoginException
+        raise RequiresLoginException(status_code=403, detail="No token provided")
     project_id = payload.get("project_id")
     if not project_id:
-        raise RequiresProjectException
+        raise RequiresProjectException(status_code=403, detail="Project is not picked")
     uow = UnitOfWork()
     async with uow:
-        if not await uow.project.find_one(id=project_id):
-            raise RequiresProjectException
-    return project_id
+        if await uow.project.find_one(id=project_id):
+            return project_id
+    raise RequiresProjectException(status_code=403, detail="Project not found")
 
 async def get_user_id(access_token: str = Depends(access_token_getter)):
-    return "deadbeefdeadbeefdeadbeefdeadbeef"  # auth_toggled_off
-    if JWTManager.is_expired(access_token):
+    if JWT_Tool.is_expired(access_token):
         raise RequiresLoginException(status_code=403, detail="Token is expired")
-    payload = JWTManager.get_payload(access_token)
+    payload = JWT_Tool.get_payload(access_token)
     if not payload:
-        raise RequiresLoginException
+        raise RequiresLoginException(status_code=403, detail="Token is expired")
     user_id = payload.get("user_id")
     if not user_id:
-        raise RequiresLoginException
+        raise RequiresLoginException(status_code=403, detail="Token is expired")
     uow = UnitOfWork()
     async with uow:
-        if not await uow.user.find_one(id=user_id):
-            raise RequiresLoginException
-    return user_id
+        if await uow.user.find_one(id=user_id):
+            return user_id
+    raise RequiresLoginException(status_code=403, detail="Token is expired")
+
+
+def role_required(required_roles: list[str]):
+    async def role_checker(user_id: str = Depends(get_user_id),
+                           project_id: str = Depends(get_current_project)):
+        uow = UnitOfWork()
+        async with uow:
+            user_project = await uow.user_project.find_one(user_id=user_id, project_id=project_id)
+            user_role_in_project = await uow.role.find_one(id=user_project.role_id)
+        if not (user_role_in_project.name in required_roles):
+            # message = WebSocketMessage(title="Error", text=f"Not enough permissions",type="error")
+            # await WS_MANAGER.send_message(project_id=project_id, message=message) 
+            raise HTTPException(status_code=403, detail="Недостаточно прав для выполнения данного действия")
+        return True
+    return role_checker
+
+
+async def get_user_role_in_project(project_id: str = Depends(get_current_project),
+                                   user_id: str = Depends(get_user_id)):
+    uow = UnitOfWork()
+    user_in_project = await UserProjectService.get_user_project(uow=uow, user_id=user_id, project_id=project_id)
+    return await RoleService.get(uow=uow, role_id=user_in_project.role_id)

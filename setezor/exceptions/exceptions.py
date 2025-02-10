@@ -1,12 +1,12 @@
 from fastapi import HTTPException
 
-class RequiresLoginException(Exception):
+class RequiresLoginException(HTTPException):
     pass
 
-class RequiresRegistrationException(Exception):
+class RequiresRegistrationException(HTTPException):
     pass
 
-class RequiresProjectException(Exception):
+class RequiresProjectException(HTTPException):
     pass
 
 class RequiresScanException(HTTPException):

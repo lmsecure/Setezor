@@ -1,11 +1,12 @@
-from setezor.unit_of_work import UnitOfWork
-from setezor.models import get_model_by_name
-from sqlmodel import SQLModel
-from setezor.repositories import SQLAlchemyRepository
+import asyncio
 from sqlalchemy import Column
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.orm.collections import InstrumentedList
-import asyncio
+from sqlmodel import SQLModel
+from setezor.unit_of_work import UnitOfWork
+from setezor.models import get_model_by_name
+from setezor.repositories import SQLAlchemyRepository
+from setezor.settings import COMMIT_STEP
 
 common_semaphore = asyncio.Semaphore(1)
 
@@ -32,9 +33,10 @@ class DataStructureService:
                     if not new_object: continue
                     await self.prepare_relationships(new_object)
                     self.new_objects.append(new_object)
-                for i in range(0, len(self.new_objects), 1000):
-                    uow.session.add_all(self.new_objects[i:i+1000])
-                    await uow.commit()
+                for i in range(0, len(self.new_objects), COMMIT_STEP):
+                    uow.session.add_all(self.new_objects[i:i+COMMIT_STEP])
+                    await uow.flush()
+                await uow.commit()
             
     async def prepare_object(self, obj: SQLModel):
         repo: SQLAlchemyRepository = self.uow.get_repo_by_model(obj.__class__)
@@ -80,7 +82,7 @@ class DataStructureService:
             
             if obj_in_relation.id:
                 continue
-            else: # если объект повязан, то проверяем, есть ли такой уже в базе, чтобы не ебануть дубликат
+            else: # если объект повязан, то проверяем, есть ли такой уже в базе, чтобы не создать дубликат
                 repo: SQLAlchemyRepository = self.uow.get_repo_by_model(obj_in_relation.__class__)
                 existing_object = await repo.exists(obj_in_relation)
                 if not existing_object: # Если такого объекта нет в бд, то раскручиваем его

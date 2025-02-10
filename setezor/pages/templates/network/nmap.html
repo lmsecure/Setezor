@@ -35,7 +35,7 @@
             <option value="-p-">All</option>
         </datalist>
         <input type="text" list="portsSelectorList" id="portsSelector" name="targetPorts" class="form-control"
-            placeholder="Ports"/>
+            placeholder="Ports" />
     </div>
 </div>
 
@@ -148,85 +148,108 @@
 
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
-        <button type="button" class="btn btn-primary w-50" onclick="
-        const button = this; // Сохраняем ссылку на кнопку
-        const form = button.closest('form'); // Находим ближайшую форму
-
-        let params = {};
-        params['targetIP'] = form.querySelector('#inputIP').value;
-        params['traceroute'] = form.querySelector('#trace').checked;
-        params['serviceVersion'] = form.querySelector('#service').checked;
-        params['stealthScan'] = form.querySelector('#stealth').checked;
-        params['skipDiscovery'] = form.querySelector('#pn').checked;
-
-        if (!params['scanTechniques']) { params['scanTechniques'] = ''; }
-        if (!params['portsDiscovery']) { params['portsDiscovery'] = ''; }
-        if (!params['requestDiscovery']) { params['requestDiscovery'] = ''; }
-
-        params['scanTechniques'] = '';
-        for (let eee of form.querySelector('#p3Group').children) {
-            if (eee.children[0].checked) {
-                params['scanTechniques'] = eee.children[0].value;
-            }
-        }
-
-        params['portsDiscovery'] = '';
-        for (let eee of form.querySelector('#p1Group').children) {
-            if (eee.children[0].checked) {
-                params['portsDiscovery'] = eee.children[0].value;
-            }
-        }
-
-        params['requestDiscovery'] = '';
-        for (let eee of form.querySelector('#p2Group').children) {
-            if (eee.children[0].checked) {
-                params['requestDiscovery'] = eee.children[0].value;
-            }
-        }
-
-        params['targetPorts'] = form.querySelector('#portsSelector').value;
-        if (params['targetPorts'] === undefined || params['targetPorts'] === '') {
-            params['targetPorts'] = '-sn';
-        }
-        if (params.targetPorts[0] !== '-') {
-            params['targetPorts'] = '-p ' + params.targetPorts;
-        }
-
-        params['agent_id'] = getAgent();
-        params['interface'] = getIface().name;
-        params['interface_ip_id'] = getIface().ip_id;
-
-        fetch('/api/v1/task/nmap_scan_task', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(params)
-        });
-
-        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
-        if (myModal) {
-            myModal.hide();
-        }
-    ">Start scan</button>
+    <button type="button" class="btn btn-primary w-50" id="startScanSimpleBtn" onclick="
+                            let params = {};
+                            params['targetIP'] = document.getElementById('inputIP').value;
+                            params['traceroute'] = document.getElementById('trace').checked;
+                            params['serviceVersion'] = document.getElementById('service').checked;
+                            params['stealthScan'] = document.getElementById('stealth').checked;
+                            params['skipDiscovery'] = document.getElementById('pn').checked;
+                            if (!params['scanTechniques']) {params['scanTechniques'] = ''; }
+                            if (!params['portsDiscovery']) {params['portsDiscovery'] = ''; }
+                            if (!params['requestDiscovery']) {params['requestDiscovery'] = ''; }
+                            params['scanTechniques'] = '';
+                            for (let eee of document.getElementById('p3Group').children)
+                            {
+                                if (eee.children[0].checked)
+                                    params['scanTechniques'] = eee.children[0].value
+                            }
+                            params['portsDiscovery'] = '';
+                            for (let eee of document.getElementById('p1Group').children)
+                            {
+                                if (eee.children[0].checked)
+                                    params['portsDiscovery'] = eee.children[0].value
+                            }
+                            params['requestDiscovery'] = '';
+                            for (let eee of document.getElementById('p2Group').children)
+                            {
+                                if (eee.children[0].checked)
+                                    params['requestDiscovery'] = eee.children[0].value
+                            }
+                            params['targetPorts'] = document.getElementById('portsSelector').value;
+                            if (params['targetPorts'] === undefined | params['targetPorts'] === '') {
+                                params['targetPorts'] = '-sn'
+                            }
+                            if (params.targetPorts[0] != '-') {
+                                params['targetPorts'] = '-p ' +  params.targetPorts
+                            }
+                            params['agent_id'] = getAgent()
+                            params['interface'] = getIface().name
+                            params['interface_ip_id'] = getIface().ip_id
+                            fetch('/api/v1/task/nmap_scan_task', {
+                                method: 'POST', 
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(params)
+                        }).then(response => {
+                        if (response.status !== 201) {
+                            response.json().then(data => {
+                                const errorMessage = data.detail[0].msg || 'Create task error';
+                                create_toast('Error', errorMessage, 'error');
+                            });
+                        } else {
+                            var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
+                            if (myModal) {
+                                myModal.hide();
+                            }
+                        }
+                        })
+                        .catch(error => {
+                            create_toast('Error', 'An error occurred while sending the request', 'error');
+                            console.error('Error:', error);
+                        });">Create scan</button>
 </div>
 
 <script>    function initializeNmapScripts() {
-    $('#ipTarget').on('change', function (e, data) {
-        if ($('#inputIP').inputmask('isComplete')) {
-            document.getElementById('startScanSimpleBtn').disabled = false;
-        } else {
-            document.getElementById('startScanSimpleBtn').disabled = true;
-        }
-    });
+        $('#ipTarget').on('change', function (e, data) {
+            if ($('#inputIP').inputmask('isComplete')) {
+                document.getElementById('startScanSimpleBtn').disabled = false;
+            } else {
+                document.getElementById('startScanSimpleBtn').disabled = true;
+            }
+        });
 
-    $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
-        document.getElementById('portsSelector').disabled = !e.target.checked;
-        document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked;
-    });
+        $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
+            document.getElementById('portsSelector').disabled = !e.target.checked;
+            document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked;
+        });
 
-}</script>
+    }</script>
 
+<!-- <div class="tab-pane fage" id="nmap-extended-mode" role="tabpanel"
+            aria-labelledby="nmap-extended-tab">
+            <form id="nmapScanExtendedForm">
+                <div class="input-group mb-3">
+                    <span class="input-group-text" id="nmapExtendedLabel">NMAP</span>
+                    <input type="text" class="form-control" id="nmapExtendedCommand"
+                        name="nmapCommand" placeholder="nmap command" aria-label="Username"
+                        aria-describedby="nmapExtendedLabel">
+                </div>
+                <div class="btn-group d-flex my-2" role="group">
+                    <input class="btn btn-outline-secondary w-50" type="reset"
+                        value="Reset command">
+                    <button type="button" class="btn btn-primary w-50" id="startScanExtendedBtn"
+                        disabled onclick="
+                            let params = Object.fromEntries(new FormData(document.getElementById('nmapScanExtendedForm'), null).entries())
+                            params['iface'] = getIface()
+                            params['agent_id'] = getAgent()
+                            fetch('/api/task/nmap_scan', {
+                                method: 'POST', body: JSON.stringify(params)
+                        })">Start scan</button>
+                </div>
+            </form>
+        </div> -->
 {% endmacro %}
 
 {% macro nmap_xml() %}
@@ -360,6 +383,8 @@
     });
 </script>
 {% endmacro %}
+
+
 
 {% macro show() %}
 <div class="d-flex flex-column">

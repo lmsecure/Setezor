@@ -62,7 +62,7 @@ class CertInfo:
         if not cert:
             return []
         #cls.write_to_file(certificates_folder, host, port, cert)
-        return cls.parse_cert(cert=cert)
+        return cls.parse_cert(cert=cert), cert
 
     @classmethod
     # переименовать и поменять формат даты-время

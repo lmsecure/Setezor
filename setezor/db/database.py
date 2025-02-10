@@ -1,20 +1,20 @@
 import datetime
-from asyncio import current_task
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, async_scoped_session
+from Crypto.Random import get_random_bytes
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
-from setezor.models import ObjectType, Network_Type, User
+from setezor.models import ObjectType, Network_Type, User, Role
 import setezor.unit_of_work as UOW
-from setezor.setezor import path_prefix
+from setezor.settings import PATH_PREFIX
+from setezor.tools.password import PasswordTool
+from setezor.logger import logger
 
-
-engine = create_async_engine(f"sqlite+aiosqlite:///{path_prefix}/db.sqlite3")
-#engine = create_async_engine("postgresql+asyncpg://test:test@localhost:5432/test")
+engine = create_async_engine(f"sqlite+aiosqlite:///{PATH_PREFIX}/db.sqlite3")
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
 
 async def init_db():
     async with engine.begin() as conn:
-        #await conn.run_sync(SQLModel.metadata.drop_all)
+        # await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
@@ -38,7 +38,8 @@ async def fill_db():
             ]:  
             obj = ObjectType(id=new_id, name=obj_type)
             if not await uow.object_type.exists(obj):
-                uow.session.add(obj)
+                uow.object_type.add(obj.model_dump())
+                logger.debug(f"CREATED object {obj.__class__.__name__} {obj.model_dump_json()}")
         await uow.commit()
 
     async with uow:
@@ -49,17 +50,29 @@ async def fill_db():
             ]:
             obj = Network_Type(id=ID, name=network_type)
             if not await uow.network_type.exists(obj):
-                uow.session.add(obj)
+                uow.network_type.add(obj.model_dump())
+                logger.debug(f"CREATED object {obj.__class__.__name__} {obj.model_dump_json()}")
         await uow.commit()
 
     async with uow:
-        user = await uow.user.find_one(id='deadbeefdeadbeefdeadbeefdeadbeef')
+        user = await uow.user.find_one(login='admin')
         if not user:
+            plain_password = get_random_bytes(64).hex()
+            print(f"Admin password = {plain_password}")
+            new_pwd = PasswordTool.hash(plain_password)
             admin_user = User(
-                id='deadbeefdeadbeefdeadbeefdeadbeef',
                 created_at=datetime.datetime.now(),
                 login="admin",
-                hashed_password="$pbkdf2-sha256$300000$59ybU2qtVcrZe..ds5bSGg$ABaTk2qmQJ8pp40a9eXOKrpQmamIO5VDSzk4rQlCGNU"
+                hashed_password=new_pwd,
+                is_superuser=True,
             )
-            uow.session.add(admin_user)
+            uow.user.add(admin_user.model_dump())
+            logger.debug(f"CREATED object {admin_user.__class__.__name__} {admin_user.model_dump_json()}")
+        await uow.commit()
+
+    async with uow:
+        for role_name in ["owner", "viewer"]:
+            role_obj = Role(name=role_name)
+            if not await uow.role.exists(role_obj):
+                uow.role.add(role_obj.model_dump())
         await uow.commit()

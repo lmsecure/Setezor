@@ -1,7 +1,7 @@
 
-from typing import Optional, Union
+from typing import Optional
 from pydantic import BaseModel
-from fastapi import UploadFile
+from pydantic.networks import IPv4Address
 
 class TaskStatus:
     pending = "PENDING"
@@ -72,7 +72,7 @@ class MasscanScanTaskPayload(BaseModel):
     interface_ip_id: str
     interface: str
     agent_id: str
-    target: str
+    target: IPv4Address
     ping: bool
     ports: str | None = None
     format: str
@@ -86,11 +86,11 @@ class MasscanLogTaskPayload(BaseModel):
     filename: str
     file: str
     interface_ip_id: str
-    ip: str
-    mac:str
+    ip: IPv4Address
+    mac: str
 
 class NmapScanTaskPayload(BaseModel):
-    targetIP: str
+    targetIP: str #IPv4Address
     agent_id: str
     interface_ip_id: str
     interface: str
@@ -108,7 +108,7 @@ class NmapParseTaskPayload(BaseModel):
     file: str
     filename: str
     interface_ip_id: str
-    ip: str
+    ip: IPv4Address
     mac: str
 
 class CertInfoTaskPayload(BaseModel):

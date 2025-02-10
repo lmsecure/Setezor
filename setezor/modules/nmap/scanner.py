@@ -79,7 +79,7 @@ class NmapScanner:
         # time1 = time()
         result, error = await (await create_async_shell_subprocess(self.superuser_permision + args if _password else args)).communicate(_password)
         # logger.debug('Finish async nmap scan after %.2f seconds', time() - time1)
-        return self._check_results(args=args, result=result, error=error)
+        return self._check_results(args=args, result=result, error=error), result
         
 
     @staticmethod

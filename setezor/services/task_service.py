@@ -20,10 +20,8 @@ class TasksService(IService):
         )
         task_dict = task_to_add.model_dump()
         async with uow:
-            task = await uow.task.add(task_dict)
-            await uow.commit()
-        message = WebSocketMessage(title="Task status", text=f"Task {task.id} {TaskStatus.created}",type="info")
-        await WS_MANAGER.send_message(project_id=project_id, message=message) 
+            task = uow.task.add(task_dict)
+            await uow.commit() 
         return task
 
     @classmethod
@@ -37,11 +35,15 @@ class TasksService(IService):
         async with uow:
             return await uow.task.find_one(id=id, project_id=project_id)
 
+
+    @classmethod
+    async def get_by_id(cls, uow: UnitOfWork, id: str) -> Task:
+        async with uow:
+            return await uow.task.find_one(id=id)
+
     @classmethod
     async def set_status(cls, uow: UnitOfWork, id: int, status: TaskStatus, project_id: str) -> int:
         async with uow:
             task_id = await uow.task.edit_one(id=id, data={"status": status})
-            await uow.commit()
-        message = WebSocketMessage(title="Task status", text=f"Task {id} {status}",type="info")
-        await WS_MANAGER.send_message(project_id=project_id, message=message)    
+            await uow.commit()   
         return task_id

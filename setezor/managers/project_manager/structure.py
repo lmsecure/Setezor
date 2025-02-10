@@ -5,6 +5,7 @@ class Folders(enum.Enum):
     scapy_logs_path = "scapy_logs"
     masscan_logs_path = "masscan_logs"
     cve_logs_path = "cve_logs"
+    whois_logs_path = "whois_logs_path"
     certificates_path = "certificates"
     screenshots_path = "screenshots"
 

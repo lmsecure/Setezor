@@ -16,23 +16,30 @@
 
 <body>
     <div id="particles-js"></div>
+    <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
+      <div id="toast_holder"></div>
+    </div>
     <form onsubmit="registration(event)">
         <div class="wrapper">
             <form action="#">
                 <h2 style="margin-bottom: 2rem;">Registration</h2>
                 <div class="input-field">
-                  <input type="text" name="username" required>
-                  <label>Email</label>
-                </div>
-                <div class="input-field">
-                    <input type="text" name="username" required>
+                    <input type="text" name="login" required>
                     <label>Login</label>
                 </div>
                 <div class="input-field">
-                    <input type="password" name="password" required>
+                    <input type="password" name="password" minlength="10" required>
                     <label>Password</label>
                 </div>
-                <button type="submit" value="Login"">Registration</button>
+                <div class="input-field">
+                    <input type="password" name="password_confirmation" minlength="10" required>
+                    <label>Password Confirm</label>
+                </div>
+                <div class="input-field">
+                    <input type="password" name="invite_token" required>
+                    <label>Invite token</label>
+                </div>
+                <button type="submit" value="Login"">Register</button>
             </form>
         </div>
     </form>
@@ -176,8 +183,55 @@ button:hover {
 }
     </style>
     <script>
+      var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+      function create_toast(title, message, level="info", time="just now") {
+        var toast_holder = document.getElementById("toast_holder")
+        var toast = document.createElement("div")
+        toast.classList.add("toast", "fade")
+        toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        var toast_instance = new bootstrap.Toast(toast)
+        toast_holder.prepend(toast)
+        toast_instance.show()
+    
+        var notification_holder = document.getElementById("notifications_body")
+        var notification_toast = document.createElement("div")
+        notification_toast.classList.add("toast", "fade")
+        notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        notification_toast.setAttribute("data-bs-autohide",false)
+        var notification_toast_instance = new bootstrap.Toast(notification_toast)
+        notification_holder.prepend(notification_toast)
+        notification_toast_instance.show()
+    };
+    function create_html_toast(title, message, time, level) {
+        return `
+                <div class="toast-header">
+                    <svg width="25" height="25">
+                        <rect fill=${level} y="3" width="20" height="20" rx="3" />
+                    </svg>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-muted">${time}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>`
+    };
         async function registration(event) {
             event.preventDefault();
+            let formData = new FormData(event.target)
+            if (formData.get('password') != formData.get('password_confirmation')){
+              create_toast("Error", "Password and password confirmation mismatch", 'error')
+              return;
+            }
+            resp = await fetch("/api/v1/auth/register", {
+              method: "POST",
+              headers: { "Content-type": "application/json" },
+              body: JSON.stringify(Object.fromEntries(formData))})
+            let answer = await resp.json()
+            if (resp.status != 200){
+              create_toast("Error", answer.detail, 'error')
+              return
+            }
             window.location.href = "/login"
         }
     </script>

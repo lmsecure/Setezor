@@ -1,10 +1,10 @@
-{% macro show() %}
+{% macro wappalyzer() %}
 
-<div class="tab-pane fade" id="v-pills-wappalyzer" role="tabpanel" aria-labelledby="v-pills-wappalyzer-setting-tab">
+<div class="tab-pane fade" id="v-pills-wappalyzer" role="tabpanel" aria-labelledby="v-pills-wappalyzer-setting-tab" style="opacity: 1;">
     <div class="flex-column">
         
         <div class="py-2 bg-highlight">
-            <button class="btn btn-primary" id="wappalyzer_button_parse" disabled onclick="
+            <button type="button" class="btn btn-primary" id="wappalyzer_button_parse" disabled onclick="
                 var input = document.createElement('input');
                 input.type = 'file';
                 input.multiple = true;
@@ -31,34 +31,73 @@
                         reader.readAsDataURL(file);            
                     }
                 }
-                input.click(); " style="min-width: 310px;">
+                input.click(); var myModal = bootstrap.Modal.getInstance(document.getElementById('wappalyzerModalWindow'));
+                            if (myModal) {
+                                myModal.hide();
+                            }" style="min-width: 310px;">
                 Parse wappalyzer logs
             </button>
         </div>
             
         <div class="btn-group" role="group" aria-label="Basic example">
-            <button class="btn btn-success" onclick="wapplyzer_category_select_all()">Select all</button>
-            <button class="btn btn-danger" onclick="wapplyzer_category_clear()">Clear</button>
+            <button type="button" class="btn btn-success" onclick="wapplyzer_category_select_all()">Select all</button>
+            <button type="button" class="btn btn-danger" onclick="wapplyzer_category_clear()">Clear</button>
         </div>
     </div>
 
     <div class="container-fluid mt-2">
         <div id="wappalyzer_groups">
-            {%for  name, category_ids in wappalyzer_groups.items()%}
-                <div class="col"> 
-                    <div class="form-check form-switch" data-bs-toggle="tooltip" data-bs-placement="right">
-                        <input class="form-check-input shadow-none" type="checkbox" value="" id="wappgroup_{{name}}" onchange="wappalyzer_element_changed()">
-                        <label class="form-check-label" for="flexCheckDefault" title="{{wappalyzer_name_categories_by_group.get(name)}}">
-                            {{name}}
-                        </label>
-                      </div>
-                </div>
-            {%endfor%}
+            <!--Wappalyzer content -->
         </div>
     </div>
 </div>
 
+<script>
+    async function fetchWappalyzerGroups() {
+        try {
+            const response = await axios.get('/api/v1/tasks_data/wappalyzer-groups');
+            const data = response.data;
 
+            renderWappalyzerGroups(data.wappalyzer_groups, data.wappalyzer_name_categories_by_group);
+        } catch (error) {
+            console.error('Error fetching Wappalyzer groups:', error);
+        }
+    }
+
+    function renderWappalyzerGroups(groups, categoriesByGroup) {
+        const container = document.getElementById('wappalyzer_groups');
+        container.innerHTML = '';
+
+        for (const [name, categoryIds] of Object.entries(groups)) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'col';
+
+            const formCheckDiv = document.createElement('div');
+            formCheckDiv.className = 'form-check form-switch';
+            formCheckDiv.setAttribute('data-bs-toggle', 'tooltip');
+            formCheckDiv.setAttribute('data-bs-placement', 'right');
+
+            const checkbox = document.createElement('input');
+            checkbox.className = 'form-check-input shadow-none';
+            checkbox.type = 'checkbox';
+            checkbox.id = `wappgroup_${name}`;
+            checkbox.onchange = wappalyzer_element_changed;
+
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = checkbox.id;
+            label.title = categoriesByGroup[name] || '';
+            label.textContent = name;
+
+            formCheckDiv.appendChild(checkbox);
+            formCheckDiv.appendChild(label);
+            groupDiv.appendChild(formCheckDiv);
+            container.appendChild(groupDiv);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchWappalyzerGroups);
+</script>
 
 <script>
 
@@ -107,5 +146,61 @@ function wapplyzer_category_select_all()
     }
 
 </script>
+
+{% endmacro %}
+
+
+{% macro wappalyzer_full_script_modal() %}
+
+<div id="wappalyzerModalWindow" class="modal fade" tabindex="-1" aria-labelledby="wappalyzerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="wappalyzerModalLabel">wappalyzer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_wappalyzer">
+                    <div data-agent-bar="agent_wappalyzer"></div>
+                    <div data-interface-bar="interface_wappalyzer" class="ms-3"></div>
+                    <div id="scans_bar_wappalyzer" class="ms-3"></div>
+                </div>
+                <form id="wappalyzerScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+                    {{ wappalyzer() }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function wappalyzer_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('wappalyzerModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('wappalyzerModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("wappalyzerModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+
+{% endmacro %}
+
+{% macro show() %}
+
+{{ wappalyzer() }}
 
 {% endmacro %}

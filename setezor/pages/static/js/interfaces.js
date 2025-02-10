@@ -22,6 +22,9 @@ class InterfaceData {
 /* Функция запроса к апи, возвращает InterfaceData*/
 async function getInterfaceData(id) {
     if (id == undefined){
+        if (window.location.pathname != "/projects"){
+            create_toast("Warning", "Create agent and interfaces on settings page", "warning")
+        }
         return new InterfaceData([], undefined)
     }
     const resp = await fetch(`/api/v1/agents/${id}/interfaces`);
@@ -30,6 +33,10 @@ async function getInterfaceData(id) {
         const ifaces = data.map(
             (element) => new Interface(element.id, element.name, element.ip_id, element.ip, element.mac)
         );
+        if (ifaces.length == 0){
+            create_toast("Warning", "Create interfaces on settings page", "warning")
+            return new InterfaceData([], undefined);
+        }
         return new InterfaceData(ifaces, ifaces[0]);
     }
 }
@@ -98,6 +105,9 @@ async function setDefaultInterface(id) {
 }
 
 function getIface() {
+    if (interfaceData.default_interface == undefined){
+        create_toast("Warning", "Create interfaces on settings page", "warning")
+    }
     iface = interfaceData.interfaces.find((elem) => elem.id == interfaceData.default_interface.id)
     return iface
 }

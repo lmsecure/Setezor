@@ -35,7 +35,6 @@ from .certificate import Cert
 from .auth_credentials_resource import L7_Authentication_Credentials
 from .user import User
 from .user_project import UserProject
-from .acunetix_targets import AcunetixTargets
 from .scope import Scope
 from .target import Target
 from .organization import Organization
@@ -49,10 +48,12 @@ from .employee_email import Employee_Email
 from .d_hardware import Hardware
 from .d_hardware_type import Hardware_Type
 from .scan import Scan
-
+from .role import Role
+from .auth_log import AuthLog
 from .l4_software import L4Software
 from .l4_software_vulnerability import L4SoftwareVulnerability
 from .vulnerability_link import VulnerabilityLink
+from .invite_link import Invite_Link
 
 
 def get_model_by_name(model_name:str):

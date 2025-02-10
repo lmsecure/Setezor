@@ -392,27 +392,27 @@ class AnalyticsService:
                        {'field': 'cwe', 'title': 'CWE'},
                        {'field': 'link', 'title': 'LINK'}]
         
-    @classmethod
-    def get_ip_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                       {'field': 'mac','title': 'MAC',},
-                       {'field': 'ipaddr','title': 'IP',}]
+    # @classmethod
+    # def get_ip_columns_tabulator_data(cls) -> list:
+    #     return [{'field': 'id', 'title': 'ID'},
+    #                    {'field': 'mac','title': 'MAC',},
+    #                    {'field': 'ipaddr','title': 'IP',}]
 
         
-    @classmethod
-    def get_mac_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                       {'field': 'object', 'title': 'Object',},
-                       {'field': 'mac', 'title': 'MAC',},
-                       {'field': 'vendor', 'title': 'Vendor',}]
+    # @classmethod
+    # def get_mac_columns_tabulator_data(cls) -> list:
+    #     return [{'field': 'id', 'title': 'ID'},
+    #                    {'field': 'object', 'title': 'Object',},
+    #                    {'field': 'mac', 'title': 'MAC',},
+    #                    {'field': 'vendor', 'title': 'Vendor',}]
 
         
-    @classmethod
-    def get_port_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                       {'field': 'ipaddr','title': 'IP',},
-                       {'field': 'port','title': 'Port',},
-                       {'field': 'protocol','title': 'Protocol',},
-                       {'field': 'service_name','title': 'Service name'}]
+    # @classmethod
+    # def get_port_columns_tabulator_data(cls) -> list:
+    #     return [{'field': 'id', 'title': 'ID'},
+    #                    {'field': 'ipaddr','title': 'IP',},
+    #                    {'field': 'port','title': 'Port',},
+    #                    {'field': 'protocol','title': 'Protocol',},
+    #                    {'field': 'service_name','title': 'Service name'}]
 
         

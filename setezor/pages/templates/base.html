@@ -17,42 +17,25 @@
 
 	{% block scripts %}{% endblock %}
 
-	{% import 'network/nmap.html' as nmap %}
-	{{ nmap.nmap_full_script_modal() }}
-	{% import 'network/scapy.html' as scapy %}
-	{{ scapy.scapy_full_script_modal() }}
-	{% import 'network/masscan.html' as masscan%}
-	{{ masscan.masscan_full_modal() }}
-	{% import 'network/domains.html' as domains%}
-	{{domains.domains_full_modal()}}
-	{% import 'network/cert.html' as cert%}
-	{{ cert.cert_full_modal() }}
-	{% import 'network/whois.html' as whois%}
-	{{ whois.whois_full_modal() }}
-	{% import 'network/screenshots.html' as screenshots%}
-	{{ screenshots.screenshoter_full_modal() }}
 </head>
 
 <body>
 	<header id="myHeader">
 		<nav class="navbar navbar-dark navbar-expand-lg bg-dark">
 			<div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem">
-				<div class="bd-highlight">
+				<div class="bd-highlight" style="margin-left: 40px;">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item d-inline">
-							{% if current_project %}
-							<button class="openbtn" id="menu-toggle-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" style="font-size: 20px; padding-left: 7px; padding-top: 7px; padding-bottom: 5px; padding-right: 6px; margin-left: -1px; color: #999; background-color:#212529"
-								data-testid="open_navbar_button">☰</button>
-							{% endif %}
 							<a class="navbar-brand" target="_blank">
-								<img src="/static/assets/logo.png" width="120px" height="auto" style="margin-left: 0.5rem; margin-bottom:0.2rem" />
+								<img src="/static/assets/logo.png" width="120px" height="auto"
+									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
 							</a>
 						</li>
 					</ul>
 				</div>
 				<div class="bd-highlight">
 					{% if current_project %}
-					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+					<ul class="navbar-nav me-auto mb-2 mb-lg-0" >
 						<li class="nav-item">
 							<a class="nav-link" style="color: rgb(109, 145, 115)" aria-current="page">Project:
 								"{{current_project}}"</a>
@@ -60,106 +43,26 @@
 					</ul>
 					{% endif %}
 				</div>
+				
 
 
-				<div class="bd-highlight">
-					{% if current_project %}
-					<button type="button" class="btn btn-primary" onclick="openTasksModal();">
-						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-							class="bi bi-list-task" style="font-family: 'Times New Roman', Times, serif" viewBox="0 0 16 16">
-							<path fill-rule="evenodd"
-								d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5zM3 3H2v1h1z">
-							</path>
-							<path
-								d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1z">
-							</path>
-							<path fill-rule="evenodd"
-								d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5zM2 7h1v1H2zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm1 .5H2v1h1z">
-							</path>
-						</svg>
-						Task manager
-					</button>
+				<div class="d-flex align-items-center gap-2 ">
+					{% if is_superuser %}
+						<button class="btn btn-success" onclick="generateRegisterToken()">
+							Invite to Setezor
+						</button>
 					{% endif %}
-					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
-						aria-hidden="true">
-						<div class="modal-dialog modal-xl">
-							<div class="modal-content">
-								<div class="modal-header">
-									<h4>Tasks list</h4>
-								</div>
-								<div class="modal-body">
-									<div id="v-pills-tasks" role="tabpanel" aria-labelledby="v-pills-tasks-tab">
-										<div class="row ms-1">
-											<ul class="nav nav-pills"
-												style="margin-bottom: 1rem; margin-left: -0.5rem;">
-												<li class="nav-item">
-													<button class="nav-link active" data-bs-toggle="pill"
-														data-bs-target="#v-pills-tasks-created" type="button" role="tab"
-														aria-controls="v-pills-tasks-created" aria-selected="true"
-														id="tasks_created_pill">CREATED</button>
-												</li>
-												<li class="nav-item">
-													<button class="nav-link" data-bs-toggle="pill"
-														data-bs-target="#v-pills-tasks-started" type="button" role="tab"
-														aria-controls="v-pills-tasks-started" aria-selected="false"
-														id="tasks_started_pill">STARTED</button>
-												</li>
-												<li class="nav-item">
-													<button class="nav-link" data-bs-toggle="pill"
-														data-bs-target="#v-pills-tasks-failed" type="button" role="tab"
-														aria-controls="v-pills-tasks-failed" aria-selected="false"
-														id="tasks_failed_pill">FAILED</button>
-												</li>
-												<li class="nav-item">
-													<button class="nav-link" data-bs-toggle="pill"
-														data-bs-target="#v-pills-tasks-finished"
-														id="tasks_finished_pill" type="button" role="tab"
-														aria-controls="v-pills-tasks-finished"
-														aria-selected="false">FINISHED</button>
-												</li>
-											</ul>
-										</div>
-									</div>
-									<div class="p2 tab-content" id="v-pills-tasksContent">
-										
-										<div class="tab-pane active show" id="v-pills-tasks-created" role="tabpanel"
-											aria-labelledby="v-pills-tasks-created-tab">
-											{% import 'task_manager_tabs.html' as task_manager with context %}
-											{{ task_manager.show() }}
-										</div>
-
-										<div class="tab-pane fade" id="v-pills-tasks-started" role="tabpanel"
-											aria-labelledby="v-pills-tasks-started-tab">
-										</div>
-
-										<div class="tab-pane fade" id="v-pills-tasks-failed" role="tabpanel"
-											aria-labelledby="v-pills-tasks-failed-tab">
-										</div>
-
-										<div class="tab-pane fade" id="v-pills-tasks-finished" role="tabpanel"
-											aria-labelledby="v-pills-tasks-finished-tab">
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<a type="button" class="btn btn-primary" href="http://help.setezor.ru/" target="_blank"
+					<a type="button" class="btn btn-outline-primary ms-auto" href="http://help.setezor.ru/"
+						target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
 						data-testid="wiki_help">
 						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" title="Wiki"></i>
 					</a>
-					{% if current_project %}
-					<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#aboutModal"
+					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
+						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-testid="about_project">
-						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif" title="About project"></i>
+						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
+							title="About project"></i>
 					</button>
-					{% else %}
-					<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#aboutModal"
-					data-testid="about_project" style="margin-right: 0.5rem;">
-					<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif" title="About project"></i>
-					</button>
-					{%endif%}
 					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
 						aria-hidden="true">
 						<div class="modal-dialog">
@@ -188,7 +91,7 @@
 									</div>
 								</div>
 								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6>Version: v0.13.1b</h6>
+									<h6>Version: v0.21.0b</h6>
 									<button type="button" class="btn btn-secondary"
 										data-bs-dismiss="modal">Close</button>
 								</div>
@@ -197,27 +100,39 @@
 					</div>
 
 					{% if current_project %}
-					<button type="button" class="btn btn-secondary" data-bs-toggle="offcanvas"
+					<button type="button" class="btn btn-outline-info" data-bs-toggle="offcanvas"
+						style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-bs-target="#offcanvasNotifications">
 						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif"></i>
 					</button>
 
-					<a class="btn btn-success" type="button" id="exportButton"
-						href="javascript:window.location='/api/project/export_project?project_id={{current_project_id}}'">
-						<i class="bi bi-download" style="font-family: 'Times New Roman', Times, serif;" data-bs-toggle="tooltip" title="Export project"></i>
-					</a>
-
-					<button class="btn btn-danger" type="submit" onclick="handleClick()" data-testid="exit_project" style="margin-right: 0.5rem;">
-						<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;" title="Exit to project menu"></i>
-					</button>{% endif %}
+					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProject()"
+						data-testid="exit_project"
+						style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
+						<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
+							title="Exit to project menu"></i>
+					</button>
+					{% endif %}
+					{% if not current_project %}
+					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
+					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
+					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
+						title="Logout"></i>{% endif %}
+				</button>
 				</div>
+			</div>
 			</div>
 		</nav>
 
 		<script>
-			const handleClick = async () => {
-				await fetch('/api/v1/auth/logout', { method: 'POST' }).then(response => {
+			const logoutFromProject = async () => {
+				await fetch('/api/v1/auth/logout_from_project', { method: 'POST' }).then(response => {
 					window.location.href = "/projects"
+				})
+			}
+			const logoutFromProfile = async () => {
+				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
+					window.location.href = "/login"
 				})
 			}
 		</script>
@@ -226,46 +141,158 @@
 	<div id="wrapper" class="toggled-2">
 		<div id="sidebar-wrapper">
 			<ul class="sidebar-nav nav-pills nav-stacked" id="menu">
-				<li class="active">
-					<a href="/projects_dashboard">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-kanban-fill fs-4" style="margin-right: 1rem;"></i></span>Dashboard
-					</a>
+				<li>
+					<button class="btn btn-outline-light" id="menu-toggle-2" data-bs-toggle="offcanvas"
+					data-bs-target="#offcanvasNavbar"
+					style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C"
+					data-testid="open_navbar_button"><i class="bi bi-list fs-4"></i></button>
 				</li>
 				<li class="active">
 					<a href="/projects_dashboard">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-kanban-fill fs-4" style="margin-right: 1rem;"></i></span>Dashboard
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi-kanban fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Dashboard</span>
 					</a>
 				</li>
 				<li>
 					<a href="/network-map">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-bezier2 fs-4" style="margin-right: 1rem;"></i></span>Network Map
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-bezier2 fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Network Map</span>
 					</a>
 				</li>
+				{% if role.name == "owner" %}
 				<li>
-					<a href="/scopes" hidden>
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-card-list fs-4" style="margin-right: 1rem;"></i></span> Scopes
+					{% if current_project %}
+					<a href="#" onclick="openTasksModal();">
+						<button type="button" class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class=" bi bi-play-circle fs-4"></i>
+						</button>
+							<span style="margin-left: 1rem; color: #54B49C;">Task manager</span>
+					</a>
+					{% endif %}
+					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
+						aria-hidden="true">
+						<div class="modal-dialog modal-xl">
+							<div class="modal-content">
+								<div class="modal-header">
+									<h4>Tasks list</h4>
+								</div>
+								<div class="modal-body">
+									<div id="v-pills-tasks" role="tabpanel" aria-labelledby="v-pills-tasks-tab">
+										<div class="row ms-1" style="display: flex !important;">
+											<ul class="nav nav-pills"
+												style="margin-bottom: 1rem; margin-left: -0.5rem; display: flex !important;">
+												<li class="nav-item">
+													<button class="nav-link active" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
+														data-bs-target="#v-pills-tasks-created" type="button" role="tab"
+														aria-controls="v-pills-tasks-created" aria-selected="true"
+														id="tasks_created_pill">CREATED</button>
+												</li>
+												<li class="nav-item">
+													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
+														data-bs-target="#v-pills-tasks-started" type="button" role="tab"
+														aria-controls="v-pills-tasks-started" aria-selected="false"
+														id="tasks_started_pill">STARTED</button>
+												</li>
+												<li class="nav-item">
+													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
+														data-bs-target="#v-pills-tasks-failed" type="button" role="tab"
+														aria-controls="v-pills-tasks-failed" aria-selected="false"
+														id="tasks_failed_pill">FAILED</button>
+												</li>
+												<li class="nav-item">
+													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
+														data-bs-target="#v-pills-tasks-finished"
+														id="tasks_finished_pill" type="button" role="tab"
+														aria-controls="v-pills-tasks-finished"
+														aria-selected="false">FINISHED</button>
+												</li>
+											</ul>
+										</div>
+									</div>
+									<div class="p2 tab-content" id="v-pills-tasksContent">
+
+										<div class="tab-pane active show" id="v-pills-tasks-created" role="tabpanel"
+											aria-labelledby="v-pills-tasks-created-tab">
+											{% import 'task_manager_tabs.html' as task_manager with context %}
+											{{ task_manager.show() }}
+										</div>
+
+										<div class="tab-pane fade" id="v-pills-tasks-started" role="tabpanel"
+											aria-labelledby="v-pills-tasks-started-tab">
+										</div>
+
+										<div class="tab-pane fade" id="v-pills-tasks-failed" role="tabpanel"
+											aria-labelledby="v-pills-tasks-failed-tab">
+										</div>
+
+										<div class="tab-pane fade" id="v-pills-tasks-finished" role="tabpanel"
+											aria-labelledby="v-pills-tasks-finished-tab">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</li>
+				{% endif %}
+				{% if role.name == "owner" %}
+				<li>
+					<a href="/scopes">
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-card-list fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Scopes</span>
 					</a>
 				</li>
+				{% endif %}
+				{% if role.name == "owner" %}
 				<li>
 					<a href="/tools">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-tools fs-4" style="margin-right: 1rem;"></i></span> Tools
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C;--bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-tools fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Tools</span>
 					</a>
 				</li>
+				{% endif %}
 				<li>
 					<a href="/vulnerabilities">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-bug-fill fs-4" style="margin-right: 1rem;"></i></span> Vulnerabilities
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-shield-fill-exclamation fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Vulnerabilities</span>
 					</a>
 				</li>
 				<li>
 					<a href="/info">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-table fs-4" style="margin-right: 1rem;"></i></span> Information
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-table fs-4" "></i>
+						</button>
+						<span style=" margin-left: 1rem; color: #54B49C;">Information</span>
 					</a>
 				</li>
+				{% if role.name == "owner" %}
 				<li>
 					<a href="/settings">
-						<span class="fa-stack fa-lg pull-left"><i class="bi bi-gear fs-4" style="margin-right: 1rem;"></i></span> Settings
+						<button class="btn btn-outline-light"
+							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+							<i class="bi bi-gear fs-4"></i>
+						</button>
+						<span style="margin-left: 1rem; color: #54B49C;">Settings</span>
 					</a>
 				</li>
+				{% endif %}
 			</ul>
 		</div>
 	</div>
@@ -295,354 +322,389 @@
 				<div class="modal-header">
 					<h1 class="modal-title fs-5" id="exampleModalLabel">Adding scan</h1>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-	
+
 				</div>
 				<form onsubmit="addScan(event)">
 					<div class="modal-body">
 						<div class="mb-3">
 							<label for="scanNameID" class="col-form-label">Scan name</label>
 							<input type="text" class="form-control" id="scanNameID" name="name" required>
-						  </div>
-						  <div class="mb-3">
+						</div>
+						<div class="mb-3">
 							<label for="scanDescriptionID" class="col-form-label">Description</label>
 							<input type="text" class="form-control" id="scanDescriptionID" name="description">
-						  </div>                        
+						</div>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeAddScanModalButton">Close</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+							id="closeAddScanModalButton">Close</button>
 						<button type="submit" class="btn btn-primary">Add</button>
 					</div>
 				</form>
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel">Registration token</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="inviteToSetezorToken" class="col-form-label">Token</label>
+						<input type="text" class="form-control" disabled id="inviteToSetezorToken">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	<style>
+		#v-pills-tasks ul.nav-pills {
+    display: flex !important; /* Или block, если нужно */
+}
 		body {
 			font-family: "Lato", sans-serif;
 		}
 
 		header {
-		position: fixed; /* Закрепляем header */
-		top: 0; /* Располагаем в верхней части страницы */
-		left: 0; /* Располагаем по левому краю */
-		width: 100%; /* Ширина на всю страницу */
-		z-index: 1051; /* Устанавливаем высокий приоритет по z-индексу, чтобы header был поверх другого контента */
-	}
+			position: fixed;
+			/* Закрепляем header */
+			top: 0;
+			/* Располагаем в верхней части страницы */
+			left: 0;
+			/* Располагаем по левому краю */
+			width: 100%;
+			/* Ширина на всю страницу */
+			z-index: 1051;
+			/* Устанавливаем высокий приоритет по z-индексу, чтобы header был поверх другого контента */
+		}
 
-		#content{
+		#content {
 			padding-left: 2.5rem;
 			padding-top: 58px;
 		}
-		.openbtn {
-			font-size: 20px;
-			cursor: pointer;
-			background-color: rgba(18, 80, 99, 0.55);
-			color: white;
-			padding: 10px 15px;
-			border: none;
-		}
-
-		.openbtn:hover {
-			background-color: #444;
-		}
 
 		#sidebar-wrapper {
-		z-index: 1000;
-		position: fixed;
+			z-index: 1052;
+			position: fixed;
 
-		width: 0;
-		height: 100%;
-		
-		overflow-y: auto;
-		background: #212529;
-		-webkit-transition: all 0.5s ease;
-		-moz-transition: all 0.5s ease;
-		-o-transition: all 0.5s ease;
-		transition: all 0.5s ease;
+			width: 0;
+			height: 100%;
+
+			overflow-y: auto;
+			background: #212529;
+			-webkit-transition: all 0.5s ease;
+			-moz-transition: all 0.5s ease;
+			-o-transition: all 0.5s ease;
+			transition: all 0.5s ease;
 		}
 
 		#wrapper.toggled #sidebar-wrapper {
-		width: 13rem;
+			width: 13rem;
 		}
+
 		#sidebar-wrapper {
 			width: 13rem;
 		}
+
 		#wrapper.toggled #sidebar-wrapper {
 			width: 13rem;
 		}
+
 		#wrapper.toggled-2 #sidebar-wrapper {
 			width: 2.5rem;
 		}
+
 		/* #wrapper.toggled-2 #sidebar-wrapper:hover {
 			width: 13rem;
 		} */
 
 		.sidebar-nav {
-		position: absolute;
-		top: 0;
-		width: 12rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		margin-top: 2px;
+			position: absolute;
+			top: 0;
+			width: 12rem;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+			margin-top: 2px;
 		}
 
 		.sidebar-nav li {
-		text-indent: 0.2rem;
-		line-height: 3rem;
+			text-indent: 0.2rem;
+			line-height: 3rem;
 		}
 
 		.sidebar-nav li a {
-		display: block;
-		text-decoration: none;
-		color: #999999;
+			display: block;
+			text-decoration: none;
+			color: #999999;
 		}
 
 		.sidebar-nav li a:hover {
-		text-decoration: none;
-		color: #fff;
-		background: rgba(255, 255, 255, 0.2);
+			text-decoration: none;
+			color: #fff;
+			background: rgba(255, 255, 255, 0.2);
 		}
 
 		.sidebar-nav li a:active,
 		.sidebar-nav li a:focus {
-		text-decoration: none;
+			text-decoration: none;
 		}
-
 	</style>
-<script>
-    $("#menu-toggle").click(function(e) {
-        e.preventDefault();
-        $("#wrapper").toggleClass("toggled");
-    });
+	<script>
+		$("#menu-toggle").click(function (e) {
+			e.preventDefault();
+			$("#wrapper").toggleClass("toggled");
+		});
 
-    $("#menu-toggle-2").click(function(e) {
-        e.preventDefault();
-        $("#wrapper").toggleClass("toggled-2");
-        $('#menu ul').hide();
-    });
+		$("#menu-toggle-2").click(function (e) {
+			e.preventDefault();
+			$("#wrapper").toggleClass("toggled-2");
+			$('#menu ul').hide();
+		});
 
-    function initMenu() {
-        $('#menu ul').hide(); // Скрыть все вложенные списки
-        $('#menu ul').children('.current').parent().show(); // Показать вложенные списки текущего элемента
+		function initMenu() {
+			$('#menu ul').hide(); // Скрыть все вложенные списки
+			$('#menu ul').children('.current').parent().show(); // Показать вложенные списки текущего элемента
 
-        $('#menu li a').click(function(e) {
-            var checkElement = $(this).next();
+			$('#menu li a').click(function (e) {
+				var checkElement = $(this).next();
 
-            // Проверка, является ли следующий элемент подменю
-            if (checkElement.is('ul')) {
-                e.preventDefault(); // Отключаем переход по ссылке
+				// Проверка, является ли следующий элемент подменю
+				if (checkElement.is('ul')) {
+					e.preventDefault(); // Отключаем переход по ссылке
 
-                if (checkElement.is(':visible')) {
-                    // Если подменю уже открыто, скрываем его
-                    checkElement.slideUp('normal');
-                } else {
-                    // Скрываем только подменю того же уровня
-                    $(this).parent().siblings().find('ul:visible').slideUp('normal');
+					if (checkElement.is(':visible')) {
+						// Если подменю уже открыто, скрываем его
+						checkElement.slideUp('normal');
+					} else {
+						// Скрываем только подменю того же уровня
+						$(this).parent().siblings().find('ul:visible').slideUp('normal');
 
-                    // Открываем текущее подменю
-                    checkElement.slideDown('normal');
-                }
+						// Открываем текущее подменю
+						checkElement.slideDown('normal');
+					}
 
-                return false; // Остановить дальнейшее выполнение
-            }
-        });
-    }
-	$(document).ready(function () {
-    initMenu();
+					return false; // Остановить дальнейшее выполнение
+				}
+			});
+		}
+		$(document).ready(function () {
+			initMenu();
 
-    $('#menu li a[data-target="#tools-submenu"]').click(function (e) {
-        e.preventDefault();
+			$('#menu li a[data-target="#tools-submenu"]').click(function (e) {
+				e.preventDefault();
 
-        var toolsSubmenu = $('#tools-submenu');
-        if (!toolsSubmenu.is(':visible')) {
-            toolsSubmenu.slideDown('normal');
-        }
+				var toolsSubmenu = $('#tools-submenu');
+				if (!toolsSubmenu.is(':visible')) {
+					toolsSubmenu.slideDown('normal');
+				}
 
-        // Убедиться, что #wrapper открыт
-        if ($('#wrapper').hasClass('toggled-2')) {
-            $('#wrapper').removeClass('toggled-2');
-        }
-    });
-});
+				// Убедиться, что #wrapper открыт
+				if ($('#wrapper').hasClass('toggled-2')) {
+					$('#wrapper').removeClass('toggled-2');
+				}
+			});
+		});
 
-</script>
-<script>
-    let currentAcunetixName = "";
+	</script>
+	<script>
+		{% if role and role.name == "owner" %}
+		let currentAcunetixName = "";
 
-    createAgentBar("agent_tools");
-    createAgentBar("agent_net_map");
-    createAgentBar("agent_nmap");
-    createAgentBar("agent_scapy");
-    createAgentBar("agent_masscan");
-    createAgentBar("agent_snmp");
-    createAgentBar("agent_domains");
-    createAgentBar("agent_cert");
-    createAgentBar("agent_whois");
-    createAgentBar("agent_acunetix");
-    createAgentBar("agent_screenshoter");
-    createAgentBar("agent_wappalyzer");
-    createAgentBar("agent_cpeguess");
-    createAgentBar("agent_searchvulns");
+		createAgentBar("agent_tools");
+		createAgentBar("agent_net_map");
+		createAgentBar("agent_nmap");
+		createAgentBar("agent_scapy");
+		createAgentBar("agent_masscan");
+		createAgentBar("agent_snmp");
+		createAgentBar("agent_domains");
+		createAgentBar("agent_cert");
+		createAgentBar("agent_whois");
+		createAgentBar("agent_acunetix");
+		createAgentBar("agent_screenshoter");
+		createAgentBar("agent_wappalyzer");
+		createAgentBar("agent_cpeguess");
+		createAgentBar("agent_searchvulns");
 
 
-    createInterfaceBar("interface_tools");
-    createInterfaceBar("interface_net_map");
-    createInterfaceBar("interface_nmap");
-    createInterfaceBar("interface_scapy");
-    createInterfaceBar("interface_masscan");
-    createInterfaceBar("interface_snmp");
-    createInterfaceBar("interface_domains");
-    createInterfaceBar("interface_cert");
-    createInterfaceBar("interface_whois");
-    createInterfaceBar("interface_acunetix");
-    createInterfaceBar("interface_screenshoter");
-    createInterfaceBar("interface_wappalyzer");
-    createInterfaceBar("interface_cpeguess");
-    createInterfaceBar("interface_searchvulns");
+		createInterfaceBar("interface_tools");
+		createInterfaceBar("interface_net_map");
+		createInterfaceBar("interface_nmap");
+		createInterfaceBar("interface_scapy");
+		createInterfaceBar("interface_masscan");
+		createInterfaceBar("interface_snmp");
+		createInterfaceBar("interface_domains");
+		createInterfaceBar("interface_cert");
+		createInterfaceBar("interface_whois");
+		createInterfaceBar("interface_acunetix");
+		createInterfaceBar("interface_screenshoter");
+		createInterfaceBar("interface_wappalyzer");
+		createInterfaceBar("interface_cpeguess");
+		createInterfaceBar("interface_searchvulns");
 
-    interfaceData = null
+		interfaceData = null
 
-    getAgentData().then((data) => {
-        agentData = data
-        fillAgentBar("agent_tools");
-        fillAgentBar("agent_net_map");
-        fillAgentBar("agent_nmap");
-        fillAgentBar("agent_scapy");
-        fillAgentBar("agent_masscan");
-        fillAgentBar("agent_snmp");
-        fillAgentBar("agent_domains");
-        fillAgentBar("agent_cert");
-        fillAgentBar("agent_whois");
-        fillAgentBar("agent_acunetix");
-        fillAgentBar("agent_screenshoter");
-        fillAgentBar("agent_wappalyzer");
-        fillAgentBar("agent_cpeguess");
-        fillAgentBar("agent_searchvulns");
-        getInterfaceData(agentData.default_agent).then((data) => {
-            interfaceData = data
-            fillInterfaceBar("interface_tools");
-            fillInterfaceBar("interface_net_map");
-            fillInterfaceBar("interface_nmap");
-            fillInterfaceBar("interface_scapy");
-            fillInterfaceBar("interface_masscan");
-            fillInterfaceBar("interface_snmp");
-            fillInterfaceBar("interface_domains");
-            fillInterfaceBar("interface_cert");
-            fillInterfaceBar("interface_whois");
-            fillInterfaceBar("interface_acunetix");
-            fillInterfaceBar("interface_screenshoter");
-            fillInterfaceBar("interface_wappalyzer");
-            fillInterfaceBar("interface_cpeguess");
-            fillInterfaceBar("interface_searchvulns");
-        })
-    })
-    getScans().then((data) => {
-        scans = data;
-        getCurrentScan().then((currentScan) => {
-            // Передаем массив идентификаторов
-            redrawScanPickDropdown(scans, currentScan, 
-            [
-            "scans_bar_tools",
-            "scans_bar_net_map",
-            "scans_bar_nmap",
-            "scans_bar_scapy",
-            "scans_bar_masscan",
-            "scans_bar_snmp",
-            "scans_bar_domains",
-            "scans_bar_net_map",
-            "scans_bar_cert",
-            "scans_bar_whois",
-            "scans_bar_acunetix",
-            "scans_bar_screenshoter",
-            "scans_bar_wappalyzer",
-            "scans_bar_cpeguess",
-            "scans_bar_searchvulns",
-            ]);
-        });
-    });
-    function redrawScanPickDropdown(scans, currentScan, scansDivIds) {
-        for (const scanDivId of scansDivIds) {
-            let el = document.getElementById(scanDivId);
-            if (!el) continue; // Пропускаем, если элемент с таким ID не найден
-            let result = ``
-            let scan_id = ''
-			scan_id = currentScan.id
-			result += `<button type="button" class="btn btn-success" disabled id="currentPickedScan">${currentScan.name}</button>`
-            el.innerHTML = result
-        }
-    }
-    async function addScan(event) {
-        event.preventDefault()
-        let formdata = new FormData(event.target)
-        let resp = await fetch("/api/v1/scan", {
-            method: "POST",
-            headers: { "Content-type": "application/json" },
-            body: JSON.stringify(Object.fromEntries(formdata))
-        })
-        if (resp.ok) {
-            getScans().then((data) => {
-                scans = data
-                getCurrentScan().then((currentScan) => {
-                    redrawScanPickDropdown(scans, currentScan, 
-                    [
-                    "scans_bar_tools",
-                    "scans_bar_net_map",
-                    "scans_bar_nmap",
-                    "scans_bar_scapy",
-                    "scans_bar_masscan",
-                    "scans_bar_snmp",
-                    "scans_bar_domains",
-                    "scans_bar_net_map",
-                    "scans_bar_cert",
-                    "scans_bar_whois",
-                    "scans_bar_acunetix",
-                    "scans_bar_screenshoter",
-                    "scans_bar_wappalyzer",
-                    "scans_bar_cpeguess",
-                    "scans_bar_searchvulns",
-                    ])
-                    let el = document.getElementById("closeAddScanModalButton")
-                    el.click()
-                })
-            })
-        }
-    }
-    async function setCurrentScan(scanID) {
-        let resp = await fetch("/api/v1/scan/set_current", {
-            method: "POST",
-            headers: { "Content-type": "application/json" },
-            body: JSON.stringify({ scan_id: scanID })
-        })
-        if (resp.ok) {
-            getScans().then((data) => {
-                scans = data
-                getCurrentScan().then((currentScan) => {
-                    redrawScanPickDropdown(scans, currentScan, 
-                    [
-                    "scans_bar_tools",
-                    "scans_bar_net_map",
-                    "scans_bar_nmap",
-                    "scans_bar_scapy",
-                    "scans_bar_masscan",
-                    "scans_bar_snmp",
-                    "scans_bar_domains",
-                    "scans_bar_net_map",
-                    "scans_bar_cert",
-                    "scans_bar_whois",
-                    "scans_bar_acunetix",
-                    "scans_bar_screenshoter",
-                    "scans_bar_wappalyzer",
-                    "scans_bar_cpeguess",
-                    "scans_bar_searchvulns",
-                    ])
-                    let el = document.getElementById("closeAddScanModalButton")
-                    el.click()
-                })
-            })
-        }
-    }
-</script>
+		getAgentData().then((data) => {
+			agentData = data
+			fillAgentBar("agent_tools");
+			fillAgentBar("agent_net_map");
+			fillAgentBar("agent_nmap");
+			fillAgentBar("agent_scapy");
+			fillAgentBar("agent_masscan");
+			fillAgentBar("agent_snmp");
+			fillAgentBar("agent_domains");
+			fillAgentBar("agent_cert");
+			fillAgentBar("agent_whois");
+			fillAgentBar("agent_acunetix");
+			fillAgentBar("agent_screenshoter");
+			fillAgentBar("agent_wappalyzer");
+			fillAgentBar("agent_cpeguess");
+			fillAgentBar("agent_searchvulns");
+			getInterfaceData(agentData.default_agent).then((data) => {
+				interfaceData = data
+				fillInterfaceBar("interface_tools");
+				fillInterfaceBar("interface_net_map");
+				fillInterfaceBar("interface_nmap");
+				fillInterfaceBar("interface_scapy");
+				fillInterfaceBar("interface_masscan");
+				fillInterfaceBar("interface_snmp");
+				fillInterfaceBar("interface_domains");
+				fillInterfaceBar("interface_cert");
+				fillInterfaceBar("interface_whois");
+				fillInterfaceBar("interface_acunetix");
+				fillInterfaceBar("interface_screenshoter");
+				fillInterfaceBar("interface_wappalyzer");
+				fillInterfaceBar("interface_cpeguess");
+				fillInterfaceBar("interface_searchvulns");
+			})
+		})
+		getScans().then((data) => {
+			scans = data;
+			getCurrentScan().then((currentScan) => {
+				// Передаем массив идентификаторов
+				redrawScanPickDropdown(scans, currentScan,
+					[
+						"scans_bar_tools",
+						"scans_bar_net_map",
+						"scans_bar_nmap",
+						"scans_bar_scapy",
+						"scans_bar_masscan",
+						"scans_bar_snmp",
+						"scans_bar_domains",
+						"scans_bar_net_map",
+						"scans_bar_cert",
+						"scans_bar_whois",
+						"scans_bar_acunetix",
+						"scans_bar_screenshoter",
+						"scans_bar_wappalyzer",
+						"scans_bar_cpeguess",
+						"scans_bar_searchvulns",
+					]);
+			});
+		});
+		function redrawScanPickDropdown(scans, currentScan, scansDivIds) {
+			for (const scanDivId of scansDivIds) {
+				let el = document.getElementById(scanDivId);
+				if (!el) continue; // Пропускаем, если элемент с таким ID не найден
+				let result = `<div class="btn-group">`
+				let scan_id = ''
+				if (currentScan == null) {
+					result += `
+                <button type="button" class="btn btn-success" disabled id="currentPickedScan">No scan</button>
+            `
+				} else {
+					scan_id = currentScan.id
+					result += `<button type="button" class="btn btn-success" disabled id="currentPickedScan">${currentScan.name}</button>`
+				}
+				result += "</div>"
+				el.innerHTML = result
+			}
+		}
+		async function addScan(event) {
+			event.preventDefault()
+			let formdata = new FormData(event.target)
+			let resp = await fetch("/api/v1/scan", {
+				method: "POST",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify(Object.fromEntries(formdata))
+			})
+			if (resp.ok) {
+				getScans().then((data) => {
+					scans = data
+					getCurrentScan().then((currentScan) => {
+						redrawScanPickDropdown(scans, currentScan,
+							[
+								"scans_bar_tools",
+								"scans_bar_net_map",
+								"scans_bar_nmap",
+								"scans_bar_scapy",
+								"scans_bar_masscan",
+								"scans_bar_snmp",
+								"scans_bar_domains",
+								"scans_bar_net_map",
+								"scans_bar_cert",
+								"scans_bar_whois",
+								"scans_bar_acunetix",
+								"scans_bar_screenshoter",
+								"scans_bar_wappalyzer",
+								"scans_bar_cpeguess",
+								"scans_bar_searchvulns",
+							])
+						let el = document.getElementById("closeAddScanModalButton")
+						el.click()
+					})
+				})
+			}
+		}
+		async function setCurrentScan(scanID) {
+			let resp = await fetch("/api/v1/scan/set_current", {
+				method: "POST",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify({ scan_id: scanID })
+			})
+			if (resp.ok) {
+				getScans().then((data) => {
+					scans = data
+					getCurrentScan().then((currentScan) => {
+						redrawScanPickDropdown(scans, currentScan,
+							[
+								"scans_bar_tools",
+								"scans_bar_net_map",
+								"scans_bar_nmap",
+								"scans_bar_scapy",
+								"scans_bar_masscan",
+								"scans_bar_snmp",
+								"scans_bar_domains",
+								"scans_bar_net_map",
+								"scans_bar_cert",
+								"scans_bar_whois",
+								"scans_bar_acunetix",
+								"scans_bar_screenshoter",
+								"scans_bar_wappalyzer",
+								"scans_bar_cpeguess",
+								"scans_bar_searchvulns",
+							])
+						let el = document.getElementById("closeAddScanModalButton")
+						el.click()
+					})
+				})
+			}
+		}
+		{% endif %}
+		async function generateRegisterToken(){
+			let resp = await fetch("/api/v1/auth/generate_register_token",{
+				method: "POST",
+				headers: { "Content-type": "application/json" },})
+				let data = await resp.json()
+				let tokenEl = document.getElementById("inviteToSetezorToken")
+				tokenEl.value = data.token
+				$('#inviteToSetezorTokenModal').modal('show');
+		}
+	</script>
 </body>
 
 </html>

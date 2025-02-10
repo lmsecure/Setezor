@@ -9,6 +9,11 @@ class UserProjectService(IService):
         async with uow:
             projects = await uow.user_project.all_projects(user_id=user_id)
             return projects
+        
+    @classmethod
+    async def get_user_project(cls, uow: UnitOfWork, user_id: str, project_id: str) -> Project:
+        async with uow:
+            return await uow.user_project.find_one(user_id=user_id, project_id=project_id)
     
 
     @classmethod

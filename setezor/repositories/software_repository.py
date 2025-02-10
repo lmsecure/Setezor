@@ -57,7 +57,6 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         .filter(L7Software.project_id == project_id)\
         .group_by(self.model.product)\
         .order_by(desc("count"))\
-        .limit(7)
 
         result = await self._session.exec(top_products)
         top_products_result = result.all()

@@ -1,7 +1,6 @@
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
-
 import os
 import sys
 sys.path[0] = ''
@@ -10,16 +9,13 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
 from dotenv import load_dotenv
 load_dotenv()
+from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
+from setezor.settings import PATH_PREFIX, BASE_PATH
 
-
-base_path = '/'.join(__file__.split('/')[:-1])
-path_prefix = os.path.join(os.path.expanduser('~'), '.local/share/setezor')
-
-if not os.path.exists(path_prefix):
-    os.makedirs(path_prefix, exist_ok=True)
+if not os.path.exists(PATH_PREFIX):
+    os.makedirs(PATH_PREFIX, exist_ok=True)
 
 @asynccontextmanager
 async def startup_event(app: FastAPI):
@@ -42,12 +38,11 @@ def create_app():
     for router in api_routers:
         app.include_router(router, prefix="/api/v1")
 
-    app.mount("/static", StaticFiles(directory=os.path.join(base_path, 'pages/static/')), name="static")
+    app.mount("/static", StaticFiles(directory=os.path.join(BASE_PATH, 'pages/static/')), name="static")
 
     @app.exception_handler(RequiresLoginException)
     async def login_required(_, __):
-        return RedirectResponse('/projects')
-        return RedirectResponse('/login') # auth_toggled_off
+        return RedirectResponse('/login')
     
     @app.exception_handler(RequiresRegistrationException)
     async def registration_required(_, __):
@@ -59,7 +54,7 @@ def create_app():
 
     @app.exception_handler(404)
     async def custom_404_handler(_, __):
-        return RedirectResponse("/projects_dashboard")
+        return RedirectResponse("/projects")
 
 
     return app
@@ -68,14 +63,19 @@ def create_app():
 @click.command()
 @click.option('-s', '--spy', default=False, type=bool, show_default=True, help='Enable spy', is_flag=True)
 @click.option('-p', '--port', default=16661, type=int, show_default=True, help='Spy port')
-def run_app(spy: bool, port: int):
+@click.option('-h', '--host', default="0.0.0.0", type=str, show_default=True, help='Spy host')
+def run_app(spy: bool, port: int, host: str):
     if spy:
         from setezor.spy import Spy
         import setezor.managers.task_manager
         app = Spy.create_app()
     else:
         app = create_app()
-    uvicorn.run(app=app, host="0.0.0.0", port=port, ssl_keyfile=os.path.join(base_path, 'key.pem'), ssl_certfile=os.path.join(base_path, 'cert.pem'))
+    uvicorn.run(app=app, 
+                host=host, 
+                port=port, 
+                ssl_keyfile=os.path.join(BASE_PATH, 'key.pem'),
+                ssl_certfile=os.path.join(BASE_PATH, 'cert.pem'))
 
 if __name__ == "__main__":
     run_app()

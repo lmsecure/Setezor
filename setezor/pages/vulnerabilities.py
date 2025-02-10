@@ -1,12 +1,14 @@
 
+from setezor.models.role import Role
 from setezor.pages import TEMPLATES_DIR
 from setezor.services import ObjectTypeService
 from setezor.managers import ProjectManager
+from setezor.services.user_service import UsersService
 from setezor.tools.ip_tools import get_interfaces
 from setezor.tools.acunetix import acunetix_groups_context, acunetix_targets_context, \
     acunetix_scans_context, acunetix_reports_context
-from setezor.api.dependencies import UOWDep
-from setezor.dependencies.project import get_current_project
+from setezor.dependencies.uow_dependency import UOWDep
+from setezor.dependencies.project import get_current_project, get_user_id, get_user_role_in_project, role_required
 from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
 from fastapi import APIRouter, Request, Depends
 
@@ -17,7 +19,10 @@ router = APIRouter(tags=["Vulnerabilities"])
 async def vulnerabilities_page(
     request: Request,
     uow: UOWDep,
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    user_id: str = Depends(get_user_id),
+    role_in_project: Role = Depends(get_user_role_in_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
 ):
     """Формирует html страницу отображения информации из базы на основе jinja2 шаблона и возращает её
 
@@ -30,8 +35,11 @@ async def vulnerabilities_page(
     project = await ProjectManager.get_by_id(uow=uow, project_id=project_id)
     project_name = project.name
     project_id = project.id
+    user = await UsersService.get(uow=uow, id=user_id)
     context = {
         "request":request,
+        "is_superuser": user.is_superuser,
+        "role": role_in_project,
         "tab": {
             'name': 'resource_vulnerabilities',
             "base_url": "/api/v1/resource",

@@ -8,7 +8,7 @@
         aria-label="IP" aria-describedby="basic-addon1" required name="target">
 
 </div>
-<!-- <script>
+<script>
     $('#masscanIpTarget').on('change', function (e, data) {
         if ($('#masscanInputIP').inputmask('isComplete')) {
             document.getElementById('startMasscanScanBtn').disabled = false
@@ -16,7 +16,7 @@
             document.getElementById('startMasscanScanBtn').disabled = true
         }
     })
-</script> -->
+</script>
 {% endmacro %}
 {% macro masscan_main() %}
 
@@ -34,7 +34,7 @@
             <option value="0-65535">All</option>
         </datalist>
         <input type="text" list="masscanPortsSelectorList" id="masscanPortsSelector" name="ports" class="form-control"
-            placeholder="Ports" />
+            placeholder="Ports" disabled />
     </div>
 </div>
 <div class="d-flex justify-content-between py-2">
@@ -45,7 +45,7 @@
 
     <div class="w-50" id="masscanSourcePortSelectorDiv">
         <input type="text" id="masscanSourcePortSelector" name="source_port" class="form-control"
-            placeholder="Source port" />
+            placeholder="Source port" disabled />
     </div>
 </div>
 <div class="d-flex justify-content-between py-2">
@@ -56,7 +56,7 @@
 
     <div class="w-50" id="masscanMaxRateSelectorDiv">
         <input type="text" id="masscanMaxRateSelector" name="max_rate" class="form-control"
-            placeholder="Max rate" />
+            placeholder="Max rate" disabled />
     </div>
 </div>
 <div class="invalid-feedback">Please select a valid tag.</div>
@@ -90,26 +90,33 @@
 </div>
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
-    <button type="button" class="btn btn-primary w-50" onclick="
-    const button = this;
-    const form = button.closest('form');
-
-    var params = Object.fromEntries(new FormData(form).entries());
-
-    const UDPcheckbox = form.querySelector('#searchUdpPortInput');
-    let ping = !params.ports || params.ports.trim() === '';
-    let search_udp_port = UDPcheckbox.checked;
-
-    const source_port = params.source_port && params.source_port.trim() !== '' ? params.source_port : null;
-    const max_rate = params.max_rate && params.max_rate.trim() !== '' ? params.max_rate : null;
-
+    <button type="button" class="btn btn-primary w-50" id="startMasscanScanBtn" onclick="
+    var params = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
+    const UDPcheckbox = document.getElementById('searchUdpPortInput');
+    let ping;
+    let search_udp_port;
+    if (params.ports === undefined) {
+        ping = true;
+    }
+    else{
+        ping = false
+    }
+    if (UDPcheckbox.checked) {
+        search_udp_port	 = true;
+        } else {
+            search_udp_port = false;
+        }
+    
     const {
         target = null,
         ports = null,
         format = null,
         wait = null,
+        source_port = null,
+        max_rate = null,
     } = params;
 
+    
     fetch('/api/v1/task/masscan_scan_task', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -126,27 +133,38 @@
             ports,
             ping
         })
-    });
-
-    var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
-    if (myModal) {
-        myModal.hide();
-    }
-">Start scan</button>
+    }).then(response => {
+            if (response.status !== 201) {
+                response.json().then(data => {
+                    const errorMessage = data.detail[0].msg || 'Create task error';
+                    create_toast('Error', errorMessage, 'error');
+                });
+            } else {
+                var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+                if (myModal) {
+                    myModal.hide();
+                }
+            }
+        })
+        .catch(error => {
+            create_toast('Error', 'An error occurred while sending the request', 'error');
+            console.error('Error:', error);
+        });
+    ">Start scan</button>
 </div>
 <script>
-    // $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
-    //     document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
-    //     document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    // })
-    // $('#sourcePortSwitch').on('change.bootstrapSwitch', function (e, data) {
-    //     document.getElementById('masscanSourcePortSelector').disabled = !e.target.checked;
-    //     document.getElementById('masscanSourcePortSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    // })
-    // $('#maxRateSwitch').on('change.bootstrapSwitch', function (e, data) {
-    //     document.getElementById('masscanMaxRateSelector').disabled = !e.target.checked;
-    //     document.getElementById('masscanMaxRateSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    // })
+    $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('masscanPortsSelector').disabled = !e.target.checked;
+        document.getElementById('masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })
+    $('#sourcePortSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('masscanSourcePortSelector').disabled = !e.target.checked;
+        document.getElementById('masscanSourcePortSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })
+    $('#maxRateSwitch').on('change.bootstrapSwitch', function (e, data) {
+        document.getElementById('masscanMaxRateSelector').disabled = !e.target.checked;
+        document.getElementById('masscanMaxRateSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
+    })
 
 </script>
 {% endmacro %}

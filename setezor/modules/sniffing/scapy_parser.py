@@ -35,7 +35,7 @@ class ScapyParser():
         try:
             return rdpcap(path)
         except Exception:
-            raise Exception('Error with parsing pcal-file. Invalid file format')
+            raise Exception('Error with parsing pcap-file. Invalid file format')
 
 
     @classmethod

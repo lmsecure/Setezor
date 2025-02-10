@@ -12,15 +12,24 @@ Projects
 <script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
 
 
-<div class="d-flex flex-row">
-    <h2 class="p-2">All Agents</h2>
-    <div class="d-flex align-items-start" style="margin-top: 0.5rem;">
-    <button type="button" class="btn btn-primary p-2" data-bs-toggle="modal" title="create agent"
-        onclick="fillParentAgents()" data-bs-target="#agentModal" data-testid="create_agent">
-        <i class="bi bi-plus-square-fill" style="font-family: 'Times New Roman', Times, serif;"></i>
-    </button>
+<div class="d-flex flex-row justify-content-between">
+    <div class="d-flex flex-row">
+        <h2 class="p-2" style="margin-left: 2rem;">All Agents</h2>
+        <div class="d-flex align-items-start" style="margin-top: 0.5rem;">
+            <button type="button" class="btn btn-primary p-2" data-bs-toggle="modal" title="create agent"
+                onclick="fillParentAgents()" data-bs-target="#agentModal" data-testid="create_agent">
+                <i class="bi bi-plus-square-fill" style="font-family: 'Times New Roman', Times, serif;"></i>
+            </button>
+        </div>
+    </div>
+    <div class="mt-3 ms-1" style="margin-right: 2rem;">
+        <button class="btn btn-success" onclick="generateInviteLink()">Invite to Project</button>
     </div>
 </div>
+
+<div id="agent_table">
+</div>
+
 
 
 <!--Creation agent modal window-->
@@ -53,7 +62,7 @@ Projects
                         </tr>
                         <tr>
                             <td>Agent REST URL</td>
-                            <td><input id="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:00000"></td>
+                            <td><input id="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
                         </tr>
                         <tr>
                             <td>Agent color</td>
@@ -121,7 +130,57 @@ Projects
         </div>
     </div>
 </div>
+<div class="modal fade" id="inviteToProjectTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="inviteToProjectTokenModalLabel">Invite to project token</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="inviteToProjectToken" class="col-form-label">Token</label>
+                    <input type="text" class="form-control" disabled id="inviteToProjectToken">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .tabulator {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-left: 2rem;
+    margin-right: 2rem;
+    width: calc(100% - 4rem);
+}
+
+.tabulator .tabulator-header {
+    background-color: #007bff;
+    font-weight: bold;
+}
+
+.tabulator .tabulator-row {
+    background-color: white;
+}
+
+.tabulator .tabulator-row:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.tabulator .tabulator-row:hover {
+    background-color: #e9ecef;
+}
+
+.tabulator .tabulator-cell {
+    padding: 12px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid #dee2e6;
+}
+</style>
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`)
 
@@ -192,6 +251,40 @@ Projects
         body: JSON.stringify(result) 
         }
         )
+        getAgentData().then((data) => {
+            agentData = data
+            fillAgentBar("agent_tools");
+            fillAgentBar("agent_net_map");
+            fillAgentBar("agent_nmap");
+            fillAgentBar("agent_scapy");
+            fillAgentBar("agent_masscan");
+            fillAgentBar("agent_snmp");
+            fillAgentBar("agent_domains");
+            fillAgentBar("agent_cert");
+            fillAgentBar("agent_whois");
+            fillAgentBar("agent_acunetix");
+            fillAgentBar("agent_screenshoter");
+            fillAgentBar("agent_wappalyzer");
+            fillAgentBar("agent_cpeguess");
+            fillAgentBar("agent_searchvulns");
+            getInterfaceData(agentData.default_agent).then((data) => {
+                interfaceData = data
+                fillInterfaceBar("interface_tools");
+                fillInterfaceBar("interface_net_map");
+                fillInterfaceBar("interface_nmap");
+                fillInterfaceBar("interface_scapy");
+                fillInterfaceBar("interface_masscan");
+                fillInterfaceBar("interface_snmp");
+                fillInterfaceBar("interface_domains");
+                fillInterfaceBar("interface_cert");
+                fillInterfaceBar("interface_whois");
+                fillInterfaceBar("interface_acunetix");
+                fillInterfaceBar("interface_screenshoter");
+                fillInterfaceBar("interface_wappalyzer");
+                fillInterfaceBar("interface_cpeguess");
+                fillInterfaceBar("interface_searchvulns");
+            })
+        })
         $('#editAgentInterfaces').modal('hide');
     }
     async function saveSynthInterface(event){
@@ -210,14 +303,18 @@ Projects
         }
         )
         $('#editAgentInterfacesWhichDoesNotExist').modal('hide');
-        console.log(event)
     }
 </script>
 
-
-<div id="agent_table">
-
-</div>
+<script>
+    async function generateInviteLink(){
+        await axios.post("/api/v1/project/generate_invite_link").then(response =>{
+            let tokenEl = document.getElementById("inviteToProjectToken")
+				tokenEl.value = response.data.token
+				$('#inviteToProjectTokenModal').modal('show');
+        })
+    }
+</script>
 
 <script>
 
@@ -325,10 +422,11 @@ Projects
                     <div class="btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';getAgentInterfaces(currentAgent)">
                         Configure interfaces
                     </div>
-                    <div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
+                    ${cell.getRow().getData().rest_url != ''? `<div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
                         Connect
                     </div>
-                </div>
+                </div>`:""}
+                    
                 
                 `
     }

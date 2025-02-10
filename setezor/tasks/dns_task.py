@@ -20,24 +20,7 @@ class DNSTask(BaseJob):
     async def _task_func(self) -> list[Any]:
         return await DNSModule.query(self.domain)
 
-
+    @BaseJob.remote_task_notifier
     async def run(self):
-        """Метод выполнения задачи
-        1. Произвести операции согласно методу self._task_func
-        2. Записать результаты в базу согласно методу self._write_result_to_db
-        3. Попутно менять статут задачи
-
-        Args:
-            db (Queries): объект запросов к базе
-            task_id (int): идентификатор задачи
-        """
-        try:
-            t1 = time()
-            result = await self._task_func()
-            print(f'Task func "{self.__class__.__name__}" finished after {time() - t1:.2f} seconds')
-            await self.send_result_to_parent_agent(result=result)
-            return result
-        except Exception as e:
-            print('Task "%s" failed with error\n%s',
-                  self.__class__.__name__, traceback.format_exc())
-            raise e
+        result = await self._task_func()
+        return result, b'', ''

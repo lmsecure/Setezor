@@ -42,49 +42,61 @@
         return chart;
     }
 </script>
-<div class="card mb-3 h-100">
-    <h6 class="card-header"
-        style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
-        <label class="form-check-label me-2" style="flex-grow: 1;">
+<div class="col h-100">
+    <div class="card mb-3" style="height: calc(50% - 1rem);">
+        <h6 class="card-header"
+            style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+            <label class="form-check-label me-2" style="flex-grow: 1;">
 
-        </label>
-        <div class="dropdown">
-            <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
-                aria-expanded="false">
-            </i>
-        </div>
-    </h6>
-    <div style="display: flex; justify-content: center; align-items: center;">
-        <div class="text-center">
-            Top ports
-
-            {{ charts.create_donut('Top ports', 'top_ports_',
-            0 | map(attribute='count') | list | tojson,
-            0 | map(attribute='value') | list | tojson,
-            ) }}
-
+            </label>
+            <div class="dropdown">
+                <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                </i>
+            </div>
+        </h6>
+        <div class="card-body d-flex flex-column" style="padding-top: 0px;">
+            <div class="mt-auto" style="padding-top: 0px;">
+                <h5 class="card-title">New Project</h5>
+                <div class="pb-2">
+                    <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
+                        placeholder="Project name" required onkeydown="preventEnter(event)">
+                    <div class="invalid-feedback">Please, type project name</div>
+                </div>
+                <button class="btn btn-success flex-fill w-100" id="createProjectButton" onclick="createProject()">
+                    Create
+                </button>
+            </div>
         </div>
     </div>
-    <div class="card-body d-flex flex-column" style="padding-top: 0px;">
-        <div class="mt-auto" style="padding-top: 0px;">
+    <div class="card h-50">
+        <h6 class="card-header"
+            style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+            <label class="form-check-label me-2" style="flex-grow: 1;">
 
-            <h4 class="card-title">New Project</h4>
-
-            <!-- Форма для создания проекта -->
-
-            <div class="pb-2">
-                <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
-                    placeholder="Project name" required onkeydown="preventEnter(event)">
-                <div class="invalid-feedback">Please, type project name</div>
+            </label>
+            <div class="dropdown">
+                <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                </i>
             </div>
-
-            <button class="btn btn-success w-100 mb-2" id="createProjectButton" onclick="createProject()">
-                Create
-            </button>
-
-            <button class="btn btn-success w-100" id="importProjectButton" onclick="importProject()">
-                Import Project
-            </button>
+        </h6>
+        <div class="card-body d-flex flex-column" style="padding-top: 0px;">
+            <div class="mt-auto" style="padding-top: 0px;">
+                <h4 class="card-title">
+                    <div class="d-flex align-items-center">
+                       <h5> Enter By Token </h5>
+                    </div>
+                </h4>
+                <div class="pb-2">
+                    <input id="invite_token_enter" type="text" class="form-control" maxlength="64"
+                        placeholder="Invite Token">
+                    <div class="invalid-feedback">Please, type project name</div>
+                </div>
+                <button class="btn btn-success flex-fill w-100" id="createProjectButton" onclick="enterByToken()">
+                    Enter
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -122,27 +134,19 @@
             })
     }
 
-    function importProject() {
-
-        var input = document.createElement('input');
-        input.type = 'file';
-        input.multiple = false;
-        input.accept = '.zip'
-        input.onchange = e => {
-            for (var file of e.target.files) {
-                var reader = new FileReader();
-                reader.onload = (function (file) {
-                    return async function (e) {
-                        resp = await fetch('/api/project/import_project', { method: 'POST', body: e.target.result });
-                        if (resp.status == 200) {
-                            location.reload();
-                        }
-                    }
-                })(file)
-                reader.readAsDataURL(file);
-            }
+    async function enterByToken() {
+        let el = document.getElementById('invite_token_enter')
+        let resp = await fetch('/api/v1/project/enter_by_token', {
+            method: "POST",
+            body: JSON.stringify({ token: el.value }),
+            headers: { "Content-type": "application/json" }
+        })
+        let data = await resp.json()
+        if (data == true) {
+            window.location = '/projects_dashboard'
+            return
         }
-        input.click();
+        create_toast("Error", data.detail, 'error')
     }
 
 </script>

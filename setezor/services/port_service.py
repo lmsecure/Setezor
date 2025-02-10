@@ -9,7 +9,7 @@ class PortService(IService):
     async def create(cls, uow: UnitOfWork, port: PortSchemaAdd) -> int:
         port_dict = port.model_dump()
         async with uow:
-            port_id = await uow.port.add(port_dict)
+            port_id = uow.port.add(port_dict)
             await uow.commit()
             return port_id
 

@@ -39,7 +39,7 @@ class PortRepository(SQLAlchemyRepository[Port]):
     
     async def get_top_ports(self, project_id: str):
         
-        top_ports: Select = select(self.model.port, func.count(self.model.port).label("count")).group_by(self.model.port).order_by(desc("count")).limit(7).filter(self.model.project_id == project_id)
+        top_ports: Select = select(self.model.port, func.count(self.model.port).label("count")).group_by(self.model.port).order_by(desc("count")).filter(self.model.project_id == project_id)
 
         result = await self._session.exec(top_ports)
         top_ports_result = result.all()
@@ -47,7 +47,7 @@ class PortRepository(SQLAlchemyRepository[Port]):
     
     async def get_top_protocols(self, project_id: str):
         
-        top_protocols: Select = select(self.model.protocol, func.count(self.model.protocol).label("count")).group_by(self.model.protocol).order_by(desc("count")).limit(7).filter(self.model.project_id == project_id)
+        top_protocols: Select = select(self.model.protocol, func.count(self.model.protocol).label("count")).group_by(self.model.protocol).order_by(desc("count")).filter(self.model.project_id == project_id)
 
         result = await self._session.exec(top_protocols)
         top_protocols_result = result.all()

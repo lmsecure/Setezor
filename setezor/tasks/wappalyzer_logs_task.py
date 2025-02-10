@@ -20,7 +20,7 @@ class WappalyzerLogsTask(BaseJob):
                  task_id: str, 
                  project_id: str, 
                  scan_id: str, 
-                 agent_id: int,
+                 agent_id: str,
                  groups: list[str], 
                  log_file: str):
         super().__init__(scheduler=scheduler, name=name)
@@ -39,24 +39,7 @@ class WappalyzerLogsTask(BaseJob):
         json_file = json.loads(data)
         return WappalyzerParser.parse_json(wappalyzer_log=json_file, groups=self.groups)
 
-
-    async def _write_result_to_db(self, result):
-        service = DataStructureService(uow=self.uow, 
-                                       result=result, 
-                                       project_id=self.project_id, 
-                                       scan_id=self.scan_id)
-        await service.make_magic()
-        await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.finished, project_id=self.project_id)
-
-
+    @BaseJob.local_task_notifier
     async def run(self):
-        try:
-            t1 = time()
-            data = await self._task_func()
-            result = await WappalyzerParser.restruct_result(data=data)
-            print(f'Task func "{self.__class__.__name__}" finished after {time() - t1:.2f} seconds')
-            await self._write_result_to_db(result=result)
-        except Exception as e:
-            print('Task "%s" failed with error\n%s',
-                  self.__class__.__name__, traceback.format_exc())
-            raise e
+        data = await self._task_func()
+        return await WappalyzerParser.restruct_result(data=data)

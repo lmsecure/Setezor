@@ -54,10 +54,6 @@
     <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="
                     // Проверяем все обязательные поля в форме
                     const requiredTLS = document.getElementById('CertForm');
-                    if (!form.checkValidity()) { 
-                        form.reportValidity();
-                        return;
-                    }
 
                     const params = {};
                     const domains_tls = [];

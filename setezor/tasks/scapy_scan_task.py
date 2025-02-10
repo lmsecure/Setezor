@@ -24,18 +24,20 @@ class ScapySniffTask(BaseJob):
 
     async def soft_stop(self):
         self.is_stoped = True
+        
+    def get_result(self):
         logs = self.sniffer.stop_sniffing()
         result = ScapyParser.parse_logs(data=logs)
         result = ScapyParser.restruct_result(data=result, agent_id=self.agent_id)
-        await self.send_result_to_parent_agent(result=result)
-
-
+        return result, logs, "pcap"
+    
+    @BaseJob.remote_task_notifier
     async def run(self):
         self.sniffer.start_sniffing()
         self.t1 = time()
         while self.sniffer.sniffer.running:
             await asyncio.sleep(2)
             if self.is_stoped:
-                return
+                return self.get_result()
             if not self.sniffer.sniffer.thread.is_alive():
                 raise Exception('Sniffing was failed. Maybe you dont have permission?')

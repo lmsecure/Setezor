@@ -52,6 +52,16 @@
             </div>
             <div class="modal-body" id="acunetixTargetsSettingsContainerBody">
                 <div id="scopesPickAcunetix" class="col-5"></div>
+                <div class="form-row d-flex">
+                    <div class="col-md-6 mb-3 me-2">
+                        <label for="date_from_acunetix_sync">Date from</label>
+                        <input type="date" class="form-control" id="date_from_acunetix_sync" required>
+                      </div>
+                      <div class="col-md-6 mb-3 ms-2">
+                        <label for="date_to_acunetix_sync">Date to</label>
+                        <input type="date" class="form-control" id="date_to_acunetix_sync" required>
+                      </div>
+                </div>
                 <div id="acunetixTargetsWhenScopeIsPicked"></div>
             </div>
             <div class="modal-footer">
@@ -202,7 +212,16 @@
                 }
             }
         }
-        await axios.post("/api/v1/acunetix/targets/sync", {targets: targetsToSync}, {headers: {'Content-Type': 'application/json'}}).then(resp =>{
+        let date_from = document.getElementById("date_from_acunetix_sync").value
+        let date_to = document.getElementById("date_to_acunetix_sync").value
+        console.log(date_from)
+        console.log(date_to)
+        let payload = {
+            targets: targetsToSync,
+            dt_from:date_from,
+            dt_to:date_to,
+        }
+        await axios.post("/api/v1/acunetix/targets/sync", payload, {headers: {'Content-Type': 'application/json'}}).then(resp =>{
             if (resp.status == 200){
                 var myModalEl = document.getElementById('acunetixTargetsSettingsContainer')
                 var myModal = bootstrap.Modal.getInstance(myModalEl)

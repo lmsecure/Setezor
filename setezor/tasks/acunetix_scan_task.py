@@ -1,21 +1,14 @@
-import datetime
-import traceback
 import asyncio
+import datetime
 from time import time
-
-from setezor.models import Vulnerability as VulnerabilityModel
-from setezor.models.d_software import Software
-from setezor.models.dns_a import DNS_A
-from setezor.models.domain import Domain
-from setezor.models.ip import IP
-from setezor.models.l7 import L7
-from setezor.models.l7_software import L7Software
-from setezor.models.l7_software_vulnerability import L7SoftwareVulnerability
-from setezor.models.port import Port
+from setezor.models import Vulnerability as VulnerabilityModel, \
+    Software, \
+    L7, \
+    L7Software, \
+    L7SoftwareVulnerability, Domain, IP, Port, DNS_A
 from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
-from setezor.modules.project_manager.acunetix import AcunetixApi
 from setezor.schemas.task import TaskStatus
 from setezor.services.data_structure_service import DataStructureService
 from setezor.services.task_service import TasksService
@@ -23,10 +16,10 @@ from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 
-
 class AcunetixScanTask(BaseJob):
     def __init__(self, uow: UnitOfWork, 
                  scheduler, name: str, 
+                 target_address: str,
                  scan_id:str,
                  acunetix_scan_id:str,
                  agent_id: int,
@@ -34,8 +27,9 @@ class AcunetixScanTask(BaseJob):
                  task_id: int, 
                  project_id: str):
         super().__init__(scheduler=scheduler, name=name)
-        self.scan_id = scan_id
+        self.target_address = target_address
         self.acunetix_scan_id = acunetix_scan_id
+        self.scan_id = scan_id
         self.uow=uow
         self.credentials = credentials
         self.task_id = task_id
@@ -60,23 +54,11 @@ class AcunetixScanTask(BaseJob):
                     raise Exception
                 break
             await asyncio.sleep(10)
-
-        vulnerabilities = Vulnerability.from_acunetix_response(vulnerabilities_detail)
-        result = []
         if not vulnerabilities_detail:
-            return result
-        target_address = vulnerabilities_detail[0]["affects_url"]
-        acunetix_target_id = vulnerabilities_detail[0]["target_id"]
-        scheme, addr = target_address.split("://")
-        target_address = addr.split("/")[0]
-        data = Target.parse_url(url=f"{scheme}://{target_address}")
-
-        if not "port" in data:
-            if scheme == "http":
-                data |= {"port": 80}
-            else:
-                data |= {"port": 443}
-
+            return
+        vulns_sctructs = Vulnerability.from_acunetix_response(vulnerabilities_detail)
+        result = []
+        data = Target.parse_url(url=self.target_address)
 
         if domain := data.get("domain"):
             try:
@@ -97,7 +79,7 @@ class AcunetixScanTask(BaseJob):
             result.append(new_ip)
             new_domain = Domain()
             result.append(new_domain)
-        
+
         new_port = Port(port=data.get("port"), ip=new_ip)
         result.append(new_port)
 
@@ -108,12 +90,12 @@ class AcunetixScanTask(BaseJob):
         result.append(new_software)
 
         new_l7_software = L7Software(l7=new_l7, software=new_software)
-        result.append(new_l7_software)
+        result.append(new_l7_software)        
 
         scan_result_statistic = await Scan.get_statistics(scan_id=self.acunetix_scan_id, result_id=result_id, credentials=self.credentials)
         end_date = datetime.datetime.fromisoformat(scan_result_statistic["scanning_app"]["wvs"]["end_date"])
 
-        for vuln in vulnerabilities:
+        for vuln in vulns_sctructs:
             vuln_obj = VulnerabilityModel(created_at_in_acunetix=end_date, **vuln)
             l7_software_vuln = L7SoftwareVulnerability(l7_software=new_l7_software, vulnerability=vuln_obj)
             result.append(vuln_obj)
@@ -128,7 +110,11 @@ class AcunetixScanTask(BaseJob):
     async def run(self):
         try:
             t1 = time()
-            result = await self._task_func()
+            try:
+                result = await self._task_func()
+            except Exception as e:
+                print(e)
+                return
             await self._write_result_to_db(result=result)
         except Exception as e:
             raise e
