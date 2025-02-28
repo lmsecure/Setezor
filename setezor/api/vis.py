@@ -4,7 +4,9 @@ from fastapi import FastAPI, APIRouter, Depends, Query
 
 from setezor.dependencies.project import get_current_project, role_required
 from setezor.dependencies.uow_dependency import UOWDep
-from setezor.services import NodeService, EdgeService
+from setezor.models.d_object_type import ObjectType
+from setezor.services import NodeService, EdgeService, IPService
+from setezor.schemas.ip import ChangeObjectType
 
 
 
@@ -45,3 +47,13 @@ async def node_info(
 ) -> Dict:
     info = await NodeService.get_node_info(uow=uow, project_id=project_id, ip_id=ip_id)
     return info
+
+
+@router.put("/set_object_type")
+async def set_object_type(
+    uow: UOWDep,
+    payload: ChangeObjectType,
+    project_id: str = Depends(get_current_project),
+) -> ObjectType:
+    return await IPService.update_object_type(uow=uow, project_id=project_id, 
+                                       **payload.model_dump())

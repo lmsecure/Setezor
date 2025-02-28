@@ -12,7 +12,6 @@ Build-Depends:
  python3-all,
  python3-venv,
  python3-setuptools,
-X-Python3-Version: 3.12
 Standards-Version: 4.6.2
 Homepage: https://setezor.ru
 Vcs-Browser: https://github.com/lmsecure/Setezor

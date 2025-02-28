@@ -79,7 +79,7 @@ class AnalyticsService:
         async with uow:
             ports_software_result = await uow.L7Software.get_ports_software_info(project_id=project_id)
             ports_software_info = [row._asdict() for row in ports_software_result]
-            
+
             products_service_name_result = await uow.L7Software.get_product_service_name_info(project_id=project_id)
             products_service_name = [row._asdict() for row in products_service_name_result]
 
@@ -115,12 +115,34 @@ class AnalyticsService:
                 'cvss_score': [i[3] for i in vulnerabilities]
             }
 
-            top_ports_and_protocols = cls.restruct_result(
-                data=ports_software_info, column1='port', column2='protocol', field_count='port_count'
-            )
-            top_products_and_servise_name = cls.restruct_result(
-                data=products_service_name, column1='product', column2='service_name', field_count='software_product_count'
-            )
+
+            ports_and_protocols_result = await uow.L7Software.get_ports_and_protocols(project_id=project_id)
+            labels = []
+            parents = []
+            graph_values = []
+            for label, parent, value in ports_and_protocols_result:
+                labels.append(label)
+                parents.append(parent)
+                graph_values.append(value)
+            top_ports_and_protocols  = {"labels" : orjson.dumps(labels).decode(),
+                                        "parents" : orjson.dumps(parents).decode(),
+                                        "graph_values" : orjson.dumps(graph_values).decode()}
+            
+            products_service_name_result_from_sunburst = await uow.L7Software.get_product_service_name_info_from_sunburts(project_id=project_id)
+            labels = []
+            parents = []
+            graph_values = []
+            for label, parent, value in products_service_name_result_from_sunburst:
+                if parent:
+                    labels.append(label)
+                else:
+                    labels.append(label.capitalize())
+                parents.append(parent.capitalize())
+                graph_values.append(value)
+            top_products_and_servise_name  = {"labels" : orjson.dumps(labels).decode(),
+                                        "parents" : orjson.dumps(parents).decode(),
+                                        "graph_values" : orjson.dumps(graph_values).decode()}
+                
 
             context = {
                 'ports_software_info': ports_software_info,
@@ -328,6 +350,24 @@ class AnalyticsService:
             return tabulator_transform_dashboard_data
         
     @classmethod
+    async def get_l7_credentials(cls, uow: UnitOfWork, project_id: str) -> list:
+        result = []
+        async with uow:
+            data = await uow.l7_authentication_credentials.get_data_for_tabulator(project_id=project_id)
+        for id, item in enumerate(data, 1):
+            ip, domain, port, auth = item
+            result.append({
+                    "id" : id,
+                    "ip" : ip.ip,
+                    "domain" : domain.domain,
+                    "port" : port.port,
+                    "login" : auth.login,
+                    "passwords" : auth.password,
+                    "permissions" : ("no permissions", "read", "write", "read/write")[auth.permissions],
+                    "parameters" : auth.parameters })
+        return result
+
+    @classmethod
     def get_l7_software_columns_tabulator_data(cls) -> list:
         return [{'field': 'id', 'title': 'ID'},
                     {'field': 'ipaddr', 'title': 'IP'},
@@ -392,6 +432,16 @@ class AnalyticsService:
                        {'field': 'cwe', 'title': 'CWE'},
                        {'field': 'link', 'title': 'LINK'}]
         
+    @classmethod
+    def get_l7_credentials_tabulator_data(cls) -> list:
+        return [       {'field': 'id', 'title': 'ID'},
+                       {'field': 'ip', 'title': 'IP'},
+                       {'field': 'domain', 'title': 'DOMAIN'},
+                       {'field': 'port', 'title': 'PORT'},
+                       {'field': 'login', 'title': 'LOGIN'},
+                       {'field': 'password', 'title': 'PASSWORD'},
+                       {'field': 'permissions', 'title': 'PERMISSIONS'},
+                       {'field': 'parameters', 'title': 'PARAMETERS'}]
     # @classmethod
     # def get_ip_columns_tabulator_data(cls) -> list:
     #     return [{'field': 'id', 'title': 'ID'},

@@ -1,16 +1,17 @@
+import sys
+import os
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
-import os
-import sys
-sys.path[0] = ''
 import click
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from dotenv import load_dotenv
 load_dotenv()
+
+sys.path[0] = ''
 from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
 from setezor.settings import PATH_PREFIX, BASE_PATH
 
@@ -60,11 +61,14 @@ def create_app():
     return app
 
 
-@click.command()
+@click.group(chain=False, invoke_without_command=True)
 @click.option('-s', '--spy', default=False, type=bool, show_default=True, help='Enable spy', is_flag=True)
 @click.option('-p', '--port', default=16661, type=int, show_default=True, help='Spy port')
 @click.option('-h', '--host', default="0.0.0.0", type=str, show_default=True, help='Spy host')
 def run_app(spy: bool, port: int, host: str):
+    """Command starts web application"""
+    if click.get_current_context().invoked_subcommand is not None: 
+        return
     if spy:
         from setezor.spy import Spy
         import setezor.managers.task_manager
@@ -76,6 +80,23 @@ def run_app(spy: bool, port: int, host: str):
                 port=port, 
                 ssl_keyfile=os.path.join(BASE_PATH, 'key.pem'),
                 ssl_certfile=os.path.join(BASE_PATH, 'cert.pem'))
+
+@run_app.command()
+def list_users():
+    """Display all users in database"""
+    import asyncio
+    from setezor.managers import UserManager
+    users = asyncio.run(UserManager.list_users())
+    print(users)
+
+@run_app.command()
+@click.option('-l', '--login', default=False, type=str, help="User's login")
+def reset_password(login: str):
+    """Resets user's password"""
+    import asyncio
+    from setezor.managers import UserManager
+    result = asyncio.run(UserManager.reset_user_password(login=login))
+    print(result)
 
 if __name__ == "__main__":
     run_app()

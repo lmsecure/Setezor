@@ -5,8 +5,8 @@ from setezor.tools.ip_tools import get_network
 from scapy.all import rdpcap
 from scapy.plist import PacketList
 from setezor.modules.sniffing import packets
-from setezor.models import IP, MAC, Route, RouteList, Network
-
+from setezor.modules.macvendorlookup.mac_vendor_lookup import MacVendorLookup
+from setezor.models import IP, MAC, Route, RouteList, Network, Vendor
 
 
 class ScapyParser():
@@ -20,7 +20,7 @@ class ScapyParser():
         pkt_list = cls.read_pcap(file)
         pkts = cls.parse_packets(pkt_list)
         return pkts
-    
+
 
     @classmethod
     def read_pcap(cls, path: str | BytesIO) -> PacketList:
@@ -56,7 +56,7 @@ class ScapyParser():
 
 
     @classmethod
-    def restruct_result(cls, data: list[dict], agent_id: int):
+    async def restruct_result(cls, data: list[dict], agent_id: int):
         macs_and_ips = dict()
         macs: dict = dict()
         routes = set()
@@ -69,7 +69,7 @@ class ScapyParser():
             if (parent_ip, child_ip) not in routes:
                 if not (ip_obj := macs_and_ips.get((parent_mac, parent_ip))):
                     if not (new_mac_obj := macs.get(parent_mac)):
-                        new_mac_obj = MAC(mac=parent_mac)
+                        new_mac_obj = MAC(mac=parent_mac, vendor=Vendor(name=await MacVendorLookup.get_vendor_from_mac(mac=parent_mac)))
                         macs[parent_mac] = new_mac_obj
                     start_ip, broadcast = get_network(ip=parent_ip, mask=24)
                     new_network_obj = Network(start_ip=start_ip, mask=24)
@@ -80,7 +80,7 @@ class ScapyParser():
                     parent_ip_obj = ip_obj
                 if not (ip_obj := macs_and_ips.get((child_mac, child_ip))):
                     if not (new_mac_obj := macs.get(child_mac)):
-                        new_mac_obj = MAC(mac=child_mac)
+                        new_mac_obj = MAC(mac=child_mac, vendor=Vendor(name=await MacVendorLookup.get_vendor_from_mac(mac=child_mac)))
                         macs[child_mac] = new_mac_obj
                     start_ip, broadcast = get_network(ip=child_ip, mask=24)
                     new_network_obj = Network(start_ip=start_ip, mask=24)

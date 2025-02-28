@@ -13,3 +13,8 @@ class IPSchema(BaseModel):
 class IPSchemaAdd(BaseModel):
     mac_id: int | None
     ip: str | None
+
+
+class ChangeObjectType(BaseModel):
+    ip_id: str
+    object_type_id: str

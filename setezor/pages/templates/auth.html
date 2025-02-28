@@ -2,443 +2,421 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/static/assets/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
-    <script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
-    <script src="/static/js/particles.min.js"></script>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/static/assets/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
+  <script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
+  <script src="/static/js/particles.min.js"></script>
 
-    <title>Setezor: Auth</title>
-    <!-- <style>
-        body {
-            font-family: "Lato", sans-serif;
-        }
-
-        .sidebar {
-            background-color: #111;
-            width: 250px !important;
-            top: 66px !important;
-        }
-
-        .sidebar a {
-            padding: 8px 8px 8px 32px;
-            text-decoration: none;
-            font-size: 18px;
-            color: #818181;
-            display: block;
-            transition: 0.2s;
-        }
-
-        .sidebar a:hover {
-            color: #f1f1f1;
-        }
-
-        .openbtn {
-            font-size: 20px;
-            cursor: pointer;
-            background-color: rgba(18, 80, 99, 0.55);
-            color: white;
-            padding: 10px 15px;
-            border: none;
-        }
-
-        .openbtn:hover {
-            background-color: #444;
-        }
-
-        #main {
-            transition: margin-left .5s;
-            padding: 16px;
-        }
-
-        /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
-        @media screen and (max-height: 450px) {
-            .sidebar {
-                padding-top: 15px;
-            }
-
-            .sidebar a {
-                font-size: 18px;
-            }
-        }
-
-        #toastHolderParent {
-            z-index: 11;
-            max-height: 90vh;
-            top: 66px !important;
-        }
-
-        #toast_holder div {
-            margin-top: 0.2rem;
-            margin-bottom: 0.2rem;
-        }
-    </style> -->
+  <title>Setezor: Auth</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
 <body>
-    <div id="particles-js"></div>
-    <form onsubmit="auth(event)">
-        <div class="wrapper">
-                <h2 style="margin-bottom: 2rem;">Authorization</h2>
-                <div class="input-field">
-                    <input type="text" name="username" required>
-                    <label>Login</label>
-                </div>
-                <div class="input-field">
-                    <input type="password" name="password" required>
-                    <label>Password</label>
-                </div>
-                <button type="submit" value="Login"">Log In</button>
-                <div class="register">
-                    <p>Don't have an account? <a href="/registration" style="  color: rgb(2, 144, 214);">Register</a></p>
-                  </div>
-        </div>
-    </form>
-    <style>
-        @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@200;300;400;500;600;700&display=swap");
-        * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Lato", sans-serif;
-}
+  <div id="particles-js"></div>
 
-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  width: 100%;
-  padding: 0 10px;
-}
+  <form onsubmit="auth(event)">
+    <div class="wrapper">
+      <h2 style="margin-bottom: 2rem;">Authorization</h2>
+      <div class="input-field">
+        <input type="text" name="username" required>
+        <label>Login</label>
+      </div>
+      <div class="input-field">
+        <input type="password" name="password" id="password" required>
+        <label>Password</label>
+        <span class="toggle-password" onclick="togglePasswordVisibility()">
+          <i class="fa fa-eye"></i>
+        </span>
+      </div>
+      <button type="submit" value="Login">Log In</button>
+      <div class="register">
+        <p>Don't have an account? <a href="/registration" style="color: rgb(2, 144, 214);">Register</a></p>
+      </div>
+    </div>
+  </form>
 
-body::before {
-  content: "";
+
+
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@200;300;400;500;600;700&display=swap");
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Lato", sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: url("https://www.codingnepalweb.com/demos/create-glassmorphism-login-form-html-css/hero-bg.jpg"), #fff;
+      background-position: center;
+      background-size: cover;
+    }
+
+    .wrapper {
+      width: 400px;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      border: 1px solid rgb(17, 17, 17);
+      backdrop-filter: blur(9px);
+      -webkit-backdrop-filter: blur(9px);
+    }
+    .toggle-password {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  background: url("https://www.codingnepalweb.com/demos/create-glassmorphism-login-form-html-css/hero-bg.jpg"), #fff;
-  background-position: center;
-  background-size: cover;
-}
-
-.wrapper {
-  width: 400px;
-  border-radius: 8px;
-  padding: 30px;
-  text-align: center;
-  border: 1px solid rgb(17,17,17);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-}
-
-h2 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-  color: rgb(17,17,17);
-}
-
-.input-field {
-  position: relative;
-  border-bottom: 2px solid rgb(17,17,17);
-  margin: 15px 0;
-}
-
-.input-field label {
-  position: absolute;
+  right: 10px;
   top: 50%;
-  left: 0;
   transform: translateY(-50%);
-  color: rgb(17,17,17);
-  font-size: 16px;
-  pointer-events: none;
-  transition: 0.15s ease;
-}
-
-.input-field input {
-  width: 100%;
-  height: 40px;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 16px;
-  color: rgb(17,17,17);
-}
-
-.input-field input:focus~label,
-.input-field input:valid~label {
-  font-size: 0.8rem;
-  top: 10px;
-  transform: translateY(-120%);
-}
-
-.forget {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 25px 0 35px 0;
-  color: rgb(17,17,17);
-}
-
-#remember {
-  accent-color: rgb(17,17,17);
-}
-
-.forget label {
-  display: flex;
-  align-items: center;
-}
-
-.forget label p {
-  margin-left: 8px;
-}
-
-.wrapper a {
-  color: rgb(17,17,17);
-  text-decoration: none;
-}
-
-.wrapper a:hover {
-  text-decoration: underline;
-}
-
-button {
-  background: rgb(17,17,17);
-  color: #fff;
-  font-weight: 600;
-  border: none;
-  padding: 12px 6rem;
   cursor: pointer;
-  border-radius: 3px;
-  font-size: 16px;
-  border: 2px solid transparent;
-  transition: 0.3s ease;
-  margin-top: 2rem;
+  color: rgb(17, 17, 17);
 }
 
-button:hover {
-  color: rgb(17,17,17);
-  border-color: rgb(17,17,17);
-  background: rgba(255, 255, 255, 0);
+.toggle-password i {
+  font-size: 18px;
 }
 
-.register {
-  text-align: center;
-  margin-top: 30px;
-  color: rgb(17,17,17);
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      color: rgb(17, 17, 17);
+    }
+
+    .input-field {
+      position: relative;
+      border-bottom: 2px solid rgb(17, 17, 17);
+      margin: 15px 0;
+    }
+
+    .input-field label {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      color: rgb(17, 17, 17);
+      font-size: 16px;
+      pointer-events: none;
+      transition: 0.15s ease;
+    }
+
+    .input-field input {
+      width: 100%;
+      height: 40px;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      color: rgb(17, 17, 17);
+    }
+
+    .input-field input:focus~label,
+    .input-field input:valid~label {
+      font-size: 0.8rem;
+      top: 10px;
+      transform: translateY(-120%);
+    }
+
+    .forget {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 25px 0 35px 0;
+      color: rgb(17, 17, 17);
+    }
+
+    #remember {
+      accent-color: rgb(17, 17, 17);
+    }
+
+    .forget label {
+      display: flex;
+      align-items: center;
+    }
+
+    .forget label p {
+      margin-left: 8px;
+    }
+
+    .wrapper a {
+      color: rgb(17, 17, 17);
+      text-decoration: none;
+    }
+
+    .wrapper a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      background: rgb(17, 17, 17);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      padding: 12px 6rem;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 16px;
+      border: 2px solid transparent;
+      transition: 0.3s ease;
+      margin-top: 2rem;
+    }
+
+    button:hover {
+      color: rgb(17, 17, 17);
+      border-color: rgb(17, 17, 17);
+      background: rgba(255, 255, 255, 0);
+    }
+
+    .register {
+      text-align: center;
+      margin-top: 30px;
+      color: rgb(17, 17, 17);
+    }
+  </style>
+
+
+
+
+  <script>
+    async function auth(event) {
+      event.preventDefault();
+      let formData = new FormData(event.target)
+      await fetch("/api/v1/auth/login", {
+        method: 'post',
+        body: formData
+      }).then(response => {
+        if (response.ok) {
+          window.location.href = "/projects"
+        }
+      }).catch(function (err) {
+        console.log(err)
+      })
+    }
+    function togglePasswordVisibility() {
+  const passwordInput = document.getElementById('password');
+  const toggleIcon = document.querySelector('.toggle-password i');
+
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    toggleIcon.classList.remove('fa-eye');
+    toggleIcon.classList.add('fa-eye-slash');
+  } else {
+    passwordInput.type = 'password';
+    toggleIcon.classList.remove('fa-eye-slash');
+    toggleIcon.classList.add('fa-eye');
+  }
 }
-    </style>
-    <script>
-        async function auth(event) {
-            event.preventDefault();
-            let formData = new FormData(event.target)
-            await fetch("/api/v1/auth/login", {
-                method: 'post',
-                body: formData
-            }).then(response => {
-                if (response.ok) {
-                    window.location.href = "/projects"
-                }
-            }).catch(function (err) {
-                console.log(err)
-            })
-        }
-    </script>
-    <style>
-        canvas {
-          display: block;
-          vertical-align: bottom;
-        }
-        
-        /* ---- particles.js container ---- */
-        
-        #particles-js {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          background-color: rgb(252, 252, 255);
-          background-image: url("");
-          background-repeat: no-repeat;
-          background-size: cover;
-          background-position: 50% 50%;
-        }
-        
-        /* ---- stats.js ---- */
-        
-        .count-particles{
-          background: #000022;
-          position: absolute;
-          top: 48px;
-          left: 0;
-          width: 80px;
-          color: rgb(17,17,17);
-          font-size: .8em;
-          text-align: left;
-          text-indent: 4px;
-          line-height: 14px;
-          padding-bottom: 2px;
-          font-family: Helvetica, Arial, sans-serif;
-          font-weight: bold;
-        }
-        
-        .js-count-particles{
-          font-size: 1.1em;
-        }
-        
-        #stats,
-        .count-particles{
-          -webkit-user-select: none;
-        }
-        
-        #stats{
-          border-radius: 3px 3px 0 0;
-          overflow: hidden;
-        }
-        
-        .count-particles{
-          border-radius: 0 0 3px 3px;
-        }
-        </style>
-        <script>
-          particlesJS("particles-js", {
-          "particles": {
-            "number": {
-              "value": 150,
-              "density": {
-                "enable": true,
-                "value_area": 800
-              }
-            },
-            "color": {
-              "value": "#367278"
-            },
-            "shape": {
-              "type": "circle",
-              "stroke": {
-                "width": 0,
-                "color": "#367278"
-              },
-              "polygon": {
-                "nb_sides": 5
-              },
-              "image": {
-                "src": "img/github.svg",
-                "width": 100,
-                "height": 100
-              }
-            },
-            "opacity": {
-              "value": 0.5,
-              "random": false,
-              "anim": {
-                "enable": false,
-                "speed": 1,
-                "opacity_min": 0.1,
-                "sync": false
-              }
-            },
-            "size": {
-              "value": 3,
-              "random": true,
-              "anim": {
-                "enable": false,
-                "speed": 40,
-                "size_min": 0.1,
-                "sync": false
-              }
-            },
-            "line_linked": {
-              "enable": true,
-              "distance": 150,
-              "color": "#367278",
-              "opacity": 0.4,
-              "width": 1
-            },
-            "move": {
-              "enable": true,
-              "speed": 2,
-              "direction": "none",
-              "random": false,
-              "straight": false,
-              "out_mode": "out",
-              "bounce": false,
-              "attract": {
-                "enable": false,
-                "rotateX": 600,
-                "rotateY": 1200
-              }
-            }
-          },
-          "interactivity": {
-            "detect_on": "canvas",
-            "events": {
-              "onhover": {
-                "enable": true,
-                "mode": "grab"
-              },
-              "onclick": {
-                "enable": true,
-                "mode": "push"
-              },
-              "resize": true
-            },
-            "modes": {
-              "grab": {
-                "distance": 140,
-                "line_linked": {
-                  "opacity": 1
-                }
-              },
-              "bubble": {
-                "distance": 400,
-                "size": 40,
-                "duration": 2,
-                "opacity": 8,
-                "speed": 3
-              },
-              "repulse": {
-                "distance": 200,
-                "duration": 0.4
-              },
-              "push": {
-                "particles_nb": 4
-              },
-              "remove": {
-                "particles_nb": 2
-              }
-            }
-          },
-          "retina_detect": true
-        });
-        
-        
-        /* ---- stats.js config ---- */
-        
-        var count_particles, stats, update;
-        stats = new Stats;
-        stats.setMode(0);
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.left = '0px';
-        stats.domElement.style.top = '0px';
-        document.body.appendChild(stats.domElement);
-        count_particles = document.querySelector('.js-count-particles');
-        update = function() {
-          stats.begin();
-          stats.end();
-          if (window.pJSDom[0].pJS.particles && window.pJSDom[0].pJS.particles.array) {
-            count_particles.innerText = window.pJSDom[0].pJS.particles.array.length;
+  </script>
+
+
+
+  <style>
+    canvas {
+      display: block;
+      vertical-align: bottom;
+    }
+
+    /* ---- particles.js container ---- */
+
+    #particles-js {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: rgb(252, 252, 255);
+      background-image: url("");
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: 50% 50%;
+    }
+
+    /* ---- stats.js ---- */
+
+    .count-particles {
+      background: #000022;
+      position: absolute;
+      top: 48px;
+      left: 0;
+      width: 80px;
+      color: rgb(17, 17, 17);
+      font-size: .8em;
+      text-align: left;
+      text-indent: 4px;
+      line-height: 14px;
+      padding-bottom: 2px;
+      font-family: Helvetica, Arial, sans-serif;
+      font-weight: bold;
+    }
+
+    .js-count-particles {
+      font-size: 1.1em;
+    }
+
+    #stats,
+    .count-particles {
+      -webkit-user-select: none;
+    }
+
+    #stats {
+      border-radius: 3px 3px 0 0;
+      overflow: hidden;
+    }
+
+    .count-particles {
+      border-radius: 0 0 3px 3px;
+    }
+  </style>
+  <script>
+    particlesJS("particles-js", {
+      "particles": {
+        "number": {
+          "value": 150,
+          "density": {
+            "enable": true,
+            "value_area": 800
           }
-          requestAnimationFrame(update);
-        };
-        requestAnimationFrame(update);
-        </script>
+        },
+        "color": {
+          "value": "#367278"
+        },
+        "shape": {
+          "type": "circle",
+          "stroke": {
+            "width": 0,
+            "color": "#367278"
+          },
+          "polygon": {
+            "nb_sides": 5
+          },
+          "image": {
+            "src": "img/github.svg",
+            "width": 100,
+            "height": 100
+          }
+        },
+        "opacity": {
+          "value": 0.5,
+          "random": false,
+          "anim": {
+            "enable": false,
+            "speed": 1,
+            "opacity_min": 0.1,
+            "sync": false
+          }
+        },
+        "size": {
+          "value": 3,
+          "random": true,
+          "anim": {
+            "enable": false,
+            "speed": 40,
+            "size_min": 0.1,
+            "sync": false
+          }
+        },
+        "line_linked": {
+          "enable": true,
+          "distance": 150,
+          "color": "#367278",
+          "opacity": 0.4,
+          "width": 1
+        },
+        "move": {
+          "enable": true,
+          "speed": 2,
+          "direction": "none",
+          "random": false,
+          "straight": false,
+          "out_mode": "out",
+          "bounce": false,
+          "attract": {
+            "enable": false,
+            "rotateX": 600,
+            "rotateY": 1200
+          }
+        }
+      },
+      "interactivity": {
+        "detect_on": "canvas",
+        "events": {
+          "onhover": {
+            "enable": true,
+            "mode": "grab"
+          },
+          "onclick": {
+            "enable": true,
+            "mode": "push"
+          },
+          "resize": true
+        },
+        "modes": {
+          "grab": {
+            "distance": 140,
+            "line_linked": {
+              "opacity": 1
+            }
+          },
+          "bubble": {
+            "distance": 400,
+            "size": 40,
+            "duration": 2,
+            "opacity": 8,
+            "speed": 3
+          },
+          "repulse": {
+            "distance": 200,
+            "duration": 0.4
+          },
+          "push": {
+            "particles_nb": 4
+          },
+          "remove": {
+            "particles_nb": 2
+          }
+        }
+      },
+      "retina_detect": true
+    });
+
+
+    /* ---- stats.js config ---- */
+
+    var count_particles, stats, update;
+    stats = new Stats;
+    stats.setMode(0);
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild(stats.domElement);
+    count_particles = document.querySelector('.js-count-particles');
+    update = function () {
+      stats.begin();
+      stats.end();
+      if (window.pJSDom[0].pJS.particles && window.pJSDom[0].pJS.particles.array) {
+        count_particles.innerText = window.pJSDom[0].pJS.particles.array.length;
+      }
+      requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  </script>
 </body>
 
 </html>

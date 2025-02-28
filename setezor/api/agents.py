@@ -105,5 +105,5 @@ async def update_color(
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required(["owner"]))
 ) -> str:
-    seted_color = await AgentService.update_agent_color(uow=uow, project_id=project_id, agent_id=agent_id, color=new_color.color)
-    return seted_color
+    new_color = await AgentService.update_agent_color(uow=uow, project_id=project_id, agent_id=agent_id, color=new_color.color)
+    return new_color

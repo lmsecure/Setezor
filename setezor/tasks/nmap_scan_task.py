@@ -1,5 +1,3 @@
-import traceback
-from time import time
 from setezor.tasks.base_job import BaseJob
 from setezor.modules.nmap.scanner import NmapScanner
 from setezor.modules.nmap.parser import NmapParser
@@ -50,8 +48,6 @@ class NmapScanTask(BaseJob):
 
     @BaseJob.remote_task_notifier
     async def run(self):
-        t1 = time()
         parse_result, raw_result = await self._task_func()
-        print(f'Task func "{self.__class__.__name__}" finished after {time() - t1:.2f} seconds')
         result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id)
         return result, raw_result, "xml"

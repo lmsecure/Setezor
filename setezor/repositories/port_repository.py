@@ -1,6 +1,6 @@
 
 
-from sqlalchemy import Select, desc
+from sqlalchemy import Select, case, desc
 from setezor.models import Port, IP
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, select, func
@@ -46,10 +46,19 @@ class PortRepository(SQLAlchemyRepository[Port]):
         return top_ports_result
     
     async def get_top_protocols(self, project_id: str):
-        
-        top_protocols: Select = select(self.model.protocol, func.count(self.model.protocol).label("count")).group_by(self.model.protocol).order_by(desc("count")).filter(self.model.project_id == project_id)
+                
+        stmt_protocols = select(
+                case(
+                    (Port.protocol.is_(None), "unknown"),
+                    (Port.protocol == "", "unknown"),
+                    else_=Port.protocol
+                ).label("labels"),
+                func.count(Port.protocol).label("values")
+            ).filter(Port.project_id == project_id)\
+            .group_by(Port.protocol)\
+            .order_by(func.count(Port.protocol).desc()) 
 
-        result = await self._session.exec(top_protocols)
+        result = await self._session.exec(stmt_protocols)
         top_protocols_result = result.all()
         return top_protocols_result
     

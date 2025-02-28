@@ -7,6 +7,7 @@ from .whois_task import WhoisTask
 from .nmap_scan_task import NmapScanTask
 from .scapy_scan_task import ScapySniffTask
 from .masscan_scan_task import MasscanScanTask
+from .snmp_brute_community_string_task import SnmpBruteCommunityStringTask
 from setezor.managers.project_manager.structure import Folders
 
 
@@ -16,6 +17,7 @@ FOLDERS = {
     ScapySniffTask.__name__: Folders.scapy_logs_path.value,
     CertTask.__name__: Folders.certificates_path.value,
     WhoisTask.__name__: Folders.whois_logs_path.value,
+    SnmpBruteCommunityStringTask.__name__: Folders.whois_logs_path.value,
 }
 
 

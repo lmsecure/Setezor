@@ -41,6 +41,7 @@ async def info_page(
     ip_mac_port_columns = AnalyticsService.get_ip_mac_port_columns_tabulator_data()
     domain_ip_columns = AnalyticsService.get_domain_ip_columns_tabulator_data()
     soft_vuln_link_columns = AnalyticsService.get_soft_vuln_link_columns_tabulator_data()
+    l7_credentials_columns = AnalyticsService.get_l7_credentials_tabulator_data()
     user = await UsersService.get(uow=uow, id=user_id)
     context =  {"request": request,
                 "analytics": analytics,
@@ -85,6 +86,12 @@ async def info_page(
                 'is_hide': False,
                 'base_url': '/api/v1/analytics/l4_soft_vuln_link',
                 'columns': soft_vuln_link_columns
+            },
+                         {
+                'name': 'l7_credentials',
+                'is_hide': False,
+                'base_url': '/api/v1/analytics/l7_credentials',
+                'columns': l7_credentials_columns
             },
          ]}
     return TEMPLATES_DIR.TemplateResponse(

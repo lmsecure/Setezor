@@ -82,3 +82,12 @@ class L7Repository(SQLAlchemyRepository[L7]):
         stmt = stmt.filter(L7.scan_id == l7_obj.scan_id)
         result = await self._session.exec(stmt)
         return result.first()
+
+
+    async def get_resource_for_snmp(self, project_id: str, scan_id: str):
+        stmt = select(IP.ip, Port.port).\
+                select_from(Port).\
+                    join(IP, IP.id == Port.ip_id).\
+                        filter(Port.project_id == project_id, Port.scan_id == scan_id, Port.service_name == "snmp")
+        result = await self._session.exec(stmt)
+        return result.all()

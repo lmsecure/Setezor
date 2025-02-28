@@ -299,11 +299,28 @@
     var cluster = false;
     var network;
     var networkData = { nodes: new vis.DataSet(), edges: new vis.DataSet() }
-    function set_device_type(elem) {
+    async function set_device_type(elem) {
         var value = elem.attributes.value.value
         var node_id = network.getSelectedNodes()[0]
-        var request = ajax_and_toast('/api/object/', 'put', { ip_id: node_id, to_update: { object_type: value } }, 'Device type setted', 'info', `To node with id "${node_id}" set device type "${value}"`)
-        networkData.nodes.update(ajax_request(`/api/ip/vis/${node_id}`, 'get').node)
+        await axios.put('/api/v1/vis/set_object_type', {ip_id: node_id, object_type_id: value},
+        {headers: {
+                'Content-Type': 'application/json'
+        }} ).then(resp => {
+            let object_type = resp.data
+            if (object_type.name == "unknown") {
+                network.body.data.nodes.updateOnly({
+                    "id":node_id,
+                    "shape":"dot",
+                    "image": null })
+                }
+            else {
+                network.body.data.nodes.updateOnly({
+                    "id":node_id,
+                    "shape":"image",
+                    "image":`/static/assets/${object_type.name}.svg` })
+            }
+        })
+        // networkData.nodes.update(ajax_request(`/api/v1/vis/${node_id}`, 'get').node)
     }
     function fullscreen_network() {
         var node_info_map_div = document.getElementById("node_info_map_div");
@@ -338,19 +355,20 @@
                 {
                     node.icon = new ServerIcon(color = caclculateColor(node))
                     node.shape="icon"
-                    node.scaling = {
-                        min:100,
-                        max:100
-                    }
                 }
                 else {
                     node.icon = new AgentIcon(color = caclculateColor(node))
                     node.shape = 'icon'
                 }
-            } else if (node.object_type != null){
-                node.shape="image"
-                node.image=`/static/assets/${node.object_type}.svg`
-                node.size=50
+            } else {
+                if (node.object_type == "unknown") {
+                        node.shape="dot"
+                        node.size=50 }
+                else {
+                        node.shape="image"
+                        node.image=`/static/assets/${node.object_type}.svg`
+                        node.size=50
+                }
             }
         }))
         {% for col in table %} {% if col.editor_entity %}

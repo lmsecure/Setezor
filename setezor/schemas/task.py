@@ -50,6 +50,7 @@ class WebSocketMessage(BaseModel):
     title: str
     text: str
     type: str
+    command: str = "notify"
 
 class WebSocketMessageForProject(WebSocketMessage):
     project_id: str
@@ -128,3 +129,9 @@ class WappalyzerParseTaskPayload(BaseModel):
     log_file: str
     groups: list[str]
     agent_id: str
+
+class SnmpBruteCommunityStringPayload(BaseModel):
+    agent_id: str
+    target_ip: str
+    target_port: int
+    community_strings_file: str

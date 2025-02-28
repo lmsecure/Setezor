@@ -9,8 +9,12 @@ from sqlalchemy.engine.result import ScalarResult
 class WhoisIPRepository(SQLAlchemyRepository[WhoIsIP]):
     model = WhoIsIP
 
-    async def exists(self, mac_obj: SQLModel):
-        return False
+    async def exists(self, whois_ip_obj: WhoIsIP):
+        stmt = select(WhoIsIP).filter(WhoIsIP.domain_crt==whois_ip_obj.domain_crt,
+                                      WhoIsIP.project_id==whois_ip_obj.project_id,
+                                      WhoIsIP.scan_id==whois_ip_obj.scan_id)
+        result = await self._session.exec(stmt)
+        return result.first()
     
     async def get_whois_ip_data(self, project_id: uuid.UUID):
         

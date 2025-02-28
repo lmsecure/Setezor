@@ -1,5 +1,5 @@
 
-from sqlalchemy import func
+from sqlalchemy import case, func, literal, text
 from setezor.models import L7Software, Port, IP, L7, Software, Domain, Vendor, Vulnerability, L7SoftwareVulnerability
 from setezor.models.l4_software import L4Software
 from setezor.repositories import SQLAlchemyRepository
@@ -49,6 +49,26 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(ports_software)
         return result.all()
     
+    async def get_ports_and_protocols(self, project_id: str):
+        stmt = select(
+            case(
+                (Port.protocol.is_(None), "unknown"),
+                (Port.protocol == "", "unknown"),
+                else_=Port.protocol).label("labels"),
+            literal("").label("parents"),
+            func.count(Port.protocol).label("graph_values")).filter(Port.project_id == project_id).group_by(Port.protocol)\
+        .union(
+            select(
+                Port.port.label("labels"),
+                case(
+                    (Port.protocol.is_(None), "unknown"),
+                    (Port.protocol == "", "unknown"),
+                    else_=Port.protocol).label("parents"),
+                func.count(Port.port).label("graph_values")).filter(Port.project_id == project_id).group_by(Port.port, Port.protocol)
+        )
+        result = await self._session.exec(stmt)
+        return result.all()
+    
     async def get_product_service_name_info(self, project_id: str):
         products_service_name: Select = (
             select(
@@ -75,6 +95,63 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .order_by(func.count(Port.service_name).desc())
         )
         result = await self._session.exec(products_service_name)
+        return result.all()
+    
+    async def get_product_service_name_info_from_sunburts(self, project_id: str):
+        stmt1 = select(
+                case(
+                    (Port.service_name.is_(None), "unknown"),
+                    (Port.service_name == "", "unknown"),
+                    else_=Port.service_name).label("labels"),
+                literal("").label("parent"),
+                func.count(Port.service_name).label("value"))\
+            .join(L4Software, L4Software.l4_id == Port.id)\
+            .join(Software, Software.id == L4Software.software_id)\
+            .filter(Port.project_id == project_id)\
+            .group_by(Port.service_name)
+                    
+        stmt2 = select(
+                Software.product.label("labels"),
+                case(
+                    (Port.service_name.is_(None), "unknown"),
+                    (Port.service_name == "", "unknown"),
+                    else_=Port.service_name).label("parent"),
+                func.count(Software.product).label("value"))\
+            .join(L4Software, L4Software.l4_id == Port.id)\
+            .join(Software, Software.id == L4Software.software_id)\
+            .filter(Port.project_id == project_id)\
+            .group_by(Software.product, Port.service_name)
+        
+        stmt3 = select(
+                case(
+                    (Port.service_name.is_(None), "unknown"),
+                    (Port.service_name == "", "unknown"),
+                    else_=Port.service_name).label("labels"),
+                literal("").label("parent"),
+                func.count(Port.service_name).label("value"))\
+            .join(L7, L7.port_id == Port.id)\
+            .join(L7Software, L7Software.l7_id == L7.id)\
+            .join(Software, Software.id == L7Software.software_id)\
+            .filter(Port.project_id == project_id)\
+            .group_by(Port.service_name)
+        
+        stmt4 = select(
+                Software.product.label("labels"),
+                case(
+                    (Port.service_name.is_(None), "unknown"),
+                    (Port.service_name == "", "unknown"),
+                    else_=Port.service_name).label("parent"),
+            func.count(Software.product).label("value"))\
+            .join(L7, L7.port_id == Port.id)\
+            .join(L7Software, L7Software.l7_id == L7.id)\
+            .join(Software, Software.id == L7Software.software_id)\
+            .filter(Port.project_id == project_id)\
+            .group_by(Software.product, Port.service_name)
+        
+        stmt = stmt1.union(stmt2, stmt3, stmt4)   
+        stmt = select(text("labels"), text("parent"), func.sum(text("value")).label("value"))\
+            .select_from(stmt).group_by(text("labels"), text("parent"))
+        result = await self._session.exec(stmt)
         return result.all()
 
     async def get_resource_software_tabulator_data(self, project_id: str):

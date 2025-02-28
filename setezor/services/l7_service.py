@@ -42,6 +42,13 @@ class L7Service(IService):
     async def list_vulnerabilities(cls, uow: UnitOfWork, project_id: str, l7_id: int):
         async with uow:
             resource_vulnerabilities = await uow.l7.vulnerabilities(project_id=project_id, l7_id=l7_id)
+            links_objs = await uow.vulnerability_link.all_on_l7(project_id=project_id, l7_id=l7_id)
+        links = {}
+        for vuln_id, link in links_objs:
+            if (item := links.get(vuln_id)):
+                item.append(link)
+            else:
+                links[vuln_id] = [link]
         result = []
         for l7_soft_vulnid, confirmed, vendor, software, vuln, screenshots_count in resource_vulnerabilities:
             result.append(
@@ -55,10 +62,16 @@ class L7Service(IService):
                     "build": software.build,
                     "patch": software.patch,
                     "platform": software.platform,
-                    "links" : [],
+                    "links" : links.get(vuln.id, []),
                     "screenshots_count":screenshots_count,
                     **vuln.model_dump(exclude=["response"])
                 }
             )
         return result
 
+
+    @classmethod
+    async def get_resources_for_snmp(cls, uow: UnitOfWork, project_id: str, scan_id):
+        async with uow:
+            data = await uow.l7.get_resource_for_snmp(project_id=project_id, scan_id=scan_id)
+        return [{"ip" : ip, "port" : port} for ip, port in data]

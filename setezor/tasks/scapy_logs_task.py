@@ -30,4 +30,4 @@ class ScapyLogsTask(BaseJob):
     @BaseJob.local_task_notifier
     async def run(self):
         pkt_list = await self._task_func()
-        return ScapyParser.restruct_result(data=pkt_list, agent_id=self.agent_id)
+        return await ScapyParser.restruct_result(data=pkt_list, agent_id=self.agent_id)

@@ -91,7 +91,7 @@
 									</div>
 								</div>
 								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6>Version: v0.21.0b</h6>
+									<h6>Version: v0.22.0b</h6>
 									<button type="button" class="btn btn-secondary"
 										data-bs-dismiss="modal">Close</button>
 								</div>
@@ -363,23 +363,18 @@
 	</div>
 	<style>
 		#v-pills-tasks ul.nav-pills {
-    display: flex !important; /* Или block, если нужно */
-}
+			display: flex !important; 
+		}
 		body {
 			font-family: "Lato", sans-serif;
 		}
 
 		header {
 			position: fixed;
-			/* Закрепляем header */
 			top: 0;
-			/* Располагаем в верхней части страницы */
 			left: 0;
-			/* Располагаем по левому краю */
 			width: 100%;
-			/* Ширина на всю страницу */
 			z-index: 1051;
-			/* Устанавливаем высокий приоритет по z-индексу, чтобы header был поверх другого контента */
 		}
 
 		#content {
@@ -417,10 +412,6 @@
 		#wrapper.toggled-2 #sidebar-wrapper {
 			width: 2.5rem;
 		}
-
-		/* #wrapper.toggled-2 #sidebar-wrapper:hover {
-			width: 13rem;
-		} */
 
 		.sidebar-nav {
 			position: absolute;
@@ -488,7 +479,7 @@
 						checkElement.slideDown('normal');
 					}
 
-					return false; // Остановить дальнейшее выполнение
+					return false;
 				}
 			});
 		}
@@ -689,7 +680,8 @@
 								"scans_bar_searchvulns",
 							])
 						let el = document.getElementById("closeAddScanModalButton")
-						el.click()
+						el.click();
+						get_snmp_ip_port_list();
 					})
 				})
 			}

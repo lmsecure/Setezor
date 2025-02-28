@@ -50,6 +50,7 @@ class NodeService(IService):
                     "address" : node.ip,
                     "agents" : list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [],
                     "agent" : None,
+                    "object_type" : node.name,
                     "group" : f"{node.start_ip}/{node.mask}",
                     "value" : 1,
                     "shape" : "dot",

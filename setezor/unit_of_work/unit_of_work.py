@@ -40,7 +40,8 @@ from setezor.repositories import \
     VulnerabilityLinkRepository, \
     RoleRepository, \
     AuthLog_Repository, \
-    InviteLinkRepository
+    InviteLinkRepository, \
+    L7AuthenticationCredentialsRepository
     
 
 from setezor.repositories import SQLAlchemyRepository
@@ -197,6 +198,9 @@ class UnitOfWork(IUnitOfWork):
     
     @property
     def vulnerability_link(self) -> VulnerabilityLinkRepository: return VulnerabilityLinkRepository(self.__session)
+
+    @property
+    def l7_authentication_credentials(self) -> L7AuthenticationCredentialsRepository: return L7AuthenticationCredentialsRepository(self.__session)
 
     @property
     def invite_link(self) -> InviteLinkRepository: return InviteLinkRepository(self.__session)

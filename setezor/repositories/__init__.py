@@ -40,3 +40,4 @@ from .vulnerability_link_repository import VulnerabilityLinkRepository
 from .role_repository import RoleRepository
 from .auth_log_repository import AuthLog_Repository
 from .invite_link_repository import InviteLinkRepository
+from .l7_authentication_credentials_repository import L7AuthenticationCredentialsRepository

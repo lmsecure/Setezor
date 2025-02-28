@@ -244,7 +244,7 @@ class AcunetixService(IService):
                                                                   scope_id=scope_id,
                                                                   **data)
                     if not target_in_setezor:
-                        target_in_setezor = await uow.target.add({
+                        target_in_setezor = uow.target.add({
                             "project_id": project_id,
                             "protocol": scheme,
                             "scope_id": scope_id,

@@ -5,11 +5,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
 from setezor.models import ObjectType, Network_Type, User, Role
 import setezor.unit_of_work as UOW
-from setezor.settings import PATH_PREFIX
+from setezor.settings import DB_URI
 from setezor.tools.password import PasswordTool
 from setezor.logger import logger
 
-engine = create_async_engine(f"sqlite+aiosqlite:///{PATH_PREFIX}/db.sqlite3")
+engine = create_async_engine(DB_URI)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
 
 async def init_db():

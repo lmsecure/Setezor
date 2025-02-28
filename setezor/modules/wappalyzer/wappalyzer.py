@@ -92,33 +92,30 @@ class WappalyzerParser:
             categories_id = set.union(categories_id, WappalyzerParser.groups.get(name_categoty))
         softwares: list[SoftwareStruct] = []
         for tech in wappalyzer_log.get('technologies', {}):
-            cpe = tech.get('cpe')
-            cpe_type = None
-            vendor = None
-            product = None
+            cpe = tech.get('cpe', "")
+            cpe_type = ""
+            vendor = ""
+            product = ""
             if cpe:
                 cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
                 vendor = cpe.replace('/', '2.3:').split(':')[3]
                 product = cpe.replace('/', '2.3:').split(':')[4]
             else:
-                product = tech.get("slug")
-            version = tech.get('version')
+                product = tech.get("slug", "")
+            version = tech.get('version', "")
             if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
             if product and version:
                 list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
-                if list_cpe:
-                    cpe = ', '.join(list_cpe)
-                else:
-                    cpe = None
+                cpe = ', '.join(list_cpe) if list_cpe else ""
                 if cpe:
                     vendor = cpe.replace('/', '2.3:').split(':')[3]
             if any([int(category.get('id')) in categories_id for category in tech.get('categories')]):
                 tmp_soft = SoftwareStruct()
                 tmp_soft.type = cpe_type
-                tmp_soft.vendor = vendor
-                tmp_soft.product = product
-                tmp_soft.version = version
-                tmp_soft.cpe23 = cpe
+                tmp_soft.vendor = vendor or ""
+                tmp_soft.product = product or ""
+                tmp_soft.version = version or ""
+                tmp_soft.cpe23 = cpe or ""
                 softwares.append(tmp_soft)
         result.update({'softwares' : softwares})
         return result
@@ -139,14 +136,20 @@ class WappalyzerParser:
 
         if domain:
             new_domain = Domain(domain=domain)
-            responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-            new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses)
-            result.extend([new_domain, new_ip, dns_a])
+            try:
+                responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
+                new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses)
+                result.extend([new_domain, new_ip, dns_a])
+            except:
+                result.append(new_domain)
         else:
             new_domain = Domain(domain="")
             result.append(new_domain)
         if ip:
             new_ip = IP(ip=ip)
+            result.append(new_ip)
+        else:
+            new_ip = IP(ip="")
             result.append(new_ip)
         if port:
             new_port = Port(port=port, ip=new_ip)

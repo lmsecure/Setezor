@@ -52,7 +52,6 @@
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="
-                    // Проверяем все обязательные поля в форме
                     const requiredTLS = document.getElementById('CertForm');
 
                     const params = {};
@@ -121,7 +120,6 @@
         myModal.show();
     }
 
-    // Код для закрытия модалки
     document.addEventListener('DOMContentLoaded', function () {
         const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
             keyboard: false
@@ -187,7 +185,6 @@
         myModal.show();
     }
 
-    // Код для закрытия модалки
     document.addEventListener('DOMContentLoaded', function () {
         const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
             keyboard: false

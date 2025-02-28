@@ -89,3 +89,12 @@ async def analytics_port(
     _: bool = Depends(role_required(["owner", "viewer"]))
 ) -> list:
     return await AnalyticsService.get_port_tabulator_data(uow=uow, project_id=project_id)
+
+
+@router.get("/l7_credentials")
+async def get_l7_credentials(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list:
+    return await AnalyticsService.get_l7_credentials(uow=uow, project_id=project_id)

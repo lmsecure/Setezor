@@ -22,14 +22,18 @@
                                         <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-nmap" type="button" role="tab"
                                             aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
-                                        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-scapy" type="button" role="tab"
-                                            aria-controls="v-pills-scapy" aria-selected="false"
-                                            tabindex="-1">SCAPY</button>
                                         <button class="nav-link" id="v-pills-masscan-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-masscan" type="button" role="tab"
                                             aria-controls="v-pills-masscan" aria-selected="false"
                                             tabindex="-1">MASSCAN</button>
+                                        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-scapy" type="button" role="tab"
+                                            aria-controls="v-pills-scapy" aria-selected="false"
+                                            tabindex="-1">SCAPY</button>
+                                        <button class="nav-link" id="v-pills-snmp-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-snmp" type="button" role="tab"
+                                            aria-controls="v-pills-snmp" aria-selected="false"
+                                            tabindex="-1" onclick="get_snmp_ip_port_list();">SNMP</button>
                                         <!-- <button class="nav-link" id="v-pills-snmp-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-snmp" type="button" role="tab"
                                             aria-controls="v-pills-snmp" aria-selected="false"
@@ -59,10 +63,10 @@
                                             data-bs-target="#v-pills-whois" type="button" role="tab"
                                             aria-controls="v-pills-whois" aria-selected="false"
                                             tabindex="-1">WHOIS</button>
-                                        <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-acunetix" type="button" role="tab"
-                                            aria-controls="v-pills-acunetix" aria-selected="false"
-                                            tabindex="-1">ACUNETIX</button>
+                                        <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-wappalyzer" type="button" role="tab"
+                                            aria-controls="v-pills-wappalyzer" aria-selected="false"
+                                            tabindex="-1">WAPPALYZER</button>
                                         <!-- <button class="nav-link" id="v-pills-screenshoter-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-screenshoter" type="button" role="tab"
                                             aria-controls="v-pills-screenshoter" aria-selected="false"
@@ -81,10 +85,10 @@
                                 <div id="collapseThree" class="accordion-collapse collapse"
                                     aria-labelledby="headingThree" data-bs-parent="#accordionExample">
                                     <div class="accordion-body">
-                                        <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-wappalyzer" type="button" role="tab"
-                                            aria-controls="v-pills-wappalyzer" aria-selected="false"
-                                            tabindex="-1">WAPPALYZER</button>
+                                        <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
+                                            data-bs-target="#v-pills-acunetix" type="button" role="tab"
+                                            aria-controls="v-pills-acunetix" aria-selected="false"
+                                            tabindex="-1">ACUNETIX</button>
                                         <button class="nav-link" id="v-pills-cpe-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-cpe" type="button" role="tab"
                                             aria-controls="v-pills-cpe" aria-selected="false"

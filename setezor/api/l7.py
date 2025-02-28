@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends, Response
 from setezor.dependencies.uow_dependency import UOWDep
-from setezor.dependencies.project import get_current_project, role_required
+from setezor.dependencies.project import get_current_project, role_required, get_current_scan_id
 from setezor.services import L7Service
 
 router = APIRouter(
@@ -37,3 +37,11 @@ async def add_resource_vulnerability(
 ):
     await L7Service.add_vulnerability(uow=uow, project_id=project_id, id=l7_id, data=data)
     return Response(status_code=201)
+
+@router.get("/get_resources_for_snmp")
+async def get_resources_for_snmp(
+    uow: UOWDep,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project)
+) -> list:
+    return await L7Service.get_resources_for_snmp(uow=uow, project_id=project_id, scan_id=scan_id)

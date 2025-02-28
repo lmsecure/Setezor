@@ -4,7 +4,7 @@ from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.models import Task
-from setezor.schemas.task import DNSTaskPayload, MasscanScanTaskPayload, NmapParseTaskPayload, ScapySniffTaskPayload, WHOISTaskPayload, DomainTaskPayload, NmapScanTaskPayload, WappalyzerParseTaskPayload, WebSocketMessage, WebSocketMessageForProject, CertInfoTaskPayload, ScapyParseTaskPayload, MasscanLogTaskPayload
+from setezor.schemas.task import DNSTaskPayload, MasscanScanTaskPayload, NmapParseTaskPayload, ScapySniffTaskPayload, WHOISTaskPayload, DomainTaskPayload, NmapScanTaskPayload, WappalyzerParseTaskPayload, WebSocketMessage, WebSocketMessageForProject, CertInfoTaskPayload, ScapyParseTaskPayload, MasscanLogTaskPayload, SnmpBruteCommunityStringPayload
 from setezor.services import TasksService
 from setezor.managers import TaskManager
 from setezor.tasks import DNSTask, WhoisTask, SdFindTask, NmapParseTask
@@ -16,6 +16,7 @@ from setezor.tasks.scapy_scan_task import ScapySniffTask
 from setezor.tasks.scapy_logs_task import ScapyLogsTask
 from setezor.tasks.wappalyzer_logs_task import WappalyzerLogsTask
 from setezor.tasks.cve_refresh_task import CVERefresher
+from setezor.tasks.snmp_brute_community_string_task import SnmpBruteCommunityStringTask
 
 
 router = APIRouter(
@@ -248,5 +249,22 @@ async def cve_refresh_task(
         uow=uow,
         scan_id=scan_id,
         project_id=project_id,
+    )
+    return 1
+
+
+@router.post("/snmp_brute_communitystring_task", status_code=201)
+async def create_snmp_brute_task(
+    uow: UOWDep,
+    payload: SnmpBruteCommunityStringPayload,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project),
+):
+    task: Task = await TaskManager.create_job(
+        job=SnmpBruteCommunityStringTask,
+        uow=uow,
+        scan_id=scan_id,
+        project_id=project_id,
+        **payload.model_dump()
     )
     return 1

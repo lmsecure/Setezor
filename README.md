@@ -89,6 +89,13 @@ docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor:/root/.loc
 ```bash
 docker run --network=host --cap-add=NET_ADMIN -d lmsecure/setezor:latest -s -p 16662
 ```
+**Функционал CLI**
+1. Просмотр всех доступных опций
+    - setezor --help
+2. Просмотр пользователей
+    - setezor list-users
+3. Сброс пароля
+    - setezor reset-password -l \<username\>
 
 **Добавление агента**
 На странице «Settings находятся все агенты проекта и сервер. Для создания нового агента нажать на «+» возле надписи «All Agents» выбрать: 

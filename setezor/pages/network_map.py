@@ -6,6 +6,7 @@ from setezor.models.role import Role
 from setezor.services import UserProjectService
 from setezor.managers import ProjectManager
 from setezor.services.user_service import UsersService
+from setezor.services.object_type_service import ObjectTypeService
 from .import TEMPLATES_DIR
 
 
@@ -30,11 +31,13 @@ async def network_page(
     """
     project = await ProjectManager.get_by_id(uow=uow, project_id=project_id)
     user = await UsersService.get(uow=uow, id=user_id)
+    device_types = [{"value" : obj.id, "label" : obj.name} for obj in await ObjectTypeService.list(uow=uow)]
     context={"request": request,
             "project": project,
             "is_superuser": user.is_superuser,
             "role": role_in_project,
             "current_project": project.name,
-            "current_project_id": project.id}
+            "current_project_id": project.id,
+            "device_types": device_types}
     return TEMPLATES_DIR.TemplateResponse(name="network/map_and_info.html", context=context
                                            )

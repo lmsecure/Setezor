@@ -281,8 +281,6 @@ Information
                             create_modal("{{tab.name}}ModalDelete", "Row deletion", "Are you sure? Deletion can have cascade effect.", "Delete",
                                 function () { fetch("{{tab.base_url}}/", { method: "DELETE", body: JSON.stringify({ id: rowIndex }) }) })
                                 .show()
-
-                            //Add confim modal "are you sure?"
                         }
                         function {{tab.name}}createRowEvent(element) {
                             var rowIndex = element.id.split("-").at(-1)
@@ -424,9 +422,6 @@ Information
                             paginationSizeSelector: [5, 10, 25, 50, 100],
                             validationMode: 'highlight',
                             columns: [
-                                {% if tab.name == 'resource_software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'soft_vuln_link' %}
-                                    {{ '{' }} title: "Select", field: "selected", formatter: checkbox_formatter, headerSort: false {{ '}' }}
-                                {% endif %},
                                 {% for col in tab.columns %}
                                     {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
                                     {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}

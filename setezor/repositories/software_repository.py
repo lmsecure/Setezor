@@ -1,7 +1,7 @@
 
 from sqlalchemy.orm import aliased
 from requests import session
-from sqlalchemy import Select, desc
+from sqlalchemy import Select, desc, text
 from sqlmodel import select, func, or_, and_
 from setezor.models import Software, Port, Vendor
 from setezor.models.l7 import L7
@@ -52,11 +52,24 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
     
     async def get_top_products(self, project_id: str):
         
-        top_products: Select = select(self.model.product, func.count(self.model.product).label("count"))\
-        .join(L7Software, L7Software.id == Software.id)\
-        .filter(L7Software.project_id == project_id)\
-        .group_by(self.model.product)\
-        .order_by(desc("count"))\
+        top_products: Select = select(
+            Software.product, 
+            func.count(Software.product).label("count")
+        ).join(L4Software, L4Software.software_id == Software.id)\
+        .filter(L4Software.project_id == project_id)\
+        .filter(Software.product != None)\
+        .filter(Software.product != "")\
+        .group_by(Software.product)\
+        .union(
+            select(
+                Software.product, 
+                func.count(Software.product).label("count")
+            ).join(L7Software, L7Software.software_id == Software.id)\
+            .filter(L7Software.project_id == project_id)\
+            .filter(Software.product != None)\
+            .filter(Software.product != "")\
+            .group_by(Software.product)
+        ).order_by(desc(text("count")))
 
         result = await self._session.exec(top_products)
         top_products_result = result.all()

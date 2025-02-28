@@ -8,8 +8,12 @@ from sqlalchemy.engine.result import ScalarResult
 class WhoisDomainRepository(SQLAlchemyRepository[WhoIsDomain]):
     model = WhoIsDomain
 
-    async def exists(self, mac_obj: SQLModel):
-        return False
+    async def exists(self, whois_domain_obj: WhoIsDomain):
+        stmt = select(WhoIsDomain).filter(WhoIsDomain.domain_crt==whois_domain_obj.domain_crt,
+                                      WhoIsDomain.project_id==whois_domain_obj.project_id,
+                                      WhoIsDomain.scan_id==whois_domain_obj.scan_id)
+        result = await self._session.exec(stmt)
+        return result.first()
     
     async def get_whois_domain_data(self, project_id: uuid.UUID):
         

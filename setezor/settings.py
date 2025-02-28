@@ -10,3 +10,4 @@ REFRESH_TOKEN_EXPIRE_TIME = datetime.timedelta(days=30)
 INVITE_LINK_EXPIRE_TIME = datetime.timedelta(minutes=5)
 COMMIT_STEP = 1000
 LOG_LEVEL = "INFO"
+DB_URI = f"sqlite+aiosqlite:///{PATH_PREFIX}/db.sqlite3"

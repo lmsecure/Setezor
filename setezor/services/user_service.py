@@ -25,7 +25,7 @@ class UsersService(IService):
         async with uow:
             user = await uow.user.find_one(id=id)
             return user
-        
+
     @classmethod
     async def get_by_login(cls, uow: UnitOfWork, login: str) -> User:
         async with uow:
@@ -37,3 +37,9 @@ class UsersService(IService):
         async with uow:
             tasks = await uow.task.filter(user_id=id)
             return tasks
+
+    @classmethod
+    async def update_user_password(cls, uow: UnitOfWork, id: str, hashed_password: str):
+        async with uow:
+            await uow.user.edit_one(id=id, data={"hashed_password": hashed_password})
+            await uow.commit()
