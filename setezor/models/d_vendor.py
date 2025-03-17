@@ -8,7 +8,7 @@ class Vendor(IDDependent, TimeDependent, table=True):
         "comment": "Справочник вендоров"
     }
 
-    name: Optional[str] = Field(sa_column_kwargs={"comment":"Наименование вендора"})
+    name: Optional[str] = Field(default='', sa_column_kwargs={"comment":"Наименование вендора"})
 
     softwares: List["Software"] = Relationship(back_populates="vendor")
     hardwares: List["Hardware"] = Relationship(back_populates="vendor")

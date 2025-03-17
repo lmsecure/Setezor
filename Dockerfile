@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM ubuntu:24.04
 RUN apt update
 WORKDIR /
 COPY setezor_*.deb setezor.deb

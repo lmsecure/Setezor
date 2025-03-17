@@ -1,6 +1,5 @@
 from sqlalchemy import Select
-from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_NS, Domain
-from setezor.models.l7 import L7
+from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_NS, Domain, Software, L7, L4Software, L7Software
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select, func, or_
 
@@ -75,19 +74,27 @@ class IPRepository(SQLAlchemyRepository[IP]):
                     .join(MAC, IP.mac_id == MAC.id)\
                         .filter(IP.id == ip_id, IP.project_id==project_id)
         stmt = await self._session.exec(query)
-        return stmt.first()
+        ip, mac, network = stmt.first()
+
+        ports_stmt = select(Port, Software).select_from(Port)\
+        .join(L4Software, L4Software.l4_id == Port.id)\
+        .join(Software, L4Software.software_id == Software.id)\
+        .filter(Port.ip_id == ip_id)
+        query = await self._session.exec(ports_stmt)
+        port_soft = query.all()
+        return ip, mac, network, port_soft
     
-    async def get_ip_count(self, project_id: str):
+    async def get_ip_count(self, project_id: str, last_scan_id: str):
         
         """Считает количество сток"""
         
-        ip_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id)
+        ip_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
 
         result = await self._session.exec(ip_count)
         ip_count_result = result.one()
         return ip_count_result
     
-    async def get_ip_mac_port_data(self, project_id: str):
+    async def get_ip_mac_port_data(self, project_id: str, last_scan_id: str):
         
         row_number_column = func.row_number().over(
         order_by=func.count(IP.ip).desc()
@@ -102,7 +109,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
             )
             .outerjoin(Port, IP.id == Port.ip_id)
             .outerjoin(MAC, IP.mac_id == MAC.id)
-            .filter(IP.project_id == project_id)
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
             .group_by(
                 Port.port,
                 IP.ip,
@@ -114,7 +121,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
         result = await self._session.exec(tabulator_dashboard_data)
         return result.all()
     
-    async def get_domain_ip_data(self, project_id: str):
+    async def get_domain_ip_data(self, project_id: str, last_scan_id: str):
 
         tabulator_dashboard_data = (
             select(
@@ -125,12 +132,12 @@ class IPRepository(SQLAlchemyRepository[IP]):
             .join(Port, L7.port_id == Port.id)
             .join(IP, Port.ip_id == IP.id)
             .join(Domain, L7.domain_id == Domain.id)
-            .filter(IP.project_id == project_id, Domain.domain != ""))
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Domain.domain != ""))
 
         result = await self._session.exec(tabulator_dashboard_data)
         return result.all()
     
-    async def get_ip_data(self, project_id: str):
+    async def get_ip_data(self, project_id: str, last_scan_id: str):
         
         row_number_column = func.row_number().over(
         order_by=func.count(IP.ip).desc()
@@ -144,7 +151,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
             )
             .outerjoin(Port, IP.id == Port.ip_id)
             .outerjoin(MAC, IP.mac_id == MAC.id)
-            .filter(IP.project_id == project_id)
+            .filter(IP.project_id == project_id, IP.scan_id==last_scan_id)
             .group_by(
                 IP.ip,
                 MAC.mac

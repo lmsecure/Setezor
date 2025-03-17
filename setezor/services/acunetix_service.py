@@ -34,6 +34,7 @@ from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.models import Vulnerability as VulnerabilityModel
 from setezor.models.l7_software_vulnerability import L7SoftwareVulnerability
 from setezor.models.dns_a import DNS_A
+from setezor.tools.url_parser import parse_url
 
 class AcunetixService(IService):
     @classmethod
@@ -68,7 +69,7 @@ class AcunetixService(IService):
         result = []
         ips = {}
         for target in targets:
-            data = Target.parse_url(url = target["address"])
+            data = parse_url(url=target["address"])
             scheme = target["address"].split("://")[0]
             if domain := data.get("domain"):
                 responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
@@ -204,7 +205,7 @@ class AcunetixService(IService):
                                              "targets": []
                                              }
         for target in targets:
-            data = Target.parse_url(url=target["address"])
+            data = parse_url(url=target["address"])
             scheme = target["address"].split("://")[0]
             async with uow:
                 target_in_setezor = await uow.target.find_one(protocol=scheme, project_id=project_id, **data)
@@ -227,14 +228,8 @@ class AcunetixService(IService):
                 acunetix_id = target.acunetix_id
                 acunetix_target_id = target.in_acunetix_id
 
-                data = Target.parse_url(url=target.address)
-
+                data = parse_url(url=target.address)
                 scheme = target.address.split("://")[0]
-                if not "port" in data:
-                    if scheme == "http":
-                        data |= {"port": 80}
-                    else:
-                        data |= {"port": 443}
 
                 if target.in_setezor_id:
                     target_in_setezor = await uow.target.find_one(project_id=project_id, id=target.in_setezor_id)

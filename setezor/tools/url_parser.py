@@ -1,19 +1,20 @@
+from urllib.parse import urlparse
 from ipaddress import IPv4Address
 
+
 def parse_url(url:str) -> dict:
-    if "://" in url:
-        _, addr_port = url.split("://")
+    parsed_url = urlparse(url)
+    data = {}
+    if parsed_url.port:
+        data.update({"port": parsed_url.port})
     else:
-        addr_port = url
-    if ':' in addr_port:
-        addr, port = addr_port.split(":")
-        data = {"port": int(port)}
-    else:
-        addr = addr_port
-        data = {"port": 443}
+        if parsed_url.scheme == "http":
+            data.update({"port": 80})
+        elif parsed_url.scheme == "https":
+            data.update({"port": 443})
     try:
-        IPv4Address(addr)
-        data.update({"ip": addr})
+        IPv4Address(parsed_url.hostname)
+        data.update({"ip": parsed_url.hostname})
     except:
-        data.update({"domain": addr})
+        data.update({"domain": parsed_url.hostname})
     return data

@@ -4,7 +4,6 @@ import re
 from typing import Union
 from .utils import send_request
 from .schemes.target import Target as TargetScheme, TargetForm, TargetFormBase
-from ipaddress import IPv4Address
 
 
 class Target:
@@ -178,21 +177,6 @@ class Target:
             scans.extend(raw_targets)
         return scans
 
-    @classmethod
-    def parse_url(cls, url: str) -> dict:
-        scheme, addr_port = url.split("://")
-        if ':' in addr_port:
-            addr, port = addr_port.split(":")
-            data = {"port": int(re.sub("[^0-9]","", port))}
-        else:
-            addr = addr_port
-            data = {}
-        try:
-            IPv4Address(addr)
-            data.update({"ip": addr})
-        except:
-            data.update({"domain": addr})
-        return data
 
     @classmethod
     def create_urls(cls, payload):

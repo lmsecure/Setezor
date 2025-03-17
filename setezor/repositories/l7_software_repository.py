@@ -3,7 +3,7 @@ from sqlalchemy import case, func, literal, text
 from setezor.models import L7Software, Port, IP, L7, Software, Domain, Vendor, Vulnerability, L7SoftwareVulnerability
 from setezor.models.l4_software import L4Software
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import select
+from sqlmodel import select, text
 from sqlmodel.sql._expression_select_cls import Select
 
 class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
@@ -20,7 +20,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(stmt)
         return result.first() 
     
-    async def get_ports_software_info(self, project_id: str):
+    async def get_ports_software_info(self, project_id: str, last_scan_id: str):
         ports_software: Select = (
             select(
                 IP.ip,
@@ -39,7 +39,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .join(L7, Port.id == L7.port_id, isouter=True)
             .join(L7Software, L7.id == L7Software.l7_id, isouter=True)
             .join(Software, L7Software.software_id == Software.id, isouter=True)
-            .filter(IP.project_id == project_id)
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
             .group_by(
                 Port.port,
                 Port.protocol,
@@ -49,14 +49,14 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(ports_software)
         return result.all()
     
-    async def get_ports_and_protocols(self, project_id: str):
+    async def get_ports_and_protocols(self, project_id: str, last_scan_id: str):
         stmt = select(
             case(
                 (Port.protocol.is_(None), "unknown"),
                 (Port.protocol == "", "unknown"),
                 else_=Port.protocol).label("labels"),
             literal("").label("parents"),
-            func.count(Port.protocol).label("graph_values")).filter(Port.project_id == project_id).group_by(Port.protocol)\
+            func.count(Port.protocol).label("graph_values")).filter(Port.project_id == project_id, Port.scan_id == last_scan_id).group_by(Port.protocol)\
         .union(
             select(
                 Port.port.label("labels"),
@@ -64,12 +64,12 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
                     (Port.protocol.is_(None), "unknown"),
                     (Port.protocol == "", "unknown"),
                     else_=Port.protocol).label("parents"),
-                func.count(Port.port).label("graph_values")).filter(Port.project_id == project_id).group_by(Port.port, Port.protocol)
+                func.count(Port.port).label("graph_values")).filter(Port.project_id == project_id, Port.scan_id == last_scan_id).group_by(Port.port, Port.protocol)
         )
         result = await self._session.exec(stmt)
         return result.all()
     
-    async def get_product_service_name_info(self, project_id: str):
+    async def get_product_service_name_info(self, project_id: str, last_scan_id: str):
         products_service_name: Select = (
             select(
                 Port.service_name,
@@ -87,7 +87,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             )
             .join(L4Software, Port.id == L4Software.l4_id)
             .join(Software, L4Software.software_id == Software.id)
-            .filter(Port.project_id == project_id, Software.product != None))
+            .filter(Port.project_id == project_id, Software.product != None, Port.scan_id == last_scan_id))
             .group_by(
                 Port.service_name,
                 Software.product,
@@ -97,7 +97,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(products_service_name)
         return result.all()
     
-    async def get_product_service_name_info_from_sunburts(self, project_id: str):
+    async def get_product_service_name_info_from_sunburts(self, project_id: str, last_scan_id: str):
         stmt1 = select(
                 case(
                     (Port.service_name.is_(None), "unknown"),
@@ -107,7 +107,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
                 func.count(Port.service_name).label("value"))\
             .join(L4Software, L4Software.l4_id == Port.id)\
             .join(Software, Software.id == L4Software.software_id)\
-            .filter(Port.project_id == project_id)\
+            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
             .group_by(Port.service_name)
                     
         stmt2 = select(
@@ -119,7 +119,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
                 func.count(Software.product).label("value"))\
             .join(L4Software, L4Software.l4_id == Port.id)\
             .join(Software, Software.id == L4Software.software_id)\
-            .filter(Port.project_id == project_id)\
+            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
             .group_by(Software.product, Port.service_name)
         
         stmt3 = select(
@@ -132,7 +132,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .join(L7, L7.port_id == Port.id)\
             .join(L7Software, L7Software.l7_id == L7.id)\
             .join(Software, Software.id == L7Software.software_id)\
-            .filter(Port.project_id == project_id)\
+            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
             .group_by(Port.service_name)
         
         stmt4 = select(
@@ -145,7 +145,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .join(L7, L7.port_id == Port.id)\
             .join(L7Software, L7Software.l7_id == L7.id)\
             .join(Software, Software.id == L7Software.software_id)\
-            .filter(Port.project_id == project_id)\
+            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
             .group_by(Software.product, Port.service_name)
         
         stmt = stmt1.union(stmt2, stmt3, stmt4)   
@@ -154,7 +154,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(stmt)
         return result.all()
 
-    async def get_resource_software_tabulator_data(self, project_id: str):
+    async def get_resource_software_tabulator_data(self, project_id: str, last_scan_id: str):
         row_number_column = func.row_number().over(
         order_by=func.count(IP.ip).desc()
         ).label("id")
@@ -184,7 +184,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .join(L7Software, L7.id == L7Software.l7_id)
             .join(Software, L7Software.software_id == Software.id)
             .join(Vendor, Software.vendor_id == Vendor.id)
-            .filter(IP.project_id == project_id, Software.product != "")
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Software.product != "")
             .group_by(
                 Port.port,
                 Port.protocol,
@@ -207,7 +207,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
         result = await self._session.exec(tabulator_dashboard_data)
         return result.all()
     
-    async def get_soft_vuln_link_data(self, project_id: str):
+    async def get_soft_vuln_link_data(self, project_id: str, last_scan_id: str):
         row_number_column = func.row_number().over(
             order_by=func.count(Port.port).desc()
         ).label("id")
@@ -233,7 +233,7 @@ class L7SoftwareRepository(SQLAlchemyRepository[L7Software]):
             .join(L7SoftwareVulnerability, L7Software.id == L7SoftwareVulnerability.l7_software_id,)
             .join(Vulnerability, Vulnerability.id == L7SoftwareVulnerability.vulnerability_id,)
             .join(Vendor, Software.vendor_id == Vendor.id)
-            .filter(Port.project_id == project_id, Software.product != None)
+            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id, Software.product != None)
             .group_by(
                 Vendor.name,
                 Software.product,

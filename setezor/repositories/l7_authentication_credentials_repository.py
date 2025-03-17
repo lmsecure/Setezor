@@ -22,12 +22,12 @@ class L7AuthenticationCredentialsRepository(SQLAlchemyRepository[L7_Authenticati
         result = await self._session.exec(stmt)
         return result.first()
 
-    async def get_data_for_tabulator(self, project_id: str):
+    async def get_data_for_tabulator(self, project_id: str, last_scan_id: str):
         stmt = select(IP, Domain, Port, L7_Authentication_Credentials).select_from(L7).\
                 join(L7_Authentication_Credentials, L7.id == L7_Authentication_Credentials.l7_id).\
                 join(Domain, Domain.id == L7.domain_id).\
                 join(Port, Port.id == L7.port_id).\
                 join(IP, IP.id == Port.ip_id).\
-                filter(L7.project_id == project_id)
+                filter(L7.project_id == project_id, L7.scan_id == last_scan_id)
         result = await self._session.exec(stmt)
         return result.all()

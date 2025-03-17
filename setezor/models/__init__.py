@@ -54,6 +54,9 @@ from .l4_software import L4Software
 from .l4_software_vulnerability import L4SoftwareVulnerability
 from .vulnerability_link import VulnerabilityLink
 from .invite_link import Invite_Link
+from .node_comment import NodeComment
+from .l4_software_vulnerability_comment import L4SoftwareVulnerabilityComment
+from .l7_software_vulnerability_comment import L7SoftwareVulnerabilityComment
 
 
 def get_model_by_name(model_name:str):

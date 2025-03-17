@@ -1,8 +1,10 @@
+import signal
+import psutil
+import os
 from setezor.tasks.base_job import BaseJob
 from setezor.modules.nmap.scanner import NmapScanner
 from setezor.modules.nmap.parser import NmapParser
 from setezor.tools.ip_tools import get_ipv4, get_mac
-
 
 
 class NmapScanTask(BaseJob):
@@ -38,13 +40,20 @@ class NmapScanTask(BaseJob):
         self.extra_args.append("-e " + interface)
         self.extra_args.append("-n")
         # self.extra_args.append("-d4")
+        self.pid = None
         self._coro = self.run()
 
 
     async def _task_func(self):
-        scan_result, raw_result = await NmapScanner().async_run(extra_args=' '.join(self.extra_args), _password=None)
+        scan_result, raw_result = await NmapScanner(self).async_run(extra_args=' '.join(self.extra_args), _password=None)
         parse_result = NmapParser().parse_hosts(scan = scan_result.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
         return parse_result, raw_result
+    
+    async def soft_stop(self):
+        for process in psutil.process_iter():
+            if process.ppid() == self.pid:
+                os.kill(process.pid, signal.SIGKILL)
+        os.kill(self.pid, signal.SIGKILL)
 
     @BaseJob.remote_task_notifier
     async def run(self):

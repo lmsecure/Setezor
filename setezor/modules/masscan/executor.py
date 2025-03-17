@@ -142,16 +142,13 @@ class ConsoleCommandExecutor:
     async def async_execute(self, log_path: str=None, extension: str='log'):
         self.arguments.clear_empty_args()
         execution_command = self.arguments.prepare_command(self.command)
-        # start_time = time()
-
         process = await create_async_shell_subprocess(execution_command)
+        if self.task:
+            self.task.pid = process.pid
         result, error = await process.communicate()
         result = result.decode(encoding='utf8', errors='backslashreplace')
         error = error.decode(encoding='utf8', errors='backslashreplace')
         code= process.returncode
-        # if log_path:
-        #     await self.__class__.save_source_data(path=log_path, source_data=result, command='masscan', extension=extension)
-        # self.logger.debug('Finish async "%s" execution after %.2f seconds', self.command, time() - start_time)
         return result, error, code
     
     @classmethod
@@ -182,10 +179,11 @@ class MasscanScanner(ConsoleCommandExecutor):
     command = 'masscan'
     # logger = get_logger(__package__, handlers=[])
     
-    def __init__(self, target: List[Type[str]], interface_addr: str, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None, search_udp_port: bool=False,
+    def __init__(self, target: List[Type[str]], interface_addr: str, task = None, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None, search_udp_port: bool=False,
                  only_open: bool=None, max_rate: int=None, ttl: int=None, retries: int=None, wait: int=10, ping: bool=False, format: str='oX') -> None:
         
         self.arguments = ListConsoleArgument()
+        self.task = task
         args = [{'argument': '--rate', 'value': rate},
                 {'argument': '--source-port', 'value': source_port},
                 {'argument': '--connection-timeout', 'value': timeout},

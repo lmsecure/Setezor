@@ -57,11 +57,16 @@ class TaskResultWriter:
         created_by = task.created_by
         project_path = ProjectFolders.get_path_for_project(project_id)
         scan_project_path = os.path.join(project_path, scan_id)
+        if not os.path.exists(scan_project_path):
+            os.makedirs(scan_project_path, exist_ok=True)
         module_folder = get_folder_for_task(created_by)
         filename = f"{str(datetime.datetime.now())}_{created_by}_{task_id}"
-        file_path = os.path.join(project_path, 
+        module_folder_path = os.path.join(project_path, 
                                  scan_project_path, 
-                                 module_folder, 
+                                 module_folder)
+        if not os.path.exists(module_folder_path):
+            os.makedirs(module_folder_path, exist_ok=True)
+        file_path = os.path.join(module_folder_path, 
                                  filename) + f".{extension}"
         async with aiofiles.open(file_path, 'wb') as file:
             await file.write(data)

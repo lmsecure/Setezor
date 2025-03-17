@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import TypedDict    
 from typing_extensions import deprecated
 import re
+import json
 
 from setezor.tools.ip_tools import get_network
     
@@ -270,6 +271,18 @@ class NmapParser(XMLParser):
             result.ports.update({address_data[0].get('ip') : ports_data})
             result.softwares.update({address_data[0].get('ip')  : software_data})
             result.traces.append(trace_data)
+        result.addresses = [json.loads(j) for j in set([json.dumps(i) for i in result.addresses])]
+        result.hostnames = [json.loads(j) for j in set([json.dumps(i) for i in result.hostnames])]
+        
+        final_traces = set()
+        for item in result.traces:
+            routes = [route.model_dump() for route in item.routes]
+            final_traces.add(json.dumps(routes))
+        result.traces = []
+        for item in final_traces:
+            loaded_trace = json.loads(item)
+            struct = RouteStruct(agent_id=agent_id, routes=[IPv4Struct(**trace) for trace in loaded_trace])
+            result.traces.append(struct)
         # logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s software, %s traces', 
         #              len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
         # res = self.convert_to_structures(result)
@@ -281,9 +294,11 @@ class NmapParser(XMLParser):
         address_in_traceses = dict()
         vendors = {}
         softwares = {}
-
+        empty_vendor = Vendor(name='')
+        vendors[''] = empty_vendor
+        result.append(empty_vendor)
         for i in range(len(data.addresses)):
-            mac_obj = MAC(mac=data.addresses[i].get('mac', ''))
+            mac_obj = MAC(mac=data.addresses[i].get('mac', ''), vendor=empty_vendor)
             result.append(mac_obj)
             start_ip, broadcast = get_network(ip=data.addresses[0].get('ip'), mask=24)
             network_obj = Network(start_ip=start_ip, mask=24)
@@ -297,16 +312,15 @@ class NmapParser(XMLParser):
                 result.append(l4_obj)
                 if any([v for k, v in soft.items() if k != 'port']):
                     soft.pop('port', None)
-                    vendor_name = soft.pop('vendor')
-                    
-                    if vendor_name and vendor_name in vendors:
+                    vendor_name = soft.pop('vendor', '')
+                    if vendor_name in vendors:
                         vendor_obj = vendors.get(vendor_name)
                     else:
                         vendor_obj = Vendor(name=vendor_name)
                         vendors[vendor_name] = vendor_obj
                         result.append(vendor_obj)
                     
-                    hash_string = vendor_name or "" + "_" + "_".join([v for v in soft.values() if v])
+                    hash_string = vendor_name or "_" + "_".join([v for v in soft.values() if v])
 
                     if not (hash_string and hash_string in softwares):
                         soft_obj = Software(vendor=vendor_obj, **soft)

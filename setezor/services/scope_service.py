@@ -27,7 +27,7 @@ class ScopeService(IService):
     @classmethod
     async def list(cls, uow: UnitOfWork, project_id: str):
         async with uow:
-            return await uow.scope.filter(project_id=project_id)
+            return await uow.scope.project_scopes(project_id=project_id)
         
     @classmethod
     async def get(cls, uow: UnitOfWork, id: str):
@@ -74,3 +74,10 @@ class ScopeService(IService):
     async def get_targets(cls, uow: UnitOfWork, project_id: str, id: str):
         async with uow:
             return await uow.target.filter(project_id=project_id, scope_id=id)
+        
+    @classmethod
+    async def delete_scope_by_id(cls, uow: UnitOfWork, id: str):
+        async with uow:
+            await uow.scope.delete(id=id)
+            await uow.commit()
+            return True

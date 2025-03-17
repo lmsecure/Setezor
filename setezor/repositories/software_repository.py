@@ -15,7 +15,7 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
 
 
     async def list(self):
-        stmt = select(Software, Vendor).join(Vendor, Software.vendor_id == Vendor.id)
+        stmt = select(Software, Vendor).join(Vendor, Software.vendor_id == Vendor.id).filter(Software.product != "")
         res = await self._session.exec(stmt)
         return res.all()
 
@@ -29,7 +29,7 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         return res.first()
     
     
-    async def get_software_version_cpe(self, project_id: str):
+    async def get_software_version_cpe(self, project_id: str, last_scan_id: str):
         
         """Считает количество сток"""
         query = (
@@ -39,7 +39,7 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
             Software.cpe23,
             func.count(Software.cpe23).label('qty')
         ).join(L7Software, L7Software.software_id == Software.id)\
-        .filter(L7Software.project_id == project_id)\
+        .filter(L7Software.project_id == project_id, L7Software.scan_id == last_scan_id)\
         .filter(Software.cpe23.is_not(None))\
         .group_by(Software.cpe23, Software.product, Software.version)\
         .order_by(func.count(Software.cpe23).desc())\
@@ -50,13 +50,13 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         
         return software_version_cpe
     
-    async def get_top_products(self, project_id: str):
+    async def get_top_products(self, project_id: str, last_scan_id: str):
         
         top_products: Select = select(
             Software.product, 
             func.count(Software.product).label("count")
         ).join(L4Software, L4Software.software_id == Software.id)\
-        .filter(L4Software.project_id == project_id)\
+        .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id)\
         .filter(Software.product != None)\
         .filter(Software.product != "")\
         .group_by(Software.product)\
@@ -65,7 +65,7 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
                 Software.product, 
                 func.count(Software.product).label("count")
             ).join(L7Software, L7Software.software_id == Software.id)\
-            .filter(L7Software.project_id == project_id)\
+            .filter(L7Software.project_id == project_id, L7Software.scan_id == last_scan_id)\
             .filter(Software.product != None)\
             .filter(Software.product != "")\
             .group_by(Software.product)

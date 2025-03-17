@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 import xmltodict
 import json
@@ -21,6 +22,9 @@ class NmapScanner:
     Класс-обертка над утилитой nmap
     '''
     
+    def __init__(self, task = None):
+        self.task = task
+
     start_command = ['nmap', '--privileged', '-oX', '-']
     superuser_permision = ['sudo', '-S']
     
@@ -77,8 +81,10 @@ class NmapScanner:
         """
         args = self._prepare_args(extra_args=extra_args)
         # time1 = time()
-        result, error = await (await create_async_shell_subprocess(self.superuser_permision + args if _password else args)).communicate(_password)
-        # logger.debug('Finish async nmap scan after %.2f seconds', time() - time1)
+        subprocess = await create_async_shell_subprocess(self.superuser_permision + args if _password else args)
+        if self.task:
+            self.task.pid = subprocess.pid
+        result, error = await subprocess.communicate(_password)
         return self._check_results(args=args, result=result, error=error), result
         
 

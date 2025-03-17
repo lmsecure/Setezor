@@ -8,8 +8,9 @@ from setezor.schemas.project import EnterTokenForm, SearchVulnsSetTokenForm
 from setezor.services.invite_link_service import InviteLinkService
 from setezor.tools.jwt import JWT_Tool
 from setezor.unit_of_work import UnitOfWork
-from setezor.settings import PATH_PREFIX, INVITE_LINK_EXPIRE_TIME
+from setezor.settings import PROJECTS_DIR_PATH
 from setezor.models.base import generate_unique_id
+
 
 class ProjectManager:
 
@@ -47,8 +48,8 @@ class ProjectManager:
                 rest_url=os.environ.get("SERVER_REST_URL")
             )
             uow.agent.add(first_agent.model_dump())
+            ProjectFolders.create(project_id=project_id)
             await uow.commit()
-        ProjectFolders.create(project_id=project_id)
 
         return new_project
     
@@ -120,18 +121,18 @@ class ProjectManager:
 class ProjectFolders:
     @classmethod
     def create(cls, project_id: str):
-        PROJECTS_PATH = cls.get_projects_path()
-        if not os.path.exists(PROJECTS_PATH): 
-            os.makedirs(PROJECTS_PATH, exist_ok=True)
-        new_project_path = os.path.join(PROJECTS_PATH, project_id)
-        if not os.path.exists(new_project_path): 
+        new_project_path = cls.get_path_for_project(project_id=project_id)
+        if not os.path.exists(new_project_path):
             os.makedirs(new_project_path, exist_ok=True)
 
-    
     @classmethod
     def get_projects_path(cls):
-        return os.path.abspath(os.path.join(PATH_PREFIX, 'projects'))
-    
+        return PROJECTS_DIR_PATH
+
     @classmethod
     def get_path_for_project(cls, project_id: str):
-        return os.path.join(cls.get_projects_path(), project_id)
+        PROJECTS_PATH = cls.get_projects_path()
+        new_project_path = os.path.join(PROJECTS_PATH, project_id)
+        if not os.path.exists(new_project_path):
+            os.makedirs(new_project_path, exist_ok=True)
+        return new_project_path

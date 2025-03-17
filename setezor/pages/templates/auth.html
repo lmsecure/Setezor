@@ -11,7 +11,6 @@
   <script src="/static/js/particles.min.js"></script>
 
   <title>Setezor: Auth</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
 <body>
@@ -28,7 +27,7 @@
         <input type="password" name="password" id="password" required>
         <label>Password</label>
         <span class="toggle-password" onclick="togglePasswordVisibility()">
-          <i class="fa fa-eye"></i>
+          <i class="bi bi-eye"></i>
         </span>
       </div>
       <button type="submit" value="Login">Log In</button>
@@ -41,13 +40,10 @@
 
 
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@200;300;400;500;600;700&display=swap");
-
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: "Lato", sans-serif;
     }
 
     body {
@@ -64,7 +60,6 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      background: url("https://www.codingnepalweb.com/demos/create-glassmorphism-login-form-html-css/hero-bg.jpg"), #fff;
       background-position: center;
       background-size: cover;
     }
@@ -217,12 +212,12 @@
 
   if (passwordInput.type === 'password') {
     passwordInput.type = 'text';
-    toggleIcon.classList.remove('fa-eye');
-    toggleIcon.classList.add('fa-eye-slash');
+    toggleIcon.classList.remove('bi-eye');
+    toggleIcon.classList.add('bi-eye-slash');
   } else {
     passwordInput.type = 'password';
-    toggleIcon.classList.remove('fa-eye-slash');
-    toggleIcon.classList.add('fa-eye');
+    toggleIcon.classList.remove('bi-eye-slash');
+    toggleIcon.classList.add('bi-eye');
   }
 }
   </script>

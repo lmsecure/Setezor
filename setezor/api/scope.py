@@ -37,6 +37,13 @@ async def get_scope_targets(
 ) -> list[Target]:
     return await ScopeService.get_targets(uow=uow, project_id=project_id, id=id)
 
+@router.delete("/{id}")
+async def delete_scope_by_id(
+    uow: UOWDep,
+    id: str,
+) -> bool:
+    return await ScopeService.delete_scope_by_id(uow=uow, id=id)
+
 @router.post("/{id}/add_targets")
 async def add_scope_targets(
     uow: UOWDep,

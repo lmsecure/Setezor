@@ -13,10 +13,8 @@ load_dotenv()
 
 sys.path[0] = ''
 from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
-from setezor.settings import PATH_PREFIX, BASE_PATH
+from setezor.settings import STATIC_FILES_DIR_PATH, SSL_KEY_FILE_PATH, SSL_CERT_FILE_PATH
 
-if not os.path.exists(PATH_PREFIX):
-    os.makedirs(PATH_PREFIX, exist_ok=True)
 
 @asynccontextmanager
 async def startup_event(app: FastAPI):
@@ -39,7 +37,7 @@ def create_app():
     for router in api_routers:
         app.include_router(router, prefix="/api/v1")
 
-    app.mount("/static", StaticFiles(directory=os.path.join(BASE_PATH, 'pages/static/')), name="static")
+    app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR_PATH), name="static")
 
     @app.exception_handler(RequiresLoginException)
     async def login_required(_, __):
@@ -78,8 +76,8 @@ def run_app(spy: bool, port: int, host: str):
     uvicorn.run(app=app, 
                 host=host, 
                 port=port, 
-                ssl_keyfile=os.path.join(BASE_PATH, 'key.pem'),
-                ssl_certfile=os.path.join(BASE_PATH, 'cert.pem'))
+                ssl_keyfile=SSL_KEY_FILE_PATH,
+                ssl_certfile=SSL_CERT_FILE_PATH)
 
 @run_app.command()
 def list_users():

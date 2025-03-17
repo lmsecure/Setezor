@@ -18,7 +18,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
         return result.first()
 
 
-    async def get_l4_software_tabulator_data(self, project_id: str):
+    async def get_l4_software_tabulator_data(self, project_id: str, last_scan_id: str):
         row_number_column = func.row_number().over(
         order_by=func.count(IP.ip).desc()
         ).label("id")
@@ -45,7 +45,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .outerjoin(L4Software, Port.id == L4Software.l4_id)
             .outerjoin(Software, L4Software.software_id == Software.id)
             .outerjoin(Vendor, Software.vendor_id == Vendor.id)
-            .filter(IP.project_id == project_id)
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
             .group_by(
                 Port.port,
                 Port.protocol,
@@ -67,7 +67,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
         result = await self._session.exec(tabulator_dashboard_data)
         return result.all()
     
-    async def get_soft_vuln_link_data(self, project_id: str):
+    async def get_soft_vuln_link_data(self, project_id: str, last_scan_id: str):
 
         tabulator_dashboard_data = (
             select(
@@ -87,7 +87,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(L4SoftwareVulnerability, L4Software.id == L4SoftwareVulnerability.l4_software_id,)
             .join(Vulnerability, Vulnerability.id == L4SoftwareVulnerability.vulnerability_id,)
             .join(Vendor, Software.vendor_id == Vendor.id)
-            .filter(L4Software.project_id == project_id, Software.product != None)
+            .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id, Software.product != None)
             .group_by(
                 Vendor.name,
                 Software.product,

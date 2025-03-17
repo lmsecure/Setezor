@@ -11,16 +11,18 @@ Projects
     <div class="row mt-2 flex-row">
         <div class="col-3">
             <div class="mt-2">
-                <table class="table">
+                <table class="table table-hover w-100">
                     <thead>
                       <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Description</th>
-                        <th scope="col"></th>
+                        <th scope="col" style="width: 20%;">Name</th>
+                        <th scope="col" style="width: 60%;">Description</th>
+                        <th scope="col" style="width: 20%;">Actions</th>
                       </tr>
                     </thead>
-                    <tbody id="scopesTableBody"></tbody>
-                  </table>
+                </table>
+                <div class="nav flex-column nav-pills" id="scopesNavPills" role="tablist" aria-orientation="vertical">
+                    <!-- Скоупы -->
+                </div>
             </div>
         </div>
         <div class="col-8" id="scopeTargetsContainer" style="height: 80vh; border: 1px solid black; overflow-y: auto;"></div>
@@ -56,33 +58,92 @@ Projects
 
 <div id = "idModalForChoosingMethodAddingTargets"> </div>
 <div id="idModalForWritingTargets"> </div>
+<div id="deleteScopeModal"> </div>
 
 <script>
-    var message_sock = create_websocket(`/api/v1/project/ws`)
-    async function getScopes(){
-        await axios.get("/api/v1/scope").then(response =>{
-            let el = document.getElementById("scopesTableBody")
-            let result = ""
-            for (const scope of response.data){
+    var message_sock = create_websocket(`/api/v1/project/ws`);
+
+    async function getScopes() {
+        await axios.get("/api/v1/scope").then(response => {
+            let el = document.getElementById("scopesNavPills");
+            let result = "";
+            for (const scope of response.data) {
                 result += `
-                <tr>
-                    <td>${scope.name}</td>
-                    <td>${scope.description}</td>
-                    <td><button class="btn btn-secondary" onclick="getScopeTargets('${scope.id}')">Targets</button></td>
-                </tr>
-                `
+                    <a class="nav-link" id="scope-${scope.id}-tab" data-toggle="pill" href="#scope-${scope.id}" role="tab" aria-controls="scope-${scope.id}" aria-selected="false" onclick="selectScope('${scope.id}')">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 40%; word-break: break-all;">${scope.name}</td>
+                                <td style="width: 40%; word-break: break-all;">${scope.description}</td>
+                                <td><button class="btn btn-danger mt-1" onclick="deleteScope('${scope.id}')"> delete </button></td>
+                            </tr>
+                        </table>
+                    </a>
+                `;
             }
-            el.innerHTML = result
+            el.innerHTML = result;
+
+            if (response.data.length > 0) {
+                const firstScopeId = response.data[0].id;
+                selectScope(firstScopeId);
+            }
+
             $('#scopeAddModal').modal('hide');
-        })
+        });
     }
-    getScopes()
-    async function addScope(event){
-        event.preventDefault()
-        let formData = new FormData(event.target)
-        await axios.post("/api/v1/scope", formData,{headers: {'Content-Type': 'application/json'}}).then(response =>{
-            getScopes()
-        })
+
+    async function deleteScope(scopeId) {
+        let modal_elem = document.getElementById("deleteScopeModal");
+        modal_elem.innerHTML = `
+        <div class="modal fade" id="deleteScopeModal" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"> Removal scope</h5>
+                    </div>
+                    <div class="modal-body justify-content-center">
+                        Are you sure you want to delete the scope?
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModal"> Cancel </button>
+                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteScopeButton"> Delete </button>
+                    </div>
+                <div>
+            </div>
+        </div>`
+        document.getElementById("idButtonCancelModal").onclick = function () { modal_elem.innerHTML = ``; };
+        document.getElementById("DeleteScopeButton").onclick = async function () {
+            await axios.delete(`/api/v1/scope/${scopeId}`).then(response => {
+                console.log(response)
+                getScopes();
+                })  
+            };
+        let modal = new bootstrap.Modal(modal_elem.children[0]);
+
+        modal.show()
+
+    }
+
+    function selectScope(scopeId) {
+        document.querySelectorAll('#scopesNavPills .nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+
+        const selectedLink = document.getElementById(`scope-${scopeId}-tab`);
+        if (selectedLink) {
+            selectedLink.classList.add('active');
+        }
+
+        getScopeTargets(scopeId);
+    }
+
+    getScopes();
+
+    async function addScope(event) {
+        event.preventDefault();
+        let formData = new FormData(event.target);
+        await axios.post("/api/v1/scope", formData, { headers: { 'Content-Type': 'application/json' } }).then(response => {
+            getScopes();
+        });
     }
 
     async function getScopeTargets(id){
@@ -126,7 +187,7 @@ Projects
                         </tbody>
                     </table>`;
             } else {
-                result = `<button class="btn btn-success" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>`;
+                result = `<button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>`;
             }
             el.innerHTML = result;
         })

@@ -30,19 +30,24 @@ async def projects_dashboard_page(
         Response: отрендеренный шаблон страницы
     """
     project = await ProjectManager.get_by_id(uow=uow, project_id=project_id)
-    analytics = await AnalyticsService.get_all_analytics(uow=uow, project_id=project_id)
-    columns = AnalyticsService.get_l4_software_columns_tabulator_data()
     user = await UsersService.get(uow=uow, id=user_id)
-    context = {"request": request,
-               "analytics": analytics,
-               "project": project,
-               "role": role_in_project,
-               "is_superuser": user.is_superuser,
-               "current_project": project.name,
-               "current_project_id": project.id,
-               'tab': {f'name': 'analytics',
-                        'base_url': f'/api/v1/analytics/l4_software',
-                        'columns': columns}}
+    last_scan_id = await AnalyticsService.get_last_scan_id(uow=uow, project_id=project_id)
+
+    context = {
+        "request": request,
+        "project": project,
+        "role": role_in_project,
+        "is_superuser": user.is_superuser,
+        "current_project": project.name,
+        "current_project_id": project.id,
+        'tab': {
+            'name': 'analytics',
+            'base_url': f'/api/v1/analytics/l4_software',
+            'columns': AnalyticsService.get_l4_software_columns_tabulator_data()
+        },
+        "analytics": {}
+    }
+
     return TEMPLATES_DIR.TemplateResponse(
         "projects_dashboard.html", context=context
-        )
+    )

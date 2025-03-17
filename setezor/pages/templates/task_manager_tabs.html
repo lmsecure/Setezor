@@ -52,11 +52,7 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
         <td>${task.created_by}</td>
         <td>${task.created_at}</td>
         <td colspan="2"><textarea class="form-control" disabled rows="3">${task.params}</textarea></td>
-        <td style="text-align: center;vertical-align: middle;">${task.status == "CREATED" ? `<button type="button" class="btn btn-success" onclick="startTask('${task.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-circle-fill" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814z"></path>
-            </svg>
-            </button>` : ``}
+        <td style="text-align: center;vertical-align: middle;">
             ${task.status == "STARTED" ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
@@ -75,7 +71,7 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
                 <th>Created At</th>
                 <th>Params</th>
                 <th></th>
-                ${status == "CREATED" | status == "STARTED" ? '<th class="text-center">Actions</th>' : ''}
+                ${status == "STARTED" ? '<th class="text-center">Actions</th>' : ''}
             </tr>
         </thead>
         <tbody>

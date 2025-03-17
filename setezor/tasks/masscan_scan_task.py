@@ -1,3 +1,6 @@
+import os
+import signal
+import psutil
 from .base_job import BaseJob
 from setezor.modules.masscan.executor import MasscanScanner
 from setezor.modules.masscan.parser import BaseMasscanParser
@@ -25,13 +28,32 @@ class MasscanScanTask(BaseJob):
         self.source_port = source_port
         self.max_rate = max_rate
         self.search_udp_port = search_udp_port
+        self.pid = None
         self._coro = self.run()
 
     async def _task_func(self) -> str:
         if self.ping:
-            masscan_obj = MasscanScanner(target=self.target, search_udp_port=self.search_udp_port, ping=self.ping, max_rate=self.max_rate, source_port=self.source_port, format=self.format, wait=self._wait, interface_addr=self.interface_addr, interface=self.interface)
+            masscan_obj = MasscanScanner(task=self, 
+                                         target=self.target, 
+                                         search_udp_port=self.search_udp_port, 
+                                         ping=self.ping, 
+                                         max_rate=self.max_rate, 
+                                         source_port=self.source_port, 
+                                         format=self.format, 
+                                         wait=self._wait, 
+                                         interface_addr=self.interface_addr, 
+                                         interface=self.interface)
         else:
-            masscan_obj = MasscanScanner(target=self.target, ports=self.ports, search_udp_port=self.search_udp_port, max_rate=self.max_rate, source_port=self.source_port, format=self.format, wait=self._wait, interface_addr=self.interface_addr, interface=self.interface)
+            masscan_obj = MasscanScanner(task=self, 
+                                         target=self.target, 
+                                         ports=self.ports, 
+                                         search_udp_port=self.search_udp_port, 
+                                         max_rate=self.max_rate, 
+                                         source_port=self.source_port, 
+                                         format=self.format, 
+                                         wait=self._wait, 
+                                         interface_addr=self.interface_addr, 
+                                         interface=self.interface)
         return await masscan_obj.async_execute(log_path = None)
         
     @BaseJob.remote_task_notifier    
@@ -40,3 +62,9 @@ class MasscanScanTask(BaseJob):
         ports = await BaseMasscanParser._parser_results(format=self.format, input_data=result)
         result_data = await BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
         return result_data, result.encode(), self.format
+    
+    async def soft_stop(self):
+        for process in psutil.process_iter():
+            if process.ppid() == self.pid:
+                os.kill(process.pid, signal.SIGKILL)
+        os.kill(self.pid, signal.SIGKILL)

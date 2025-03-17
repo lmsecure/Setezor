@@ -28,11 +28,11 @@ class MACRepository(SQLAlchemyRepository[MAC]):
         result = await self._session.exec(stmt)
         return result.first()
     
-    async def get_mac_count(self, project_id: str):
+    async def get_mac_count(self, project_id: str, last_scan_id: str):
         
         """Считает количество сток"""
         
-        mac_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id)
+        mac_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
 
         result = await self._session.exec(mac_count)
         mac_count_result = result.one()
@@ -43,7 +43,7 @@ class MACRepository(SQLAlchemyRepository[MAC]):
         result = await self._session.exec(stmt)
         return result.all()
     
-    async def get_mac_tabulator_data(self, project_id: str):
+    async def get_mac_tabulator_data(self, project_id: str, last_scan_id: str):
         row_number_column = func.row_number().over(
         order_by=func.count(MAC.mac).desc()
         ).label("id")
@@ -58,7 +58,7 @@ class MACRepository(SQLAlchemyRepository[MAC]):
             .outerjoin(Vendor, MAC.vendor_id == Vendor.id)
             .outerjoin(Object, MAC.object_id  == Object.id)
             .outerjoin(ObjectType, Object.object_type_id  == ObjectType.id)
-            .filter(MAC.project_id == project_id)
+            .filter(MAC.project_id == project_id, MAC.scan_id == last_scan_id)
             .group_by(
                 MAC.mac,
                 ObjectType.name,

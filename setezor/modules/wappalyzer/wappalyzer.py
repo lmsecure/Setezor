@@ -1,12 +1,10 @@
 import re
-
+from cpeguess.cpeguess import CPEGuess
 from setezor.models import IP, Port, Domain, Software, Vendor, L7, L7Software
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
-from ipaddress import IPv4Address
-
-from cpeguess.cpeguess import CPEGuess
+from setezor.tools.url_parser import parse_url
 
 
 class WappalyzerParser:
@@ -70,22 +68,7 @@ class WappalyzerParser:
         if not wappalyzer_log.get('technologies', []):
             return {}
         url = list(wappalyzer_log.get('urls').keys())[-1]                   
-        result = {}
-        protocol, addr = url.split('://')
-        addr = addr.split('/')[0]
-        if ':' in addr:
-            addr, port = addr.split(':')
-            result.update({'port' : int(port)})
-        else:
-            result.update({'port' : 443 if protocol == 'https' else 80})
-
-        try:
-            IPv4Address(addr)
-            # to do bag с resolve домена, если в логах стутус 200, а при парсинге нет (пока отправляется либо домен, либо ip)
-            # result.update({'ip' : DNS.proceed_records([await DNS.resolve_domain(addr, 'A')])[0].get("record_value")})
-            result.update({'ip' : addr})
-        except:
-            result.update({'domain' : addr})
+        result = parse_url(url)
 
         categories_id = set()
         for name_categoty in groups:

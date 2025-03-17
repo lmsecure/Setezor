@@ -18,15 +18,15 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
             return result.first()
         return False
     
-    async def get_object_count(self, project_id: str):
-        object_count: Select = select(func.count(self.model.id).label('qty')).filter(self.model.project_id == project_id)
+    async def get_object_count(self, project_id: str, last_scan_id: str):
+        object_count: Select = select(func.count(self.model.id).label('qty')).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
 
         result = await self._session.exec(object_count)
         object_count_result = result.one()
 
         return object_count_result
     
-    async def get_most_frequent_values_device_type(self, project_id: str, limit: int | None = None):
+    async def get_most_frequent_values_device_type(self, project_id: str, last_scan_id: str, limit: int | None = None):
         """Запрос на получение самых распространенных значений в колонке.
         
         Возвращает (значение, количество)
@@ -36,9 +36,10 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
             FROM object
             JOIN d_object_type ON object.object_type_id = d_object_type.id
             WHERE object.project_id = :project_id
+            AND object.scan_id = :last_scan_id
             GROUP BY d_object_type.name
             ORDER BY count DESC
         """)
 
-        result = await self._session.exec(device_types_query, params={'project_id': project_id})
+        result = await self._session.exec(device_types_query, params={'project_id': project_id, 'last_scan_id': last_scan_id})
         return result.fetchall()

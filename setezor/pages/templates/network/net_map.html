@@ -1230,19 +1230,18 @@
     function exportToPNG() {
         download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
     }
-
+    let nodeForComment
     async function createNodeInformation(node) {
         if (node.agent == null) {
-            params = { ip_id: JSON.stringify(node.id) }
+            params = { ip_id: node.id}
             ip = node.label
-            // url_address = '/api/v1/vis/node_info?' + new URLSearchParams(params)
             url_address = '/api/v1/vis/node_info/' + node.id
             resp = await fetch(url_address, { method: 'GET' })
             json = await resp.json()
             source_table = document.getElementById('div_node_info')
             html_text = `<div><h5>Node ${node.label}</h5></div>\n`
             table = '<table class="table table-bordered table-hover" style="min-width: 325px; max-width: 325px;">'
-
+            nodeForComment = node
             if (json.ip) {
                 table += `
                         <tr>
@@ -1299,33 +1298,141 @@
                 html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover align-middle"">\n'
                 html_ports += `
                         <tr>
-                            <td> Number </td>
+                            <td> Port </td>
                             <td> Protocol </td>
-                            <td> Soft </td>
-                            <td> Product </td>
-                            <td> Version </td>
+                            <td> State </td>
+                            <td> Software </td>
                         </tr>`
 
                 json.ports.forEach((port) => {
                     html_ports += `
                         <tr>
-                            <td> ${port.number} </td>
+                            <td> ${port.port} </td>
                             <td> ${port.protocol} </td>
-                            <td> ${port.name} </td>
-                            <td> ${port.product} </td>
-                            <td> ${port.version} </td>
+                            <td> ${port.state} </td>
+                            <td> ${port.software} </td>
                         </tr>
                     `
                 })
                 html_ports += '</table>\n'
                 html_text += html_ports
             }
+            let html_all_comments = '';
+            let html_child_comments = '';
+
+            all_comments_response = await axios.get(`/api/v1/vis/comment/${params.ip_id}`).then(response => {
+                    response.data.forEach(comment => {
+
+                        const createdAt = new Date(comment.created_at);
+                        const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                        html_all_comments += `
+                                <div id="commentContainer-${comment.id}">
+                                    <hr>
+                                    <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small" style="word-break: break-all">${comment.login}</span>
+                                        <span class="text-muted small">${formattedDate}</span>
+                                        <button class="btn btn-outline-primary btn-sm" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')">
+                                            Reply
+                                        </button>
+                                    </div>
+                                </div>`;
+                                comment.child_comments.forEach(child =>{
+                                    const createdAt = new Date(child.created_at);
+                                    const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                                    html_all_comments += `
+                                        <div id="commentContainer-${child.id}" style="margin-left: 1rem">
+                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                <span class="text-muted small">${formattedDate}</span>
+                                            </div>
+                                        </div>`
+                                        ;
+                                });
+                    });
+                });
+
+            html_text += html_all_comments
+            html_add_comment = `<form id="addCommentForm">
+                            <div class="form-group w-100">
+                                <label for="AddCommentForm">New comment</label>
+                                <textarea class="form-control" id="AddCommentForm" rows="3" required></textarea>
+                            </div>
+                            <button class="btn btn-primary w-100" style="margin-top: 0.5rem" type="submit">Send</button>
+                        </form>`
+            html_text += html_add_comment
             source_table.innerHTML = html_text
+            
+            document.getElementById('addCommentForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const commentText = document.getElementById('AddCommentForm').value;
+            axios.post('/api/v1/vis/comment', { text: commentText, ip_id: params.ip_id }, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                document.getElementById('AddCommentForm').value = '';
+                createNodeInformation(node);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
         }
         else {
             document.getElementById('div_node_info').innerHTML = ``;
         }
     }
+
+    function replyToComment(commentId) {
+
+        let replyFormId = document.getElementById(`replyForm-${commentId}`)
+
+        if(replyFormId){
+            replyFormId.remove()
+            return;
+        }
+
+        const replyForm = document.createElement('form');
+        replyForm.id = `replyForm-${commentId}`;
+        replyForm.classList.add('mt-2');
+        replyForm.innerHTML = `
+            <div class="form-group">
+                <textarea class="form-control" id="replyText-${commentId}" rows="2" placeholder="Write a reply..." required></textarea>
+            </div>
+            <div class="d-flex justify-content-sm-end">
+            <button class="btn btn-success btn-sm m-1" type="submit">Send Reply</button>
+            </div>
+        `;
+
+        replyForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const replyText = document.getElementById(`replyText-${commentId}`).value;
+
+            axios.post('/api/v1/vis/comment', {
+                text: replyText,
+                parent_comment_id: commentId,
+                ip_id: params.ip_id
+            }, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                console.log(response)
+                createNodeInformation(nodeForComment);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
+
+    const commentElement = document.getElementById(`commentContainer-${commentId}`);
+    if (commentElement) {
+        commentElement.appendChild(replyForm);
+    } else {
+        console.error(`not found commentId: ${commentId}`);
+    }
+}
+
 
     const DEFAULT_COLOR = '#2B7CE9'
 
@@ -1406,7 +1513,6 @@
 
         constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF5C2') {
             this.color = color
-            this.shape = 'icon'
             this.size = size
             this.face = face
             this.code = code
@@ -1417,7 +1523,16 @@
 
         constructor(color = '#2B7CE9', size = 100, face = '"bootstrap-icons"', code = '\uF67A') {
             this.color = color
-            this.shape = 'icon'
+            this.size = size
+            this.face = face
+            this.code = code
+        }
+    }
+
+    class CommentNodeIcon {
+
+        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF332') {
+            this.color = color
             this.size = size
             this.face = face
             this.code = code

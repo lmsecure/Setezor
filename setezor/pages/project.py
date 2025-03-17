@@ -26,18 +26,26 @@ async def projects_page(
     Returns:
         Response: отрендеренный шаблон страницы
     """
-    
     projects = await UserProjectService.get_user_projects(uow=uow, user_id=user_id)
     user = await UsersService.get(uow=uow, id=user_id)
-    analytics_lst = []
+
     result = []
+
     for project_obj in projects:
-        analytics = await AnalyticsService.get_all_analytics(uow=uow, project_id=project_obj.id)
+        analytics = {
+            "top_ports": await AnalyticsService.get_top_ports(uow, project_obj.id),
+            "top_protocols": await AnalyticsService.get_top_protocols(uow, project_obj.id),
+            "top_products": await AnalyticsService.get_top_products(uow, project_obj.id),
+            "device_types": await AnalyticsService.get_device_types(uow, project_obj.id),
+            "ip_count" : await AnalyticsService.get_ip_count(uow, project_obj.id),
+            "port_count" : await AnalyticsService.get_port_count(uow, project_obj.id)
+        }
+
         analytics['top_ports'] = {
             'labels': [i[0] for i in analytics["top_ports"]],
             'data': [i[1] for i in analytics["top_ports"]],
         }
-        analytics['top_protocols'] = { 
+        analytics['top_protocols'] = {
             'labels': [i[0] for i in analytics["top_protocols"]],
             'data': [i[1] for i in analytics["top_protocols"]],
         }
@@ -45,8 +53,17 @@ async def projects_page(
             'labels': [i[0] for i in analytics["top_products"]],
             'data': [i[1] for i in analytics["top_products"]],
         }
-        project_obj.id = project_obj.id
-        result.append({"project" : project_obj, "analytics" : analytics})
-    return TEMPLATES_DIR.TemplateResponse(name="projects/base_project.html", context={"request": request,
-                                                                                      "is_superuser": user.is_superuser,
-                                                                                      "projects": result})
+
+        result.append({
+            "project": project_obj,
+            "analytics": analytics
+        })
+
+    return TEMPLATES_DIR.TemplateResponse(
+        name="projects/base_project.html",
+        context={
+            "request": request,
+            "is_superuser": user.is_superuser,
+            "projects": result
+        }
+    )

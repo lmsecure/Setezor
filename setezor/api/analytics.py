@@ -98,3 +98,117 @@ async def get_l7_credentials(
     _: bool = Depends(role_required(["owner", "viewer"]))
 ) -> list:
     return await AnalyticsService.get_l7_credentials(uow=uow, project_id=project_id)
+
+
+
+@router.get("/get_ports_software_info")
+async def get_ports_software_info(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list:
+    return await AnalyticsService.get_ports_software_info(uow=uow, project_id=project_id)
+
+@router.get("/get_product_service_name_info")
+async def get_product_service_name_info(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list:
+    return await AnalyticsService.get_product_service_name_info(uow=uow, project_id=project_id)
+
+@router.get("/get_device_types")
+async def get_device_types(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> dict:
+    return await AnalyticsService.get_device_types(uow=uow, project_id=project_id)
+
+@router.get("/get_object_count")
+async def get_object_count(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> int:
+    return await AnalyticsService.get_object_count(uow=uow, project_id=project_id)
+
+@router.get("/get_ip_count")
+async def get_ip_count(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> int:
+    return await AnalyticsService.get_ip_count(uow=uow, project_id=project_id)
+
+@router.get("/get_mac_count")
+async def get_mac_count(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> int:
+    return await AnalyticsService.get_mac_count(uow=uow, project_id=project_id)
+
+@router.get("/get_port_count")
+async def get_port_count(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> int:
+    return await AnalyticsService.get_port_count(uow=uow, project_id=project_id)
+
+@router.get("/get_software_version_cpe")
+async def get_software_version_cpe(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> dict:
+    return await AnalyticsService.get_software_version_cpe(uow=uow, project_id=project_id)
+
+@router.get("/get_top_products")
+async def get_top_products(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list[tuple]:
+    return await AnalyticsService.get_top_products(uow=uow, project_id=project_id)
+
+@router.get("/get_top_ports")
+async def get_top_ports(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list[tuple]:
+    return await AnalyticsService.get_top_ports(uow=uow, project_id=project_id)
+
+@router.get("/get_top_protocols")
+async def get_top_protocols(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> list[tuple]:
+    return await AnalyticsService.get_top_protocols(uow=uow, project_id=project_id)
+
+@router.get("/get_vulnerabilities")
+async def get_vulnerabilities(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> dict:
+    return await AnalyticsService.get_vulnerabilities(uow=uow, project_id=project_id)
+
+@router.get("/get_ports_and_protocols")
+async def get_ports_and_protocols(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> dict:
+    return await AnalyticsService.get_ports_and_protocols(uow=uow, project_id=project_id)
+
+@router.get("/get_products_and_service_name")
+async def get_products_and_service_name(
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required(["owner", "viewer"]))
+) -> dict:
+    return await AnalyticsService.get_products_and_service_name(uow=uow, project_id=project_id)

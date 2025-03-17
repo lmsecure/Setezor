@@ -41,13 +41,14 @@ from setezor.repositories import \
     RoleRepository, \
     AuthLog_Repository, \
     InviteLinkRepository, \
-    L7AuthenticationCredentialsRepository
+    L7AuthenticationCredentialsRepository, \
+    NodeCommentRepository, \
+    ScanRepository
     
 
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel.ext.asyncio.session import AsyncSession
 from setezor.logger import logger
-from setezor.repositories.scan_repository import ScanRepository
 
 class UnitOfWork(IUnitOfWork):
     def __init__(self):
@@ -207,6 +208,9 @@ class UnitOfWork(IUnitOfWork):
     
     @property
     def auth_log(self) -> AuthLog_Repository: return AuthLog_Repository(self.__session)
+    
+    @property
+    def node_comment(self) -> NodeCommentRepository: return NodeCommentRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():
