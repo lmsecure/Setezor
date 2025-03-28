@@ -46,8 +46,8 @@ class NmapScanTask(BaseJob):
 
     async def _task_func(self):
         scan_result, raw_result = await NmapScanner(self).async_run(extra_args=' '.join(self.extra_args), _password=None)
-        parse_result = NmapParser().parse_hosts(scan = scan_result.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
-        return parse_result, raw_result
+        parse_result, traceroute = NmapParser().parse_hosts(scan = scan_result.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
+        return parse_result, raw_result, traceroute
     
     async def soft_stop(self):
         for process in psutil.process_iter():
@@ -57,6 +57,6 @@ class NmapScanTask(BaseJob):
 
     @BaseJob.remote_task_notifier
     async def run(self):
-        parse_result, raw_result = await self._task_func()
-        result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id)
+        parse_result, raw_result, traceroute = await self._task_func()
+        result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id, traceroute=traceroute)
         return result, raw_result, "xml"

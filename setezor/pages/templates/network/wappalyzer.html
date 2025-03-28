@@ -28,6 +28,11 @@
                                         body: JSON.stringify(data)});
                                     } 
                                 })(file)
+                        reader.onerror = (function (file){
+                            return function (e){
+                                create_toast('Error', `Not enough permissions. Check file owner`, 'error')
+                            }
+                        })(file)
                         reader.readAsDataURL(file);            
                     }
                 }

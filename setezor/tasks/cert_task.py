@@ -18,7 +18,7 @@ class CertTask(BaseJob):
         self.task_id = task_id
         self.target = target
         self.port = port
-        self.data = parse_url(f"{self.target}:{self.port}")
+        self.data = parse_url(f"https://{self.target}:{self.port}/")
         self.agent_id = agent_id
         self.project_id = project_id
         self._coro = self.run()

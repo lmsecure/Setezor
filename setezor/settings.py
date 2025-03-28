@@ -16,6 +16,7 @@ STATIC_FILES_DIR_PATH = os.path.join(BASE_PATH, 'pages/static/')
 SSL_KEY_FILE_PATH = os.path.join(BASE_PATH, 'key.pem')
 SSL_CERT_FILE_PATH = os.path.join(BASE_PATH, 'cert.pem')
 PROJECTS_DIR_PATH = os.path.abspath(os.path.join(PATH_PREFIX, 'projects'))
+ALEMBIC_INI_PATH = os.path.join(BASE_PATH, "alembic.ini")
 
 if not os.path.exists(PATH_PREFIX):
     os.makedirs(PATH_PREFIX, exist_ok=True)

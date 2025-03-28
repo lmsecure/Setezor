@@ -29,6 +29,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 IP.ip,
                 Port.port,
                 Port.protocol,
+                Port.state,
                 Port.service_name,
                 Vendor.name,
                 Software.product,
@@ -42,7 +43,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 func.count(Port.service_name).label("service_name_count"),
             ).select_from(Port)
             .join(IP, Port.ip_id == IP.id)
-            .outerjoin(L4Software, Port.id == L4Software.l4_id)
+            .join(L4Software, Port.id == L4Software.l4_id)
             .outerjoin(Software, L4Software.software_id == Software.id)
             .outerjoin(Vendor, Software.vendor_id == Vendor.id)
             .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)

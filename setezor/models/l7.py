@@ -16,6 +16,6 @@ class L7(IDDependent, Base, table=True):
     port: Optional["Port"]        = Relationship(back_populates="l7")
     domain: Optional["Domain"]    = Relationship(back_populates="l7")
     softwares: List["L7Software"] = Relationship(back_populates="l7")
-    cert: Optional["Cert"]        = Relationship(back_populates="l7")
+    cert: List["Cert"]        = Relationship(back_populates="l7")
     authentication_credentials: List["L7_Authentication_Credentials"] = Relationship(back_populates="l7")
     

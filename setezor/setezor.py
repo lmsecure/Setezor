@@ -96,5 +96,37 @@ def reset_password(login: str):
     result = asyncio.run(UserManager.reset_user_password(login=login))
     print(result)
 
+@run_app.group()
+def alembic():
+    pass
+    """Resets user's password"""
+    
+@alembic.command()
+def history():
+    from alembic import command
+    from alembic.config import Config
+    from setezor.settings import ALEMBIC_INI_PATH
+    config = Config(ALEMBIC_INI_PATH)
+    command.history(config)
+
+@alembic.command()
+@click.argument('revision')
+def stamp(revision: str):
+    from alembic import command
+    from alembic.config import Config
+    from setezor.settings import ALEMBIC_INI_PATH
+    config = Config(ALEMBIC_INI_PATH)
+    command.stamp(config, revision)
+
+@alembic.command()
+@click.argument('revision')
+def upgrade(revision: str):
+    from alembic import command
+    from alembic.config import Config
+    from setezor.settings import ALEMBIC_INI_PATH
+    config = Config(ALEMBIC_INI_PATH)
+    command.upgrade(config, revision)
+
+
 if __name__ == "__main__":
     run_app()

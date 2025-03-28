@@ -10,71 +10,6 @@
                         aria-orientation="vertical">
                         <div class="accordion" id="accordionExample">
                             <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingOne">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                        Network
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" class="accordion-collapse collapse show"
-                                    aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-                                    <div class="accordion-body">
-                                        <button class="nav-link active" id="v-pills-nmap-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-nmap" type="button" role="tab"
-                                            aria-controls="v-pills-nmap" aria-selected="true">NMAP</button>
-                                        <button class="nav-link" id="v-pills-masscan-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-masscan" type="button" role="tab"
-                                            aria-controls="v-pills-masscan" aria-selected="false"
-                                            tabindex="-1">MASSCAN</button>
-                                        <button class="nav-link" id="v-pills-scapy-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-scapy" type="button" role="tab"
-                                            aria-controls="v-pills-scapy" aria-selected="false"
-                                            tabindex="-1">SCAPY</button>
-                                        <button class="nav-link" id="v-pills-snmp-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-snmp" type="button" role="tab"
-                                            aria-controls="v-pills-snmp" aria-selected="false"
-                                            tabindex="-1" onclick="get_snmp_ip_port_list();">SNMP</button>
-                                        <!-- <button class="nav-link" id="v-pills-snmp-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-snmp" type="button" role="tab"
-                                            aria-controls="v-pills-snmp" aria-selected="false"
-                                            onclick=get_all_ips_with_open_port_snmp() tabindex="-1">SNMP</button> -->
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingTwo">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                        Web
-                                    </button>
-                                </h2>
-                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
-                                    data-bs-parent="#accordionExample">
-                                    <div class="accordion-body">
-                                        <button class="nav-link" id="v-pills-domains-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-domains" type="button" role="tab"
-                                            aria-controls="v-pills-domains" aria-selected="false"
-                                            tabindex="-1">DOMAINS</button>
-                                        <button class="nav-link" id="v-pills-cert-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-cert" type="button" role="tab"
-                                            aria-controls="v-pills-cert" aria-selected="false" tabindex="-1">TLS/SSL
-                                            CERT</button>
-                                        <button class="nav-link" id="v-pills-whois-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-whois" type="button" role="tab"
-                                            aria-controls="v-pills-whois" aria-selected="false"
-                                            tabindex="-1">WHOIS</button>
-                                        <button class="nav-link" id="v-pills-wappalyzer-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-wappalyzer" type="button" role="tab"
-                                            aria-controls="v-pills-wappalyzer" aria-selected="false"
-                                            tabindex="-1">WAPPALYZER</button>
-                                        <!-- <button class="nav-link" id="v-pills-screenshoter-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-screenshoter" type="button" role="tab"
-                                            aria-controls="v-pills-screenshoter" aria-selected="false"
-                                            tabindex="-1">SCREENSHOTER</button> -->
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item">
                                 <h2 class="accordion-header" id="headingThree">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                         data-bs-target="#collapseThree" aria-expanded="false"
@@ -82,21 +17,13 @@
                                         Vulnerability
                                     </button>
                                 </h2>
-                                <div id="collapseThree" class="accordion-collapse collapse"
+                                <div id="collapseThree" class="accordion-collapse collapse show"
                                     aria-labelledby="headingThree" data-bs-parent="#accordionExample">
                                     <div class="accordion-body">
-                                        <button class="nav-link" id="v-pills-acunetix-tab" data-bs-toggle="pill"
+                                        <button class="nav-link active" id="v-pills-acunetix-tab" data-bs-toggle="pill"
                                             data-bs-target="#v-pills-acunetix" type="button" role="tab"
                                             aria-controls="v-pills-acunetix" aria-selected="false"
                                             tabindex="-1">ACUNETIX</button>
-                                        <button class="nav-link" id="v-pills-cpe-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-cpe" type="button" role="tab"
-                                            aria-controls="v-pills-cpe" aria-selected="false"
-                                            tabindex="-1">CPEGuess</button>
-                                        <button class="nav-link" id="v-pills-search-vulns-tab" data-bs-toggle="pill"
-                                            data-bs-target="#v-pills-search-vulns" type="button" role="tab"
-                                            aria-controls="v-pills-search-vulns" aria-selected="false"
-                                            tabindex="-1">SearchVulns</button>
                                     </div>
                                 </div>
                             </div>
@@ -114,54 +41,12 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade show active col-3" id="v-pills-nmap" role="tabpanel"
-                        aria-labelledby="v-pills-nmap-tab">
-                        {% import 'network/nmap.html' as nmap%}
-                        {{ nmap.show() }}
-                    </div>
-
-                    <div class="tab-pane fade col-3" id="v-pills-scapy" role="tabpanel"
-                        aria-labelledby="v-pills-scapy-tab">
-                        {% import 'network/scapy.html' as scapy%}
-                        {{scapy.show(is_scapy_running)}}
-                    </div>
-
-                    <div class="tab-pane fade col-3" id="v-pills-masscan" role="tabpanel"
-                        aria-labelledby="v-pills-masscan-tab">
-                        {% import 'network/masscan.html' as masscan%}
-                        {{ masscan.show() }}
-                    </div>
-
-                    <div class="tab-pane fade" id="v-pills-snmp" role="tabpanel"
-                        aria-labelledby="v-pills-snmp-setting-tab">
-                        {% import 'network/snmp.html' as snmp%}
-                        {{ snmp.show() }}
-                    </div>
-
-                    <div class="tab-pane fade col-3" id="v-pills-domains" role="tabpanel"
-                        aria-labelledby="v-pills-domains-tab">
-                        {% import 'network/domains.html' as domains%}
-                        {{domains.show()}}
-                    </div>
-
-                    <div class="tab-pane fade col-4" id="v-pills-cert" role="tabpanel"
-                        aria-labelledby="v-pills-cert-tab">
-                        {% import 'network/cert.html' as cert%}
-                        {{ cert.show() }}
-                    </div>
-
-                    <div class="tab-pane fade col-3" id="v-pills-whois" role="tabpanel"
-                        aria-labelledby="v-pills-whois-tab">
-                        {% import 'network/whois.html' as whois%}
-                        {{whois.show()}}
-                    </div>
-
                     <div class="tab-pane fade col-3" id="v-pills-screenshoter" role="tabpanel"
                         aria-labelledby="v-pills-screenshoter-tab">
                         {% import 'network/screenshots.html' as screenshots%}
                         {{screenshots.show()}}
                     </div>
-                    <div class="tab-pane fade" id="v-pills-acunetix" role="tabpanel"
+                    <div class="tab-pane fade show active" id="v-pills-acunetix" role="tabpanel"
                         aria-labelledby="v-pills-acunetix-tab">
                         <div class="row ms-1">
                             <ul class="nav nav-pills">
@@ -250,23 +135,10 @@
                             {{acunetix_set_group_targets_modal.show()}}
                         </div>
                     </div>
-
-                    {% import 'network/wappalyzer.html' as wappalyzer with context%}
-                    {{wappalyzer.show()}}
-                    <div class="tab-pane fade" id="v-pills-cpe" role="tabpanel"
-                        aria-labelledby="v-pills-cpe-setting-tab">
-                        {% import 'network/cpe.html' as cpe%}
-                        {{ cpe.show() }}
-                    </div>
                     <div class="tab-pane fade" id="v-pills-search-vulns" role="tabpanel"
                         aria-labelledby="v-pills-search-vulns-tab">
                         {% import 'network/search_vulns.html' as search_vulns %}
                         {{ search_vulns.show() }}
-                    </div>
-                    <div class="tab-pane fade" id="v-pills-cve" role="tabpanel"
-                        aria-labelledby="v-pills-cve-setting-tab">
-                        {% import 'network/cve.html' as cve with context%}
-                        {{cve.show()}}
                     </div>
                 </div>
             </div>
@@ -301,71 +173,4 @@
         </div>
     </div>
 </div>
-<script>
-    // ЭТА ШТУКА НУЖНА ЗАКОМЕНТИЛ ПОКА ЧТОБЫ НЕ МЕШАЛАСЬ 
-    // let ip_lst = [];
-
-    // async function get_ip_list() {
-    //     resp = await fetch('/api/task/get_ip_info', { method: 'GET' });
-    //     data = await resp.json();
-
-    //     let el = document.getElementById("IpList");
-    //     let res = ``;
-    //     for (const item of data) {
-    //         res += `<option value="${item}">`;
-    //     }
-    //     el.innerHTML = res;
-    // }
-
-    // let domain_lst = [];
-
-    // async function get_domains_list() {
-    //     resp = await fetch('/api/task/get_domains_info', { method: 'GET' });
-    //     data = await resp.json();
-
-    //     let el = document.getElementById("DomainsList");
-    //     let res = ``;
-    //     for (const item of data) {
-    //         res += `<option value="${item}">`;
-    //     }
-    //     el.innerHTML = res;
-    // }
-
-    // let domain_and_ip_lst = [];
-
-    // async function get_domain_and_ip_list() {
-    //     resp = await fetch('/api/task/get_domains_and_ip_info', { method: 'GET' });
-    //     data = await resp.json();
-
-    //     let el = document.getElementById("DomainsAndIp");
-    //     let res = ``;
-    //     for (const item of data) {
-    //         res += `<option value="${item}">`;
-    //     }
-    //     el.innerHTML = res;
-    // }
-    // get_ip_list();
-
-    // get_domains_list();
-
-    // get_domain_and_ip_list();
-</script>
-
-
-
-<script>
-
-    // var mask = new Inputmask('ip').mask('InputLogIp')
-    // var mask = new Inputmask('mac').mask('InputLogMac')
-    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('ipTarget').lastElementChild)
-    // var mask = new Inputmask({ mask: '9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]].9[9][9][-9[9][9]][/9[9]]' }).mask(document.getElementById('masscanIpTarget').lastElementChild)
-
-    // $('#nmapExtendedCommand').on('change', function (e, data) {
-    //     if (e.target.value != '') {
-    //         document.getElementById('startScanExtendedBtn').disabled = false
-    //     } else {
-    //         document.getElementById('startScanExtendedBtn').disabled = true
-    //     }
-    // })
-</script>
 {% endmacro %}

@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import access_token_getter, get_user_id
 from setezor.schemas.auth import RegisterForm
+from setezor.schemas.invite_link import InviteLinkCounter
 from setezor.services.auth_service import AuthService
 
 router = APIRouter(
@@ -52,9 +53,12 @@ async def logout_from_profile(
 @router.post("/generate_register_token", status_code=200)
 async def generate_register_token(
     uow: UOWDep, 
+    generate_link_form: InviteLinkCounter,
     user_id: str = Depends(get_user_id)
 ) -> dict:
-    return await AuthService.generate_register_token(uow=uow, user_id=user_id)
+    return await AuthService.generate_register_token(uow=uow, 
+                                                     count_of_entries=generate_link_form.count,
+                                                     user_id=user_id)
 
 
 @router.post("/register")

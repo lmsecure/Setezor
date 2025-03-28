@@ -5,13 +5,18 @@ from setezor.api.acunetix.acunetix import router as router_acunetix
 from setezor.api.agents import router as router_agents
 from setezor.api.vis import router as router_vis
 from setezor.api.analytics import router as router_analytics
-from setezor.api.l7 import router as router_resource
-from setezor.api.l7_vulnerability import router as router_resource_vulnerability
+from setezor.api.l4 import router as router_l4
+from setezor.api.l7 import router as router_l7
+from setezor.api.l4_vulnerability import router as router_l4_vulnerability
+from setezor.api.l7_vulnerability import router as router_l7_vulnerability
 from setezor.api.software import router as router_software
 from setezor.api.vulnerability import router as router_vulnerability
 from setezor.api.scan import router as router_scan
 from setezor.api.scope import router as router_scope
 from setezor.api.tasks_data import router as router_tasks_data
+from setezor.api.user_project import router as router_user_project
+from setezor.api.target import router as router_target
+from setezor.api.role import router as router_role
 
 
 api_routers = [
@@ -22,11 +27,16 @@ api_routers = [
     router_agents,
     router_vis,
     router_analytics,
-    router_resource,
-    router_resource_vulnerability,
+    router_l4,
+    router_l7,
+    router_l4_vulnerability,
+    router_l7_vulnerability,
     router_software,
     router_vulnerability,
     router_scan,
     router_scope,
-    router_tasks_data
+    router_tasks_data,
+    router_user_project,
+    router_target,
+    router_role
 ]

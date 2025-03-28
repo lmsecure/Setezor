@@ -1,4 +1,6 @@
-{% macro show() %}
+{% macro search_vulns_main() %}
+
+
 <div class="p2 tab-content">
     <div class="row">
         <div class="col-3">
@@ -109,4 +111,66 @@
         await fetch("/api/v1/task/refresh_cve", { method: "POST" })
     }
 </script>
+{% endmacro %}
+
+
+{% macro search_vulns_full_script_modal() %}
+
+<div id="searchVulnsModalWindow" class="modal fade" tabindex="-1" aria-labelledby="searchVulnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="searchVulnsModalLabel">SearchVulns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_searchvulns">
+                    <div data-agent-bar="agent_searchvulns"></div>
+                    <div data-interface-bar="interface_searchvulns" class="ms-3"></div>
+                    <div id="scans_bar_searchvulns" class="ms-3"></div>
+                </div>
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
+                        {{ search_vulns_main() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function search_vulns_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('searchVulnsModalWindow'));
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('searchVulnsModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("searchVulnsModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+
+{% endmacro %}
+
+
+
+
+
+
+{% macro show() %}
+
+{{ search_vulns_main() }}
+
 {% endmacro %}

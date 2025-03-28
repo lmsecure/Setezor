@@ -59,7 +59,7 @@ class BaseJob(Job):
 
                 await self._scheduler.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
                                              data=task_status_data)
-                logger.error(f"TASK {func.__qualname__} FAILED", extra={**task_status_data})
+                logger.error(f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return
             await self._scheduler.give_result_to_task_manager(
                 task_id=task_id,
@@ -91,10 +91,10 @@ class BaseJob(Job):
                 result = await func(self, *args, **kwargs)
             except Exception as e:
                 task_status_data["status"] = TaskStatus.failed
-                task_status_data["traceback"] = traceback.format_exc()
+                task_status_data["traceback"] = str(e)
                 task_status_data["type"] = "error"
                 await self._scheduler.change_task_status_local(data=task_status_data, project_id=project_id, uow=uow)
-                logger.error(f"TASK {func.__qualname__} FAILED. {task_status_data}")
+                logger.error(f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return
             await self._scheduler.write_local_result(uow=self.uow,
                                                      project_id=project_id,

@@ -59,6 +59,8 @@ class MasscanScanTask(BaseJob):
     @BaseJob.remote_task_notifier    
     async def run(self):
         result = await self._task_func()
+        if not result:
+            raise Exception("Ports not found")
         ports = await BaseMasscanParser._parser_results(format=self.format, input_data=result)
         result_data = await BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
         return result_data, result.encode(), self.format

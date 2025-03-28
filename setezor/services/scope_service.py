@@ -1,15 +1,12 @@
 
-from base64 import b64decode
-import csv
-import io
-
+from fastapi import HTTPException
 from setezor.interfaces.service import IService
 from setezor.models import Scope, Target
 from setezor.schemas.scope import ScopeCreateForm
 from setezor.schemas.target import TargetCreate
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from typing import List
 
+from io import StringIO
 
 class ScopeService(IService):
     @classmethod
@@ -39,41 +36,26 @@ class ScopeService(IService):
         
         targets = payload.targets
         result = []
-        if isinstance(targets, str):
-            data = b64decode(targets.split(',')[1])
-            data = io.BytesIO(data)
-            data = io.TextIOWrapper(data, newline='\n')
-            data = csv.reader(data)
-            for row in data:
-                params = {}
-                if row:
-                    protocol, ip, domain, port = row + [None] * (4 - len(row))
-                    if protocol: params.update({"protocol" : protocol})
-                    if ip: params.update({"ip" : ip})
-                    if domain: params.update({"domain" : domain})
-                    if port: params.update({"port" : int(port)})
-                    if params:
-                        result.append(params)
-        else:
-            for params in targets:
-                params = params.model_dump()
-                if any(params.values()):
-                    result.append(params)
+        for target in targets:
+            params = target.model_dump()
+            if target.ip or target.domain:
+                result.append(params)
         async with uow:
             for params in result:
                 if params:
                     new_target = Target(
                         project_id=project_id,
                         scope_id=id,
-                        **params )
-                    uow.target.add(new_target.model_dump())
-                await uow.commit()
-            return await uow.target.filter(scope_id=id, project_id=project_id)
+                        **params)
+                    if not await uow.target.find_one(**new_target.model_dump()):
+                        uow.target.add(new_target.model_dump())
+            await uow.commit()
+            return await uow.target.for_scope(scope_id=id, project_id=project_id)
     
     @classmethod
     async def get_targets(cls, uow: UnitOfWork, project_id: str, id: str):
         async with uow:
-            return await uow.target.filter(project_id=project_id, scope_id=id)
+            return await uow.target.for_scope(project_id=project_id, scope_id=id)
         
     @classmethod
     async def delete_scope_by_id(cls, uow: UnitOfWork, id: str):
@@ -81,3 +63,16 @@ class ScopeService(IService):
             await uow.scope.delete(id=id)
             await uow.commit()
             return True
+
+
+    @classmethod
+    async def get_csv_from_scope(cls, uow: UnitOfWork, project_id: str, scope_id: str) -> bytes:
+        async with uow:
+            targets = await uow.target.for_scope(project_id=project_id, scope_id=scope_id)
+        if not targets:
+            raise HTTPException(status_code=204)
+        result = StringIO()
+        for target in targets:
+            result.write(f"{target.protocol or ''},{target.ip or ''},{target.domain or ''},{target.port or ''}\n")
+        result.seek(0)
+        return result

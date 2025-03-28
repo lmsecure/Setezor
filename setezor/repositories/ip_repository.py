@@ -77,8 +77,8 @@ class IPRepository(SQLAlchemyRepository[IP]):
         ip, mac, network = stmt.first()
 
         ports_stmt = select(Port, Software).select_from(Port)\
-        .join(L4Software, L4Software.l4_id == Port.id)\
-        .join(Software, L4Software.software_id == Software.id)\
+        .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
+        .join(Software, L4Software.software_id == Software.id, isouter=True)\
         .filter(Port.ip_id == ip_id)
         query = await self._session.exec(ports_stmt)
         port_soft = query.all()
@@ -160,4 +160,9 @@ class IPRepository(SQLAlchemyRepository[IP]):
         )
 
         result = await self._session.exec(tabulator_dashboard_data)
+        return result.all()
+
+    async def get_ips_ports(self, project_id: str):
+        stmt = select(IP.ip, Port.port).select_from(Port).join(IP, Port.ip_id == IP.id).filter(Port.project_id == project_id, IP.scan_id != None)
+        result = await self._session.exec(stmt)
         return result.all()

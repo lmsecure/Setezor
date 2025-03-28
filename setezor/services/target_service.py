@@ -1,7 +1,7 @@
 
 from setezor.interfaces.service import IService
 from setezor.models import Target
-from setezor.schemas.target import TargetCreateForm
+from setezor.schemas.target import TargetCreate, TargetCreateForm
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from typing import List, Dict
 
@@ -37,3 +37,16 @@ class TargetService(IService):
                 for row in scope_cert_data
             ]
             return result
+        
+    @classmethod
+    async def delete_target_by_id(cls, uow: UnitOfWork, target_id: str):
+        async with uow:
+            await uow.target.delete(id=target_id)
+            await uow.commit()
+        return
+    
+    @classmethod
+    async def update_target_by_id(cls, uow: UnitOfWork, target_id: str, updated_data: TargetCreate):
+        async with uow:
+            await uow.target.edit_one(id=target_id, data=updated_data.model_dump())
+            await uow.commit()

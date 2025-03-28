@@ -1,22 +1,177 @@
-{% extends "base.html" %}
-{% block title %}
-Projects
-{% endblock title %}
-{% block scripts %}
-<script src="/static/js/plotly-2.29.1.min.js.js"></script>
-{% endblock %}
+
 {% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+<title>Setezor</title>
+<link rel="icon" href="/static/assets/favicon.ico">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
+<script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
+<script src="/static/js/plotly-2.29.1.min.js.js"></script>
 <script src="/static/js/particles.min.js"></script>
+<script src="/static/js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<header id="myHeader">
+		<nav class="navbar navbar-dark navbar-expand-lg bg-dark">
+			<div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem;">
+				<div class="bd-highlight" style="margin-left: 40px;">
+					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+						<li class="nav-item d-inline">
+							<a class="navbar-brand" target="_blank">
+								<img src="/static/assets/logo.png" width="120px" height="auto"
+									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
+							</a>
+						</li>
+					</ul>
+				</div>
+				<div class="d-flex align-items-center gap-2 ">
+					{% if is_superuser %}
+          <button class="btn btn-success" data-bs-toggle="modal" 
+          onclick='document.getElementById("inviteToSetezorToken").value=""'
+          data-bs-target="#inviteToSetezorTokenModal">
+            Invite to Setezor
+          </button>
+            {% endif %}
+					<a type="button" class="btn btn-outline-primary ms-auto" href="http://help.setezor.ru/"
+						target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
+						data-testid="wiki_help">
+						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" title="Wiki"></i>
+					</a>
+					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
+						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
+						data-testid="about_project">
+						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
+							title="About project"></i>
+					</button>
+					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+						aria-hidden="true">
+						<div class="modal-dialog">
+							<div class="modal-content">
+								<div class="modal-header">
+									<h4>About</h4>
+								</div>
+								<div class="modal-body">
+									<div>
+										Setezor is a network traffic analyzer with the ability to automatically build
+										network topology. For more information, please visit our resources:
+									</div>
+									<div class="list-group">
+										<a href="https://setezor.ru"
+											class="list-group-item list-group-item-action list-group-item-success"
+											target="_blank">Site</a>
+										<a href="https://t.me/lmsecurity"
+											class="list-group-item list-group-item-action list-group-item-primary"
+											target="_blank">Telegram</a>
+										<a href="https://github.com/lmsecure/Setezor"
+											class="list-group-item list-group-item-action list-group-item-secondary"
+											target="_blank">GitHub</a>
+										<a href="https://hub.docker.com/r/lmsecure/setezor"
+											class="list-group-item list-group-item-action list-group-item-danger"
+											target="_blank">DockerHub</a>
+									</div>
+								</div>
+								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
+									<h6>Version: v0.24.0b</h6>
+									<button type="button" class="btn btn-secondary"
+										data-bs-dismiss="modal">Close</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+
+					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
+					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
+					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
+						title="Logout"></i>
+				</button>
+				</div>
+			</div>
+			</div>
+		</nav>
+
+		<script>
+var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+      function create_toast(title, message, level="info", time="just now") {
+        var toast_holder = document.getElementById("toast_holder")
+        var toast = document.createElement("div")
+        toast.classList.add("toast", "fade")
+        toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        var toast_instance = new bootstrap.Toast(toast)
+        toast_holder.prepend(toast)
+        toast_instance.show()
+    
+        var notification_holder = document.getElementById("notifications_body")
+        var notification_toast = document.createElement("div")
+        notification_toast.classList.add("toast", "fade")
+        notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        notification_toast.setAttribute("data-bs-autohide",false)
+        var notification_toast_instance = new bootstrap.Toast(notification_toast)
+        notification_holder.prepend(notification_toast)
+        notification_toast_instance.show()
+    };
+    function create_html_toast(title, message, time, level) {
+        return `
+                <div class="toast-header">
+                    <svg width="25" height="25">
+                        <rect fill=${level} y="3" width="20" height="20" rx="3" />
+                    </svg>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-muted">${time}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>`
+    };
+			const logoutFromProfile = async () => {
+				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
+					window.location.href = "/login"
+				})
+			}
+		</script>
+	</header>
+	<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel">Registration token</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<form onsubmit="generateRegisterToken(event)">
+					<div class="modal-body">
+						<div class="mb-3">
+							<label for="inviteToSetezorCount" class="col-form-label">Person count</label>
+							<input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
+							<label for="inviteToSetezorToken" class="col-form-label">Token</label>
+							<input type="text" class="form-control" disabled id="inviteToSetezorToken">
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+						<button id="close-create-agent" type="submit" class="btn btn-success">Create</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 <div id="particles-js" class="h-100"></div>
+<div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
+  <div id="toast_holder"></div>
+</div>
 <div class="container">
     <h4 class="form-label">Choose project</h4>
 
     <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
         {% if projects %}
-        {% for pair in projects %}
+        {% for items in projects %}
         <div class="col mb-3">
             {% import 'projects/project_card.html' as project_cards with context%}
-            {{project_cards.show(pair.project, pair.analytics)}}
+            {{project_cards.show(items.project, items.analytics, items.role)}}
         </div>
         {% endfor %}
         {% endif %}
@@ -29,6 +184,9 @@ Projects
 
 
 <style>
+  body {
+  font-family: "Lato", sans-serif;
+}
 canvas {
   display: block;
   /* vertical-align: bottom; */
@@ -218,5 +376,24 @@ update = function() {
   requestAnimationFrame(update);
 };
 requestAnimationFrame(update);
+
+
+
+async function generateRegisterToken(event){
+			event.preventDefault()
+			let formdata = new FormData(event.target)
+			let resp = await fetch("/api/v1/auth/generate_register_token",{
+				method: "POST",
+				body: JSON.stringify(Object.fromEntries(formdata)),
+				headers: { "Content-type": "application/json" },})
+				let data = await resp.json()
+				let tokenEl = document.getElementById("inviteToSetezorToken")
+				tokenEl.value = data.token
+		}
+
+
+
 </script>
+</body>
+</html>
 {% endblock content %}

@@ -91,14 +91,13 @@
     </div>
 </div>
 <script>
-
+    var tab_url = "l4";
     async function addVulnerability(event) {
         event.preventDefault()
         let data = new FormData(event.target)
-        let resp = await fetch(`/api/v1/resource/${currentResourceID}/vulnerabilities`, { method: "POST", headers: {"Content-Type": "application/json",},body: JSON.stringify(Object.fromEntries(data)) })
+        let resp = await fetch(`/api/v1/${tab_url}/${currentResourceID}/vulnerabilities`, { method: "POST", headers: {"Content-Type": "application/json",},body: JSON.stringify(Object.fromEntries(data)) })
         if (resp.status == 201){
-            await getVulnerabilities(currentResourceID)
-            resource_table.dataLoader.reloadData()
+            await func_reload_data_update();
             $('#vulnerabilityAddModal').modal('hide');
         }
     }

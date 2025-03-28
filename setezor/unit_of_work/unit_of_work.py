@@ -43,7 +43,8 @@ from setezor.repositories import \
     InviteLinkRepository, \
     L7AuthenticationCredentialsRepository, \
     NodeCommentRepository, \
-    ScanRepository
+    ScanRepository, \
+    ScreenshotsRepository
     
 
 from setezor.repositories import SQLAlchemyRepository
@@ -211,6 +212,9 @@ class UnitOfWork(IUnitOfWork):
     
     @property
     def node_comment(self) -> NodeCommentRepository: return NodeCommentRepository(self.__session)
+
+    @property
+    def screenshots(self) -> ScreenshotsRepository: return ScreenshotsRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():

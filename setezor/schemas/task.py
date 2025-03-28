@@ -1,7 +1,7 @@
 
 from typing import Optional
 from pydantic import BaseModel
-from pydantic.networks import IPv4Address
+from pydantic.networks import IPv4Address, IPv4Network
 
 class TaskStatus:
     pending = "PENDING"
@@ -51,29 +51,33 @@ class WebSocketMessage(BaseModel):
     text: str
     type: str
     command: str = "notify"
+    user_id: str | None = None
 
 class WebSocketMessageForProject(WebSocketMessage):
     project_id: str
 
 
+class TaskPayloadWithScopeID(BaseModel):
+    scope_id: str | None = None
+
 class DNSTaskPayload(BaseModel):
-    domain: str
+    domain: str | None = None
     agent_id: str
 
 class DomainTaskPayload(BaseModel):
-    domain: str
+    domain: str | None = None
     crt_sh: bool
     agent_id: str
 
 class WHOISTaskPayload(BaseModel):
-    target: str
+    target: str | None = None
     agent_id: str
 
-class MasscanScanTaskPayload(BaseModel):
+class MasscanScanTaskPayload(TaskPayloadWithScopeID):
     interface_ip_id: str
     interface: str
     agent_id: str
-    target: IPv4Address
+    target: IPv4Network | None = None
     ping: bool
     ports: str | None = None
     format: str
@@ -90,8 +94,8 @@ class MasscanLogTaskPayload(BaseModel):
     ip: IPv4Address
     mac: str
 
-class NmapScanTaskPayload(BaseModel):
-    targetIP: str #IPv4Address
+class NmapScanTaskPayload(TaskPayloadWithScopeID):
+    targetIP: IPv4Network  | None = None #IPv4Address
     agent_id: str
     interface_ip_id: str
     interface: str
@@ -109,13 +113,13 @@ class NmapParseTaskPayload(BaseModel):
     file: str
     filename: str
     interface_ip_id: str
-    ip: IPv4Address
+    ip: IPv4Address | None = None
     mac: str
 
 class CertInfoTaskPayload(BaseModel):
     agent_id: str
-    port: int
-    target: str
+    port: int | None = None
+    target: str | None = None
 
 class ScapySniffTaskPayload(BaseModel):
     agent_id: str
@@ -132,6 +136,6 @@ class WappalyzerParseTaskPayload(BaseModel):
 
 class SnmpBruteCommunityStringPayload(BaseModel):
     agent_id: str
-    target_ip: str
-    target_port: int
+    target_ip: str | None = None
+    target_port: int | None = None
     community_strings_file: str

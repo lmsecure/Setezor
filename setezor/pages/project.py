@@ -2,12 +2,11 @@
 from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Depends, Request
 from setezor.dependencies.uow_dependency import UOWDep
-from setezor.dependencies.project import get_current_project, get_user_id
+from setezor.dependencies.project import get_user_id
 from setezor.services import UserProjectService
 from setezor.services.analytics_service import AnalyticsService
 from setezor.services.user_service import UsersService
 from .import TEMPLATES_DIR
-import pprint
 
 router = APIRouter(tags=["Pages"])
 
@@ -18,7 +17,7 @@ async def projects_page(
     uow: UOWDep,
     user_id: str = Depends(get_user_id),
 ):
-    """Формирует html страницу выбора проекта на основе jinja2 шаблона и возращает её
+    """Формирует html страницу выбора проекта на основе jinja2 шаблона и возвращает её
 
     Args:
         request (Request): объект http запроса
@@ -30,8 +29,7 @@ async def projects_page(
     user = await UsersService.get(uow=uow, id=user_id)
 
     result = []
-
-    for project_obj in projects:
+    for project_obj, role in projects:
         analytics = {
             "top_ports": await AnalyticsService.get_top_ports(uow, project_obj.id),
             "top_protocols": await AnalyticsService.get_top_protocols(uow, project_obj.id),
@@ -56,6 +54,7 @@ async def projects_page(
 
         result.append({
             "project": project_obj,
+            "role": role,
             "analytics": analytics
         })
 

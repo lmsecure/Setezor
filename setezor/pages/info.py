@@ -1,18 +1,12 @@
-import json
-import uuid
 from setezor.models.role import Role
 from setezor.pages import TEMPLATES_DIR
-from setezor.services import ObjectTypeService
 from setezor.managers import ProjectManager
 from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_user_id, get_user_role_in_project, role_required
 from fastapi import APIRouter, Request, Depends
 from setezor.services.analytics_service import AnalyticsService
-from setezor.services.role_service import RoleService
-from setezor.services.user_project_service import UserProjectService
 from setezor.services.user_service import UsersService
-from setezor.tools.ip_tools import get_interfaces
-import pprint
+from setezor.schemas.roles import Roles
 
 router = APIRouter(tags=["Info"])
 
@@ -23,10 +17,10 @@ async def info_page(
     uow: UOWDep,
     project_id: str = Depends(get_current_project),
     user_id: str = Depends(get_user_id),
-    role_in_project: Role = Depends(get_user_role_in_project),
-    _: bool = Depends(role_required(["owner", "viewer"]))
+    role_in_project: Roles = Depends(get_user_role_in_project),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ):
-    """Формирует html страницу отображения информации из базы на основе jinja2 шаблона и возращает её
+    """Формирует html страницу отображения информации из базы на основе jinja2 шаблона и возвращает её
 
     Args:
         request (Request): объект http запроса
@@ -49,6 +43,7 @@ async def info_page(
                 "current_project": project.name,
                 "current_project_id": project.id,
                 "is_superuser": user.is_superuser,
+                "user_id": user_id,
                 "role": role_in_project,
                 'tabs': [
              {

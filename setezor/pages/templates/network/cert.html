@@ -202,6 +202,36 @@
     });
 </script>
 {% endmacro %}
+{% macro cert_script_modal_to_node() %}
+<script>
+    async function get_cert_targets () {
+                    const response = await axios.get('api/v1/scope/cert_data');
+            };
+
+    function cert_script_modal_to_node(ip) {
+        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
+        var inputIP = document.getElementById('inputTargetTLS')
+        inputIP.value = ip
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("certModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
 
 {% macro show() %}
 <div class="d-flex flex-column">

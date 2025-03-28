@@ -11,4 +11,4 @@ class Invite_Link(IDDependent, TimeDependent, table=True):
     
     token_hash: str = Field(index=True, sa_column_kwargs={"comment": "Хеш от токена"})
     token: str = Field(sa_column_kwargs={"comment": "Токен с пэйлодом"})
-    used: bool = Field(default=False)
+    count_of_entries: int = Field(nullable=True, sa_column_kwargs={"comment": "Количество допустимых использований"})

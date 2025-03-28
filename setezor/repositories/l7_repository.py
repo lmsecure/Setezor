@@ -40,20 +40,9 @@ class L7Repository(SQLAlchemyRepository[L7]):
         .join(L7, L7.id == L7Software.l7_id)\
         .join(Vendor, Vendor.id == Software.vendor_id)\
         .filter(L7.id == l7_id)
-        res = await self._session.exec(stmt)
-        vulnerabilities = res.all()
-        result = []
-        for vuln in vulnerabilities:
-            id = vuln[0]
-            stmt = select(func.count(L7SoftwareVulnerabilityScreenshot.id))\
-                .filter(L7SoftwareVulnerabilityScreenshot.l7_software_vulnerability_id == id, 
-                        L7SoftwareVulnerabilityScreenshot.project_id == project_id)\
-                            .group_by(L7SoftwareVulnerabilityScreenshot.id)
-            res = await self._session.exec(stmt)
-            count = res.first()
-            count = count if count else 0
-            result.append((*(vuln), count))
-        return result
+        result = await self._session.exec(stmt)
+        return result.all()
+
 
     async def exists(self, l7_obj: L7):
         port = l7_obj.port.port if l7_obj.port else ""
@@ -88,6 +77,6 @@ class L7Repository(SQLAlchemyRepository[L7]):
         stmt = select(IP.ip, Port.port).\
                 select_from(Port).\
                     join(IP, IP.id == Port.ip_id).\
-                        filter(Port.project_id == project_id, Port.scan_id == scan_id, Port.service_name == "snmp")
+                        filter(Port.project_id == project_id, Port.scan_id == scan_id, Port.service_name == "snmp", Port.protocol == "udp") # TODO fixme - Port.protocol == "udp" - это временное решение (нашло порты с tcp)
         result = await self._session.exec(stmt)
         return result.all()

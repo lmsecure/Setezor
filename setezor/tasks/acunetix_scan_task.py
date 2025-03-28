@@ -10,11 +10,11 @@ from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
 from setezor.schemas.task import TaskStatus
-from setezor.services.data_structure_service import DataStructureService
 from setezor.services.task_service import TasksService
 from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
+from setezor.tools.url_parser import parse_url
 
 class AcunetixScanTask(BaseJob):
     def __init__(self, uow: UnitOfWork, 
@@ -58,14 +58,14 @@ class AcunetixScanTask(BaseJob):
             return
         vulns_sctructs = Vulnerability.from_acunetix_response(vulnerabilities_detail)
         result = []
-        data = Target.parse_url(url=self.target_address)
+        data = parse_url(url=self.target_address)
 
         if domain := data.get("domain"):
             try:
                 responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
+                new_domain, new_ip, *dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
                 result.append(new_ip)
-                result.append(dns_a)
+                result.extend(dns_a)
             except:
                 new_domain = Domain(domain=domain)
                 new_ip = IP()
@@ -102,19 +102,7 @@ class AcunetixScanTask(BaseJob):
             result.append(l7_software_vuln)
         return result
 
-    async def _write_result_to_db(self, result):
-        service = DataStructureService(uow=self.uow, result=result, project_id=self.project_id, scan_id=self.scan_id)
-        await service.make_magic()
-        await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.finished, project_id=self.project_id)
 
+    @BaseJob.local_task_notifier
     async def run(self):
-        try:
-            t1 = time()
-            try:
-                result = await self._task_func()
-            except Exception as e:
-                print(e)
-                return
-            await self._write_result_to_db(result=result)
-        except Exception as e:
-            raise e
+        return await self._task_func()

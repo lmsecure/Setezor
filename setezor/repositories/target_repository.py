@@ -1,3 +1,4 @@
+from sqlalchemy import ScalarResult
 from setezor.models import Target, Scope
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, and_, select
@@ -37,3 +38,10 @@ class TargetRepository(SQLAlchemyRepository[Target]):
 
         result = await self._session.exec(stmt)
         return result.all()
+    
+    async def for_scope(self, project_id: str, scope_id: str):
+        stmt = select(self.model).filter(self.model.project_id == project_id, 
+                                         self.model.scope_id == scope_id,
+                                         self.model.deleted_at == None)
+        res: ScalarResult = await self._session.exec(stmt)
+        return res.all()

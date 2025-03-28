@@ -1,10 +1,6 @@
 import json
-from typing import TypedDict
 import socket
-import time
-from datetime import datetime
 from ipaddress import IPv4Address, AddressValueError
-from pprint import pprint
 
 from setezor.models.domain import Domain
 from setezor.models.ip import IP

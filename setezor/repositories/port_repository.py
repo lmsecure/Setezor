@@ -1,7 +1,7 @@
 
 
 from sqlalchemy import Select, case, desc
-from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, Software, Vendor
+from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, Software, Vendor, L4SoftwareVulnerabilityScreenshot
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, select, func
 
@@ -45,6 +45,36 @@ class PortRepository(SQLAlchemyRepository[Port]):
         top_ports_result = result.all()
         return top_ports_result
     
+    async def resource_list(self, project_id: str):
+        stmt = select(
+                Port.id,
+                IP.ip, 
+                Port.port,
+                func.count(L4SoftwareVulnerability.id).label('cnt')).select_from(Port)\
+            .join(IP, IP.id == Port.ip_id)\
+            .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
+            .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id, isouter=True)\
+            .filter(Port.project_id == project_id)\
+            .group_by(Port.id)
+        result = await self._session.exec(stmt)
+        return result.all()
+    
+    async def vulnerabilities(self, l4_id: str, project_id: str):
+        stmt = select(L4SoftwareVulnerability.id.label("abc"), 
+                      L4SoftwareVulnerability.confirmed.label("confirmed"),
+                      Vendor,
+                      Software, 
+                      Vulnerability)\
+        .join(L4SoftwareVulnerability, L4SoftwareVulnerability.vulnerability_id== Vulnerability.id)\
+        .join(L4Software, L4Software.id == L4SoftwareVulnerability.l4_software_id)\
+        .join(Software, L4Software.software_id == Software.id)\
+        .join(Port, Port.id == L4Software.l4_id)\
+        .join(Vendor, Vendor.id == Software.vendor_id)\
+        .filter(Port.id == l4_id)
+        result = await self._session.exec(stmt)
+        return result.all()
+
+
     async def get_top_protocols(self, project_id: str, last_scan_id: str):
                 
         stmt_protocols = select(

@@ -2,7 +2,6 @@ import asyncio
 import json
 
 from pysnmp.hlapi.v3arch.asyncio import *
-from pysnmp.smi import builder, view, compiler
 
 
 

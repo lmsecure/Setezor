@@ -25,6 +25,8 @@ from .l7 import L7
 from .l7_software import L7Software
 from .l7_software_vulnerability import L7SoftwareVulnerability
 from .l7_software_vulnerability_screenshot import L7SoftwareVulnerabilityScreenshot
+from .l4_software_vulnerability_screenshot import L4SoftwareVulnerabilityScreenshot
+from .screenshot import Screenshot
 from .d_vendor import Vendor
 from .d_software import Software
 from .vulnerability import Vulnerability

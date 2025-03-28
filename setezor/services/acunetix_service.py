@@ -457,20 +457,19 @@ class AcunetixService(IService):
             raw_data = await api.create_scan_for_group(payload=form.model_dump())
         if hasattr(form, 'target_id'):
             raw_data = await api.create_scan_for_target(payload=form.model_dump())
-        async with uow:
-            for _, scan in raw_data:
-                target_id = scan.get("target_id")
-                target = await api.get_target_by_id(target_id=target_id)
-                target_address = target.get("address")
-                acunetix_scan_id = scan.get("scan_id")
-                task: Task = await M.TaskManager.create_local_job(
-                    job=AcunetixScanTask,
-                    agent_id = None,
-                    uow=uow,
-                    project_id=project_id,
-                    target_address=target_address,
-                    credentials=api.credentials,
-                    scan_id=scan_id,
-                    acunetix_scan_id=acunetix_scan_id
-                )
+        for _, scan in raw_data:
+            target_id = scan.get("target_id")
+            target = await api.get_target_by_id(target_id=target_id)
+            target_address = target.get("address")
+            acunetix_scan_id = scan.get("scan_id")
+            task: Task = await M.TaskManager.create_local_job(
+                job=AcunetixScanTask,
+                agent_id = None,
+                uow=uow,
+                project_id=project_id,
+                target_address=target_address,
+                credentials=api.credentials,
+                scan_id=scan_id,
+                acunetix_scan_id=acunetix_scan_id
+            )
         return True

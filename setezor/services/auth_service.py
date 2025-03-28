@@ -36,7 +36,7 @@ class AuthService(IService):
             await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"NONEXISTENT PROJECT {project_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Проект с ID={project_id} не существует")
-        if not (await UserProjectService.is_project_available_for_user(uow=uow, project_id=project_id, user_id=user_id)):
+        if not (await UserProjectService.get_user_project(uow=uow, project_id=project_id, user_id=user_id)):
             await Auth_Log_Service.log_event(uow=uow, login=user.login, event=f"UNAVAILABLE PROJECT {project_id} FOR USER")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Тебе сюда нельзя")
@@ -53,7 +53,7 @@ class AuthService(IService):
         if not (await ProjectManager.get_by_id(uow=uow, project_id=project_id)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Проект с ID={project_id} не существует")
-        if not (await UserProjectService.is_project_available_for_user(uow=uow, project_id=project_id, user_id=user_id)):
+        if not (await UserProjectService.get_user_project(uow=uow, project_id=project_id, user_id=user_id)):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Тебе сюда нельзя")
         access_token = JWT_Tool.create_access_token(data={"user_id": user_id, "project_id": project_id, "scan_id": scan_id})
@@ -76,17 +76,19 @@ class AuthService(IService):
     
 
     @classmethod
-    async def generate_register_token(cls, uow: UnitOfWork, user_id: str) -> dict:
+    async def generate_register_token(cls, uow: UnitOfWork, 
+                                      count_of_entries: int,
+                                      user_id: str) -> dict:
         user = await UsersService.get(uow=uow, id=user_id)
         if not user.is_superuser:
             raise HTTPException(status_code=403, detail="You are not superuser")
         payload = {"event": "register"}
-        return await InviteLinkService.create_token(uow=uow, payload=payload)
+        return await InviteLinkService.create_token(uow=uow, count_of_entries=count_of_entries, payload=payload)
 
     @classmethod
     async def register_by_invite_token(cls, uow: UnitOfWork, register_form: RegisterForm):
         async with uow:
-            invite_link = await uow.invite_link.find_one(token_hash=register_form.invite_token, used=False)
+            invite_link = await uow.invite_link.find_one(token_hash=register_form.invite_token)
         if not invite_link:
             raise HTTPException(status_code=400, detail="Token not found")
         if register_form.password != register_form.password_confirmation:
@@ -94,6 +96,8 @@ class AuthService(IService):
         token_payload = JWT_Tool.get_payload(invite_link.token)
         if not token_payload:
             raise HTTPException(status_code=403, detail="Token is expired")
+        if not invite_link.count_of_entries:
+            raise HTTPException(status_code=403, detail="Invalid token")
         if await UsersService.get_by_login(uow=uow, login=register_form.login):
             raise HTTPException(status_code=400, detail="Username is already taken")
         event = token_payload.get("event")
@@ -105,7 +109,7 @@ class AuthService(IService):
             )
             await UsersService.create(uow=uow, user=new_user_model)
             async with uow:
-                await uow.invite_link.edit_one(id=invite_link.id, data={"used": True})
+                await uow.invite_link.edit_one(id=invite_link.id, data={"count_of_entries": invite_link.count_of_entries-1})
                 await uow.commit()
             return True
         raise HTTPException(status_code=400, detail="Invalid register token")

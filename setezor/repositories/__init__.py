@@ -42,3 +42,4 @@ from .auth_log_repository import AuthLog_Repository
 from .invite_link_repository import InviteLinkRepository
 from .l7_authentication_credentials_repository import L7AuthenticationCredentialsRepository
 from .node_comment_repository import NodeCommentRepository
+from .screenshots_repository import ScreenshotsRepository

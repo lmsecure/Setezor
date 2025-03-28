@@ -8,10 +8,27 @@ Vulnerabilities
 <script src="/static/js/tabulator.min.js" type="text/javascript"></script>
 {% endblock %}
 {% block content %}
+{% import 'modals.html' as modals %}
+{{ modals.create_vulnerabilities_add_modal() }}
 <div class="container-fluid">
     <div class="row p-3">
         <div class="col">
-            <div id="resource-table"></div>
+            <ul class="nav nav-tabs" id="myTab" role="tablist" style="margin-top: 0.2rem;">
+                <li class="nav-item w-50" role="presentation">
+                    <button class="nav-link active w-100" id="tab_vulnerabilities_l4" data-bs-toggle="tab" type="button"
+                    aria-selected="true" onclick="event_select_l4()">l4</button>
+                </li>
+                <li class="nav-item w-50" role="presentation">
+                    <button class="nav-link w-100" id="tab_vulnerabilities_l7" data-bs-toggle="tab" type="button"
+                    aria-selected="false" onclick="event_select_l7()">l7</button>
+                </li>
+            </ul>
+            <div id="area_table_l4">
+                <div id="table-l4_resources"></div>
+            </div>
+            <div id="area_table_l7">
+                <div id="table-l7_resources"></div>
+            </div>
         </div>
         <div class="col">
             <div id="resourceINFO">
@@ -70,8 +87,6 @@ Vulnerabilities
       </div>
     </div>
   </div>
-{% import 'modals.html' as modals %}
-{{ modals.create_vulnerabilities_add_modal() }}
 <style>
     .tabulator {
     border-radius: 8px;
@@ -104,9 +119,7 @@ Vulnerabilities
 }
 </style>
 <script>
-    {% if role.name == "owner" %}
-    var message_sock = create_websocket(`/api/v1/project/ws`)
-    {% endif %}
+    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
     let currentResourceID = 0
     let currentResourceVulnerabilityID = 0
     var headerMenu = function () {
@@ -141,14 +154,12 @@ Vulnerabilities
         }
         return menu;
     }
-
-    var resource_table = new Tabulator('#resource-table', {
-                            {% if  tab.name == 'resource_software' or tab.name == 'soft_vuln_link' or tab.name =='task' %}
-                                layout: "fitDataTable",
-                            {% else %}
-                                layout: "fitColumns",
-                            {% endif %}
-                            ajaxURL: "{{tab.base_url}}",
+    let counter = 1
+    let objCount = 0
+    {% for tab in tabs %}
+    var {{ tab.name }}_table = new Tabulator('#table-{{ tab.name }}', {
+                            layout: "fitColumns",
+                            ajaxURL: "/api/v1/{{ tab.base_url }}",
 
                             ajaxURLGenerator: function (url, config, params) {
                                 //url - the url from the ajaxURL property or setData function
@@ -173,16 +184,17 @@ Vulnerabilities
                                 {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}
                         {% if col.formatter %}, editorParams: { values: foriegnData{{ col.field }}, itemFormatter: function(label, value, item, element) { label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>` } }, formatter: {{ col.formatter }} (foriegnData{{ col.field }}) {% endif %}
                         {% if col.validator %}, validator: "{{col.validator}}"{% endif %} {{ '}' }}, {% endfor %}
-                        {% if  tab.name != 'task' and tab.name != 'resource_software' and tab.name != 'ip_mac_port' and tab.name != 'domain_ip' and tab.name != 'soft_vuln_link'%} {{ '{' }} title: "Actions", formatter: buttons_formatter, headerSort: false{{ '}' }} {% endif %}]
+                        {{ '{' }} title: "Actions", formatter: buttons_formatter_{{ tab.name }}, headerSort: false{{ '}' }}]
                         })
-                        function buttons_formatter(cell, formatterParams, onRendered) {
-                            return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities('${cell.getRow().getData().id}');">Vulnerabilities (${cell.getRow().getData().vuln_count})</button>`;
-                        }
-    let counter = 1
-    let objCount = 0
-    async function getVulnerabilities(id){
-        let resource = resource_table.getRow(id).getData()
-        let els = document.getElementsByClassName("btnIdentifyClass")
+    function buttons_formatter_{{ tab.name }}(cell, formatterParams, onRendered) {
+        return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities_{{ tab.name }}('${cell.getRow().getData().id}');">Vulnerabilities (${cell.getRow().getData().vuln_count})</button>`;
+    }
+
+
+
+    async function getVulnerabilities_{{ tab.name }}(id){
+        let resource = {{ tab.name }}_table.getRow(id).getData();
+        let els = document.getElementsByClassName("btnIdentifyClass");
         for (const el of els){
             if (el.id == `resource_vulnerabilities-edit-${id}`){
                 el.classList.add("btn-primary")
@@ -192,7 +204,7 @@ Vulnerabilities
                 el.classList.remove("btn-primary")
             }
         }
-        let resp = await fetch(`/api/v1/resource/${currentResourceID}/vulnerabilities`)
+        let resp = await fetch(`/api/v1/{{ tab.base_url }}/${currentResourceID}/vulnerabilities`)
         let data = await resp.json()
         let vulnerabilities = data
         let first = true
@@ -213,8 +225,8 @@ Vulnerabilities
                             <h6>Name: ${vuln.name}</h6>
                             <h6>CVE: ${vuln.cve}</h6>
                             <h6>CWE: ${vuln.cwe}</h6>
-                            <button class="btn btn-danger" onclick="setVulnerabilityStatus('${vuln.vuln_res_soft_id}',false)">Reset</button>
-                            <button class="btn btn-success" onclick="setVulnerabilityStatus('${vuln.vuln_res_soft_id}',true)">Confirm</button>
+                            <button class="btn btn-danger" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',false)">Reset</button>
+                            <button class="btn btn-success" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',true)">Confirm</button>
                             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID=${vuln.vuln_res_soft_id};resetContainer()">Screenshots (${vuln.screenshots_count})</button>
                             <hr>
                             <h5>Software</h5>
@@ -258,11 +270,18 @@ Vulnerabilities
         if (Object.keys(resource).length != 0){
             document.getElementById("resourceINFO").innerHTML = `
             <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" 
-            onclick="document.getElementById('addingVulnerabilityForm').reset()"
+            onclick="document.getElementById('addingVulnerabilityForm').reset();"
             >Add Vulnerability</button>
-            <p>IP: ${resource.ip}</p><p>PORT: ${resource.port}</p><p>DOMAIN: ${resource.domain}</p>`
+            <p>IP: ${resource.ip}</p>
+            <p>PORT: ${resource.port}</p>
+            {% if tab.name == "l7_resources" %}
+            <p>DOMAIN: ${resource.domain}</p>
+            {% endif %}
+            `
         }
     }
+    {% endfor %}
+
     var myCarousel = document.getElementById('carouselCards')
     myCarousel.addEventListener('slide.bs.carousel', function (event) {
         if (event.direction == "left"){
@@ -279,8 +298,9 @@ Vulnerabilities
         document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`
       })
 
-    async function setVulnerabilityStatus(id, status){
-        resp = await fetch(`/api/v1/resource-vulnerability/${id}/confirm`,{method:'put',headers: {"Content-Type": "application/json",},body:JSON.stringify({"status":status})})
+    {% for tab in tabs %}
+    async function setVulnerabilityStatus_{{ tab.name }}(id, status){
+        resp = await fetch(`/api/v1/{{ tab.base_url }}-vulnerability/${id}/confirm`,{method:'put',headers: {"Content-Type": "application/json",},body:JSON.stringify({"status":status})})
         status = await resp.json()
         document.getElementById(`confirmation-${id}`).innerHTML = `Confirmed: ${status}`
         if (status){
@@ -289,6 +309,8 @@ Vulnerabilities
             document.getElementById(`confirmation-card-${id}`).classList = "card border border-danger border-5"
         }
     }
+    {% endfor %}
+
     let screenshotsCounter = 1
     async function resetContainer(){
         let el = document.getElementById("rowContainer");
@@ -305,7 +327,7 @@ Vulnerabilities
                     </div>
                 </div>
         `
-        let resp = await fetch(`/api/resource-vulnerability/${currentResourceVulnerabilityID}/screenshots`)
+        let resp = await fetch(`/api/l7-vulnerability/${currentResourceVulnerabilityID}/screenshots`)
         let screenshots = await resp.json()
         let scr = document.getElementById("existingScreenshots")
         let result = ""
@@ -318,7 +340,7 @@ Vulnerabilities
                     <div class="col-5">
                         <img class="img-thumbnail" onclick="zoomImage(${screenshot.id})" 
                         data-bs-toggle="modal" data-bs-target="#zoomedImage"
-                        src="/api/resource-vulnerability-screenshot/${screenshot.id}" alt="">
+                        src="/api/l7-vulnerability-screenshot/${screenshot.id}" alt="">
                     </div>
                     <div class="col-1">
                         <span class="btn btn-danger" onclick="deleteScreenshot(${screenshot.id})">X</span>
@@ -332,7 +354,7 @@ Vulnerabilities
     function zoomImage(id){
         document.getElementById("zoomINBody").innerHTML = `
         <img class="img-fluid w-100" data-bs-target="#screenshotsModal" data-bs-toggle="modal"  
-        src="/api/resource-vulnerability-screenshot/${id}" alt="">
+        src="/api/l7-vulnerability-screenshot/${id}" alt="">
         `
     }
 
@@ -353,7 +375,7 @@ Vulnerabilities
     }
 
     async function deleteScreenshot(id){
-        let resp = await fetch(`/api/resource-vulnerability-screenshot/${id}`,{method:"DELETE"})
+        let resp = await fetch(`/api/l7-vulnerability-screenshot/${id}`,{method:"DELETE"})
         if (resp.status == 200){
             let el = document.getElementById(`scheenshotRow${id}`)
             el.remove()
@@ -373,7 +395,7 @@ Vulnerabilities
                 reader.onload = (function (key, file) {
                     return async function (e) {
                         data = {file: e.target.result, filename: file.name, note:map["note" + key.slice(-1)]}
-                        resp = await fetch(`/api/resource-vulnerability/${currentResourceVulnerabilityID}/screenshots`, {method:"POST", body:JSON.stringify(data)})
+                        resp = await fetch(`/api/l7-vulnerability/${currentResourceVulnerabilityID}/screenshots`, {method:"POST", body:JSON.stringify(data)})
                         let cnt = await resp.json()
                         let el = document.getElementById(`screenshot-btn-${currentResourceVulnerabilityID}`)
                         el.innerHTML = `Screenshots (${cnt})`
@@ -401,4 +423,33 @@ Vulnerabilities
         min-height: 572px;
     }
 </style>
+<script>
+    document.getElementById('area_table_l7').style.display='none';
+
+    function event_select_l4() {
+        document.getElementById('area_table_l4').style.display='block';
+        document.getElementById('area_table_l7').style.display='none'; tab_url='l4';
+        document.getElementById("resourceINFO").innerHTML = ``
+        document.getElementById('carouselCards').innerHTML = ``
+    }
+
+    function event_select_l7() {
+        document.getElementById('area_table_l4').style.display='none';
+        document.getElementById('area_table_l7').style.display='block'; tab_url='l7';
+        document.getElementById("resourceINFO").innerHTML = ``
+        document.getElementById('carouselCards').innerHTML = ``
+    }
+
+    async function func_reload_data_update() {
+        if (tab_url === "l4") {
+            await getVulnerabilities_l4_resources(currentResourceID);
+            l4_resources_table.dataLoader.reloadData()
+        }
+        if (tab_url === "l7") {
+            await getVulnerabilities_l7_resources(currentResourceID);
+            l7_resources_table.dataLoader.reloadData()
+        }
+        console.log("objCount = ", objCount);
+    }
+</script>
 {% endblock content %}

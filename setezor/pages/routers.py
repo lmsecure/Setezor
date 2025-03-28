@@ -6,7 +6,9 @@ from setezor.pages.network_map import router as router_network_map
 from setezor.pages.tool import router as router_tool
 from setezor.pages.vulnerabilities import router as router_vulnerabilities
 from setezor.pages.info import router as router_info
-from setezor.pages.settings import router as router_settings
+from setezor.pages.project_settings import router as router_project_settings
+from setezor.pages.application_settings import router as router_application_settings
+from setezor.pages.user_settings import router as router_user_settings
 from setezor.pages.scopes import router as router_scopes
 
 pages_routers = [
@@ -18,6 +20,8 @@ pages_routers = [
     router_tool,
     router_vulnerabilities,
     router_info,
-    router_settings,
+    router_application_settings,
+    router_project_settings,
+    router_user_settings,
     router_scopes,
 ]

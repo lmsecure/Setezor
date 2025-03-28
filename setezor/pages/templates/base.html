@@ -17,6 +17,26 @@
 
 	{% block scripts %}{% endblock %}
 
+	{% import 'network/nmap.html' as nmap %}
+	{{ nmap.nmap_full_script_modal() }}
+	{% import 'network/scapy.html' as scapy %}
+	{{ scapy.scapy_full_script_modal() }}
+	{% import 'network/masscan.html' as masscan%}
+	{{ masscan.masscan_full_modal() }}
+	{% import 'network/cert.html' as cert%}
+	{{ cert.cert_full_modal() }}
+	{% import 'network/whois.html' as whois%}
+	{{ whois.whois_full_modal() }}
+	{% import 'network/domains.html' as domains%}
+	{{domains.domains_full_modal()}}   
+	{% import 'network/wappalyzer.html' as wappalyzer%}
+	{{wappalyzer.wappalyzer_full_script_modal()}}   
+	{% import 'network/snmp.html' as snmp%}
+	{{snmp.snmp_full_script_modal()}}   
+	{% import 'network/cpe.html' as cpe%}
+	{{cpe.cpe_full_script_modal()}}   
+	{% import 'network/search_vulns.html' as search_vulns%}
+	{{search_vulns.search_vulns_full_script_modal()}}   
 </head>
 
 <body>
@@ -48,7 +68,10 @@
 
 				<div class="d-flex align-items-center gap-2 ">
 					{% if is_superuser %}
-						<button class="btn btn-success" onclick="generateRegisterToken()">
+						<button class="btn btn-success" 
+						data-bs-toggle="modal" 
+						onclick='document.getElementById("inviteToSetezorToken").value=""'
+						data-bs-target="#inviteToSetezorTokenModal">
 							Invite to Setezor
 						</button>
 					{% endif %}
@@ -91,7 +114,7 @@
 									</div>
 								</div>
 								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6>Version: v0.23.0b</h6>
+									<h6>Version: v0.24.0b</h6>
 									<button type="button" class="btn btn-secondary"
 										data-bs-dismiss="modal">Close</button>
 								</div>
@@ -103,7 +126,7 @@
 					<button type="button" class="btn btn-outline-info" data-bs-toggle="offcanvas"
 						style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-bs-target="#offcanvasNotifications">
-						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif"></i>
+						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif" title="Notifications"></i>
 					</button>
 
 					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProject()"
@@ -145,13 +168,13 @@
 					<button class="btn btn-outline-light" id="menu-toggle-2" data-bs-toggle="offcanvas"
 					data-bs-target="#offcanvasNavbar"
 					style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C"
-					data-testid="open_navbar_button"><i class="bi bi-list fs-4"></i></button>
+					data-testid="open_navbar_button"><i class="bi bi-list fs-4" title="Open/Close sidebar"></i></button>
 				</li>
 				<li class="active">
-					<a href="/projects_dashboard">
+					<a href="/projects_dashboard" style="margin-top: 6px;">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi-kanban fs-4"></i>
+							<i class="bi-kanban fs-4" title="Dashboard"></i>
 						</button>
 						<span style="margin-left: 1rem; color: #54B49C;">Dashboard</span>
 					</a>
@@ -160,20 +183,20 @@
 					<a href="/network-map">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-bezier2 fs-4"></i>
+							<i class="bi bi-bezier2 fs-4" title="Network Map"></i>
 						</button>
 						<span style="margin-left: 1rem; color: #54B49C;">Network Map</span>
 					</a>
 				</li>
-				{% if role.name == "owner" %}
+				{% if role.name == "owner" or role.name == "executor"%}
 				<li>
 					{% if current_project %}
 					<a href="#" onclick="openTasksModal();">
 						<button type="button" class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class=" bi bi-play-circle fs-4"></i>
+							<i class=" bi bi-play-circle fs-4" title="Task manager"></i>
 						</button>
-							<span style="margin-left: 1rem; color: #54B49C;">Task manager</span>
+							<span style="margin-left: 1rem; color: #54B49C;" >Task manager</span>
 					</a>
 					{% endif %}
 					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
@@ -242,55 +265,131 @@
 					</div>
 				</li>
 				{% endif %}
-				{% if role.name == "owner" %}
+				{% if role.name == "owner" or role.name == "executor"%}
 				<li>
 					<a href="/scopes">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-card-list fs-4"></i>
+							<i class="bi bi-card-list fs-4" title="Scopes"></i>
 						</button>
 						<span style="margin-left: 1rem; color: #54B49C;">Scopes</span>
 					</a>
 				</li>
 				{% endif %}
-				{% if role.name == "owner" %}
+				{% if role.name == "owner" or role.name == "executor"%}
 				<li>
-					<a href="/tools">
+					<a href="#" data-toggle="collapse" data-target="#tools-submenu" aria-expanded="false">
 						<button class="btn btn-outline-light"
-							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C;--bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-tools fs-4"></i>
+						style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+						<i class="bi bi-tools fs-4" title="Tools"></i>
 						</button>
 						<span style="margin-left: 1rem; color: #54B49C;">Tools</span>
 					</a>
+					<ul class="collapse" id="tools-submenu">
+						<li>
+							<a href="#" data-toggle="collapse" data-target="#tool-category-1" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-reception-4 fs-4" title="Network"></i>
+								</button>
+								<span style="color: #54B49C;">Network</span>
+							</a>
+							<ul class="collapse" id="tool-category-1">
+								<li><a href="#" onclick="nmap_full_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
+								<li><a href="#" onclick="masscan_full_modal_window()"><span style="color: #54B49C;">MASSCAN</span></a></li>
+								<li><a href="#" onclick="scapy_full_modal_window()"><span style="color: #54B49C;">SCAPY</span></a></li>
+								<li><a href="#" onclick="snmp_full_modal_window()"><span style="color: #54B49C;">SNMP</span></a></li>
+							</ul>
+						</li>
+						<li>
+							<a href="#" data-toggle="collapse" data-target="#tool-category-2" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-wifi fs-4" title="Network"></i>
+								</button>
+								<span style="color: #54B49C;">Web</span>
+							</a>
+							<ul class="collapse" id="tool-category-2">
+								<li><a href="#" onclick="domains_full_modal_window()"><span style="color: #54B49C;">Domains</span></a></li>
+								<li><a href="#" onclick="cert_full_modal_window()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
+								<li><a href="#" onclick="whois_full_modal_window()"><span style="color: #54B49C;">WHOIS</span></a></li>
+								<li><a href="#" onclick="wappalyzer_full_modal_window()"><span style="color: #54B49C;">WAPPALYZER</span></a></li>
+								<!-- <li><a href="#" onclick="screenshoter_full_modal_window()">SCREENSHOTER</a></li> -->
+							</ul>
+						</li>
+						<li>
+							<a href="/tools" data-toggle="collapse" data-target="#tool-category-2" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-bug fs-4" title="Network"></i>
+								</button>
+								<span style="color: #54B49C;">Vulnerability</span>
+							</a>
+							<ul class="collapse" id="tool-category-3">
+								<li><a href="/tools" onclick=""><span style="color: #54B49C;">ACUNETIX</span></a></li>
+								<li><a href="#" onclick="cpe_full_modal_window()"><span style="color: #54B49C;">CPEGuess</span></a></li>
+								<li><a href="#" onclick="search_vulns_full_modal_window()"><span style="color: #54B49C;">SearchVulns</span></a></li>
+							</ul>
+						</li>
+					</ul>
 				</li>
 				{% endif %}
 				<li>
 					<a href="/vulnerabilities">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-shield-fill-exclamation fs-4"></i>
+							<i class="bi bi-shield-fill-exclamation fs-4" title="Vulnerabilities"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Vulnerabilities</span>
+						<span style="margin-left: 1rem; color: #54B49C;" >Vulnerabilities</span>
 					</a>
 				</li>
 				<li>
 					<a href="/info">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-table fs-4" "></i>
+							<i class="bi bi-table fs-4" title="Information"></i>
 						</button>
-						<span style=" margin-left: 1rem; color: #54B49C;">Information</span>
+						<span style=" margin-left: 1rem; color: #54B49C;" >Information</span>
 					</a>
 				</li>
-				{% if role.name == "owner" %}
+				{% if role.name == "owner" or role.name == "executor" %}
 				<li>
-					<a href="/settings">
+					<a href="#" data-toggle="collapse" data-target="#settings-submenu" aria-expanded="false">
 						<button class="btn btn-outline-light"
-							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-gear fs-4"></i>
-						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Settings</span>
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-gear fs-4" title="Settings"></i>
+								</button>
+								<span style="margin-left: 1rem; color: #54B49C;" >Settings</span>
 					</a>
+					<ul class="collapse" id="settings-submenu">
+						<li>
+							<a href="/project_settings" data-toggle="collapse" data-target="#settings-category-1" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-person-workspace fs-4" title="Project settings"></i>
+								</button>
+								<span style="color: #54B49C;" >Project</span>
+							</a>
+						</li>
+						<!-- <li>
+							<a href="/user_settings" data-toggle="collapse" data-target="#settings-category-2" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-person-vcard-fill fs-4" title="User settings"></i>
+								</button>
+								<span style="color: #54B49C;" >User</span>
+							</a>
+						</li>
+						<li>
+							<a href="/application_settings" data-toggle="collapse" data-target="#settings-category-3" aria-expanded="false">
+								<button class="btn btn-outline-light"
+								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
+								<i class="bi bi-menu-button-wide fs-4" title="Application settings"></i>
+								</button>
+								<span style="color: #54B49C;" >Application</span>
+							</a>
+						</li> -->
+					</ul>
 				</li>
 				{% endif %}
 			</ul>
@@ -350,14 +449,21 @@
 				<div class="modal-header">
 					<h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel">Registration token</h1>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-
 				</div>
-				<div class="modal-body">
-					<div class="mb-3">
-						<label for="inviteToSetezorToken" class="col-form-label">Token</label>
-						<input type="text" class="form-control" disabled id="inviteToSetezorToken">
+				<form onsubmit="generateRegisterToken(event)">
+					<div class="modal-body">
+						<div class="mb-3">
+							<label for="inviteToSetezorCount" class="col-form-label">Person count</label>
+							<input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
+							<label for="inviteToSetezorToken" class="col-form-label">Token</label>
+							<input type="text" class="form-control" disabled id="inviteToSetezorToken">
+						</div>
 					</div>
-				</div>
+					<div class="modal-footer">
+						<button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+						<button id="close-create-agent" type="submit" class="btn btn-success">Create</button>
+					</div>
+				</form>
 			</div>
 		</div>
 	</div>
@@ -486,6 +592,19 @@
 		$(document).ready(function () {
 			initMenu();
 
+			$('#menu li a[data-target="#settings-submenu"]').click(function (e) {
+				e.preventDefault();
+
+				var settingsSubmenu = $('#settings-submenu');
+				if (!settingsSubmenu.is(':visible')) {
+					settingsSubmenu.slideDown('normal');
+				}
+
+				// Убедиться, что #wrapper открыт
+				if ($('#wrapper').hasClass('toggled-2')) {
+					$('#wrapper').removeClass('toggled-2');
+				}
+			});
 			$('#menu li a[data-target="#tools-submenu"]').click(function (e) {
 				e.preventDefault();
 
@@ -503,7 +622,7 @@
 
 	</script>
 	<script>
-		{% if role and role.name == "owner" %}
+		{% if role and (role.name == "owner" or role.name == "executor") %}
 		let currentAcunetixName = "";
 
 		createAgentBar("agent_tools");
@@ -687,14 +806,16 @@
 			}
 		}
 		{% endif %}
-		async function generateRegisterToken(){
+		async function generateRegisterToken(event){
+			event.preventDefault()
+			let formdata = new FormData(event.target)
 			let resp = await fetch("/api/v1/auth/generate_register_token",{
 				method: "POST",
+				body: JSON.stringify(Object.fromEntries(formdata)),
 				headers: { "Content-type": "application/json" },})
 				let data = await resp.json()
 				let tokenEl = document.getElementById("inviteToSetezorToken")
 				tokenEl.value = data.token
-				$('#inviteToSetezorTokenModal').modal('show');
 		}
 	</script>
 </body>

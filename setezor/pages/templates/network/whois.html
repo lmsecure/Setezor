@@ -124,6 +124,34 @@
 
 {% endmacro %}
 
+{% macro whois_script_modal_to_node() %}
+<script>
+    function whois_script_modal_to_node(ip) {
+        var myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'));
+        var inputIP = document.getElementById('inputTARGET')
+        inputIP.value = ip
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("whoisModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+
 
 
 

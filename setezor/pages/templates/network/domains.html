@@ -101,6 +101,84 @@
 
 </div>
 {% endmacro %}
+{% macro domains_full_modal() %}
+<div id="domainsModalWindow" class="modal fade" tabindex="-1" aria-labelledby="domainsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="domainsModalLabel">Domains</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_domains">
+                    <div data-agent-bar="agent_domains"></div>
+                    <div data-interface-bar="interface_domains" class="ms-3"></div>
+                    <div id="scans_bar_domains" class="ms-3"></div>
+                </div>
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa">
+                        <form id="DomainForm" class="needs-validation" novalidate>
+                            {{ domains_input() }}
+                            {{ domains_main() }}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function domains_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("domainsModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
+{% macro domains_script_modal_to_node() %}
+<script>
+    function domains_script_modal_to_node(ip) {
+        var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
+        var inputIP = document.getElementById('inputDOMAIN')
+        inputIP.value = ip
+
+        myModal.show();
+    }
+
+    // Код для закрытия модалки
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("domainsModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
 
 {% macro show() %}
 <div class="d-flex flex-column">

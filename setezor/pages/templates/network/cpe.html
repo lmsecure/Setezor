@@ -1,4 +1,5 @@
-{% macro show() %}
+{% macro cpe_main() %}
+
 <div class="p2 tab-content">
     <div class="row d-flex flex-row">
         <div class="col-3">
@@ -66,4 +67,64 @@
 
     }
 </script>
+
+{% endmacro %}
+
+
+{% macro cpe_full_script_modal() %}
+
+<div id="cpeModalWindow" class="modal fade" tabindex="-1" aria-labelledby="cpeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cpeModalLabel">CPEGuess</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_cpeguess">
+                    <div data-agent-bar="agent_cpeguess"></div>
+                    <div data-interface-bar="interface_cpeguess" class="ms-3"></div>
+                    <div id="scans_bar_cpeguess" class="ms-3"></div>
+                </div>
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
+                        {{ cpe_main() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function cpe_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('cpeModalWindow'));
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('cpeModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("cpeModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+
+{% endmacro %}
+
+
+
+{% macro show() %}
+
+{{ cpe_main() }}
+
 {% endmacro %}

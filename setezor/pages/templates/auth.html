@@ -15,7 +15,9 @@
 
 <body>
   <div id="particles-js"></div>
-
+  <div class="position-fixed top-0 end-0" id="toastHolderParent" style="margin-top: 5px;">
+    <div id="toast_holder"></div>
+  </div>
   <form onsubmit="auth(event)">
     <div class="wrapper">
       <h2 style="margin-bottom: 2rem;">Authorization</h2>
@@ -73,18 +75,19 @@
       backdrop-filter: blur(9px);
       -webkit-backdrop-filter: blur(9px);
     }
-    .toggle-password {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: rgb(17, 17, 17);
-}
 
-.toggle-password i {
-  font-size: 18px;
-}
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: rgb(17, 17, 17);
+    }
+
+    .toggle-password i {
+      font-size: 18px;
+    }
 
     form {
       display: flex;
@@ -192,34 +195,67 @@
 
 
   <script>
+     var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+      function create_toast(title, message, level="info", time="just now") {
+        var toast_holder = document.getElementById("toast_holder")
+        var toast = document.createElement("div")
+        toast.classList.add("toast", "fade")
+        toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        var toast_instance = new bootstrap.Toast(toast)
+        toast_holder.prepend(toast)
+        toast_instance.show()
+    
+        var notification_holder = document.getElementById("notifications_body")
+        var notification_toast = document.createElement("div")
+        notification_toast.classList.add("toast", "fade")
+        notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        notification_toast.setAttribute("data-bs-autohide",false)
+        var notification_toast_instance = new bootstrap.Toast(notification_toast)
+        notification_holder.prepend(notification_toast)
+        notification_toast_instance.show()
+    };
+    function create_html_toast(title, message, time, level) {
+        return `
+                <div class="toast-header">
+                    <svg width="25" height="25">
+                        <rect fill=${level} y="3" width="20" height="20" rx="3" />
+                    </svg>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-muted">${time}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>`
+    };
     async function auth(event) {
       event.preventDefault();
       let formData = new FormData(event.target)
-      await fetch("/api/v1/auth/login", {
+      let response = await fetch("/api/v1/auth/login", {
         method: 'post',
         body: formData
-      }).then(response => {
-        if (response.ok) {
-          window.location.href = "/projects"
-        }
-      }).catch(function (err) {
-        console.log(err)
       })
+      let answer = await response.json()
+      if (response.status != 200) {
+        create_toast("Error", answer.detail, 'error')
+        return
+      }
+      window.location.href = "/projects"
     }
     function togglePasswordVisibility() {
-  const passwordInput = document.getElementById('password');
-  const toggleIcon = document.querySelector('.toggle-password i');
+      const passwordInput = document.getElementById('password');
+      const toggleIcon = document.querySelector('.toggle-password i');
 
-  if (passwordInput.type === 'password') {
-    passwordInput.type = 'text';
-    toggleIcon.classList.remove('bi-eye');
-    toggleIcon.classList.add('bi-eye-slash');
-  } else {
-    passwordInput.type = 'password';
-    toggleIcon.classList.remove('bi-eye-slash');
-    toggleIcon.classList.add('bi-eye');
-  }
-}
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye');
+        toggleIcon.classList.add('bi-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash');
+        toggleIcon.classList.add('bi-eye');
+      }
+    }
   </script>
 
 

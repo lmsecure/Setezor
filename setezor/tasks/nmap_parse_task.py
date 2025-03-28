@@ -28,8 +28,8 @@ class NmapParseTask(BaseJob):
     async def _task_func(self):
         data = b64decode(self.file.split(',')[1])
         data = NmapScanner.parse_xml(data)
-        parse_result = NmapParser().parse_hosts(scan = data.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
-        result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id)
+        parse_result, traceroute = NmapParser().parse_hosts(scan = data.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
+        result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id, traceroute=traceroute)
         return result
 
     @BaseJob.local_task_notifier

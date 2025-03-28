@@ -1,10 +1,11 @@
 from typing import List
 
-
+from fastapi import HTTPException
 from setezor.models.node_comment import NodeComment
 from setezor.schemas.comment import NodeCommentForm
 from setezor.unit_of_work import UnitOfWork
 from setezor.interfaces.service import IService
+from setezor.schemas.roles import Roles
 
 
 class NodeService(IService):
@@ -14,64 +15,59 @@ class NodeService(IService):
         async with uow:
             if (not scans) and (last_scan := await uow.scan.last(project_id=project_id)):
                 scans.append(last_scan.id)
-
-            agents_ips = {}
-
             vis_nodes_and_interfaces = await uow.ip.vis_nodes_and_interfaces(project_id=project_id, scans=scans)
-            for row in vis_nodes_and_interfaces:
-                if not agents_ips.get(row.ip_id):
-                    agents_ips[row.ip_id] = {"agents": set()}
-                    if row.agent_id:
-                        agents_ips[row.ip_id].update(
-                            {"agents": {row.agent_id}})
-                else:
-                    if row.agent_id:
-                        agents_ips[row.ip_id]["agents"].add(row.agent_id)
-
-            result = []
-
             agents = await uow.agent.list(project_id=project_id)
-            for agent in agents:
-                result.append({
-                    "id": agent.id,
-                    "mac_address": "",
-                    "address": "",
-                    "agents": [agent.id],
-                    "agent": agent.id,
-                    "parent_agent_id": agent.parent_agent_id,
-                    "group": "agents_group",
-                    "value": 1,
-                    "shape": "dot",
-                    "label": agent.name
-                })
-
-
-            nodes_with_comment = await uow.node_comment.list_nodes_with_comment(project_id=project_id)
-            nodes_with_comment_set = {t for t in nodes_with_comment}
             nodes = await uow.ip.get_nodes(project_id=project_id, scans=scans)
-            for node in nodes:
-                result.append({
-                    "id": node.id,
-                    "mac_address": node.mac,
-                    "address": node.ip,
-                    "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [],
-                    "agent": None,
-                    "object_type": node.name,
-                    "group": f"{node.start_ip}/{node.mask}",
-                    "value": 1,
-                    "shape": "dot",
-                    "label": node.ip,
-                    "has_comments": node.id in nodes_with_comment_set
-                })
 
-            return result
+        server_id = [agent.id for agent in agents if agent.name == "Server"]
+        agents_ips = {}
+        for row in vis_nodes_and_interfaces:
+            if not agents_ips.get(row.ip_id):
+                agents_ips[row.ip_id] = {"agents": set()}
+                if row.agent_id:
+                    agents_ips[row.ip_id].update(
+                        {"agents": {row.agent_id}})
+            else:
+                if row.agent_id:
+                    agents_ips[row.ip_id]["agents"].add(row.agent_id)
+
+        result = []
+        for agent in agents:
+            result.append({
+                "id": agent.id,
+                "mac_address": "",
+                "address": "",
+                "agents": [agent.id],
+                "agent": agent.id,
+                "parent_agent_id": agent.parent_agent_id,
+                "group": "agents_group",
+                "value": 1,
+                "shape": "dot",
+                "label": agent.name
+            })
+        for node in nodes:
+            result.append({
+                "id": node.id,
+                "mac_address": node.mac,
+                "address": node.ip,
+                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else server_id,
+                "agent": None,
+                "object_type": node.name,
+                "group": f"{node.start_ip}/{node.mask}",
+                "value": 1,
+                "shape": "dot",
+                "label": node.ip
+            })
+        return result
 
     @classmethod
     async def get_comments(cls, uow: UnitOfWork,
-                           ip_id: str, project_id: str) -> List[dict]:
+                           ip_id: str, project_id: str, user_id: str) -> List[dict]:
         async with uow:
+            role = await uow.user_project.get_role_in_project(project_id=project_id, user_id=user_id)
             raw_comments = await uow.node_comment.for_node(ip_id=ip_id,
-                                                           project_id=project_id)
+                                                           project_id=project_id,
+                                                           hide_deleted=role!=Roles.owner)
         raw_comments = list(raw_comments)
         comments = {}
         for comment, user_login in raw_comments:
@@ -96,25 +92,58 @@ class NodeService(IService):
             await uow.commit()
             return new_comment
 
+
+    @classmethod
+    async def update_comment(cls, uow: UnitOfWork,
+                             project_id: str,
+                             user_id: str,
+                             comment_id: str,
+                             comment_text: str):
+        async with uow:
+            comment = await uow.node_comment.find_one(id=comment_id, project_id=project_id)
+            role = await uow.user_project.get_role_in_project(project_id=project_id, user_id=user_id)
+            if comment.user_id == user_id or role == Roles.owner:
+                await uow.node_comment.edit_one(id=comment_id, data={"text" : comment_text})
+                await uow.commit()
+                return await uow.node_comment.find_one(id=comment_id)
+            raise HTTPException(status_code=403, detail="You can't edit this comment")
+
+
+    @classmethod
+    async def delete_comment(cls, uow: UnitOfWork, project_id: str, user_id: str, comment_id: str):
+        async with uow:
+            comment = await uow.node_comment.find_one(id=comment_id, project_id=project_id)
+            role = await uow.user_project.get_role_in_project(project_id=project_id, user_id=user_id)
+            if comment.user_id == user_id or role == Roles.owner:
+                if not comment.parent_comment_id:
+                    sub_comments = await uow.node_comment.filter(parent_comment_id=comment_id, project_id=project_id)
+                    for sub_comment in sub_comments:
+                        await uow.node_comment.delete(id=sub_comment.id)
+                await uow.node_comment.delete(id=comment_id)
+                await uow.commit()
+                return
+        raise HTTPException(status_code=403, detail="You can't delete this comment")
+
+
     @classmethod
     async def get_node_info(cls, uow: UnitOfWork, project_id: str, ip_id: int):
         async with uow:
             ip_obj, mac_obj, network_obj, port_soft = await uow.ip.get_node_info(project_id=project_id, ip_id=ip_id)
-            ports_list = []
-            for port, soft in port_soft:
-                ports_list.append({
-                    "port": port.port,
-                    "protocol": port.protocol,
-                    "state": port.state,
-                    "software": soft.product,
-                })
-            result = {
-                "ip": ip_obj.ip,
-                "mac": mac_obj.mac,
-                "network": f"{network_obj.start_ip}/{network_obj.mask}",
-                "ports": ports_list
-            }
-            return result
+        ports_list = []
+        for port, soft in port_soft:
+            ports_list.append({
+                "port": port.port,
+                "protocol": port.protocol,
+                "state": port.state,
+                "software": soft.product if soft else "",
+            })
+        result = {
+            "ip": ip_obj.ip,
+            "mac": mac_obj.mac,
+            "network": f"{network_obj.start_ip}/{network_obj.mask}",
+            "ports": ports_list
+        }
+        return result
 
 
 class EdgeService(IService):

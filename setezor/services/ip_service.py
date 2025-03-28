@@ -1,7 +1,6 @@
 from setezor.schemas.ip import IPSchema, IPSchemaAdd
 from setezor.interfaces.service import IService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from typing import List
 from setezor.models import IP
 
 class IPService(IService):
@@ -14,10 +13,21 @@ class IPService(IService):
             return ip
 
     @classmethod
-    async def list(cls, uow: UnitOfWork) -> List[IPSchema]:
+    async def list_ips(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
-            ips = await uow.ip.list()
-            return ips
+            ips = await uow.ip.filter(project_id=project_id)
+        uniq_ips = set([item.ip for item in ips if item.scan_id and item.ip])
+        result = sorted(uniq_ips, key=lambda item: tuple(map(int, item.split('.'))))
+        return result
+
+    @classmethod
+    async def get_ips_and_ports(cls, uow: UnitOfWork, project_id: str) -> list:
+        async with uow:
+            ips_ports = await uow.ip.get_ips_ports(project_id=project_id)
+        result = []
+        for ip, port in ips_ports:
+            result.append({"ip" : ip, "port" : port})
+        return sorted(result, key=lambda x: (tuple(map(int, x['ip'].split('.'))), x['port']))
 
     @classmethod
     async def get(cls, uow: UnitOfWork, id: int) -> IPSchema:

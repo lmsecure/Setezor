@@ -143,16 +143,22 @@ class NmapParser(XMLParser):
             address (dict): адреса сканируемой машины
 
         Returns:
-            list: распарсенные данные о портах
+            list: распарсенных данных о портах
         """        
         result: list[PortStruct] = []
         ports = NmapParser.to_list(ports.get('port') if ports else None)
         if ports:
             for port in ports:
+                if (tunnel := port.get('service', {}).get('tunnel')):
+                    if tunnel != "ssl": # TODO
+                        print("If you see this message, please notify the developer:")
+                        print("no \"ssl\" tunnel detected:", tunnel)
                 result.append({'port': port.get('portid'),
                                'mac': address.get('mac'), 'service_name' : port.get('service', {}).get('name'),
                                 'state': port.get('state', {}).get('state'),
-                                'protocol': port.get('protocol')})
+                                'protocol': port.get('protocol'),
+                                'is_ssl' : tunnel == "ssl"})
+
         return result
     
 
@@ -241,7 +247,7 @@ class NmapParser(XMLParser):
             addr.ports = ports[str(addr.address)]
         return NmapRunResult({'addresses': addresses, 'traces': res.traces})
     
-    def parse_hosts(self, scan: dict, agent_id: int, self_address: IPv4Struct | None | dict = None):
+    def parse_hosts(self, scan: dict, agent_id: int, self_address: IPv4Struct | None | dict = None) -> tuple[NmapStructure, bool]:
         """Метод парсинга лога nmap-а
 
         Args:
@@ -250,8 +256,9 @@ class NmapParser(XMLParser):
 
         Returns:
             NmapStructure: _description_
-        """        
+        """
         result = NmapStructure()
+        traceroute = "-traceroute" in scan.get('args', "")
         if 'nmaprun' in scan:
             scan = scan['nmaprun']
         hosts = self.to_list(scan.get('host'))
@@ -271,25 +278,37 @@ class NmapParser(XMLParser):
             result.ports.update({address_data[0].get('ip') : ports_data})
             result.softwares.update({address_data[0].get('ip')  : software_data})
             result.traces.append(trace_data)
-        result.addresses = [json.loads(j) for j in set([json.dumps(i) for i in result.addresses])]
-        result.hostnames = [json.loads(j) for j in set([json.dumps(i) for i in result.hostnames])]
+
+        addresses, addresses_set = list(), set()
+        for item in result.addresses:
+            if not json.dumps(item) in addresses_set:
+                addresses.append(item)
+                addresses_set.add(json.dumps(item))
+        result.addresses = addresses
+
+        hostnames, hostnames_set = list(), set()
+        for item in result.hostnames:
+            if not json.dumps(item) in hostnames_set:
+                hostnames.append(item)
+                hostnames_set.add(json.dumps(item))
+        result.hostnames = hostnames
         
-        final_traces = set()
+        
+        final_traces, ft = list(), set()
         for item in result.traces:
             routes = [route.model_dump() for route in item.routes]
-            final_traces.add(json.dumps(routes))
+            if not json.dumps(routes) in ft:
+                final_traces.append(json.dumps(routes))
+                ft.add(json.dumps(routes))
         result.traces = []
         for item in final_traces:
             loaded_trace = json.loads(item)
             struct = RouteStruct(agent_id=agent_id, routes=[IPv4Struct(**trace) for trace in loaded_trace])
             result.traces.append(struct)
-        # logger.debug('Finish parse %s hosts. Get %s addresses, %s hostnames, %s ports, %s software, %s traces', 
-        #              len(hosts), *[len(result.__getattribute__(i)) for i in result.__slots__])
-        # res = self.convert_to_structures(result)
-        return result
+        return result, traceroute
     
     @classmethod
-    def restruct_result(cls, data, interface_ip_id: int):
+    def restruct_result(cls, data, interface_ip_id: int, traceroute: bool) -> list:
         result = []
         address_in_traceses = dict()
         vendors = {}
@@ -304,7 +323,8 @@ class NmapParser(XMLParser):
             network_obj = Network(start_ip=start_ip, mask=24)
             result.append(network_obj)
             ip_obj = IP(ip=data.addresses[i].get('ip'), mac=mac_obj, network=network_obj)
-
+            result.append(ip_obj)
+            address_in_traceses[ip_obj.ip] = ip_obj
             ports = data.ports.get(data.addresses[i].get('ip'), [])
             softs = data.softwares.get(data.addresses[i].get('ip'), [])
             for port, soft in zip(ports, softs):
@@ -328,23 +348,25 @@ class NmapParser(XMLParser):
                         result.append(soft_obj)
                         L4Software_obj = L4Software(l4=l4_obj, software=soft_obj)
                         result.append(L4Software_obj)
-
-            trace_ips = []
-            for r in data.traces[i].routes[1:-1]:
-                start_ip, broadcast = get_network(ip=str(r.address), mask=24)
-                if not (ip_obj_in_trace := address_in_traceses.get(str(r.address))):
-                    network_obj = Network(start_ip=start_ip, mask=24)
-                    result.append(network_obj)
-                    ip_obj_in_trace = IP(ip=str(r.address), network=network_obj)
-                    trace_ips.append(ip_obj_in_trace)
-                    address_in_traceses.update({str(r.address) : ip_obj_in_trace})
-                else:
-                    trace_ips.append(ip_obj_in_trace)
-            trace_ips.append(ip_obj)
-            result.extend(trace_ips)
-            route_obj = Route(agent_id=data.traces[i].agent_id)
-            result.append(route_obj)
-            result.append(RouteList(ip_id_from=interface_ip_id, ip_to=trace_ips[0], route=route_obj))
-            for i in range(1, len(trace_ips)):
-                result.append(RouteList(ip_from=trace_ips[i-1], ip_to=trace_ips[i], route=route_obj))
+        if traceroute:
+            for i in range(len(data.addresses)):
+                froms_tos = []
+                for r in data.traces[i].routes[1:-1]:
+                    start_ip, broadcast = get_network(ip=str(r.address), mask=24)
+                    if not (ip_obj_in_trace := address_in_traceses.get(str(r.address))):
+                        network_obj = Network(start_ip=start_ip, mask=24)
+                        result.append(network_obj)
+                        ip_obj_in_trace = IP(ip=str(r.address), network=network_obj)
+                        result.append(ip_obj_in_trace)
+                        froms_tos.append(str(r.address))
+                        address_in_traceses.update({str(r.address) : ip_obj_in_trace})
+                    else:
+                        froms_tos.append(str(r.address))
+                froms_tos.append(data.addresses[i].get('ip'))
+                route_obj = Route(agent_id=data.traces[i].agent_id)
+                result.append(route_obj)
+                result.append(RouteList(ip_id_from=interface_ip_id, ip_to=address_in_traceses[froms_tos[0]], route=route_obj))
+                for i in range(1, len(froms_tos)):
+                    result.append(RouteList(ip_from=address_in_traceses[froms_tos[i-1]], 
+                                            ip_to=address_in_traceses[froms_tos[i]], route=route_obj))
         return result

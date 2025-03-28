@@ -59,7 +59,7 @@ class NmapScanner:
             error = error.decode()
         if isinstance(result, bytes):
             result = result.decode()
-        error = ''.join([line for line in error.splitlines() if not any(keyword in line for keyword in ['NSOCK', 'INFO', 'MAC', 'DEBUG'])])
+        error = ''.join([line for line in error.splitlines() if not any(keyword in line for keyword in ['NSOCK', 'INFO', 'MAC', 'DEBUG', 'WARNING'])])
         if not error or re.match(r'^\[sudo\] password for [^\n]+?$', error):
             result_dict = self.parse_xml(result)
             return result_dict

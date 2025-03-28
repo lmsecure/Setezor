@@ -8,6 +8,8 @@ import setezor.unit_of_work as UOW
 from setezor.settings import DB_URI
 from setezor.tools.password import PasswordTool
 from setezor.logger import logger
+from setezor.schemas.roles import Roles
+
 
 engine = create_async_engine(DB_URI)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
@@ -71,7 +73,7 @@ async def fill_db():
         await uow.commit()
 
     async with uow:
-        for role_name in ["owner", "viewer"]:
+        for role_name in Roles:
             role_obj = Role(name=role_name)
             if not await uow.role.exists(role_obj):
                 uow.role.add(role_obj.model_dump())

@@ -1,15 +1,19 @@
 var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
-function create_websocket(endpoint) {
+function create_websocket(endpoint, user_id) {
     var sock = new WebSocket('wss://' + window.location.host + endpoint);
-    
     sock.onmessage = function (message) {
-        data = JSON.parse(message.data)
+        let data = JSON.parse(message.data)
         if (window.location.pathname == '/network-map/' && data.command === "update") {
             get_nodes_and_edges([], true)
             return;
         }
+        if (data.command == "notify_user" && data.user_id && data.user_id == user_id){
+            create_toast(data.title, data.text, data.type)
+            return;
+        }
         if (data.command === "notify"){
             create_toast(data.title, data.text, data.type)
+            return;
         }
         if (window.location.pathname == '/tools/' && data.command === "update") {
             get_all_ips_with_open_port_snmp();

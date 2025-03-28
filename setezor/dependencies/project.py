@@ -30,14 +30,15 @@ async def get_current_scan_id(access_token: str = Depends(access_token_getter)):
 async def get_scan_id(access_token: str, project_id: str):
     payload = JWT_Tool.get_payload(access_token)
     scan_id = payload.get("scan_id")
+    user_id = payload.get("user_id")
     if not scan_id:
-        message = WebSocketMessage(title="Info", text=f"Create scan or pick it", type="info")
+        message = WebSocketMessage(title="Info", text=f"Create scan or pick it", type="info", user_id=user_id, command="notify_user")
         await WS_MANAGER.send_message(project_id=project_id, message=message) 
         raise RequiresScanException(status_code=404, detail="No scan picked")
     uow = UnitOfWork()
     async with uow:
         if not await uow.scan.find_one(id=scan_id, project_id=project_id):
-            message = WebSocketMessage(title="Error", text=f"Scan with id={scan_id} does not exist",type="error")
+            message = WebSocketMessage(title="Error", text=f"Scan with id={scan_id} does not exist", type="error", user_id=user_id, command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message) 
             raise RequiresScanException(status_code=404, detail="Scan not found")
     return scan_id

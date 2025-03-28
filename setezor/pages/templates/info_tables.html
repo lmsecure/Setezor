@@ -436,9 +436,7 @@ Information
             </div>
         </div>
     </div>
-{% if role.name == "owner" %}
 <script>
-    var message_sock = create_websocket(`/api/v1/project/ws`)
+    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 </script>
-{% endif %}
 {% endblock content %}

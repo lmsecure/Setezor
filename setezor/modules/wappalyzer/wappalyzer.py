@@ -117,26 +117,29 @@ class WappalyzerParser:
         domain = data.get("domain")
         ip = data.get("ip")
 
+        new_ip = None
         if domain:
             new_domain = Domain(domain=domain)
             try:
                 responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses)
-                result.extend([new_domain, new_ip, dns_a])
+                new_domain, new_ip, *dns_a = DNSModule.proceed_records(domain, responses) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                result.extend([new_domain, new_ip, *dns_a])
             except:
                 result.append(new_domain)
         else:
             new_domain = Domain(domain="")
             result.append(new_domain)
-        if ip:
-            new_ip = IP(ip=ip)
-            result.append(new_ip)
-        else:
-            new_ip = IP(ip="")
-            result.append(new_ip)
+        if not new_ip:
+            if ip:
+                new_ip = IP(ip=ip)
+                result.append(new_ip)
+            else:
+                new_ip = IP(ip="")
+                result.append(new_ip)
         if port:
             new_port = Port(port=port, ip=new_ip)
             result.append(new_port)
+
 
         new_l7 = L7(port=new_port, domain=new_domain)
         result.append(new_l7)

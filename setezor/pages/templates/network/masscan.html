@@ -1,13 +1,46 @@
 {% macro masscan_ip() %}
 
-
+<div id="MasscanInputContainer"></div>
 <div class="input-group" id="masscanIpTarget">
-    <span class="input-group-text" id="basic-addon1">IP</span>
+    <span class="input-group-text"  style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
     <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control" id='masscanInputIP' placeholder="IP address or netmask"
+    <input type="text" list="IpList" class="form-control" id='masscanInputIP' placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="target">
-
+    <button id="add_new_masscan_form" onclick="addNewMasscanForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
+<script>
+      function addNewMasscanForm() {
+        const original = document.getElementById('masscanIpTarget');
+        const clone = original.cloneNode(true);
+        const newInput = clone.querySelector('input');
+        newInput.id = 'inputTarget_' + Date.now();
+        newInput.value = '';
+
+        const existingMinusButton = clone.querySelector('.btn-danger');
+        if (existingMinusButton) {
+            existingMinusButton.remove();
+        }
+
+        const removeButton = document.createElement('button');
+        removeButton.textContent = '-';
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-danger';
+        removeButton.style.width = '3rem';
+        removeButton.style.marginBottom = '0.5rem';
+        removeButton.onclick = () => {
+            clone.remove();
+        };
+
+        clone.appendChild(removeButton);
+
+        const addButton = clone.querySelector('#add_new_masscan_form');
+        if (addButton) {
+            addButton.remove();
+        }
+
+        document.getElementById('MasscanInputContainer').appendChild(clone);
+    }
+</script>
 <script>
     $('#masscanIpTarget').on('change', function (e, data) {
         if ($('#masscanInputIP').inputmask('isComplete')) {
@@ -91,24 +124,24 @@
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startMasscanScanBtn" onclick="
+    const isTargetTabActive = document.getElementById('masscan-simple-tab').classList.contains('active');
     var params = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
+
     const UDPcheckbox = document.getElementById('searchUdpPortInput');
     let ping;
     let search_udp_port;
     if (params.ports === undefined) {
         ping = true;
-    }
-    else{
-        ping = false
+    } else {
+        ping = false;
     }
     if (UDPcheckbox.checked) {
-        search_udp_port	 = true;
-        } else {
-            search_udp_port = false;
-        }
-    
+        search_udp_port = true;
+    } else {
+        search_udp_port = false;
+    }
+
     const {
-        target = null,
         ports = null,
         format = null,
         wait = null,
@@ -116,41 +149,89 @@
         max_rate = null,
     } = params;
 
-    
-    fetch('/api/v1/task/masscan_scan_task', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            interface_ip_id: getIface().ip_id,
-            interface: getIface().name,
-            agent_id: getAgent(),
-            format,
-            wait,
-            target,
-            search_udp_port,
-            source_port,
-            max_rate,
-            ports,
-            ping
-        })
-    }).then(response => {
-            if (response.status !== 201) {
-                response.json().then(data => {
-                    const errorMessage = data.detail[0].msg || 'Create task error';
-                    create_toast('Error', errorMessage, 'error');
-                });
-            } else {
-                var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
-                if (myModal) {
-                    myModal.hide();
+    if (isTargetTabActive) {
+        const ips = [];
+        for (const d of document.getElementById('MasscanInputContainer').getElementsByClassName('form-control')) {
+            ips.push(d.value);
+        }
+        var paramsForValues = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
+        ips.push(params.target)
+        for (const ip of ips) {
+            fetch('/api/v1/task/masscan_scan_task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interface_ip_id: getIface().ip_id,
+                    interface: getIface().name,
+                    agent_id: getAgent(),
+                    format,
+                    wait,
+                    target: ip,
+                    search_udp_port,
+                    source_port,
+                    max_rate,
+                    ports,
+                    ping,
+                    scope_id: ''
+                })
+            }).then(response => {
+                if (response.status !== 201) {
+                    response.json().then(data => {
+                        const errorMessage = data.detail[0].msg || 'Create task error';
+                        create_toast('Error', errorMessage, 'error');
+                    });
+                } else {
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+                    if (myModal) {
+                        myModal.hide();
+                    }
                 }
-            }
-        })
-        .catch(error => {
-            create_toast('Error', 'An error occurred while sending the request', 'error');
-            console.error('Error:', error);
-        });
-    ">Start scan</button>
+            }).catch(error => {
+                create_toast('Error', 'An error occurred while sending the request', 'error');
+                console.error('Error:', error);
+            });
+        }
+    } else {
+        if (selectedScopeForMasscan) {
+            fetch('/api/v1/task/masscan_scan_task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interface_ip_id: getIface().ip_id,
+                    interface: getIface().name,
+                    agent_id: getAgent(),
+                    format,
+                    wait,
+                    target: null,
+                    search_udp_port,
+                    source_port,
+                    max_rate,
+                    ports,
+                    ping,
+                    scope_id: selectedScopeForMasscan
+                })
+            }).then(response => {
+                if (response.status !== 201) {
+                    response.json().then(data => {
+                        const errorMessage = data.detail[0].msg || 'Create task error';
+                        create_toast('Error', errorMessage, 'error');
+                    });
+                } else {
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+                    if (myModal) {
+                        myModal.hide();
+                    }
+                }
+            }).catch(error => {
+                create_toast('Error', 'An error occurred while sending the request', 'error');
+                console.error('Error:', error);
+            });
+        } else {
+            create_toast('Error', 'Please select a scope', 'error');
+            return;
+        }
+    }
+">Start scan</button>
 </div>
 <script>
     $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
@@ -189,6 +270,11 @@
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
                                                     body: JSON.stringify(data)});
+                                            }
+                                        })(file)
+                                        reader.onerror = (function (file){
+                                            return function (e){
+                                                create_toast('Error', `Not enough permissions. Check file owner`, 'error')
                                             }
                                         })(file)
                                         reader.readAsDataURL(file);            
@@ -251,7 +337,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="masscanModalLabel">Masscan Сканирование</h5>
+                <h5 class="modal-title" id="masscanModalLabel">Masscan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -260,11 +346,29 @@
                     <div data-interface-bar="interface_masscan" class="ms-3"></div>
                     <div id="scans_bar_masscan" class="ms-3"></div>
                 </div>
-                <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
-                    {{ masscan_ip() }}
-                    {{ masscan_main() }}
-                </form>
-                {{ masscan_parse() }}
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
+                        <div class="nav nav-tabs me-3 mb-3" id="masscan-tab" role="tablist">
+                            <button class="nav-link active" id="masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#masscan-simple-mode"
+                                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true">Target</button>
+                            <button class="nav-link" id="masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#masscan-scope-mode"
+                                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false">Scope</button>
+                        </div>
+                
+                        <div class="tab-pane fade show active" id="masscan-simple-mode" role="tabpanel" aria-labelledby="masscan-simple-tab">
+                            <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+                                {{ masscan_ip() }}
+                        </div>
+                
+                        <div class="tab-pane fade" id="masscan-scope-mode" role="tabpanel" aria-labelledby="masscan-scope-tab">
+                            <form id="masscanScanScopeForm" class="needs-validation" novalidate>
+                                {{ masscan_scope() }}
+                        </div>
+                            {{ masscan_main() }}
+                        </form>
+                    {{ masscan_parse() }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -294,14 +398,94 @@
 </script>
 
 {% endmacro %}
+{% macro masscan_script_modal_to_node() %}
+<script>
+    function masscan_script_modal_to_node(ip) {
+        var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
+        var inputIP = document.getElementById('masscanInputIP')
+        inputIP.value = ip
+        myModal.show();
+    }
 
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("masscanModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+
+{% macro masscan_scope() %}
+<div class="dropdown w-100 mt-2">
+    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de" type="button" id="masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+      Select scope
+    </button>
+    <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeMasscanData">
+    </ul>
+</div>
+<script>
+let selectedScopeForMasscan = '';
+function get_masscan_scope_list(prefix) {
+    axios.get('/api/v1/scope').then(resp => {
+        const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeMasscanData');
+        const dropdownButton = document.getElementById(prefix + 'masscanScopeDropdown');
+        dropdownMenu.innerHTML = '';
+
+        resp.data.forEach((item, index) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.classList.add('dropdown-item');
+            a.href = '#';
+            a.textContent = `${item.name}`;
+
+            a.addEventListener('click', () => {
+                dropdownButton.textContent = `${item.name}`;
+                selectedScopeForMasscan = item.id;
+            });
+
+            li.appendChild(a);
+            dropdownMenu.appendChild(li);
+        });
+    })
+}
+
+get_masscan_scope_list('')
+</script>
+{% endmacro %}
 
 {% macro show() %}
-<form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
-    <div class="d-flex flex-column">
-        {{ masscan_ip() }}
-        {{ masscan_main() }}
-    </div>
+<div class="d-flex flex-column">
+    <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
+        <div class="nav nav-tabs me-3 mb-3" id="masscan-tab" role="tablist">
+            <button class="nav-link active" id="masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#masscan-simple-mode"
+                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true">Target</button>
+            <button class="nav-link" id="masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#masscan-scope-mode"
+                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false">Scope</button>
+        </div>
+
+        <div class="tab-pane fade show active" id="masscan-simple-mode" role="tabpanel" aria-labelledby="masscan-simple-tab">
+            <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
+                {{ masscan_ip() }}
+        </div>
+
+        <div class="tab-pane fade" id="masscan-scope-mode" role="tabpanel" aria-labelledby="masscan-scope-tab">
+            <form id="masscanScanScopeForm" class="needs-validation" novalidate>
+                {{ masscan_scope() }}
+        </div>
+            {{ masscan_main() }}
+        </form>
     {{ masscan_parse() }}
-</form>
+    </div>
+</div>
 {% endmacro %}

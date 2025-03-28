@@ -1,12 +1,14 @@
-{% macro show() %}
+{% macro snmp_main() %}
+
+
 
 <!--  style="-moz-appearance: textfield;" -->
 
 <div id="v-pills-snmp">
     <div id="snmp" class="row">
-        <div class="col-4">
-            <form class="row g-3" onsubmit=startScan161udpPort(event) id="SnmpForm">
-                <div class="col-md-10">
+
+            <form onsubmit=startScan161udpPort(event) id="SnmpForm">
+
                     <div id="snmpInputContainer"></div>
 
                     <div class="dropdown w-100 mt-2">
@@ -16,24 +18,18 @@
                         <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForIpPortData">
                         </ul>
                     </div>
-                </div>
 
-                <div class="col-md-10">
-                    <label for="">Community strings dictionary (default if empty):</label>
-                <form id='idChoiceDictCommunityStrings'>
-                    <div class="mb-3">
-                            <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
-                    </div>
-                </form>
-            </div>
-                <div class="col-md-10">
+                        <label class="mt-3" for="">Community strings dictionary (default if empty):</label>
+                    <form id='idChoiceDictCommunityStrings'>
+                        <div class="mb-3">
+                                <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
+                        </div>
+                    </form>
                     <div class="btn-group d-flex my-2" role="group">
                         <button class="btn btn-danger w-50" type="button" onclick="reset_community_string_lst()">Reset</button>
                         <button class="btn btn-primary w-50" type="button" onclick="startScan()"> Start </button>
                     </div>
-                </div>
             </form>
-        </div>
     </div>
 </div>
 
@@ -68,7 +64,7 @@
     let selectedIp = '';
     let selectedPort = '';
     function get_snmp_ip_port_list() {
-    axios.get('/api/v1/resource/get_resources_for_snmp').then(resp => {
+    axios.get('/api/v1/l7/get_resources_for_snmp').then(resp => {
         const dropdownMenu = document.getElementById('dropdownMenuForIpPortData');
         const dropdownButton = document.getElementById('snmpIpPortDropdown');
 
@@ -96,5 +92,61 @@
     get_snmp_ip_port_list();
 
 </script>
+{% endmacro %}
+
+
+{% macro snmp_full_script_modal() %}
+
+<div id="snmpModalWindow" class="modal fade" tabindex="-1" aria-labelledby="snmpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="snmpModalLabel">Snmp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_snmp">
+                    <div data-agent-bar="agent_snmp"></div>
+                    <div data-interface-bar="interface_snmp" class="ms-3"></div>
+                    <div id="scans_bar_snmp" class="ms-3"></div>
+                </div>
+                <div class="d-flex flex-column">
+                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
+                        {{ snmp_main() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function snmp_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('snmpModalWindow'));
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('snmpModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("snmpModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+
+
+{% macro show() %}
+
+{{ snmp_main() }}
 
 {% endmacro %}

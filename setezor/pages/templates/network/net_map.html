@@ -3,6 +3,20 @@
 {{ union_netmask.show() }}
 {% import 'network/division_netmask.html' as division_netmask %}
 {{ division_netmask.show() }}
+
+{% import 'network/nmap.html' as nmap %}
+{{ nmap.nmap_script_modal_to_node() }}
+{% import 'network/masscan.html' as masscan%}
+{{ masscan.masscan_script_modal_to_node() }}
+{% import 'network/cert.html' as cert%}
+{{ cert.cert_script_modal_to_node() }}
+{% import 'network/whois.html' as whois%}
+{{ whois.whois_script_modal_to_node() }}
+{% import 'network/domains.html' as domains%}
+{{domains.domains_script_modal_to_node()}}  
+        
+
+
 <div class="d-flex flex-row">
     <div class="btn-group" role="group" style="padding-left: 0.47rem;">
         <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
@@ -91,8 +105,8 @@
         </div>
     </div>
 </div>
-
 <div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
+    {% if role.name == "owner" or role.name == "executor"%}
     <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
@@ -109,6 +123,21 @@
             <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Tools</a>
             <ul class="dropdown-menu">
+                <li><a a class="dropdown-item"  onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    Nmap
+                </a></li>
+                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    Masscan
+                </a></li>
+                <li><a a class="dropdown-item"  onclick="domains_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    Domains
+                </a></li>
+                <li><a a class="dropdown-item"  onclick="cert_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    Cert
+                </a></li>
+                <li><a a class="dropdown-item"  onclick="whois_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    Whois
+                </a></li>
                 <li>
                     <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();
                         document.getElementById('acunetix_scan_target_id').value='';
@@ -124,7 +153,7 @@
                 </li>
             </ul>
         </li>
-        <li class="dropdown dropend">
+        <!-- <li class="dropdown dropend">
             <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Node managment</a>
                 <ul class="dropdown-menu">
@@ -142,11 +171,12 @@
                         <a class="dropdown-item" href="#" onclick="network.manipulation.deleteSelected()">Delete Node</a>
                     </li>
                 </ul>
-        </li>
+        </li> -->
     </ul>
+    {% endif %}
 </div>
 <div class="dropdown xs" id="agentDropdownMenu" style="display:none">
-    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+    <!-- <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
                 aria-expanded="false">Device
@@ -176,9 +206,9 @@
                     </a>
                 </li>
             </ul>
-        </li>
+        </li> -->
         <!-- network.body.nodes[1] -->
-        <li class="dropdown dropend">
+        <!-- <li class="dropdown dropend">
             <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Node managment</a>
                 <ul class="dropdown-menu">
@@ -196,8 +226,8 @@
                             data-bs-target="#demoteAgent" onclick="demoteAgent()">Demote Agent</a>
                     </li>
                 </ul>
-        </li>
-    </ul>
+        </li> -->
+    <!-- </ul> -->
 </div>
 
 <div id="ModalCreateNode">
@@ -948,40 +978,40 @@
                 
             },
             /* !Редактирование карты, нужно изменить! */
-             manipulation: {
-              addNode: function (data, callback) {
-                // filling in the popup DOM elements
-                modal = createCreateNodeModal(false)
-                modal.show()
-                editNode(data, clearNodePopUp, callback, true);
-                modal.hide()
-              },
-              editNode: function (data, callback) {
-                // filling in the popup DOM elements
-                modal = createCreateNodeModal(true)
-                modal.show()
-                editNode(data, cancelNodeEdit, callback, false);
-                modal.hide()
-              },
-              addEdge: function (data, callback) {
-                  createEdgeInDatabase(data, callback)
-                  callback(data)
-              },
-              deleteNode: function (data, callback) {
-                deleteNodeInDatabase(data, callback)
-              },
-              deleteEdge: function (data, callback) {
-                  deleteEdgeInDatabase(data, callback)
-                  callback(data)
-              },
-              editEdge: {
-                editWithoutDrag: function (data, callback) {
-                  document.getElementById("edge-operation").innerText =
-                    "Edit Edge";
-                  saveEdgeData(data, callback);
-                }
-              }, 
-            },
+        //      manipulation: {
+        //       addNode: function (data, callback) {
+        //         // filling in the popup DOM elements
+        //         modal = createCreateNodeModal(false)
+        //         modal.show()
+        //         editNode(data, clearNodePopUp, callback, true);
+        //         modal.hide()
+        //       },
+        //       editNode: function (data, callback) {
+        //         // filling in the popup DOM elements
+        //         modal = createCreateNodeModal(true)
+        //         modal.show()
+        //         editNode(data, cancelNodeEdit, callback, false);
+        //         modal.hide()
+        //       },
+        //       addEdge: function (data, callback) {
+        //           createEdgeInDatabase(data, callback)
+        //           callback(data)
+        //       },
+        //       deleteNode: function (data, callback) {
+        //         deleteNodeInDatabase(data, callback)
+        //       },
+        //       deleteEdge: function (data, callback) {
+        //           deleteEdgeInDatabase(data, callback)
+        //           callback(data)
+        //       },
+        //       editEdge: {
+        //         editWithoutDrag: function (data, callback) {
+        //           document.getElementById("edge-operation").innerText =
+        //             "Edit Edge";
+        //           saveEdgeData(data, callback);
+        //         }
+        //       }, 
+        //     },
         };
 
         if (to_update_data == true) {
@@ -1294,8 +1324,8 @@
             }
             table += '</table>\n'
             html_text += table
-            if (json.ports) {
-                html_ports = '<div><h4>Ports</h4>\n</div><table class="table table-bordered table-hover align-middle"">\n'
+            if (json.ports.length) {
+                html_ports = '<div"><h4>Ports</h4>\n</div><div style="overflow-y: auto; max-height: 200px;"><table class="table table-bordered table-hover align-middle"">\n'
                 html_ports += `
                         <tr>
                             <td> Port </td>
@@ -1314,46 +1344,149 @@
                         </tr>
                     `
                 })
-                html_ports += '</table>\n'
+                html_ports += '</table></div>\n'
                 html_text += html_ports
             }
             let html_all_comments = '';
             let html_child_comments = '';
+            
 
             all_comments_response = await axios.get(`/api/v1/vis/comment/${params.ip_id}`).then(response => {
                     response.data.forEach(comment => {
-
-                        const createdAt = new Date(comment.created_at);
-                        const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                        let createdAt
+                        if (comment.updated_at == null){
+                            createdAt = new Date(comment.created_at);
+                        } else {
+                            createdAt = new Date(comment.updated_at);
+                        }
+                        let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                        if (comment.deleted_at == null) {
                         html_all_comments += `
-                                <div id="commentContainer-${comment.id}">
-                                    <hr>
+                                <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
                                     <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted small" style="word-break: break-all">${comment.login}</span>
-                                        <span class="text-muted small">${formattedDate}</span>
-                                        <button class="btn btn-outline-primary btn-sm" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')">
-                                            Reply
-                                        </button>
-                                    </div>
-                                </div>`;
-                                comment.child_comments.forEach(child =>{
-                                    const createdAt = new Date(child.created_at);
-                                    const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
-                                    html_all_comments += `
-                                        <div id="commentContainer-${child.id}" style="margin-left: 1rem">
-                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
-                                                <span class="text-muted small">${formattedDate}</span>
+                                    <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                            <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                                <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                                <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
                                             </div>
-                                        </div>`
+                                            <div style="display: flex; gap: 10px;">`
+                                                if ("{{ role.name }}" == "owner" || "{{ user_id }}" == comment.user_id ) {
+                                                html_all_comments += `<div class="column">
+                                                    <button class="btn btn-outline-danger btn-xs h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${comment.id}')">Delete</button>
+                                                </div>
+                                                <div class="column">
+                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="editToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Edit</button>
+                                                </div>` + ``
+                                                }
+                                                html_all_comments += `<div class="column">
+                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Reply</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="comment-hr" data-deleted="false">`;}
+                                else {
+                                    html_all_comments += `
+                                <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
+
+                                    <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                                    <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                            <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                                <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                                <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
+                                            </div>
+                                            <div style="display: flex; gap: 10px;">
+                                                <div class="column">
+                                                <span class="text-muted small" style="font-size: 0.8em">Deleted</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="comment-hr" data-deleted="true">`;
+                                }
+                                comment.child_comments.forEach(child =>{
+                                    let createdAt
+                                    if (child.updated_at == null){
+                                        createdAt = new Date(child.created_at);
+                                    } else {
+                                        createdAt = new Date(child.updated_at);
+                                    }
+                                    const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                                    if (child.deleted_at == null) {
+                                    html_all_comments += `
+                                        <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
+                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                                        <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                        <span class="text-muted small">${formattedDate}</span>
+                                                    </div>
+                                                    <div style="display: flex; gap: 10px;">`
+                                                        if ("{{ role.name }}" == "owner" || "{{ user_id }}" == child.user_id ) {
+                                                            html_all_comments += `<div class="column">
+                                                            <button class="btn btn-outline-danger btn-sm h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${child.id}')">Delete</button>
+                                                        </div>
+                                                        <div class="column">
+                                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${child.id}" onclick="editToComment('${child.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Edit</button>
+                                                        </div>`
+                                                    }
+                                                    html_all_comments += `</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr class="comment-hr" data-deleted="false">`
+                                        ;}
+                                        else {
+                                            html_all_comments += `
+                                        <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
+                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                                        <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                        <span class="text-muted small">${formattedDate}</span>
+                                                    </div>
+                                                    <div style="display: flex; gap: 10px;">
+                                                        <div class="column">
+                                                        <span class="text-muted small" style="font-size: 0.8em">Deleted</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr class="comment-hr" data-deleted="true">`
                                         ;
+                                        }
                                 });
                     });
                 });
-
-            html_text += html_all_comments
+                const hideDeletedKey = `hideDeletedComments_${node.id}`;
+                const isChecked = localStorage.getItem(hideDeletedKey) === 'true';
+                html_text += `<hr>`
+                {% if role.name == "owner" %}
+                html_text += `<div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${isChecked ? 'checked' : ''}>
+                        <label class="form-check-label" for="hideDeletedComments">
+                            Hide deleted comments
+                        </label>
+                    </div>`
+                {% else %}
+                html_text += `<div class="form-check" style="opacity:0">
+                        <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${isChecked ? 'checked' : ''} disabled>
+                        <label class="form-check-label" for="hideDeletedComments" disabled>
+                            Hide deleted comments
+                        </label>
+                    </div>`
+                {% endif %}
+                html_text += `<div id="commentsContainer" style="overflow-y: auto; max-height: 300px;">`
+        
+        html_text += html_all_comments
+        html_text += `</div>`
             html_add_comment = `<form id="addCommentForm">
                             <div class="form-group w-100">
                                 <label for="AddCommentForm">New comment</label>
@@ -1363,7 +1496,30 @@
                         </form>`
             html_text += html_add_comment
             source_table.innerHTML = html_text
+            const hideDeletedCheckbox = document.getElementById('hideDeletedComments');
+            function toggleDeletedComments() {
+            const hideDeleted = hideDeletedCheckbox.checked;
+            localStorage.setItem(hideDeletedKey, hideDeleted);
             
+            const comments = document.querySelectorAll('.comment');
+            const hrElements = document.querySelectorAll('.comment-hr');
+            
+            comments.forEach(comment => {
+                if (comment.getAttribute('data-deleted') === 'true') {
+                    comment.style.display = hideDeleted ? 'none' : 'block';
+                }
+            });
+            
+            hrElements.forEach(hr => {
+                if (hr.getAttribute('data-deleted') === 'true') {
+                    hr.style.display = hideDeleted ? 'none' : 'block';
+                }
+            });
+        }
+        if (isChecked) {
+            toggleDeletedComments();
+        }
+        hideDeletedCheckbox.addEventListener('change', toggleDeletedComments);
             document.getElementById('addCommentForm').addEventListener('submit', function(event) {
             event.preventDefault();
             const commentText = document.getElementById('AddCommentForm').value;
@@ -1383,6 +1539,112 @@
             document.getElementById('div_node_info').innerHTML = ``;
         }
     }
+    function editToComment(commentId) {
+    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+    const commentText = commentContainer.querySelector('h5, p');
+    const editBtn = document.getElementById(`reply-btn-${commentId}`);
+    const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
+    const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
+
+    commentText.setAttribute('data-original', commentText.innerText);
+    
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control';
+    textarea.value = commentText.innerText;
+    textarea.rows = 3;
+    commentText.replaceWith(textarea);
+    
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.display = 'flex';
+    buttonsContainer.style.gap = '10px';
+    buttonsContainer.style.marginTop = '5px';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-outline-secondary btn-sm';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => cancelCommentEdit(commentId);
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn-outline-success btn-sm';
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.onclick = () => confirmCommentEdit(commentId);
+
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(confirmBtn);
+
+    textarea.insertAdjacentElement('afterend', buttonsContainer);
+    
+    if (editBtn) editBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    if (replyBtn) replyBtn.style.display = 'none';
+}
+
+function cancelCommentEdit(commentId) {
+    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+    const textarea = commentContainer.querySelector('textarea');
+    const originalText = textarea.getAttribute('data-original');
+    const buttonsContainer = textarea.nextElementSibling;
+    
+    const isParentComment = commentContainer.querySelector('h5') !== null;
+    const textElement = document.createElement(isParentComment ? 'h5' : 'p');
+    textElement.style.marginBottom = '0';
+    textElement.style.wordBreak = 'break-all';
+    textElement.textContent = originalText;
+    textarea.replaceWith(textElement);
+    
+    buttonsContainer.remove();
+    
+    const editBtn = document.getElementById(`reply-btn-${commentId}`);
+    const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
+    const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
+    
+    if (editBtn) editBtn.style.display = 'inline-block';
+    if (deleteBtn) deleteBtn.style.display = 'inline-block';
+    if (replyBtn) replyBtn.style.display = 'inline-block';
+}
+
+async function confirmCommentEdit(commentId) {
+    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+    const textarea = commentContainer.querySelector('textarea');
+    const newText = textarea.value;
+    const buttonsContainer = textarea.nextElementSibling;
+    
+    try {
+        await axios.put(
+            `/api/v1/vis/comment/${commentId}?comment_text=${encodeURIComponent(newText)}`,
+            null, 
+            {
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+        
+        const isParentComment = commentContainer.querySelector('h5') !== null;
+        const textElement = document.createElement(isParentComment ? 'h5' : 'p');
+        textElement.style.marginBottom = '0';
+        textElement.style.wordBreak = 'break-all';
+        textElement.textContent = newText;
+        textarea.replaceWith(textElement);
+        
+        buttonsContainer.remove();
+        
+        const editBtn = document.getElementById(`reply-btn-${commentId}`);
+        const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
+        const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
+        
+        if (editBtn) editBtn.style.display = 'inline-block';
+        if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        if (replyBtn) replyBtn.style.display = 'inline-block';
+        
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        cancelCommentEdit(commentId);
+    }
+}
+    async function deleteComment(commentId) {
+        await axios.delete(`/api/v1/vis/comment/${commentId}`).then(response => {
+                createNodeInformation(nodeForComment);
+                })  
+            };
 
     function replyToComment(commentId) {
 
@@ -1417,7 +1679,6 @@
                 headers: { 'Content-Type': 'application/json' }
             })
             .then(response => {
-                console.log(response)
                 createNodeInformation(nodeForComment);
             })
             .catch(error => {
@@ -1541,7 +1802,7 @@
 
     
     async function fillAcunetixInstances(acunetix_id){
-        resp = await fetch("/api/v1/acunetix/apis/")
+        resp = await fetch("/api/v1/acunetix/config")
         data = await resp.json()
 
         let parent = `<div class="col-4">
@@ -1555,7 +1816,7 @@
         result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
             <option value=''>Acunetix Name</option>`
         for (const instance of data){
-            result += `<option value='${instance.name}'>${instance.name}</option>`
+            result += `<option value='${instance.id}'>${instance.name}</option>`
         }
         result += "</select>"
         document.getElementById(acunetix_id).innerHTML = result;

@@ -4,7 +4,7 @@ import xmltodict
 import re
 
 from setezor.tools.ip_tools import get_network
-from setezor.models import IP, Port, MAC, Route, RouteList, Network, Object
+from setezor.models import IP, Port, MAC, Network
 
 
 class BaseMasscanParser:
@@ -40,8 +40,6 @@ class BaseMasscanParser:
                 for port in ports_target:
                     port_obj = Port(ip=ip_obj, **port)
                     result.append(port_obj)
-            route_obj = Route(agent_id=agent_id)
-            result.append(RouteList(ip_id_from=interface_ip_id, ip_to=ip_obj, route=route_obj))
         return result
 
 

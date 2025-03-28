@@ -52,7 +52,7 @@ class AgentManager:
         }
 
     @classmethod
-    async def get_interfaces_on_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str):
+    async def get_interfaces_on_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str, user_id: str):
         agent = await AgentService.get(uow=uow, id=agent_id, project_id=project_id)
         if not agent.rest_url:
             return []
@@ -60,7 +60,9 @@ class AgentManager:
             message = WebSocketMessage(title="Error",
                                        text=f"{
                                            agent.name} is not connected yet",
-                                       type="error")
+                                       type="error",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=404)
         agents_chain: List = await AgentService.get_agents_chain(uow=uow,
@@ -77,7 +79,9 @@ class AgentManager:
         if isinstance(data, aiohttp.client_exceptions.ClientConnectorError):
             message = WebSocketMessage(title="Error",
                                        text=f"{agent.name} is unreachable",
-                                       type="error")
+                                       type="error",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=404)
         b64decoded = base64.b64decode(data)
@@ -87,25 +91,29 @@ class AgentManager:
             logger.error(str(e))
             message = WebSocketMessage(title="Error",
                                        text=f"Error while decrypting payload",
-                                       type="error")
+                                       type="error",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=404)
         return orjson.loads(deciphered_data.decode())
 
     @classmethod
     def interfaces(cls):
-        interfaces = [iface.model_dump() for iface in get_interfaces()]
+        interfaces = [iface.model_dump() for iface in get_interfaces() if iface.ip]
         initial_data = orjson.dumps(interfaces)
         return base64.b64encode(Cryptor.encrypt(initial_data, Spy.SECRET_KEY))
 
     @classmethod
-    async def connect_new_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str):
+    async def connect_new_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str, user_id: str):
         agent = await AgentService.get(uow=uow, id=agent_id, project_id=project_id)
         if agent.secret_key:
             logger.error(f"{agent.name} is already connected")
             message = WebSocketMessage(title="Error",
                                        text=f"{agent.name} is already connected",
-                                       type="error")
+                                       type="error",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id,
                                           message=message)
             raise HTTPException(status_code=400)
@@ -113,7 +121,9 @@ class AgentManager:
             logger.error(f"{agent.name} is synthetic")
             message = WebSocketMessage(title="Error",
                                        text=f"{agent.name} is synthetic",
-                                       type="error")
+                                       type="error",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=400)
         new_key = get_random_bytes(32).hex()
@@ -139,7 +149,9 @@ class AgentManager:
             message = WebSocketMessage(title="Info",
                                        text=f"{
                                            agent.name} was successfully connected",
-                                       type="success")
+                                       type="success",
+                                       user_id=user_id,
+                                       command="notify_user")
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             await AgentService.set_key(uow=uow, id=agent_id, key=new_key)
 

@@ -58,10 +58,12 @@ Projects
 
 <div id = "idModalForChoosingMethodAddingTargets"> </div>
 <div id="idModalForWritingTargets"> </div>
-<div id="deleteScopeModal"> </div>
+<div id="idModalForWritingDataBaseTargets"> </div>
+<div id="deleteScopeModalContainer"></div>
+<div id="deleteTargetModalContainer"></div>
 
 <script>
-    var message_sock = create_websocket(`/api/v1/project/ws`);
+    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}');
 
     async function getScopes() {
         await axios.get("/api/v1/scope").then(response => {
@@ -69,15 +71,26 @@ Projects
             let result = "";
             for (const scope of response.data) {
                 result += `
-                    <a class="nav-link" id="scope-${scope.id}-tab" data-toggle="pill" href="#scope-${scope.id}" role="tab" aria-controls="scope-${scope.id}" aria-selected="false" onclick="selectScope('${scope.id}')">
+                    <div class="nav-link" 
+                    style="cursor: pointer;"
+                    id="scope-${scope.id}-tab" data-toggle="pill" role="tab" aria-controls="scope-${scope.id}" aria-selected="false" onclick="selectScope('${scope.id}')">
                         <table style="width: 100%;">
                             <tr>
                                 <td style="width: 40%; word-break: break-all;">${scope.name}</td>
                                 <td style="width: 40%; word-break: break-all;">${scope.description}</td>
-                                <td><button class="btn btn-danger mt-1" onclick="deleteScope('${scope.id}')"> delete </button></td>
+                                <td><div id="download_report_container">
+                                    <div class="dropdown">
+                                        <button class="btn btn-success mt-1" type="button"
+                                            id="download_csv_scope" data-bs-toggle="dropdown" aria-expanded="false" onclick="get_csv_scope('${scope.id}', '${scope.name}')">
+                                            <span class="bi bi-download"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td><button class="btn btn-danger mt-1" onclick="deleteScope('${scope.id}')">Delete</button></td>
+                                
                             </tr>
                         </table>
-                    </a>
+                    </div>
                 `;
             }
             el.innerHTML = result;
@@ -85,14 +98,31 @@ Projects
             if (response.data.length > 0) {
                 const firstScopeId = response.data[0].id;
                 selectScope(firstScopeId);
+            }else{
+                document.getElementById("scopeTargetsContainer").innerHTML = ''
             }
 
             $('#scopeAddModal').modal('hide');
         });
     }
 
+    async function get_csv_scope(scopeID, scopeName) {
+        await axios.get(`/api/v1/scope/${scopeID}/download`, {responseType: 'blob'}).then(response =>{
+            const blob = response.data;
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${scopeName}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        })
+    }
+                                                        
+
     async function deleteScope(scopeId) {
-        let modal_elem = document.getElementById("deleteScopeModal");
+        let modal_elem = document.getElementById("deleteScopeModalContainer");
         modal_elem.innerHTML = `
         <div class="modal fade" id="deleteScopeModal" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -113,14 +143,40 @@ Projects
         document.getElementById("idButtonCancelModal").onclick = function () { modal_elem.innerHTML = ``; };
         document.getElementById("DeleteScopeButton").onclick = async function () {
             await axios.delete(`/api/v1/scope/${scopeId}`).then(response => {
-                console.log(response)
                 getScopes();
                 })  
             };
         let modal = new bootstrap.Modal(modal_elem.children[0]);
-
         modal.show()
+    }
 
+    async function deleteTarget(scopeID, targetID) {
+        let modal_elem = document.getElementById("deleteTargetModalContainer");
+        modal_elem.innerHTML = `
+        <div class="modal fade" id="deleteTargetModal" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Removal target</h5>
+                    </div>
+                    <div class="modal-body justify-content-center">
+                        Are you sure you want to delete the target?
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelTargetDeleteModal">Cancel</button>
+                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteTargetButton">Delete</button>
+                    </div>
+                <div>
+            </div>
+        </div>`
+        document.getElementById("idButtonCancelTargetDeleteModal").onclick = function () { modal_elem.innerHTML = ``; };
+        document.getElementById("DeleteTargetButton").onclick = async function () {
+            await axios.delete(`/api/v1/target/${targetID}`).then(response => {
+                getScopeTargets(scopeID);
+                })  
+            };
+        let modal = new bootstrap.Modal(modal_elem.children[0]);
+        modal.show()
     }
 
     function selectScope(scopeId) {
@@ -146,50 +202,113 @@ Projects
         });
     }
 
-    async function getScopeTargets(id){
+    async function getScopeTargets(id) {
         let el = document.getElementById("scopeTargetsContainer");
-        await axios.get(`/api/v1/scope/${id}/targets`).then(response =>{
+        await axios.get(`/api/v1/scope/${id}/targets`).then(response => {
+            let result = '';
             if (response.data.length) {
                 result = `
                     <table class="table table-bordered">
-                        <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">`;
-                result += `
+                        <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
+                            <button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>
                             <tr>
                                 <th scope="col">PROTOCOL</th>
                                 <th scope="col">IP</th>
                                 <th scope="col">DOMAIN</th>
                                 <th scope="col">PORT</th>
+                                <th scope="col">ACTION</th>
                             </tr>
                         </thead>
                         <tbody>`;
-                        for (const target of response.data){
-                            result += `
-                            <tr>`
-                                result += `<td>`
-                                if (target.protocol)
-                                    result += `${target.protocol}`
-                                result += `</td>
-                                <td>`
-                                if (target.ip)
-                                    result += `${target.ip}`
-                                result += `</td>
-                                <td>`
-                                if (target.domain)
-                                    result += `${target.domain}`
-                                result += `</td>
-                                <td>`
-                                if (target.port)
-                                    result += `${target.port}`
-                                result += `</td>
-                            </tr>`;
-                        }
-                        result += `
-                        </tbody>
-                    </table>`;
+                for (const target of response.data) {
+                    result += `<tr id="target-${target.id}">`;
+                    result += `<td><span class="editable" data-field="protocol">${target.protocol || ''}</span></td>`;
+                    result += `<td><span class="editable" data-field="ip">${target.ip || ''}</span></td>`;
+                    result += `<td><span class="editable" data-field="domain">${target.domain || ''}</span></td>`;
+                    result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
+                    result += `<td>
+                                    <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">Edit</button>
+                                    <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">Delete</button>
+                                    <button class="btn btn-danger cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">Cancel</button>
+                                    <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">Confirm</button>
+                                </td>`;
+                    result += `</tr>`;
+                }
+                result += `</tbody></table>`;
             } else {
                 result = `<button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>`;
             }
             el.innerHTML = result;
+        });
+    }
+
+    function editTarget(targetId) {
+        const row = document.getElementById(`target-${targetId}`);
+        const editBtn = row.querySelector('.edit-btn');
+        const deleteBtn = row.querySelector('.delete-btn');
+        const cancelBtn = row.querySelector('.cancel-btn');
+        const confirmBtn = row.querySelector('.confirm-btn');
+        const editableFields = row.querySelectorAll('.editable');
+
+
+        editableFields.forEach(field => {
+            const text = field.innerText;
+            field.setAttribute('data-original', text);
+            field.innerHTML = `<input type="text" value="${text}" />`;
+        });
+
+        editBtn.style.display = 'none';
+        deleteBtn.style.display = 'none';
+        cancelBtn.style.display = 'inline-block';
+        confirmBtn.style.display = 'inline-block';
+    }
+
+    function cancelEdit(targetId) {
+        const row = document.getElementById(`target-${targetId}`);
+        const editBtn = row.querySelector('.edit-btn');
+        const deleteBtn = row.querySelector('.delete-btn');
+        const cancelBtn = row.querySelector('.cancel-btn');
+        const confirmBtn = row.querySelector('.confirm-btn');
+        const editableFields = row.querySelectorAll('.editable');
+
+        editableFields.forEach(field => {
+            const originalValue = field.getAttribute('data-original');
+            field.innerHTML = originalValue;
+        });
+
+        editBtn.style.display = 'inline-block';
+        deleteBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'none';
+        confirmBtn.style.display = 'none';
+    }
+
+    async function confirmEdit(scopeId, targetId) {
+        const row = document.getElementById(`target-${targetId}`);
+        const editBtn = row.querySelector('.edit-btn');
+        const deleteBtn = row.querySelector('.delete-btn');
+        const cancelBtn = row.querySelector('.cancel-btn');
+        const confirmBtn = row.querySelector('.confirm-btn');
+        const editableFields = row.querySelectorAll('.editable');
+
+        const updatedData = {};
+
+        editableFields.forEach(field => {
+            const input = field.querySelector('input');
+            if (input.value == ""){
+                updatedData[field.getAttribute('data-field')] = null
+            }else{
+                updatedData[field.getAttribute('data-field')] = input.value;
+            }
+            field.innerHTML = input.value;
+        });
+
+        editBtn.style.display = 'inline-block';
+        deleteBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'none';
+        confirmBtn.style.display = 'none';
+
+        response = await axios.put(`/api/v1/target/${targetId}`, updatedData).catch(function(err){
+            getScopeTargets(scopeId)
         })
     }
 
@@ -205,8 +324,10 @@ Projects
                     <div class="modal-body justify-content-center">
                         <div class="col-1 w-100">
                             <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsManually"> Enter targets manually </button>
+                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsFromDataBase"> Add targets from data base </button>
                             <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChiveMethodAddTargetsFromFile"> Add targets from file </button>
                         </div>
+                        <span>To upload a file, use the .csv format of the following type: "Protocol, IP, Domain, Port"</span>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalChoicingMethodAddingTargets"> Cancel </button>
@@ -216,6 +337,7 @@ Projects
         </div>`
         document.getElementById("idButtonCancelModalChoicingMethodAddingTargets").onclick = function () { modal_elem.innerHTML = ``; };
         document.getElementById("idButtonChoiceMethodEnterTargetsManually").onclick = async function () { await enterTargets(id); modal_elem.innerHTML = ``;  };
+        document.getElementById("idButtonChoiceMethodEnterTargetsFromDataBase").onclick = async function () { await enterTargetsFromDataBase(id); modal_elem.innerHTML = ``;  };
         document.getElementById("idButtonChiveMethodAddTargetsFromFile").onclick = async function () { await addTargetsOnFile(id); modal_elem.innerHTML = ``;  };
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show();
@@ -241,49 +363,14 @@ Projects
                             <div id="ScopeTargetsContainer"> </div>
                             <div class="input-group" id="idEnterScopeTargetsOriginal">
                                 <datalist id="ProtocolList"></datalist>
-                                <input type="text" list="ProtocolList" class="form-control" id="input_target_protocol" placeholder="Protocol" aria-label="Protocol" aria-describedby="target_protocol" required name="input_target_protocol">
+                                <input type="text" style="margin-top: 0.5rem" list="ProtocolList" class="form-control" id="input_target_protocol" placeholder="Protocol" aria-label="Protocol" aria-describedby="target_protocol" required name="input_target_protocol">
                                 <datalist id="IPList"></datalist>
-                                <input type="text" list="IPList" class="form-control" id="input_target_ip" placeholder="IP" aria-label="IP" aria-describedby="target_ip" required name="input_target_ip">
+                                <input type="text" style="margin-top: 0.5rem" list="IPList" class="form-control" id="input_target_ip" placeholder="IP" aria-label="IP" aria-describedby="target_ip" required name="input_target_ip">
                                 <datalist id="DomainList"></datalist>
-                                <input type="text" list="DomainList" class="form-control" id="input_target_domain" placeholder="Domain" aria-label="Domain" aria-describedby="target_domain" required name="input_target_domain">
+                                <input type="text" style="margin-top: 0.5rem" list="DomainList" class="form-control" id="input_target_domain" placeholder="Domain" aria-label="Domain" aria-describedby="target_domain" required name="input_target_domain">
                                 <datalist id="PortList"></datalist>
-                                <input type="text" list="PortList" class="form-control" id="input_target_port" placeholder="Port" aria-label="Port" aria-describedby="target_port" required name="input_target_port">
-                                <button id="id_add_new_targets_group" onclick="(
-                                    function() {
-                                        let suffix_id = Date.now();
-                                        let original = document.getElementById('idEnterScopeTargetsOriginal');
-                                        let clone = original.cloneNode(true);
-                                        let newInputProtocol = clone.querySelector('[id^=input_target_protocol]');
-                                        newInputProtocol.id = 'input_target_protocol_' + suffix_id;
-                                        newInputProtocol.value = '';
-                                        let newInputIP = clone.querySelector('[id^=input_target_ip]');
-                                        newInputIP.id = 'input_target_ip_' + suffix_id;
-                                        newInputIP.value = '';
-                                        let newInputDomain = clone.querySelector('[id^=input_target_domain]');
-                                        newInputDomain.id = 'input_target_domain_' + suffix_id;
-                                        newInputDomain.value = '';
-                                        let newInputPort = clone.querySelector('[id^=input_target_port]');
-                                        newInputPort.id = 'input_target_port_' + suffix_id;
-                                        newInputPort.value = '';
-                                        let existingMinusButton = clone.querySelector('.btn-danger');
-                                        if (existingMinusButton) {
-                                            existingMinusButton.remove();
-                                        }
-                                        let removeButton = document.createElement('button');
-                                        removeButton.textContent = '-';
-                                        removeButton.type = 'button';
-                                        removeButton.className = 'btn btn-danger';
-                                        removeButton.style.width = '3rem';
-                                        removeButton.onclick = () => {
-                                            clone.remove();
-                                        };
-                                        clone.appendChild(removeButton);
-                                        let addButton = clone.querySelector('#id_add_new_targets_group');
-                                        if (addButton) {
-                                            addButton.remove();
-                                        }
-                                        document.getElementById('ScopeTargetsContainer').appendChild(clone);
-                                    })()" type="button" class="btn btn-success" style="width: 3rem"> + </button>
+                                <input type="text" style="margin-top: 0.5rem" list="PortList" class="form-control" id="input_target_port" placeholder="Port" aria-label="Port" aria-describedby="target_port" required name="input_target_port">
+                                <button id="id_add_new_targets_group" onclick="addNewTargetLine()" type="button" class="btn btn-success" style="width: 3rem; margin-top: 0.5rem"> + </button>
                             </div>
                         </div>
                     </div>
@@ -298,7 +385,189 @@ Projects
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show();
     }
+    async function enterTargetsFromDataBase(id) {
+        let modal_elem = document.getElementById("idModalForWritingDataBaseTargets");
+        modal_elem.innerHTML = `
+        <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" style="width: 60rem;">
+                    <div class="modal-header">
+                        <h5 class="modal-title"> Enter targets for adding on scope</h5>
+                    </div>
+                    <div class="modal-body justify-content-center">
+                        <div class="w-100">
+                            <div class="container">
+                                <div class="btn-group row row-cols-3 g-2 p-1 w-100" id="IpsDomainsDropdown">
+                                    <button type="button" class="btn btn-outline-primary dropdown-toggle" style="flex: none" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Select targets
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#">IP</a></li>
+                                        <li><a class="dropdown-item" href="#">IP:Port</a></li>
+                                        <li><a class="dropdown-item" href="#">Domains</a></li>
+                                    </ul>
+                                    <div class="form-check ms-3" >
+                                        <input class="form-check-input" type="checkbox" id="selectAllTargets">
+                                        <label class="form-check-label" for="selectAllTargets">
+                                            Select All
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
+                            <div id="DataBaseTargetsContainer" class="row row-cols-3 g-2 p-1" style="max-height: 400px; overflow-y: auto;"> </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="processSelectedItems('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); "> Add targets </button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> Cancel </button>
+                    </div>
+                <div>
+            </div>
+        </div>`
+        document.getElementById("idButtonCancelModalEnterTargets").onclick = function () { modal_elem.innerHTML = ``; };
+        const selectAllCheckbox = document.getElementById('selectAllTargets');
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('#DataBaseTargetsContainer input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+            });
+        });
+        let modal = new bootstrap.Modal(modal_elem.children[0]);
+        modal.show();
+        getDataBaseTargets();
+    }
+
+
+    function getDataBaseTargets() {
+            let dropdown = document.getElementById('IpsDomainsDropdown');
+            let dropdownItems = dropdown.querySelectorAll('.dropdown-item');
+            let dropdownButton = dropdown.querySelector('.dropdown-toggle');
+            let resultContainer = document.getElementById('DataBaseTargetsContainer');
+
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', async function(e) {
+                    e.preventDefault();
+
+                    let selectedText = this.textContent
+                    dropdownButton.textContent = selectedText
+
+                    if (selectedText === 'IP'){
+                        await axios.get(`/api/v1/target/get_ips`).then(response => {
+                            resultContainer.innerHTML = ``
+                            response.data.forEach(ip => {
+                                resultContainer.innerHTML += ` <div class="col md-1">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" value="" id="${ip}">
+                                                                    <label class="form-check-label" for="${ip}">
+                                                                        ${ip}
+                                                                    </label>
+                                                                </div>
+                                                                </div>`
+                            })
+                        });
+                    } else if (selectedText === 'Domains'){
+                        resultContainer.innerHTML = ``
+                        await axios.get(`/api/v1/target/get_domains`).then(response => {
+                            response.data.forEach(domain => {
+                                resultContainer.innerHTML += `<div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="" id="${domain}">
+                                                                <label class="form-check-label" for="${domain}">
+                                                                    ${domain}
+                                                                </label>
+                                                                </div>`
+                            })
+                        })
+                    }   else if (selectedText === 'IP:Port'){
+                        resultContainer.innerHTML = ``
+                        await axios.get(`/api/v1/target/get_ips_ports`).then(response => {
+                            response.data.forEach(ip_port => {
+                                resultContainer.innerHTML += `<div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="" id="${ip_port.ip}_${ip_port.port}">
+                                                                <label class="form-check-label" for="${ip_port.ip}_${ip_port.port}">
+                                                                    ${ip_port.ip}:${ip_port.port}
+                                                                </label>
+                                                                </div>`
+                            })
+                        })
+                    }
+            })
+            })
+        }
+
+    async function processSelectedItems(id) {
+        let target_type = document.getElementById('IpsDomainsDropdown').textContent.split('\n')[1].replaceAll(' ', '');
+        let targets = [];
+        document.querySelectorAll('#DataBaseTargetsContainer input[type="checkbox"]:checked').forEach(checkbox => {
+            if (target_type === "IP") {
+                targets.push({
+                    "protocol" : null,
+                    "ip" : checkbox.id || null,
+                    "domain" : null,
+                    "port" : null
+                })
+            }
+            if (target_type === "Domains") {
+                targets.push({
+                    "protocol" : null,
+                    "ip" : null,
+                    "domain" : checkbox.id || null,
+                    "port" : null
+                })
+            }
+            if (target_type === "IP:Port") {
+                ip_port = checkbox.id.split('_')
+                targets.push({
+                    "protocol" : null,
+                    "ip" : ip_port[0],
+                    "domain" : null,
+                    "port" : ip_port[1]
+                })
+            }
+        })
+        await axios.post(`/api/v1/scope/${id}/add_targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
+            getScopeTargets(id)
+        })
+    }
+
+    async function addNewTargetLine(){
+        let suffix_id = Date.now();
+        let original = document.getElementById('idEnterScopeTargetsOriginal');
+        let clone = original.cloneNode(true);
+        let newInputProtocol = clone.querySelector('[id^=input_target_protocol]');
+        newInputProtocol.id = 'input_target_protocol_' + suffix_id;
+        newInputProtocol.value = '';
+        let newInputIP = clone.querySelector('[id^=input_target_ip]');
+        newInputIP.id = 'input_target_ip_' + suffix_id;
+        newInputIP.value = '';
+        let newInputDomain = clone.querySelector('[id^=input_target_domain]');
+        newInputDomain.id = 'input_target_domain_' + suffix_id;
+        newInputDomain.value = '';
+        let newInputPort = clone.querySelector('[id^=input_target_port]');
+        newInputPort.id = 'input_target_port_' + suffix_id;
+        newInputPort.value = '';
+        let existingMinusButton = clone.querySelector('.btn-danger');
+        if (existingMinusButton) {
+            existingMinusButton.remove();
+        }
+        let removeButton = document.createElement('button');
+        removeButton.textContent = '-';
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-danger';
+        removeButton.style.width = '3rem';
+        removeButton.style.marginTop = '0.5rem';
+        removeButton.onclick = () => {
+            clone.remove();
+        };
+        clone.appendChild(removeButton);
+        let addButton = clone.querySelector('#id_add_new_targets_group');
+        if (addButton) {
+            addButton.remove();
+        }
+        document.getElementById('ScopeTargetsContainer').appendChild(clone);
+    }
+
+    
     async function addEnterTargets(id) {
         const targetsProtocol = document.querySelectorAll('[id^="input_target_protocol"]');
         const targetsIP= document.querySelectorAll('[id^="input_target_ip"]');
@@ -312,37 +581,61 @@ Projects
                 "domain" : targetsDomain[i].value || null,
                 "port" : Number(targetsPort[i].value) || null
             }) }
-        console.log(targets)
         await axios.post(`/api/v1/scope/${id}/add_targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
                                         getScopeTargets(id)
                                     })
     }
 
-    async function addTargetsOnFile(id){
-        var input = document.createElement('input');
-            input.type = 'file';
-            input.multiple = false;
-            input.accept = '.csv'
-            input.onchange = e => { 
-                for (var file of e.target.files)
-                {
-                    var reader = new FileReader();
-                    reader.onload = (
-                        function (file) 
-                            {
-                                return async function (e) 
-                                {
-                                    data = {targets: e.target.result}
-                                    await axios.post(`/api/v1/scope/${id}/add_targets`, data, {headers: {'Content-Type': 'application/json'}}).then(response =>{
-                                        getScopeTargets(id)
-                                    })
-                                } 
-                            })(file)
-                    reader.readAsDataURL(file);
-                }
-            }
-        input.click();
-    }
+    async function addTargetsOnFile(id) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = false;
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+        for (var file of e.target.files) {
+            var reader = new FileReader();
+            reader.onload = (function (file) {
+                return async function (e) {
+                    let content = e.target.result;
+                    content = content.split("base64,")[1];
+                    let decodedString = atob(content);
 
+                    let fileData = [];
+                    for (let line of decodedString.split("\n")) {
+                        if (line != "") {
+                            let splitted_line = line.split(",");
+                            fileData.push(splitted_line);
+                        }
+                    }
+
+                    await enterTargets(id);
+
+                    for (let data of fileData) {
+                        addNewTargetLine(); 
+
+                        let container = document.getElementById('ScopeTargetsContainer');
+                        let lastLine = container.lastElementChild;
+                        let protocolInput = lastLine.querySelector('[id^=input_target_protocol]');
+                        let ipInput = lastLine.querySelector('[id^=input_target_ip]');
+                        let domainInput = lastLine.querySelector('[id^=input_target_domain]');
+                        let portInput = lastLine.querySelector('[id^=input_target_port]');
+
+                        protocolInput.value = data[0] || '';
+                        ipInput.value = data[1] || '';
+                        domainInput.value = data[2] || '';
+                        portInput.value = data[3] || '';
+                    }
+                };
+            })(file);
+            reader.onerror = (function (file){
+                    return function (e){
+                        create_toast('Error', `Not enough permissions. Check file owner`, 'error')
+                    }
+                })(file)
+            reader.readAsDataURL(file);
+        }
+    };
+    input.click();
+}
 </script>
 {% endblock content %}

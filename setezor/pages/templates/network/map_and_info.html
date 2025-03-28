@@ -14,18 +14,16 @@ Network Map
     import Tags from "/static/js/tags.js";
     Tags.init('select')
 </script>
-{% if role.name == "owner" %}
 <script>
-    var message_sock = create_websocket(`/api/v1/project/ws`)
+    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 </script>
-{% endif %}
 {% endblock scripts %}
 {% block content %}
 <div class="container-fluid d-flex justify-content-between h-100 bd-highlight mb-3">
     <div class="row w-100">
         <div class="col-9" id="network_map_div">
             <div class="p-2 flex-fill bd-highlight" id="div_network">
-                {% from 'network/net_map.html' import net_map %}
+                {% from 'network/net_map.html' import net_map with context %}
                 {{net_map(device_types)}}
             </div>
         </div>
@@ -46,7 +44,7 @@ Network Map
             </div>
             <div class="p-2 flex-fill bd-highlight" id="div_node_info" style="max-width: 325px;">
                 <h4>Select node to see the information</h4>
-                {# {% from 'network/info.html' import info%}
+                {# {% from 'network/info.html' import info with context %}
                 {{info(table)}} #}
             </div>
         </div>

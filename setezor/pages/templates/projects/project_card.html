@@ -1,4 +1,4 @@
-{% macro show(project, analytics) %}
+{% macro show(project, analytics, role) %}
 {% import 'projects/donut_card.html' as charts %}
 <script>
 
@@ -47,7 +47,7 @@
         <h6 class="card-header"
             style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
             <label class="form-check-label me-2" for="{{ project.name }}" style="flex-grow: 1;">
-                {{ project.name }}
+                {{ project.name }} [{{ role }}]
             </label>
             <div class="dropdown">
                 <i class="bi bi-three-dots" type="button" id="dropdownMenuButton_{{ project.id }}"
