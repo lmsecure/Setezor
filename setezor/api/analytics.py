@@ -10,23 +10,7 @@ router = APIRouter(
     tags=["Analytics"],
 )
 
-@router.get("")
-async def analytics(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> Dict:
-    return await AnalyticsService.get_all_analytics(uow=uow, project_id=project_id)
-    
-@router.get("/l7_software")
-async def analytics_l7_software(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_l7_software_tabulator_data(uow=uow, project_id=project_id)
-
-@router.get("/l4_software")
+@router.get("/software")
 async def analytics_l4_software(
     uow: UOWDep,
     project_id: str = Depends(get_current_project),
@@ -50,15 +34,7 @@ async def analytics_domain_ip(
 ) -> list:
     return await AnalyticsService.get_domain_ip_tabulator_data(uow=uow, project_id=project_id)
 
-@router.get("/l7_soft_vuln_link")
-async def analytics_soft_vuln_link(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_l7_soft_vuln_link_tabulator_data(uow=uow, project_id=project_id)
-
-@router.get("/l4_soft_vuln_link")
+@router.get("/soft_vuln_link")
 async def analytics_soft_vuln_link(
     uow: UOWDep,
     project_id: str = Depends(get_current_project),
@@ -91,31 +67,13 @@ async def analytics_port(
     return await AnalyticsService.get_port_tabulator_data(uow=uow, project_id=project_id)
 
 
-@router.get("/l7_credentials")
-async def get_l7_credentials(
+@router.get("/auth_credentials")
+async def get_auth_credentials(
     uow: UOWDep,
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list:
-    return await AnalyticsService.get_l7_credentials(uow=uow, project_id=project_id)
-
-
-
-@router.get("/get_ports_software_info")
-async def get_ports_software_info(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_ports_software_info(uow=uow, project_id=project_id)
-
-@router.get("/get_product_service_name_info")
-async def get_product_service_name_info(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_product_service_name_info(uow=uow, project_id=project_id)
+    return await AnalyticsService.get_auth_credentials(uow=uow, project_id=project_id)
 
 @router.get("/get_device_types")
 async def get_device_types(

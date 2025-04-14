@@ -8,15 +8,15 @@ from .user_project_service import UserProjectService
 from .object_type_service import ObjectTypeService
 from .acunetix_service import AcunetixService
 from .agent_service import AgentService
+from .agent_in_project_service import AgentInProjectService
 from .route_service import NodeService
 from .route_service import EdgeService
 from .analytics_service import AnalyticsService
-from .l7_service import L7Service
 from .l4_vulnerability_service import L4VulnerabilityService
-from .l7_vulnerability_service import L7VulnerabilityService
 from .software import SoftwareService
 from .port_service import PortService
 from .scope_service import ScopeService
 from .target_service import TargetService
 from .auth_log_service import Auth_Log_Service
 from .role_service import RoleService
+from .settings_service import SettingsService

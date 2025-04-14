@@ -19,15 +19,15 @@ Projects
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 </script>
-<div class="modal fade" id="dontShowModal" tabindex="-1" aria-hidden="true">
+<!-- <div class="modal fade" id="dontShowModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content" style="height: 40rem;">
             <div class="modal-header">
-                <h5 class="modal-title">Welcome to setezor!</h5>
+                <h5 class="modal-title" data-i18n="Welcome to setezor!"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h4>Before you start working, you need to add an agent.</h4>
+                <h4 data-i18n="Before you start..."></h4>
                 <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-indicators" style="margin-bottom: -1rem;">
                         <button type="button" style="background-color:black" data-bs-target="#carouselExampleIndicators"
@@ -45,14 +45,12 @@ Projects
                         <div class="carousel-item active">
                             <div class="m-3 d-flex justify-content-center align-items-center"
                                 style="height: 80%; text-align: center;">
-                                <h5> For local tasks, it is enough to add an artificial agent; for scanning, you need a
-                                    real
-                                    agent running on a remote machine (or another port of the current computer).</h5>
+                                <h5 data-i18n="For local tasks..."> </h5>
                             </div>
                         </div>
                         <div class="carousel-item">
                             <div class="m-3">
-                                <h5>Agents are added in the settings tab.</h5>
+                                <h5 data-i18n="Agents are added in the settings tab"></h5>
                             </div>
                             <div class="row d-flex justify-content-center">
                                 <img src="../static/assets/slide2.1.png" style="height: 11rem;"
@@ -63,26 +61,23 @@ Projects
                         </div>
                         <div class="carousel-item">
                             <div class="m-3">
-                                <h5> To add an artificial agent, leave the "Agent REST URL" field empty.</h5>
+                                <h5 data-i18n="To add an artificial agent..."></h5>
                             </div>
                             <img src="../static/assets/slide3.1.png" style="height: 22rem;" class="d-block w-100">
                         </div>
                         <div class="carousel-item">
                             <div class="m-3">
-                                <h5>Then manually configure its interfaces.</h5>
+                                <h5 data-i18n="Then manually configure its interfaces."></h5>
                             </div>
                             <img src="../static/assets/slide4.1.png" style="height: 16rem;" class="d-block w-100">
                         </div>
                         <div class="carousel-item">
                             <div class="m-3">
-                                <h5>To add a real agent, specify its "Agent REST URL", then connect it by clicking
-                                    "Connect"
-                                    in the agents table.</h5>
+                                <h5 data-i18n="To add a real agent, specify..."></h5>
                             </div>
                             <img src="../static/assets/slide5.1.png" style="height: 6rem;" class="d-block mx-auto w-50">
                             <div class="m-3">
-                                <h5> Next, in the interface configuration, select those from which you want to start
-                                    scanning.</h5>
+                                <h5 data-i18n="Next, in the interface configuration..."> </h5>
                             </div>
                             <img src="../static/assets/slide5.2.png" style="height: 11rem;"
                                 class="d-block mx-auto w-50">
@@ -90,15 +85,16 @@ Projects
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <label>
-                    <input type="checkbox" id="dontShowAgain"> Don't show again
-                </label>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeModal">Close</button>
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="dontShowAgain">
+                    <label class="form-check-label" for="dontShowAgain" data-i18n="Dont show again"></label>
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeModal" data-i18n="Close"></button>
             </div>
         </div>
     </div>
-</div>
+</div> -->
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -123,7 +119,7 @@ Projects
 
             <div class="card mb-3 w-100" style="height: 23%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <h5 class="card-title">Objects</h5>
+                    <h5 class="card-title" data-i18n="Objects" style="text-align: center;"></h5>
                     <p id="object-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
                         <!-- количество Objects -->
                     </p>
@@ -132,7 +128,7 @@ Projects
 
             <div class="card mb-3 w-100" style="height: 23.1%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <h5 class="card-title">IP</h5>
+                    <h5 class="card-title" data-i18n="IPs" style="text-align: center;"></h5>
                     <p id="ip-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
                         <!-- количество IP -->
                     </p>
@@ -141,7 +137,7 @@ Projects
 
             <div class="card mb-3 w-100" style="height: 23%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <h5 class="card-title">Mac</h5>
+                    <h5 class="card-title" data-i18n="Macs" style="text-align: center;"></h5>
                     <p id="mac-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
                          <!-- количество MAC -->
                         </p>
@@ -150,7 +146,7 @@ Projects
 
             <div class="card mb-3 w-100" style="height: 23.1%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <h5 class="card-title">Ports</h5>
+                    <h5 class="card-title" data-i18n="Ports" style="text-align: center;"></h5>
                     <p id="port-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
                          <!-- количество Ports -->
                     </p>
@@ -180,7 +176,7 @@ Projects
             </li>
             <li class="nav-item w-50" role="presentation">
                 <button class="nav-link w-100" id="new-tab" data-bs-toggle="tab" data-bs-target="#new" type="button"
-                    role="tab" aria-controls="new" aria-selected="false">Vulnerabilities</button>
+                    role="tab" aria-controls="new" aria-selected="false" data-i18n="Vulnerabilities"></button>
             </li>
         </ul>
 
@@ -190,10 +186,10 @@ Projects
                     <table id="softwareTable" class="table table-striped table-bordered">
                         <thead>
                             <tr>
-                                <th style="text-align: center; width: 25%;">Product</th>
-                                <th style="text-align: center; width: 25%;">Version</th>
+                                <th style="text-align: center; width: 25%;" data-i18n="Product"></th>
+                                <th style="text-align: center; width: 25%;" data-i18n="Version"></th>
                                 <th style="text-align: center; width: 25%;">cpe:2.3</th>
-                                <th style="text-align: center; width: 25%;">Count</th>
+                                <th style="text-align: center; width: 25%;" data-i18n="Count"></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -206,9 +202,9 @@ Projects
                     <table id="vulnerabilitiesTable" class="table table-striped table-bordered" style="width: 100%; table-layout: fixed;">
                         <thead>
                             <tr>
-                                <th style="text-align: center; width: 25%;">Name</th>
+                                <th style="text-align: center; width: 25%;" data-i18n="Name"></th>
                                 <th style="text-align: center; width: 25%;">cve</th>
-                                <th style="text-align: center; width: 25%;">description</th>
+                                <th style="text-align: center; width: 25%;" data-i18n="Description"></th>
                                 <th style="text-align: center; width: 25%;">cvss_score</th>
                             </tr>
                         </thead>
@@ -495,7 +491,7 @@ Projects
             const data = response.data;
             
             createGraphDeviceType(
-                'All device types',
+                i18next.t('device_types_title'),
                 'device_types',
                 data.data || [],
                 data.labels || [],
@@ -508,9 +504,9 @@ Projects
             const data = response.data;
             labels = JSON.parse(data.labels)
             parents = JSON.parse(data.parents)
-            graph_values = JSON.parse(data.graph_values)
+            graph_values = data.graph_values
             createPortsAndProtocols(
-                'Ports and protocols',
+                i18next.t('ports_protocols_title'),
                 'ports_and_protocols-id',
                 labels || [],
                 parents || [],
@@ -524,9 +520,9 @@ Projects
             const data = response.data;
             labels = JSON.parse(data.labels)
             parents = JSON.parse(data.parents)
-            graph_values = JSON.parse(data.graph_values)
+            graph_values = data.graph_values
             createProductsAndServiceName(
-                'Products and service name',
+                i18next.t('products_service_title'),
                 'products_and_service_name-id',
                 labels || [],
                 parents || [],

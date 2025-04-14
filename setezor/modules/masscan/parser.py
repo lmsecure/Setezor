@@ -4,11 +4,11 @@ import xmltodict
 import re
 
 from setezor.tools.ip_tools import get_network
-from setezor.models import IP, Port, MAC, Network
+from setezor.models import IP, Port, MAC, Network, DNS_A, Domain
 
 
 class BaseMasscanParser:
-    
+
     async def parse(input_data: str):
         pass
 
@@ -25,7 +25,7 @@ class BaseMasscanParser:
         loop = asyncio.get_event_loop()
         parser = parsers.get(format)
         return await parser.parse(input_data=input_data)
-    
+
     @classmethod
     async def restruct_result(cls, data: dict, agent_id: int, interface_ip_id: int):
         result = []
@@ -35,8 +35,10 @@ class BaseMasscanParser:
                 start_ip, broadcast = get_network(ip = ip_target, mask = 24)
                 network_obj = Network(start_ip=start_ip, mask=24)
                 ip_obj = IP(ip=ip_target, network=network_obj)
+                domain_obj = Domain()
+                dns_a_obj = DNS_A(target_domain=domain_obj, target_ip=ip_obj)
                 ips_objs.update({ip_target : ip_obj})
-                result.extend([network_obj, ip_obj])
+                result.extend([network_obj, ip_obj, domain_obj, dns_a_obj])
                 for port in ports_target:
                     port_obj = Port(ip=ip_obj, **port)
                     result.append(port_obj)
@@ -44,7 +46,7 @@ class BaseMasscanParser:
 
 
 class XMLParser(BaseMasscanParser):
-    
+
     @classmethod
     async def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:
@@ -71,7 +73,7 @@ class XMLParser(BaseMasscanParser):
 
 
 class JsonParser(BaseMasscanParser):
-    
+
     @classmethod
     async def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:
@@ -97,7 +99,7 @@ class JsonParser(BaseMasscanParser):
 
 
 class ListParser(BaseMasscanParser):
-    
+
     @classmethod
     async def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:

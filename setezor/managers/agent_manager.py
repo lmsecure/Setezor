@@ -1,4 +1,5 @@
 import base64
+import binascii
 import copy
 from typing import List
 import aiohttp
@@ -8,6 +9,7 @@ from Crypto.Random import get_random_bytes
 from setezor.managers.sender_manager import HTTPManager
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.schemas.task import TaskStatus, WebSocketMessage
+from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_service import AgentService
 from setezor.services.task_service import TasksService
 from setezor.spy import Spy
@@ -22,9 +24,9 @@ from setezor.logger import logger
 
 class AgentManager:
     @classmethod
-    def single_cipher(cls, key: str, data: dict):
+    def single_cipher(cls, key: str, is_connected: bool, data: dict):
         initial_data = orjson.dumps(data)
-        if not key:
+        if not is_connected:
             return base64.b64encode(initial_data)
         return base64.b64encode(Cryptor.encrypt(initial_data, key))
 
@@ -32,12 +34,12 @@ class AgentManager:
     def cipher_chain(cls, agents_chain: list[Agent], data: dict, close_connection: bool):
         for agent in agents_chain:
             ciphered_payload_by_current_agent = cls.single_cipher(key=agent.secret_key,
+                                                                  is_connected=agent.is_connected,
                                                                   data=data)
             data = {
                 "next_agent_url": f"{agent.rest_url}/api/v1/agents/forward",
                 "close_connection": close_connection,
                 "agent_id": agent.id,
-                "project_id": agent.project_id,
                 "data": ciphered_payload_by_current_agent.decode()
             }
         return data
@@ -45,6 +47,7 @@ class AgentManager:
     @classmethod
     def generate_data_for_server(cls, agent_id: str, data: dict):
         ciphered_payload_by_current_agent = cls.single_cipher(key=Spy.SECRET_KEY,
+                                                              is_connected=True,
                                                               data=data)
         return {
             "sender": agent_id,
@@ -52,8 +55,11 @@ class AgentManager:
         }
 
     @classmethod
-    async def get_interfaces_on_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str, user_id: str):
-        agent = await AgentService.get(uow=uow, id=agent_id, project_id=project_id)
+    async def get_interfaces_on_agent(cls, uow: UnitOfWork, project_id: str, agent_id_in_project: str, user_id: str):
+        agent_in_project = await AgentInProjectService.get_agent(uow=uow, agent_id_in_project=agent_id_in_project, project_id=project_id)
+        if not agent_in_project:
+            raise HTTPException(status_code=404, detail="Agent not found in this project")
+        agent = await AgentService.get_by_id(uow=uow, id=agent_in_project.agent_id)
         if not agent.rest_url:
             return []
         if not agent.secret_key:
@@ -66,37 +72,27 @@ class AgentManager:
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=404)
         agents_chain: List = await AgentService.get_agents_chain(uow=uow,
-                                                                 agent_id=agent_id,
-                                                                 project_id=project_id)
-        payload = cls.cipher_chain(agents_chain=agents_chain,
-                                            data={
-                                                "signal": "interfaces",
-                                                "agent_id": agent.id
-                                            },
-                                            close_connection=False)
-        body = payload["data"].encode()
-        data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
-        if isinstance(data, aiohttp.client_exceptions.ClientConnectorError):
-            message = WebSocketMessage(title="Error",
-                                       text=f"{agent.name} is unreachable",
-                                       type="error",
-                                       user_id=user_id,
-                                       command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
-            raise HTTPException(status_code=404)
-        b64decoded = base64.b64decode(data)
-        try:
-            deciphered_data = Cryptor.decrypt(data=b64decoded, key=agent.secret_key)
-        except Exception as e:
-            logger.error(str(e))
-            message = WebSocketMessage(title="Error",
-                                       text=f"Error while decrypting payload",
-                                       type="error",
-                                       user_id=user_id,
-                                       command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
-            raise HTTPException(status_code=404)
-        return orjson.loads(deciphered_data.decode())
+                                                                 agent_id=agent.id,
+                                                                 user_id=agent.user_id)
+        for chain in agents_chain:
+            payload = cls.cipher_chain(agents_chain=chain,
+                                       data={
+                                           "signal": "interfaces",
+                                           "agent_id": agent.id
+                                       },
+                                       close_connection=False)
+            body = payload["data"].encode()
+            data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+            if isinstance(data, aiohttp.client_exceptions.ClientConnectorError):
+                continue
+            b64decoded = base64.b64decode(data)
+            try:
+                deciphered_data = Cryptor.decrypt(data=b64decoded, key=agent.secret_key)
+            except Exception as e:
+                continue
+            return orjson.loads(deciphered_data.decode())
+        raise HTTPException(status_code=404, detail=f"{agent.name} is unreachable")
+    
 
     @classmethod
     def interfaces(cls):
@@ -105,67 +101,56 @@ class AgentManager:
         return base64.b64encode(Cryptor.encrypt(initial_data, Spy.SECRET_KEY))
 
     @classmethod
-    async def connect_new_agent(cls, uow: UnitOfWork, project_id: str, agent_id: str, user_id: str):
-        agent = await AgentService.get(uow=uow, id=agent_id, project_id=project_id)
-        if agent.secret_key:
+    async def connect_new_agent(cls, uow: UnitOfWork, agent_id: str, user_id: str):
+        agent = await AgentService.get_by_id(uow=uow, id=agent_id)
+        if agent.is_connected:
             logger.error(f"{agent.name} is already connected")
-            message = WebSocketMessage(title="Error",
-                                       text=f"{agent.name} is already connected",
-                                       type="error",
-                                       user_id=user_id,
-                                       command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id,
-                                          message=message)
-            raise HTTPException(status_code=400)
+            raise HTTPException(status_code=400, detail="Agent is already connected")
         if not agent.rest_url:
             logger.error(f"{agent.name} is synthetic")
-            message = WebSocketMessage(title="Error",
-                                       text=f"{agent.name} is synthetic",
-                                       type="error",
-                                       user_id=user_id,
-                                       command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
-            raise HTTPException(status_code=400)
-        new_key = get_random_bytes(32).hex()
-        agents_chain = await AgentService.get_agents_chain(uow=uow,
-                                                           agent_id=agent_id,
-                                                           project_id=project_id)
-        parent_agent = await AgentService.get(uow=uow,
-                                              id=agent.parent_agent_id,
-                                              project_id=project_id)
+            raise HTTPException(status_code=400, detail=f"{agent.name} is synthetic")
+        agents_chains = await AgentService.get_agents_chain(uow=uow,
+                                                            user_id=user_id,
+                                                            agent_id=agent_id)
+        if not agents_chains:
+            logger.error(f"{agent.name} is unreachable")
+            raise HTTPException(status_code=500, detail=f"{agent.name} is unreachable")
+        parent_agents = await AgentService.get_parents_of_user_agent(uow=uow,
+                                                                     user_id=user_id,
+                                                                     agent_id=agent_id)
         data = {
             "signal": "connect",
-            "project_id": project_id,
-            "agent_id": agent.id,
-            "key": new_key,
-            "parent_agent_url": parent_agent.rest_url
+            "key": agent.secret_key,
+            "parent_agents_urls": parent_agents
         }
-        payload = cls.cipher_chain(
-            agents_chain=agents_chain, data=data, close_connection=False)
-        body = payload["data"].encode()
+        for chain in agents_chains:
+            payload = cls.cipher_chain(
+                agents_chain=chain, data=data, close_connection=False)
+            body = payload["data"].encode()
 
-        connection_data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
-        if base64.b64decode(connection_data.decode()) == b'OK':
-            message = WebSocketMessage(title="Info",
-                                       text=f"{
-                                           agent.name} was successfully connected",
-                                       type="success",
-                                       user_id=user_id,
-                                       command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
-            await AgentService.set_key(uow=uow, id=agent_id, key=new_key)
+            connection_data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+            if isinstance(connection_data, aiohttp.client_exceptions.ClientConnectorError):
+                continue
+            try:
+                if base64.b64decode(connection_data.decode()) == b'OK':
+                    await AgentService.set_connected(uow=uow, id=agent_id)
+                    return
+            except binascii.Error:
+                continue
+        raise HTTPException(status_code=500, detail=f"{agent.name} has not been connected")
 
     @classmethod
     async def decipher_data_from_agent(cls, uow: UnitOfWork, data: BackWardData):
-        agent: Agent = await AgentService.get_by_id(uow=uow, id=data.sender)
-        if not agent:
+        agent_in_project = await AgentInProjectService.get_agent_in_project(uow=uow, id=data.sender)
+        if not agent_in_project:
             return
+        agent: Agent = await AgentService.get_by_id(uow=uow, id=agent_in_project.agent_id)
         ciphered_payload = data.data.encode()
         b64decoded = base64.b64decode(ciphered_payload)
         deciphered_payload = Cryptor.decrypt(data=b64decoded,
                                              key=agent.secret_key)
         dict_data = orjson.loads(deciphered_payload)
-        project_id = agent.project_id
+        project_id = agent_in_project.project_id
         await cls.proceed_signal(dict_data=dict_data, uow=uow, project_id=project_id)
 
     @classmethod
@@ -181,7 +166,7 @@ class AgentManager:
                 await TasksService.set_status(uow=uow,
                                               id=copy_of_dict["task_id"],
                                               status=copy_of_dict["status"],
-                                              project_id=copy_of_dict)
+                                              traceback=copy_of_dict["traceback"])
                 payload = WebSocketMessage(
                     title="Task status",
                     text=f"Task with task_id = {copy_of_dict["task_id"]} {
@@ -206,8 +191,7 @@ class AgentManager:
                                                     uow=uow)
                 await TasksService.set_status(uow=uow,
                                               id=task_id,
-                                              status=TaskStatus.finished,
-                                              project_id=project_id)
+                                              status=TaskStatus.finished)
                 payload = WebSocketMessage(
                     title="Task status",
                     text=f"Task with {task_id=} {TaskStatus.finished}",
@@ -215,3 +199,10 @@ class AgentManager:
                 )
                 await WS_MANAGER.send_message(project_id=project_id,
                                               message=payload)
+
+    @classmethod
+    async def send_to_parent(cls, data: dict):
+        for url in Spy.PARENT_AGENT_URLS:
+            status = await HTTPManager.send_json(url=f"{url}/api/v1/agents/backward", data=data)
+            if status == 200:
+                return

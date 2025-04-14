@@ -4,7 +4,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="unionNetworkModalLabel">Union Netmask</h5>
+                <h5 class="modal-title" id="unionNetworkModalLabel" data-i18n="Union Netmask"></h5>
                 {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal"
                     aria-label="Close"></button> #}
             </div>
@@ -12,9 +12,9 @@
                 <div class="modal-body">
                         <div class="input-group" style="padding-bottom: 0.5rem;" id="unionIpAndMaskInput">
                         <input type="text" style="width: auto;" class="form-control" id='unionNetmaskIp'
-                            placeholder="Netmask IP" aria-label="NetmaskIp" aria-describedby="basic-addon1"
+                            aria-label="NetmaskIp" aria-describedby="basic-addon1"
                             name="NetmaskIp" disabled>
-                        <span class="input-group-text" style="width: auto;" id="basic-addon1">MASK</span>
+                        <span class="input-group-text" style="width: auto;" id="basic-addon1" data-i18n="MASK"></span>
                         <input type="number" min="1" max="32" class="form-control" style="width: 5rem;" id='unionInputMask' placeholder="Mask" aria-label="Mask"
                             aria-describedby="basic-addon1" required name="Mask">
                     </div>
@@ -28,10 +28,10 @@
                         <ul id="networksMaskList"></ul> </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="changeMaskButton" type="button" class="btn btn-success me-auto" onclick="union_mask(network_mask_data, ip)" disabled>Union</button>
+                    <button id="changeMaskButton" type="button" class="btn btn-success me-auto" onclick="union_mask(network_mask_data, ip)" disabled data-i18n="Union"></button>
                     <button id="node-cancelButton" type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal">Close</button>
-                    <button id="viewMaskButton" type="button" class="btn btn-primary" onclick="view_new_netmasks(network_mask_data, ip)">View</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button id="viewMaskButton" type="button" class="btn btn-primary" onclick="view_new_netmasks(network_mask_data, ip)" data-i18n="View"></button>
 
                 </div>
             </form>

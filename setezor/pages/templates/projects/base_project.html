@@ -13,6 +13,9 @@
 <script src="/static/js/plotly-2.29.1.min.js.js"></script>
 <script src="/static/js/particles.min.js"></script>
 <script src="/static/js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script src="/static/js/i18next.min.js"></script>
+<script src="/static/js/translate_i18n.js"></script>
+<script src="/static/js/donut.js" type="text/javascript"></script>
 </head>
 <body>
 <header id="myHeader">
@@ -31,33 +34,45 @@
 				<div class="d-flex align-items-center gap-2 ">
 					{% if is_superuser %}
           <button class="btn btn-success" data-bs-toggle="modal" 
-          onclick='document.getElementById("inviteToSetezorToken").value=""'
-          data-bs-target="#inviteToSetezorTokenModal">
-            Invite to Setezor
+          onclick='document.getElementById("inviteToSetezorToken").value=""; document.getElementById("inviteToSetezorURL").value = "";'
+          data-bs-target="#inviteToSetezorTokenModal" data-i18n="Invite to Setezor">
           </button>
             {% endif %}
-					<a type="button" class="btn btn-outline-primary ms-auto" href="http://help.setezor.ru/"
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
+                data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-translate"></i>
+              <span id="currentLanguage">EN</span>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+              <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+              <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+            </ul>
+          </div>
+          <a type="button" class="btn btn-outline-primary ms-auto" href="/admin_settings"
+            style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;">
+            <i class="bi bi-gear" data-i18n-title="Admin settings"></i>
+          </a>
+					<a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/?utm_source=public"
 						target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
 						data-testid="wiki_help">
-						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" title="Wiki"></i>
+						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
 					</a>
 					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
 						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-testid="about_project">
 						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
-							title="About project"></i>
+            data-i18n-title="About project"></i>
 					</button>
 					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
 						aria-hidden="true">
 						<div class="modal-dialog">
 							<div class="modal-content">
 								<div class="modal-header">
-									<h4>About</h4>
+									<h4 data-i18n="About project"></h4>
 								</div>
 								<div class="modal-body">
-									<div>
-										Setezor is a network traffic analyzer with the ability to automatically build
-										network topology. For more information, please visit our resources:
+									<div data-i18n="About Setezor text">
 									</div>
 									<div class="list-group">
 										<a href="https://setezor.ru"
@@ -73,21 +88,35 @@
 											class="list-group-item list-group-item-action list-group-item-danger"
 											target="_blank">DockerHub</a>
 									</div>
+                  <hr>
+									<div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
+									</div>
+                  <div class="list-group">
+										<span>Bitcoin: </span>
+											<div class="input-group mb-3">
+												<input type="text" class="form-control" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
+												<button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
+											  </div>
+										<span>Dash: </span>
+											<div class="input-group mb-3">
+												<input type="text" class="form-control" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+												<button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
+											  </div>
+									</div>
 								</div>
 								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6>Version: v0.24.0b</h6>
+									<h6 data-i18n="SetezorVersion"></h6>
 									<button type="button" class="btn btn-secondary"
-										data-bs-dismiss="modal">Close</button>
+										data-bs-dismiss="modal" data-i18n="Close"></button>
 								</div>
 							</div>
 						</div>
 					</div>
 
-
 					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
 					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
 					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
-						title="Logout"></i>
+						data-i18n-title="Logout"></i>
 				</button>
 				</div>
 			</div>
@@ -95,7 +124,7 @@
 		</nav>
 
 		<script>
-var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+      var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
       function create_toast(title, message, level="info", time="just now") {
         var toast_holder = document.getElementById("toast_holder")
         var toast = document.createElement("div")
@@ -135,36 +164,44 @@ var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#19
 			}
 		</script>
 	</header>
-	<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel">Registration token</h1>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<form onsubmit="generateRegisterToken(event)">
-					<div class="modal-body">
-						<div class="mb-3">
-							<label for="inviteToSetezorCount" class="col-form-label">Person count</label>
-							<input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
-							<label for="inviteToSetezorToken" class="col-form-label">Token</label>
-							<input type="text" class="form-control" disabled id="inviteToSetezorToken">
-						</div>
-					</div>
-					<div class="modal-footer">
-						<button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-						<button id="close-create-agent" type="submit" class="btn btn-success">Create</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
+<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel" data-i18n="Registration token"></h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form onsubmit="generateRegisterToken(event)">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
+            <input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
+            <label for="inviteToSetezorToken" class="col-form-label" data-i18n="Token"></label>
+            <input type="text" class="form-control" disabled id="inviteToSetezorToken">
+            <label for="inviteToSetezorURL" class="col-form-label" data-i18n="Registration link"></label>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" id="inviteToSetezorURL" readonly>
+              <button class="btn btn-outline-secondary" type="button" id="copyLinkBtn" data-i18n="Copy"></button>
+            </div>
+            <!-- <div class="mt-2">
+                            <a href="#" id="inviteToSetezorURLLink" target="_blank">Open registration page</a>
+                        </div> -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+          <button type="submit" class="btn btn-success" data-i18n="Create"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 <div id="particles-js" class="h-100"></div>
 <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
   <div id="toast_holder"></div>
 </div>
 <div class="container">
-    <h4 class="form-label">Choose project</h4>
+    <h4 class="form-label" data-i18n="Choose project"></h4>
 
     <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
         {% if projects %}
@@ -359,41 +396,80 @@ canvas {
 
 /* ---- stats.js config ---- */
 
-var count_particles, stats, update;
-stats = new Stats;
-stats.setMode(0);
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.left = '0px';
-stats.domElement.style.top = '0px';
-document.body.appendChild(stats.domElement);
+var count_particles, update;
 count_particles = document.querySelector('.js-count-particles');
 update = function() {
-  stats.begin();
-  stats.end();
-  if (window.pJSDom[0].pJS.particles && window.pJSDom[0].pJS.particles.array) {
-    count_particles.innerText = window.pJSDom[0].pJS.particles.array.length;
-  }
   requestAnimationFrame(update);
 };
 requestAnimationFrame(update);
 
 
 
-async function generateRegisterToken(event){
-			event.preventDefault()
-			let formdata = new FormData(event.target)
-			let resp = await fetch("/api/v1/auth/generate_register_token",{
-				method: "POST",
-				body: JSON.stringify(Object.fromEntries(formdata)),
-				headers: { "Content-type": "application/json" },})
-				let data = await resp.json()
-				let tokenEl = document.getElementById("inviteToSetezorToken")
-				tokenEl.value = data.token
-		}
-
-
-
+async function generateRegisterToken(event) {
+    event.preventDefault();
+    let formdata = new FormData(event.target);
+    
+    try {
+        let resp = await fetch("/api/v1/auth/generate_register_token", {
+            method: "POST",
+            body: JSON.stringify(Object.fromEntries(formdata)),
+            headers: { "Content-type": "application/json" },
+        });
+        
+        if (!resp.ok) throw new Error("Network response was not ok");
+        
+        let data = await resp.json();
+        let tokenEl = document.getElementById("inviteToSetezorToken");
+        let urlInput = document.getElementById("inviteToSetezorURL");
+        // let urlLink = document.getElementById("inviteToSetezorURLLink");
+        
+        tokenEl.value = data.token;
+        
+        const baseUrl = window.location.origin;
+        const registrationLink = `${baseUrl}/registration?token=${data.token}`;
+        
+        urlInput.value = registrationLink;
+        // urlLink.href = registrationLink;
+        
+        document.getElementById("copyLinkBtn").addEventListener("click", function() {
+            urlInput.select();
+            document.execCommand("copy");
+            this.classList.remove('btn-outline-secondary');
+            this.classList.add('btn-outline-success');
+        });
+        
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Error generating token: " + error.message);
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    function handleCopy(event) {
+        const button = event.target;
+        const input = button.closest('.input-group').querySelector('input');
+        
+        navigator.clipboard.writeText(input.value)
+            .then(() => {
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                button.textContent = i18next.t('Copied!');
+                
+                setTimeout(() => {
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                    button.textContent = i18next.t('Copy');
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Ошибка при копировании: ', err);
+            });
+    }
+    
+    document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
+    document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
+});
 </script>
+<script defer src="static/js/update_language.js"></script>
 </body>
 </html>
 {% endblock content %}

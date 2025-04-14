@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, Response
 from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project
 from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
-from setezor.services import L7Service
 
 router = APIRouter(
     prefix="/tasks_data",

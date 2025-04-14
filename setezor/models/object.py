@@ -21,3 +21,5 @@ class Object(IDDependent, Base, table=True):
     macs: List["MAC"] = Relationship(back_populates="object")
     object_type: Optional["ObjectType"] = Relationship(back_populates="objects")
     employees: List["Object_Employee"]  = Relationship(back_populates="object")
+    agents: List["AgentInProject"] = Relationship(back_populates="_object")
+    project: "Project" = Relationship(back_populates="objects")

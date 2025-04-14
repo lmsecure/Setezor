@@ -3,7 +3,7 @@
 <div class="input-group" id="ipTarget">
     <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
     <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control" id='inputIP' placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
+    <input type="text" list="IpList" class="form-control" id='inputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
     <button id="add_new_nmap_form" onclick="addNewNmapForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
@@ -47,8 +47,8 @@
 <div class="dropdown w-100 mt-2">
     <button class="btn btn dropdown-toggle w-100"
         style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
-        type="button" id="nmapScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-        Select scope
+        type="button" id="nmapScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
+        
     </button>
     <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeNmapData">
     </ul>
@@ -88,78 +88,78 @@
 <div class="d-flex justify-content-between py-2">
     <div class="form-check form-switch" id="portSwitch" >
         <input class="form-check-input" type="checkbox" id="portsScan">
-        <label class="form-check-label" for="portsScan">Ports</label>
+        <label class="form-check-label" for="portsScan" data-i18n="Ports"></label>
     </div>
     <div class="w-50" id="portsSelectorDiv" >
         <datalist id="portsSelectorList">
-            <option hidden disabled value="1">Choose a ports...</option>
-            <option value="--top-ports 1000">top-1000</option>
-            <option value="--top-ports 100">top-100</option>
-            <option value="-p 80,443,8080,8443">web ports</option>
-            <option value="-p 25,465,587,110,143,993,995">email ports</option>
-            <option value="-p-">All</option>
+            <option hidden disabled value="1" data-i18n="Choose a ports..."></option>
+            <option value="--top-ports 1000" data-i18n="top-1000"></option>
+            <option value="--top-ports 100" data-i18n="top-100"></option>
+            <option value="-p 80,443,8080,8443" data-i18n="web ports"></option>
+            <option value="-p 25,465,587,110,143,993,995" data-i18n="email ports"></option>
+            <option value="-p-" data-i18n="All"></option>
         </datalist>
         <input type="text" list="portsSelectorList" id="portsSelector" name="targetPorts" class="form-control"
-            placeholder="Ports" disabled>
+        data-i18n-placeholder="Ports" disabled>
     </div>
 </div>
 
-<div class="invalid-feedback">Please select a valid tag.</div>
+<div class="invalid-feedback" data-i18n="Please select a valid tag."></div>
 <div class="d-flex justify-content-between py-1">
     <div class="form-check form-switch  pe-2" id="traceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="Trace hop path to each host">
+        data-i18n-title="Trace hop path to each host">
         <input class="form-check-input" type="checkbox" id="trace" name="traceroute" value="--traceroute" checked>
-        <label class="form-check-label" for="trace">TraceRoute</label>
+        <label class="form-check-label" for="trace" data-i18n="TraceRoute"></label>
     </div>
     <div class="form-check form-switch" id="serviceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="Attempts to determine the version of the service running on port">
+    data-i18n-title="Attempts to determine the version of the service running on port">
         <input class="form-check-input" type="checkbox" id="service" name="serviceVersion" value="-sV">
-        <label class="form-check-label" for="service">Service Version</label>
+        <label class="form-check-label" for="service" data-i18n="Service Version"></label>
     </div>
 </div>
 <div class="d-flex justify-content-between py-1">
     <div class="form-check form-switch pe-2" id="stealthSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="OS detection">
+    data-i18n-title="OS detection">
         <input class="form-check-input" type="checkbox" id="stealth" name="stealthScan" value="-O">
-        <label class="form-check-label" for="stealth">OS detection</label>
+        <label class="form-check-label" for="stealth" data-i18n="OS detection"></label>
     </div>
     <div class="form-check form-switch" id="pnSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="Disable host discovery. Port scan only.">
+    data-i18n-title="Disable host discovery. Port scan only.">
         <input class="form-check-input" type="checkbox" id="pn" name="skipDiscovery" value="-Pn">
-        <label class="form-check-label" for="pn">Skip discovery</label>
+        <label class="form-check-label" for="pn" data-i18n="Skip discovery"></label>
     </div>
 </div>
 
 <div class="my-2">
     <div align="center">
-        <h6><b>Scan Techniques</b></h6>
+        <h6><b data-i18n="Scan Techniques"></b></h6>
     </div>
     <div class="d-flex justify-content-between" id="p3Group">
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP SYN scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP SYN scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="ss" value="-sS">
             <label class="form-check-label" for="ss">sS</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Connect() scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Connect() scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="st" value="-sT">
             <label class="form-check-label" for="st">sT</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP ACK scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP ACK scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="sa" value="-sA">
             <label class="form-check-label" for="sa">sA</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Window scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Window scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="sw" value="-sW">
             <label class="form-check-label" for="sw">sW</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Maimon scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Maimon scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="sm" value="-sM">
             <label class="form-check-label" for="sm">sM</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="UDP Scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="UDP Scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="su" value="-sU">
             <label class="form-check-label" for="su">sU</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="Ping Scan">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="Ping Scan">
             <input class="form-check-input" type="radio" name="scanTechniques" id="sp" value="-sP">
             <label class="form-check-label" for="sp">sP</label>
         </div>
@@ -168,24 +168,24 @@
 
 <div class="my-2">
     <div align="center">
-        <h6><b>TCP/UDP discovery</b></h6>
+        <h6><b data-i18n="TCP/UDP discovery"></b></h6>
     </div>
     <div class="d-flex justify-content-between" id="p1Group">
         <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="TCP ACK discovery to given ports">
+        data-i18n-title="TCP ACK discovery to given ports">
             <input class="form-check-input" type="radio" name="portsDiscovery" id="pa" value="-PA">
             <label class="form-check-label" for="pa">PA</label>
         </div>
         <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="TCP SYN discovery to given ports">
+        data-i18n-title="TCP SYN discovery to given ports">
             <input class="form-check-input" type="radio" name="portsDiscovery" id="ps" value="-PS">
             <label class="form-check-label" for="ps">PS</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="UDP discovery to given ports">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="UDP discovery to given ports">
             <input class="form-check-input" type="radio" name="portsDiscovery" id="pu" value="-PU">
             <label class="form-check-label" for="pu">PU</label>
         </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="SCTP discovery to given ports">
+        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="SCTP discovery to given ports">
             <input class="form-check-input" type="radio" name="portsDiscovery" id="py" value="-PY">
             <label class="form-check-label" for="py">PY</label>
         </div>
@@ -194,21 +194,21 @@
 
 <div class="my-2">
     <div align="center">
-        <h6><b>ICMP request discovery</b></h6>
+        <h6><b data-i18n="ICMP request discovery"></b></h6>
     </div>
     <div class="d-flex justify-content-between" id="p2Group">
         <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="ICMP echo request discovery probes">
+        data-i18n-title="ICMP echo request discovery probes">
             <input class="form-check-input" type="radio" name="requestDiscovery" id="pe" value="-PE">
             <label class="form-check-label" for="pe">PE</label>
         </div>
         <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="ICMP timestamp request discovery probes">
+        data-i18n-title="ICMP timestamp request discovery probes">
             <input class="form-check-input" type="radio" name="requestDiscovery" id="pp" value="-PP">
             <label class="form-check-label" for="pp">PP</label>
         </div>
         <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="ICMP netmask request discovery probes">
+        data-i18n-title="ICMP netmask request discovery probes">
             <input class="form-check-input" type="radio" name="requestDiscovery" id="pm" value="-PM">
             <label class="form-check-label" for="pm">PM</label>
         </div>
@@ -216,7 +216,7 @@
 </div>
 
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startScanSimpleBtn" onclick="
                         let params = {};
 
@@ -326,7 +326,7 @@
                                 return;
                             }
                         }
-                    ">Create scan</button>
+                    " data-i18n="Start scan"></button>
 </div>
 
 <script>
@@ -385,8 +385,8 @@
         var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
         if (myModal) {
             myModal.hide();
-        }" style="min-width: 310px;">
-    Parse xml logs
+        }" style="min-width: 310px;" data-i18n="Parse xml logs">
+    
 </button>
 {% endmacro %}
 
@@ -409,9 +409,9 @@
                     <div class="tab-content" id="dsa" style="padding-top: 7px;">
                         <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
                             <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab" data-bs-target="#nmap-simple-mode"
-                                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true">Target</button>
+                                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true" data-i18n="Target"></button>
                             <button class="nav-link" id="nmap-scope-tab" data-bs-toggle="tab" data-bs-target="#nmap-scope-mode"
-                                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false">Scope</button>
+                                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false" data-i18n="Scope"></button>
                         </div>
                 
                         <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
@@ -460,10 +460,27 @@
 
 {% macro nmap_script_modal_to_node() %}
 <script>
-    function nmap_script_modal_to_node(ip) {
+    async function nmap_script_modal_to_node(node) {
         var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
+
         var inputIP = document.getElementById('inputIP')
+        params = { ip_id: node.id }
+        ip = node.label
         inputIP.value = ip
+        url_address = '/api/v1/vis/node_info/' + node.id
+        resp = await fetch(url_address, { method: 'GET' })
+        json = await resp.json()
+        console.log(json)
+        var portsSelector = document.getElementById('portsSelector');
+        if (json.ports.length) {
+            document.getElementById('portsScan').checked = true
+            portsSelector.removeAttribute('disabled')
+            portsSelector.value = json.ports.map(item => item.port).join(',');
+        } else {
+            portsSelector.value = ''
+            document.getElementById('portsScan').checked = false
+            portsSelector.setAttribute('disabled', 'disabled')
+        };
         myModal.show();
     }
 
@@ -492,7 +509,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="nmapModalLabel">Nmap Сканирование</h5>
+                <h5 class="modal-title" id="nmapModalLabel">Nmap</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -540,9 +557,9 @@
     <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
         <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
             <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab" data-bs-target="#nmap-simple-mode"
-                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true">Target</button>
+                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true" data-i18n="Target"></button>
             <button class="nav-link" id="nmap-scope-tab" data-bs-toggle="tab" data-bs-target="#nmap-scope-mode"
-                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false">Scope</button>
+                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false" data-i18n="Scope"></button>
         </div>
 
         <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">

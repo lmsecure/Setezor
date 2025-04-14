@@ -3,7 +3,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addScanLabel">Adding target</h5>
+                <h5 class="modal-title" id="addScanLabel" data-i18n="Adding target"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="add_target(event)" id="targetAddForm">
@@ -16,24 +16,24 @@
                         <div class="form-group">
                             <div class="row mb-1">
                                 <div class="col-6">
-                                    <label for="target_name" class="col-form-label">Target address</label>
+                                    <label for="target_name" class="col-form-label" data-i18n="Target address"></label>
                                     <input type="text" id="target_name" class="form-control" name="address1" required
                                         placeholder="https://localhost:8080">
                                 </div>
                                 <div class="col-6">
-                                    <label for="target_description" class="col-form-label">Target description</label>
+                                    <label for="target_description" class="col-form-label" data-i18n="Target description"></label>
                                     <input type="text" id="target_description" name="description1" class="form-control">
                                 </div>
                             </div>
                         </div>
                     </div>
                     <button class="btn btn-success mt-1" onclick="addTargetInList()">+</button>
-                    <button class="btn btn-danger mt-1" onclick="clearTargetsList()">Clear</button>
+                    <button class="btn btn-danger mt-1" onclick="clearTargetsList()" data-i18n="Clear"></button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_adding_target"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Add</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </div>
             </form>
 
@@ -49,12 +49,12 @@
         div.classList = "form-group"
         div.innerHTML = `<div class="row mb-1">
                                 <div class="col-6">
-                                    <label for="target_name" class="col-form-label">Target address</label>
+                                    <label for="target_name" class="col-form-label">${i18next.t('Target address')}</label>
                                     <input type="text" id="target_name" class="form-control" name="address${targetsCount}" required
                                         placeholder="https://localhost:8080">
                                 </div>
                                 <div class="col-6">
-                                    <label for="target_description" class="col-form-label">Target description</label>
+                                    <label for="target_description" class="col-form-label">${i18next.t('Target description')}</label>
                                     <input type="text" id="target_description" name="description${targetsCount}" class="form-control">
                                 </div>
                             </div>`

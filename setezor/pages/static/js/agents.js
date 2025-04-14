@@ -46,7 +46,7 @@ function rgbToHex(r, g, b) {
 
 
 async function getAgentData() {
-    const resp = await fetch('/api/v1/agents');
+    const resp = await fetch('/api/v1/agents_in_project/settings');
     if (resp.ok) {
         const data = await resp.json();
         const agents = data.map((element) => {
@@ -61,10 +61,7 @@ async function getAgentData() {
                 hex_rgb.b
             );
         });
-        if (agents.length == 1){
-            return new AgentData(agents, undefined)
-        }
-        return new AgentData(agents, agents[1].id);
+        return new AgentData(agents, agents[0].id);
     }
 }
 

@@ -4,5 +4,5 @@ __pycache__
 .vscode
 tmp_chain.py
 config.json
-.env
+.env*
 build.sh

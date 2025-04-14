@@ -42,7 +42,7 @@ class SpyMethod(Generic[_P, _Returns]):
 
 class Spy:
     _funcs: list[SpyMethod] = []
-    PARENT_AGENT_URL = ""
+    PARENT_AGENT_URLS = []
     SECRET_KEY: str = ""
     @classmethod
     def spy_func(cls, method: Literal['GET', 'POST'], endpoint: str) -> SpyMethod[_P, _Returns]:
@@ -71,7 +71,7 @@ class Spy:
         try: 
             with open(os.path.join(PATH_PREFIX, "config.json"), 'r') as f:
                 config = json.load(f)
-            cls.PARENT_AGENT_URL = config["parent_agent_url"]
+            cls.PARENT_AGENT_URLS = config["parent_agents_urls"]
             cls.SECRET_KEY = config["key"]
         except (FileNotFoundError, KeyError, json.decoder.JSONDecodeError):
             logger.warning("Agent is not connected yet")

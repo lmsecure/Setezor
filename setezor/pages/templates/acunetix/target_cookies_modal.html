@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="setCookiesLabel">Setting cookies</h5>
+                <h5 class="modal-title" id="setCookiesLabel" data-i18n="Setting cookies"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="set_cookies(event)" id="setCookiesForm">
@@ -17,23 +17,23 @@
                                     <input type="text" class="form-control" name="url1" required>
                                 </div>
                                 <div class="col-4">
-                                    <label class="col-form-label">Key</label>
+                                    <label class="col-form-label" data-i18n="Key"></label>
                                     <input type="text" class="form-control" name="key1" required>
                                 </div>
                                 <div class="col-4">
-                                    <label class="col-form-label">Value</label>
+                                    <label class="col-form-label" data-i18n="Value"></label>
                                     <input type="text" class="form-control" name="value1" required>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <button class="btn btn-success mt-1" onclick="addCookieInList()">+</button>
-                    <button class="btn btn-danger mt-1" onclick="clearCookiesList()">Clear</button>
+                    <button class="btn btn-danger mt-1" onclick="clearCookiesList()" data-i18n="Clear"></button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_setting_cookies"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Save</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Save"></button>
                 </div>
             </form>
 

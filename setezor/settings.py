@@ -1,5 +1,14 @@
 import datetime
 import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class PostgresSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env.postgres', env_file_encoding='utf-8')
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+
 
 BASE_PATH = '/'.join(__file__.split('/')[:-1])
 PATH_PREFIX = os.path.join(os.path.expanduser('~'), '.local/share/setezor')
@@ -10,14 +19,20 @@ REFRESH_TOKEN_EXPIRE_TIME = datetime.timedelta(days=30)
 INVITE_LINK_EXPIRE_TIME = datetime.timedelta(minutes=5)
 COMMIT_STEP = 1000
 LOG_LEVEL = "INFO"
-DB_URI = f"sqlite+aiosqlite:///{PATH_PREFIX}/db.sqlite3"
 TEMPLATES_DIR_PATH = os.path.join(BASE_PATH, 'pages/templates')
 STATIC_FILES_DIR_PATH = os.path.join(BASE_PATH, 'pages/static/')
 SSL_KEY_FILE_PATH = os.path.join(BASE_PATH, 'key.pem')
 SSL_CERT_FILE_PATH = os.path.join(BASE_PATH, 'cert.pem')
 PROJECTS_DIR_PATH = os.path.abspath(os.path.join(PATH_PREFIX, 'projects'))
 ALEMBIC_INI_PATH = os.path.join(BASE_PATH, "alembic.ini")
+PASSWORD_HASH_ROUNDS = 600_000
+ENGINE = os.environ.get("ENGINE", "sqlite")
 
+if ENGINE == "sqlite":
+    DB_URI = f"sqlite+aiosqlite:///{PATH_PREFIX}/db.sqlite3"
+if ENGINE == "postgresql":
+    pg_settings = PostgresSettings()
+    DB_URI = f"postgresql+asyncpg://{pg_settings.postgres_user}:{pg_settings.postgres_password}@{os.environ.get("POSTGRES_HOST", "localhost")}:5432/{pg_settings.postgres_db}"
 if not os.path.exists(PATH_PREFIX):
     os.makedirs(PATH_PREFIX, exist_ok=True)
 

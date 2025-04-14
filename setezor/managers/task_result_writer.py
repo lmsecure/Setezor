@@ -42,8 +42,7 @@ class TaskResultWriter:
         await service.make_magic()
         await TasksService.set_status(uow=uow, 
                                       id=task_id, 
-                                      status=TaskStatus.finished, 
-                                      project_id=project_id)
+                                      status=TaskStatus.finished)
 
     @classmethod  # метод сервера на запись сырых данных результата на сервере
     async def write_raw_result(cls, 

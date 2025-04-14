@@ -1,6 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from setezor.dependencies.application import is_register_open
 from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import access_token_getter, get_user_id
 from setezor.schemas.auth import RegisterForm
@@ -64,6 +65,9 @@ async def generate_register_token(
 @router.post("/register")
 async def register(
     register_form: RegisterForm,
-    uow: UOWDep
+    uow: UOWDep,
+    open_reg: bool = Depends(is_register_open)
 ) -> bool:
-    return await AuthService.register_by_invite_token(uow=uow, register_form=register_form)
+    return await AuthService.register_by_invite_token(uow=uow, 
+                                                      open_reg=open_reg,
+                                                      register_form=register_form)

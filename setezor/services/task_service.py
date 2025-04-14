@@ -7,12 +7,13 @@ from setezor.interfaces.service import IService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import Task
 
+
 class TasksService(IService):
     @classmethod
-    async def create(cls, uow: UnitOfWork, project_id: str, scan_id: str, params: dict, created_by:str, agent_id: int | None = None) -> Task:
+    async def create(cls, uow: UnitOfWork, project_id: str, scan_id: str, params: dict, created_by: str, agent_id: int | None = None) -> Task:
         task_to_add = Task(
-            status=TaskStatus.created, 
-            project_id=project_id, 
+            status=TaskStatus.created,
+            project_id=project_id,
             scan_id=scan_id,
             params=json.dumps(params),
             agent_id=agent_id,
@@ -21,7 +22,7 @@ class TasksService(IService):
         task_dict = task_to_add.model_dump()
         async with uow:
             task = uow.task.add(task_dict)
-            await uow.commit() 
+            await uow.commit()
         return task
 
     @classmethod
@@ -35,15 +36,14 @@ class TasksService(IService):
         async with uow:
             return await uow.task.find_one(id=id, project_id=project_id)
 
-
     @classmethod
     async def get_by_id(cls, uow: UnitOfWork, id: str) -> Task:
         async with uow:
             return await uow.task.find_one(id=id)
 
     @classmethod
-    async def set_status(cls, uow: UnitOfWork, id: int, status: TaskStatus, project_id: str) -> int:
+    async def set_status(cls, uow: UnitOfWork, id: int, status: TaskStatus, traceback: str = "") -> int:
         async with uow:
-            task_id = await uow.task.edit_one(id=id, data={"status": status})
-            await uow.commit()   
+            task_id = await uow.task.edit_one(id=id, data={"status": status, "traceback": traceback})
+            await uow.commit()
         return task_id

@@ -31,21 +31,19 @@ Network Map
             <div class="container-fluid my-2">
                 <form class="d-flex" onsubmit="findNodesByIP(event)">
                     <div class="input-group" id="ipTarget">
-                        <span class="input-group-text" id="basic-addon1">IP</span>
-                        <input type="text" class="form-control" id='inputIP' placeholder="IP address or netmask"
+                        <span class="input-group-text" id="basic-addon1" >IP</span>
+                        <input type="text" class="form-control" id='inputIP' data-i18n-placeholder="IP address or netmask"
                             aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
                     </div>
-                    <input type="submit" class="btn btn-success ms-1" value="Find">
+                    <input type="submit" class="btn btn-success ms-1" data-i18n-value="Find">
                 </form>
             </div>
             <div class="container-fluid">
                 <div class="row row-cols-xxxl-3 g-2  overflow-auto p-1" id="search_ip_addresses" style="max-height: 250px;">
                 </div>
             </div>
-            <div class="p-2 flex-fill bd-highlight" id="div_node_info" style="max-width: 325px;">
-                <h4>Select node to see the information</h4>
-                {# {% from 'network/info.html' import info with context %}
-                {{info(table)}} #}
+            <div class="p-2 flex-fill bd-highlight" id="div_node_info">
+                <h4 data-i18n="Select node to see the information"></h4>
             </div>
         </div>
     </div>

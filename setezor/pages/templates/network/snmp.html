@@ -12,22 +12,23 @@
                     <div id="snmpInputContainer"></div>
 
                     <div class="dropdown w-100 mt-2">
-                        <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de" type="button" id="snmpIpPortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                          Select target
+                        <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
+                         type="button" id="snmpIpPortDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select target">
+                          
                         </button>
                         <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForIpPortData">
                         </ul>
                     </div>
 
-                        <label class="mt-3" for="">Community strings dictionary (default if empty):</label>
+                        <label class="mt-3" for="" data-i18n="Community strings dictionary (default if empty):"></label>
                     <form id='idChoiceDictCommunityStrings'>
                         <div class="mb-3">
                                 <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
                         </div>
                     </form>
                     <div class="btn-group d-flex my-2" role="group">
-                        <button class="btn btn-danger w-50" type="button" onclick="reset_community_string_lst()">Reset</button>
-                        <button class="btn btn-primary w-50" type="button" onclick="startScan()"> Start </button>
+                        <button class="btn btn-danger w-50" type="button" onclick="reset_community_string_lst()" data-i18n="Reset"></button>
+                        <button class="btn btn-primary w-50" type="button" onclick="startScan()" data-i18n="Start"></button>
                     </div>
             </form>
     </div>
@@ -64,7 +65,7 @@
     let selectedIp = '';
     let selectedPort = '';
     function get_snmp_ip_port_list() {
-    axios.get('/api/v1/l7/get_resources_for_snmp').then(resp => {
+    axios.get('/api/v1/l4/get_resources_for_snmp').then(resp => {
         const dropdownMenu = document.getElementById('dropdownMenuForIpPortData');
         const dropdownButton = document.getElementById('snmpIpPortDropdown');
 

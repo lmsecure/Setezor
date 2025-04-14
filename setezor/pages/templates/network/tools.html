@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col-2">
                 <div class="d-flex flex-column flex-shrink-0 p-3">
-                    <h4>Tools</h4>
+                    <h4 data-i18n="Tools"></h4>
                     <div class="nav flex-column nav-pills me-1" id="v-pills-tab" role="tablist"
                         aria-orientation="vertical">
                         <div class="accordion" id="accordionExample">
@@ -13,8 +13,8 @@
                                 <h2 class="accordion-header" id="headingThree">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                         data-bs-target="#collapseThree" aria-expanded="false"
-                                        aria-controls="collapseThree">
-                                        Vulnerability
+                                        aria-controls="collapseThree" data-i18n="Vulnerability">
+                                        
                                     </button>
                                 </h2>
                                 <div id="collapseThree" class="accordion-collapse collapse show"
@@ -54,30 +54,30 @@
                                     <button class="nav-link" data-bs-toggle="pill"
                                         data-bs-target="#v-pills-acunetix-groups" type="button" role="tab"
                                         aria-controls="v-pills-acunetix-groups" aria-selected="false"
-                                        id="acunetix_groups_pill" tabindex="-1">Groups</button>
+                                        id="acunetix_groups_pill" tabindex="-1" data-i18n="Groups"></button>
                                 </li>
                                 <li class="nav-item">
                                     <button class="nav-link" data-bs-toggle="pill"
                                         data-bs-target="#v-pills-acunetix-targets" type="button" role="tab"
                                         aria-controls="v-pills-acunetix-targets" aria-selected="false"
-                                        id="acunetix_targets_pill" tabindex="-1">Targets</button>
+                                        id="acunetix_targets_pill" tabindex="-1" data-i18n="Targets"></button>
                                 </li>
                                 <li class="nav-item">
                                     <button class="nav-link" data-bs-toggle="pill"
                                         data-bs-target="#v-pills-acunetix-scans" id="acunetix_scans_pill" type="button"
-                                        role="tab" aria-controls="" aria-selected="false" tabindex="-1">Scans</button>
+                                        role="tab" aria-controls="" aria-selected="false" tabindex="-1" data-i18n="Scans"></button>
                                 </li>
                                 <li class="nav-item">
                                     <button class="nav-link" data-bs-toggle="pill"
                                         data-bs-target="#v-pills-acunetix-reports" type="button" role="tab"
                                         aria-controls="" aria-selected="false" id="acunetix_reports_pill"
-                                        tabindex="-1">Reports</button>
+                                        tabindex="-1" data-i18n="Reports"></button>
                                 </li>
                                 <li class="nav-item">
                                     <button class="nav-link" data-bs-toggle="pill"
                                         data-bs-target="#v-pills-acunetix-settings" type="button" role="tab"
                                         aria-controls="" aria-selected="false" onclick="refreshConfigsTable()"
-                                        tabindex="-1">Settings</button>
+                                        tabindex="-1" data-i18n="Settings"></button>
                                 </li>
                             </ul>
                         </div>
@@ -150,24 +150,24 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="exampleModalLabel">Adding scan</h1>
+                <h1 class="modal-title fs-5" id="exampleModalLabel" data-i18n="Adding scan"></h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
             </div>
             <form onsubmit="addScan(event)">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="scanNameID" class="col-form-label">Scan name</label>
+                        <label for="scanNameID" class="col-form-label" data-i18n="Scan name"></label>
                         <input type="text" class="form-control" id="scanNameID" name="name" required>
                       </div>
                       <div class="mb-3">
-                        <label for="scanDescriptionID" class="col-form-label">Description</label>
+                        <label for="scanDescriptionID" class="col-form-label" data-i18n="Description"></label>
                         <input type="text" class="form-control" id="scanDescriptionID" name="description">
                       </div>                        
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeAddScanModalButton">Close</button>
-                    <button type="submit" class="btn btn-primary">Add</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeAddScanModalButton" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-primary" data-i18n="Add"></button>
                 </div>
             </form>
         </div>

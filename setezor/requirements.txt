@@ -29,3 +29,5 @@ loguru==0.7.3
 alembic==1.14.1
 pysnmp==7.1.5
 psutil==7.0.0
+pydantic-settings==2.8.1
+asyncpg==0.30.0

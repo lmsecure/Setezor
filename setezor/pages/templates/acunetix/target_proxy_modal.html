@@ -3,7 +3,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addScanLabel">Setting proxy</h5>
+                <h5 class="modal-title" id="addScanLabel" data-i18n="Setting proxy"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="set_proxy(event)" id="setProxyForm">
@@ -12,7 +12,7 @@
                 <div class="modal-body">
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="target_proxy_address" class="col-form-label">Address</label>
+                            <label for="target_proxy_address" class="col-form-label" data-i18n="Address"></label>
                         </div>
                         <div class="col-auto">
                             <input type="text" id="target_proxy_address" class="form-control mt-1" name="address" required
@@ -21,7 +21,7 @@
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="target_proxy_port" class="col-form-label">Port</label>
+                            <label for="target_proxy_port" class="col-form-label" data-i18n="Port"></label>
                         </div>
                         <div class="col-auto">
                             <input type="number" min="1" max="65535" id="target_proxy_port" class="form-control mt-1" name="port" required>
@@ -29,7 +29,7 @@
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="target_proxy_username" class="col-form-label">Username</label>
+                            <label for="target_proxy_username" class="col-form-label" data-i18n="Username"></label>
                         </div>
                         <div class="col-auto">
                             <input type="text" id="target_proxy_username" class="form-control mt-1" name="username">
@@ -37,7 +37,7 @@
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="target_proxy_password" class="col-form-label">Password</label>
+                            <label for="target_proxy_password" class="col-form-label" data-i18n="Password"></label>
                         </div>
                         <div class="col-auto">
                             <input type="password" id="target_proxy_password" class="form-control mt-1" name="password">
@@ -46,8 +46,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_setting_proxy"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Add</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </div>
             </form>
 

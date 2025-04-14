@@ -6,7 +6,7 @@ import orjson
 
 
 class AnalyticsService:
-    
+
     @classmethod
     async def get_last_scan_id(cls, uow: UnitOfWork, project_id: str):
         async with uow:
@@ -14,50 +14,8 @@ class AnalyticsService:
             return last_scan.id
 
     @classmethod
-    def restruct_result(cls, data: list, column1: str, column2: str, field_count: str):
-        if data:
-            labels = []
-            parents = []
-            graph_values = []
-            node_graph_values = {}
-
-            for item in data:
-                col1_value = str(item.get(column1, ''))
-                col2_value = str(item.get(column2, '')).upper()
-                count = item.get(field_count, 0)
-
-                if col2_value and col2_value not in node_graph_values:
-                    labels.append(col2_value)
-                    parents.append('')
-                    node_graph_values[col2_value] = 0
-
-                if col1_value:
-                    labels.append(col1_value)
-                    parents.append(col2_value)
-                    node_graph_values[col1_value] = count
-
-                if col2_value:
-                    node_graph_values[col2_value] += count
-
-            for label in labels:
-                graph_values.append(node_graph_values.get(label, 0))
-
-            return {
-                'labels': orjson.dumps(labels).decode(),
-                'parents': orjson.dumps(parents).decode(),
-                'graph_values': orjson.dumps(graph_values).decode()
-            }
-        else:
-            return {
-                'labels': '[]',
-                'parents': '[]',
-                'graph_values': '[]'
-            }
-
-    # TODO
-    '''Класс для получения данных из whois сделанный перед нг, потом его нужно будет запихнуть куда нибудь в нормальное место'''
-    @classmethod
     async def get_whois_data(cls, uow: UnitOfWork, project_id: uuid.UUID) -> Dict:
+        ''' TODO Функция для получения данных из whois сделанный перед нг, потом его нужно будет запихнуть куда нибудь в нормальное место'''
         async with uow:
             whois_ip_data = await uow.whois_ip.get_whois_ip_data(project_id=project_id)
             whois__transform_ip_data = {
@@ -78,20 +36,6 @@ class AnalyticsService:
                 'whois_domain_data': whois_transform_domain_data,
                 }
             return context
-
-    @classmethod
-    async def get_ports_software_info(cls, uow: UnitOfWork, project_id: str) -> List[Dict]:
-        async with uow:
-            last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            result = await uow.L7Software.get_ports_software_info(project_id=project_id, last_scan_id=last_scan_id)
-            return [row._asdict() for row in result]
-
-    @classmethod
-    async def get_product_service_name_info(cls, uow: UnitOfWork, project_id: str) -> List[Dict]:
-        async with uow:
-            last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            result = await uow.L7Software.get_product_service_name_info(project_id=project_id, last_scan_id=last_scan_id)
-            return [row._asdict() for row in result]
 
     @classmethod
     async def get_device_types(cls, uow: UnitOfWork, project_id: str) -> Dict:
@@ -174,7 +118,7 @@ class AnalyticsService:
     async def get_ports_and_protocols(cls, uow: UnitOfWork, project_id: str) -> Dict:
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            result = await uow.L7Software.get_ports_and_protocols(project_id=project_id, last_scan_id=last_scan_id)
+            result = await uow.l4_software.get_ports_and_protocols(project_id=project_id, last_scan_id=last_scan_id)
             labels = []
             parents = []
             graph_values = []
@@ -185,14 +129,14 @@ class AnalyticsService:
             return {
                 "labels": orjson.dumps(labels).decode(),
                 "parents": orjson.dumps(parents).decode(),
-                "graph_values": orjson.dumps(graph_values).decode()
+                "graph_values": graph_values
             }
 
     @classmethod
     async def get_products_and_service_name(cls, uow: UnitOfWork, project_id: str) -> Dict:
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            result = await uow.L7Software.get_product_service_name_info_from_sunburts(project_id=project_id, last_scan_id=last_scan_id)
+            result = await uow.l4_software.get_product_service_name_info_from_sunburts(project_id=project_id, last_scan_id=last_scan_id)
             labels = []
             parents = []
             graph_values = []
@@ -206,36 +150,9 @@ class AnalyticsService:
             return {
                 "labels": orjson.dumps(labels).decode(),
                 "parents": orjson.dumps(parents).decode(),
-                "graph_values": orjson.dumps(graph_values).decode()
+                "graph_values": graph_values
             }
-        
-    @classmethod
-    async def get_l7_software_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
-        async with uow:
-            last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            tabulator_dashboard_data = await uow.L7Software.get_resource_software_tabulator_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "id",
-            "ipaddr", 
-            "port", 
-            "protocol", 
-            "service_name", 
-            "domain", 
-            "vendor", 
-            "product", 
-            "type", 
-            "version", 
-            "build", 
-            "patch", 
-            "platform", 
-            "cpe23"
-            ]
 
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
-    
     @classmethod
     async def get_l4_software_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
@@ -243,18 +160,19 @@ class AnalyticsService:
             tabulator_dashboard_data = await uow.l4_software.get_l4_software_tabulator_data(project_id=project_id, last_scan_id = last_scan_id)
             keys = [
             "id",
-            "ipaddr", 
-            "port", 
-            "protocol", 
+            "ipaddr",
+            "domain",
+            "port",
             "state",
-            "service_name",  
-            "vendor", 
-            "product", 
-            "type", 
-            "version", 
-            "build", 
-            "patch", 
-            "platform", 
+            "protocol",
+            "service_name",
+            "vendor",
+            "product",
+            "type",
+            "version",
+            "build",
+            "patch",
+            "platform",
             "cpe23"
             ]
 
@@ -262,7 +180,7 @@ class AnalyticsService:
                 dict(zip(keys, row)) for row in tabulator_dashboard_data
             ]
             return tabulator_transform_dashboard_data
-        
+
     @classmethod
     async def get_ip_mac_port_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
@@ -279,7 +197,7 @@ class AnalyticsService:
                 dict(zip(keys, row)) for row in tabulator_dashboard_data
             ]
             return tabulator_transform_dashboard_data
-        
+
     @classmethod
     async def get_domain_ip_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
@@ -295,58 +213,18 @@ class AnalyticsService:
                 dict(zip(keys, row)) for row in tabulator_dashboard_data
             ]
             return tabulator_transform_dashboard_data
-        
-    @classmethod
-    async def get_l7_soft_vuln_link_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
-        async with uow:
-            last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            tabulator_dashboard_data = await uow.L7Software.get_soft_vuln_link_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "id",
-            "vendor", 
-            "product", 
-            "type", 
-            "version", 
-            "build", 
-            "patch", 
-            "platform", 
-            "cpe23", 
-            "name", 
-            "cve", 
-            "cwe", 
-            "link", 
-            ]
 
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
-        
     @classmethod
     async def get_l4_soft_vuln_link_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
             tabulator_dashboard_data = await uow.l4_software.get_soft_vuln_link_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "vendor", 
-            "product", 
-            "type", 
-            "version", 
-            "build", 
-            "patch", 
-            "platform", 
-            "cpe23", 
-            "name", 
-            "cve", 
-            "cwe", 
-            "link", 
-            ]
+        keys = [ "vendor", "product", "type", "version", "build", "patch", "platform", "cpe23", "name", "cve", "cwe", "link", ]
+        tabulator_transform_dashboard_data = [
+            dict(zip(keys, row)) for row in tabulator_dashboard_data
+        ]
+        return tabulator_transform_dashboard_data
 
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
-        
     @classmethod
     async def get_ip_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
@@ -362,7 +240,7 @@ class AnalyticsService:
                 dict(zip(keys, row)) for row in tabulator_dashboard_data
             ]
             return tabulator_transform_dashboard_data
-        
+
     @classmethod
     async def get_mac_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
@@ -396,13 +274,13 @@ class AnalyticsService:
                 dict(zip(keys, row)) for row in tabulator_dashboard_data
             ]
             return tabulator_transform_dashboard_data
-        
+
     @classmethod
-    async def get_l7_credentials(cls, uow: UnitOfWork, project_id: str) -> list:
+    async def get_auth_credentials(cls, uow: UnitOfWork, project_id: str) -> list:
         result = []
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
-            data = await uow.l7_authentication_credentials.get_data_for_tabulator(project_id=project_id, last_scan_id=last_scan_id)
+            data = await uow.authentication_credentials.get_data_for_tabulator(project_id=project_id, last_scan_id=last_scan_id)
         for id, item in enumerate(data, 1):
             ip, domain, port, auth = item
             result.append({
@@ -416,31 +294,15 @@ class AnalyticsService:
                     "parameters" : auth.parameters })
         return result
 
-    @classmethod
-    def get_l7_software_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                    {'field': 'ipaddr', 'title': 'IP'},
-                    {'field': 'port', 'title': 'PORT'},
-                    {'field': 'protocol', 'title': 'PROTOCOL'},
-                    {'field': 'service_name', 'title': 'SERVICE_NAME'},
-                    {'field': 'domain', 'title': 'DOMAIN'},
-                    {'field': 'vendor', 'title': 'VENDOR'},
-                    {'field': 'product', 'title': 'PRODUCT'},
-                    {'field': 'version', 'title': 'VERSION'},
-                #  {'field': 'type', 'title': 'TYPE'},
-                #  {'field': 'build', 'title': 'BUILD'},
-                #  {'field': 'patch', 'title': 'PATCH'},
-                #  {'field': 'platform', 'title': 'PLATFORM'},
-                #  {'field': 'cpe23', 'title': 'CPE23'}
-                ]
-    
+
     @classmethod
     def get_l4_software_columns_tabulator_data(cls) -> list:
         return [{'field': 'id', 'title': 'ID'},
                     {'field': 'ipaddr', 'title': 'IP'},
+                    {'field': 'domain', 'title': 'DOMAIN'},
                     {'field': 'port', 'title': 'PORT'},
-                    {'field': 'protocol', 'title': 'PROTOCOL'},
                     {'field': 'state', 'title': 'STATE'},
+                    {'field': 'protocol', 'title': 'PROTOCOL'},
                     {'field': 'service_name', 'title': 'SERVICE_NAME'},
                     {'field': 'vendor', 'title': 'VENDOR'},
                     {'field': 'product', 'title': 'PRODUCT'},
@@ -466,7 +328,7 @@ class AnalyticsService:
                 {'field': 'domain', 'title': 'DOMAIN'},
                 ]
 
-        
+
     @classmethod
     def get_soft_vuln_link_columns_tabulator_data(cls) -> list:
         return [{'field': 'vendor', 'title': 'VENDOR'},
@@ -481,9 +343,9 @@ class AnalyticsService:
                        {'field': 'cve', 'title': 'CVE'},
                        {'field': 'cwe', 'title': 'CWE'},
                        {'field': 'link', 'title': 'LINK'}]
-        
+
     @classmethod
-    def get_l7_credentials_tabulator_data(cls) -> list:
+    def get_auth_credentials_tabulator_data(cls) -> list:
         return [       {'field': 'id', 'title': 'ID'},
                        {'field': 'ip', 'title': 'IP'},
                        {'field': 'domain', 'title': 'DOMAIN'},
@@ -498,7 +360,7 @@ class AnalyticsService:
     #                    {'field': 'mac','title': 'MAC',},
     #                    {'field': 'ipaddr','title': 'IP',}]
 
-        
+
     # @classmethod
     # def get_mac_columns_tabulator_data(cls) -> list:
     #     return [{'field': 'id', 'title': 'ID'},
@@ -506,7 +368,7 @@ class AnalyticsService:
     #                    {'field': 'mac', 'title': 'MAC',},
     #                    {'field': 'vendor', 'title': 'Vendor',}]
 
-        
+
     # @classmethod
     # def get_port_columns_tabulator_data(cls) -> list:
     #     return [{'field': 'id', 'title': 'ID'},
@@ -515,4 +377,4 @@ class AnalyticsService:
     #                    {'field': 'protocol','title': 'Protocol',},
     #                    {'field': 'service_name','title': 'Service name'}]
 
-        
+

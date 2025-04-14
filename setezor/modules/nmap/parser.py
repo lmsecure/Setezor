@@ -5,7 +5,7 @@ import re
 import json
 
 from setezor.tools.ip_tools import get_network
-    
+
 try:
     # from exceptions.loggers import get_logger
     from tools.xml_utils import XMLParser
@@ -17,7 +17,7 @@ except ImportError:
 
 from cpeguess.cpeguess import CPEGuess
 
-from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network
+from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS_A, Domain
 
 # logger = get_logger(__package__, handlers=[])
 
@@ -52,10 +52,7 @@ class NmapParser(XMLParser):
 
         Returns:
             list: данные в виде list
-        """        
-        '''
-        
-        '''
+        """
         if data is None:
             return []
         return [data] if not isinstance(data, list) else data
@@ -103,7 +100,7 @@ class NmapParser(XMLParser):
 
         Returns:
             list: распарсенные данные о трассировках
-        """        
+        """
         trace = NmapParser.to_list(trace.get('hop') if trace else None)
         addresses = [IPv4Struct.model_validate(i) for i in trace]
         if not addresses:
@@ -112,8 +109,8 @@ class NmapParser(XMLParser):
             addresses.insert(0, self_address)
         route = RouteStruct(agent_id=agent_id, routes=addresses)
         return route
-    
-    
+
+
     @classmethod
     @deprecated('Нужно будет перейти на структуры')
     def _parse_traces(cls, trace: list | dict, self_address: dict) -> list:
@@ -144,7 +141,7 @@ class NmapParser(XMLParser):
 
         Returns:
             list: распарсенных данных о портах
-        """        
+        """
         result: list[PortStruct] = []
         ports = NmapParser.to_list(ports.get('port') if ports else None)
         if ports:
@@ -153,14 +150,14 @@ class NmapParser(XMLParser):
                     if tunnel != "ssl": # TODO
                         print("If you see this message, please notify the developer:")
                         print("no \"ssl\" tunnel detected:", tunnel)
-                result.append({'port': port.get('portid'),
+                result.append({'port': int(port.get('portid')),
                                'mac': address.get('mac'), 'service_name' : port.get('service', {}).get('name'),
                                 'state': port.get('state', {}).get('state'),
                                 'protocol': port.get('protocol'),
                                 'is_ssl' : tunnel == "ssl"})
 
         return result
-    
+
 
 
     @classmethod
@@ -191,10 +188,10 @@ class NmapParser(XMLParser):
                 service = port.get('service', "")
                 if service:
                     cpe = service.get('cpe', "")
-                    
+
                     cpe_type = ""
-                    vendor = ""
-                    product = ""
+                    vendor = service.get('vendor', "")
+                    product = service.get('product', "")
                     version = service.get('version', "")
                     if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
 
@@ -217,7 +214,7 @@ class NmapParser(XMLParser):
                             else:
                                 if not version:
                                     version = cpe.split(':')[5]
-                    
+
                     if product and version:
                         list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
                         cpe = ', '.join(list_cpe) if list_cpe else ""
@@ -246,7 +243,7 @@ class NmapParser(XMLParser):
         for addr in addresses:
             addr.ports = ports[str(addr.address)]
         return NmapRunResult({'addresses': addresses, 'traces': res.traces})
-    
+
     def parse_hosts(self, scan: dict, agent_id: int, self_address: IPv4Struct | None | dict = None) -> tuple[NmapStructure, bool]:
         """Метод парсинга лога nmap-а
 
@@ -265,48 +262,25 @@ class NmapParser(XMLParser):
         if len(hosts) == 0:
             hosts = self.to_list(scan.get('hosthint'))
         # logger.debug('Start parse %s hosts', len(hosts))
+        uniq_addrs = set()
         for h in hosts:
             address_data = self.parse_addresses(h.get('address'))
-            hostname_data = self.parse_hostname(h.get('hostnames'))
-            trace_data = self.parse_traces(h.get('trace'), agent_id, self_address, IPv4Struct.model_validate(address_data[0]))
-            for index, i in enumerate(address_data):
-                i.update({'domain_name': hostname_data[index]})
-            ports_data = self.parse_ports(h.get('ports',{}), address_data[0])
-            software_data = self.parse_softwares(h.get('ports',{}), address_data[0])
-            result.addresses += address_data
-            result.hostnames += hostname_data
-            result.ports.update({address_data[0].get('ip') : ports_data})
-            result.softwares.update({address_data[0].get('ip')  : software_data})
-            result.traces.append(trace_data)
+            if json.dumps(address_data) not in uniq_addrs:
+                uniq_addrs.add(json.dumps(address_data) )
+                hostname_data = self.parse_hostname(h.get('hostnames'))
+                trace_data = self.parse_traces(h.get('trace'), agent_id, self_address, IPv4Struct.model_validate(address_data[0]))
+                for index, i in enumerate(address_data):
+                    i.update({'domain_name': hostname_data[index]})
+                ports_data = self.parse_ports(h.get('ports',{}), address_data[0])
+                software_data = self.parse_softwares(h.get('ports',{}), address_data[0])
+                result.addresses += address_data
+                result.hostnames += hostname_data
+                result.ports.update({address_data[0].get('ip') : ports_data})
+                result.softwares.update({address_data[0].get('ip')  : software_data})
+                result.traces.append(trace_data)
 
-        addresses, addresses_set = list(), set()
-        for item in result.addresses:
-            if not json.dumps(item) in addresses_set:
-                addresses.append(item)
-                addresses_set.add(json.dumps(item))
-        result.addresses = addresses
-
-        hostnames, hostnames_set = list(), set()
-        for item in result.hostnames:
-            if not json.dumps(item) in hostnames_set:
-                hostnames.append(item)
-                hostnames_set.add(json.dumps(item))
-        result.hostnames = hostnames
-        
-        
-        final_traces, ft = list(), set()
-        for item in result.traces:
-            routes = [route.model_dump() for route in item.routes]
-            if not json.dumps(routes) in ft:
-                final_traces.append(json.dumps(routes))
-                ft.add(json.dumps(routes))
-        result.traces = []
-        for item in final_traces:
-            loaded_trace = json.loads(item)
-            struct = RouteStruct(agent_id=agent_id, routes=[IPv4Struct(**trace) for trace in loaded_trace])
-            result.traces.append(struct)
         return result, traceroute
-    
+
     @classmethod
     def restruct_result(cls, data, interface_ip_id: int, traceroute: bool) -> list:
         result = []
@@ -324,6 +298,10 @@ class NmapParser(XMLParser):
             result.append(network_obj)
             ip_obj = IP(ip=data.addresses[i].get('ip'), mac=mac_obj, network=network_obj)
             result.append(ip_obj)
+            domain_obj = Domain()
+            result.append(domain_obj)
+            dns_a_obj = DNS_A(target_ip=ip_obj, target_domain=domain_obj)
+            result.append(dns_a_obj)
             address_in_traceses[ip_obj.ip] = ip_obj
             ports = data.ports.get(data.addresses[i].get('ip'), [])
             softs = data.softwares.get(data.addresses[i].get('ip'), [])
@@ -339,14 +317,14 @@ class NmapParser(XMLParser):
                         vendor_obj = Vendor(name=vendor_name)
                         vendors[vendor_name] = vendor_obj
                         result.append(vendor_obj)
-                    
+
                     hash_string = vendor_name or "_" + "_".join([v for v in soft.values() if v])
 
                     if not (hash_string and hash_string in softwares):
                         soft_obj = Software(vendor=vendor_obj, **soft)
                         softwares[hash_string] = soft_obj
                         result.append(soft_obj)
-                        L4Software_obj = L4Software(l4=l4_obj, software=soft_obj)
+                        L4Software_obj = L4Software(l4=l4_obj, software=soft_obj, dns_a=dns_a_obj)
                         result.append(L4Software_obj)
         if traceroute:
             for i in range(len(data.addresses)):
@@ -358,6 +336,10 @@ class NmapParser(XMLParser):
                         result.append(network_obj)
                         ip_obj_in_trace = IP(ip=str(r.address), network=network_obj)
                         result.append(ip_obj_in_trace)
+                        domain_obj = Domain()
+                        result.append(domain_obj)
+                        dns_a_obj = DNS_A(target_ip=ip_obj_in_trace, target_domain=domain_obj)
+                        result.append(dns_a_obj)
                         froms_tos.append(str(r.address))
                         address_in_traceses.update({str(r.address) : ip_obj_in_trace})
                     else:

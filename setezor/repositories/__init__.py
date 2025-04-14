@@ -15,7 +15,6 @@ from .route_repository import RouteRepository
 from .route_list_repository import RouteListRepository
 from .project_repository import ProjectRepository
 from .task_repository import TasksRepository
-from .l7_repository import L7Repository
 from .cert_repository import CertRepository
 from .user_repository import UserRepository
 from .network_repository import NetworkRepository
@@ -27,10 +26,8 @@ from .whois_ip_repository import WhoisIPRepository
 from .agent_repository import AgentRepository
 from .vendor_repository import VendorRepository
 from .software_repository import SoftwareRepository
-from .l7_software_repository import L7SoftwareRepository
 from .asn_repository import ASN_Repository
 from .vulnerability_repository import VulnerabilityRepository
-from .l7_software_vulnerability_repository import L7SoftwareVulnerabilityRepository
 from .scan_repository import ScanRepository
 from .scope_repository import ScopeRepository
 from .target_repository import TargetRepository
@@ -40,6 +37,8 @@ from .vulnerability_link_repository import VulnerabilityLinkRepository
 from .role_repository import RoleRepository
 from .auth_log_repository import AuthLog_Repository
 from .invite_link_repository import InviteLinkRepository
-from .l7_authentication_credentials_repository import L7AuthenticationCredentialsRepository
+from .authentication_credentials_repository import AuthenticationCredentialsRepository
 from .node_comment_repository import NodeCommentRepository
 from .screenshots_repository import ScreenshotsRepository
+from .setting_repository import SettingRepository
+from .agent_in_project_repository import AgentInProjectRepository

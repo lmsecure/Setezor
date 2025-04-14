@@ -12,7 +12,6 @@ from cpeguess.cpeguess import CPEGuess
 from .base_job import BaseJob
 from setezor.models import Vulnerability, \
     L4SoftwareVulnerability, \
-    L7SoftwareVulnerability, \
     VulnerabilityLink
 
 from setezor.modules.search_vulns.search_vulns import SearchVulns
@@ -97,19 +96,14 @@ class CVERefresher(BaseJob):
             return
         new_vulnerabilities = []
         async with self.uow as uow:
-            l4_soft_with_cpe23, l7_soft_with_cpe23 = await uow.software.for_search_vulns(project_id=self.project_id, 
+            l4_soft_with_cpe23 = await uow.software.for_search_vulns(project_id=self.project_id, 
                                                                                          scan_id=self.scan_id)
         
         l4_software_vulnerabilities = await self.get_vulnerabilities(l4_soft_with_cpe23, 
                                                                      token, 
                                                                      L4SoftwareVulnerability,
                                                                      "l4_software_id")
-        l7_software_vulnerabilities = await self.get_vulnerabilities(l7_soft_with_cpe23, 
-                                                                     token, 
-                                                                     L7SoftwareVulnerability,
-                                                                     "l7_software_id")
         new_vulnerabilities.extend(l4_software_vulnerabilities)
-        new_vulnerabilities.extend(l7_software_vulnerabilities)
         return new_vulnerabilities
 
     @BaseJob.local_task_notifier

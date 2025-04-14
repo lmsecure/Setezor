@@ -7,7 +7,7 @@ from setezor.dependencies.uow_dependency import UOWDep
 from setezor.models.d_object_type import ObjectType
 from setezor.models.node_comment import NodeComment
 from setezor.schemas.comment import NodeCommentForm
-from setezor.services import NodeService, EdgeService, IPService
+from setezor.services import NodeService, EdgeService, IPService, AgentInProjectService
 from setezor.schemas.ip import ChangeObjectType
 from setezor.schemas.roles import Roles
 
@@ -25,7 +25,8 @@ async def list_edges(
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> List:
-    edges = await EdgeService.list(uow=uow, project_id=project_id, scans=scans)
+    agents_parents = await AgentInProjectService.get_id_and_names_from_parents(uow=uow, project_id=project_id)
+    edges = await EdgeService.list(uow=uow, project_id=project_id, scans=scans, agents_parents=agents_parents)
     return edges
 
 

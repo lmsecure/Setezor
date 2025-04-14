@@ -14,7 +14,7 @@ load_dotenv()
 sys.path[0] = ''
 from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
 from setezor.settings import STATIC_FILES_DIR_PATH, SSL_KEY_FILE_PATH, SSL_CERT_FILE_PATH
-
+from setezor.db.alembic import AlembicManager
 
 @asynccontextmanager
 async def startup_event(app: FastAPI):
@@ -96,6 +96,12 @@ def reset_password(login: str):
     result = asyncio.run(UserManager.reset_user_password(login=login))
     print(result)
 
+@run_app.command()
+def initial_fill():
+    import asyncio
+    from setezor.db.database import fill_db
+    asyncio.run(fill_db(manual=True))
+
 @run_app.group()
 def alembic():
     pass
@@ -103,29 +109,21 @@ def alembic():
     
 @alembic.command()
 def history():
-    from alembic import command
-    from alembic.config import Config
-    from setezor.settings import ALEMBIC_INI_PATH
-    config = Config(ALEMBIC_INI_PATH)
-    command.history(config)
+    AlembicManager.history()
+    
+@alembic.command()
+def current():
+    AlembicManager.current()
 
 @alembic.command()
 @click.argument('revision')
 def stamp(revision: str):
-    from alembic import command
-    from alembic.config import Config
-    from setezor.settings import ALEMBIC_INI_PATH
-    config = Config(ALEMBIC_INI_PATH)
-    command.stamp(config, revision)
+    AlembicManager.stamp(revision)
 
 @alembic.command()
 @click.argument('revision')
 def upgrade(revision: str):
-    from alembic import command
-    from alembic.config import Config
-    from setezor.settings import ALEMBIC_INI_PATH
-    config = Config(ALEMBIC_INI_PATH)
-    command.upgrade(config, revision)
+    AlembicManager.upgrade(revision)
 
 
 if __name__ == "__main__":

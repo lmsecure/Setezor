@@ -19,5 +19,5 @@ class Port(IDDependent, Base, table=True):
 
 
     ip: "IP"         = Relationship(back_populates="ports")
-    l7: List["L7"]   = Relationship(back_populates="port")
     softwares: List["L4Software"] = Relationship(back_populates="l4")
+    authentication_credentials: List["Authentication_Credentials"] = Relationship(back_populates="port")

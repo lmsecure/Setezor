@@ -8,11 +8,10 @@ class Route(IDDependent, Base, table=True):
         "comment": "Таблица предназначена для хранения роутов"
     }
 
-    agent_id: str = Field(foreign_key="agent.id")
+    agent_id: str = Field(foreign_key="agent_in_project.id")
 
 
     route_lists: List["RouteList"] = Relationship(back_populates="route")
-    agent: "Agent" = Relationship(back_populates="route")
 
 
     def __repr__(self):

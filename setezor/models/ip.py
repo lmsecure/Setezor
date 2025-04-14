@@ -33,7 +33,7 @@ class IP(IDDependent, Base, table=True):
     dns_soa_target: List["DNS_SOA"]         = Relationship(back_populates="target_ip")
 
     whois: List["WhoIsIP"]       = Relationship(back_populates="ip")
-
+    cert: List["Cert"] = Relationship(back_populates="ip")
 
     #@field_serializer('ip', when_used='json')
     #def serialize_ip(self, ip: int, _info):

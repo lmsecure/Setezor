@@ -19,5 +19,4 @@ class Software(IDDependent, TimeDependent, table=True):
     cpe23: Optional[str]        = Field(sa_column_kwargs={"comment": "Строка CPE23"})
 
     vendor: "Vendor"         = Relationship(back_populates="softwares")
-    l7: List["L7Software"]   = Relationship(back_populates="software")
     l4: List["L4Software"]   = Relationship(back_populates="software")

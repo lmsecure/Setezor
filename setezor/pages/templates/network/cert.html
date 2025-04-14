@@ -1,12 +1,12 @@
 {% macro cert_input_ip() %}
 
-<span class="input-group-text" id="basic-addon1">TARGET</span>
+<span class="input-group-text" id="basic-addon1" data-i18n="TARGET"></span>
 <datalist id="DomainsAndIp"></datalist>
-<input type="text" list="DomainsAndIp" class="form-control" id='inputTargetTLS' placeholder="Domain name or IP"  style="width: 7rem;"
+<input type="text" list="DomainsAndIp" class="form-control" id='inputTargetTLS' data-i18n-placeholder="Domain name or IP"  style="width: 7rem;"
     aria-label="TargetTLS" aria-describedby="basic-addon1" required name="TargetTLS">
 {% endmacro %}
 {% macro cert_input_port() %}
-<span class="input-group-text" id="basic-addon1">PORT</span>
+<span class="input-group-text" id="basic-addon1" data-i18n="PORT"></span>
 <input type="text" class="form-control" id='inputPort' placeholder="Port" aria-label="Port"
     aria-describedby="basic-addon1" required name="Port" value="443">
 {% endmacro %}
@@ -50,7 +50,7 @@
 {% endmacro %}
 {% macro cert_start() %}
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="
                     const requiredTLS = document.getElementById('CertForm');
 
@@ -83,8 +83,7 @@
                     var myModal = bootstrap.Modal.getInstance(document.getElementById('certModalWindow'));
                                     if (myModal) {
                                         myModal.hide();
-                                    }">
-        Start
+                                    }" data-i18n="Start">
     </button>
 
 </div>

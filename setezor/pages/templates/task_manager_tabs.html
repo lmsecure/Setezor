@@ -1,14 +1,5 @@
 {% macro show() %}
-<!-- Кнопка рестарта тасок
- ${task.status == "FINISHED" ? `<button type="button" class="btn btn-success" 
-data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.stringify(task.params)}' onclick="restartTask(this)">
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-</svg>
-</button>` : ``} -->
 <script>
-
     async function openTasksModal() {
         const tasksModal = new bootstrap.Modal(document.getElementById("tasksListManager"));
         tasksModal.show();
@@ -23,7 +14,17 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('#tasks_created_pill, #tasks_started_pill, #tasks_finished_pill, #tasks_failed_pill').forEach(tab => {
             tab.addEventListener('shown.bs.tab', async (event) => {
-                const status = event.target.innerText.trim();
+                let status;
+                if (event.target.id === 'tasks_created_pill') {
+                    status = 'CREATED';
+                } else if (event.target.id === 'tasks_started_pill') {
+                    status = 'STARTED';
+                } else if (event.target.id === 'tasks_finished_pill') {
+                    status = 'FINISHED';
+                } else if (event.target.id === 'tasks_failed_pill') {
+                    status = 'FAILED';
+                }
+                
                 if (activeTab !== status) {
                     activeTab = status;
                     await getTasks(status);
@@ -33,7 +34,6 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
 
         const tasksModal = document.getElementById("tasksListManager");
         tasksModal.addEventListener("show.bs.modal", async () => {
-
             activeTab = "CREATED";
             await getTasks("CREATED");
         });
@@ -58,7 +58,11 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
             </svg>
             </button>` : ``}
-
+            ${task.status == "CREATED" ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
+            </svg>
+            </button>` : ``}
         </td>
     </tr>`;
         }
@@ -67,11 +71,12 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Created By</th>
-                <th>Created At</th>
-                <th>Params</th>
+                <th>${i18next.t('Created By')}</th>
+                <th>${i18next.t('Created At')}</th>
+                <th>${i18next.t('Params')}</th>
                 <th></th>
-                ${status == "STARTED" ? '<th class="text-center">Actions</th>' : ''}
+                ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "CREATED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
             </tr>
         </thead>
         <tbody>
@@ -80,6 +85,7 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
     </table>
     `;
     }
+
     async function startTask(id) {
         let resp = await fetch(`/api/v1/task/${id}/start`,
             {
@@ -91,6 +97,7 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
         )
         let data = await resp.json()
     }
+
     async function stopTask(id) {
         let resp = await fetch(`/api/v1/task/${id}/soft_stop`,
             {
@@ -102,83 +109,17 @@ data-id="${task.id}" data-created-by="${task.created_by}" data-params='${JSON.st
         )
         let data = await resp.json()
     }
-    async function restartTask(elem) {
-        const id = elem.dataset.id;
-        const createdBy = elem.dataset.createdBy;
-        const params = JSON.parse(elem.dataset.params);
-        if (createdBy == 'NmapScanTask') {
-        let resp = await fetch(`/api/v1/task/nmap_scan_task`,
+    async function deleteTask(id) {
+        let resp = await fetch(`/api/v1/task/${id}/deleteTask`,
             {
                 method: "POST",
                 headers: {
                     "Content-type": "application/json"
-                },
-                body: params
+                }
             }
-        )}
-        else if (createdBy == 'ScapySniffTask') {
-           let resp = await fetch(`/api/v1/task/scapy_sniff_task`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
-        else if (createdBy == 'MasscanScanTask') 
-        {   let resp = await fetch(`/api/v1/task/masscan_scan_task`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
-        else if (createdBy == 'DNSTask') 
-        {   let resp = await fetch(`/api/v1/task/dns_task`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
-        else if (createdBy == 'SdFindTask') 
-        {   let resp = await fetch(`/api/v1/task/sd_find`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
-        else if (createdBy == 'CertTask') 
-        {   let resp = await fetch(`/api/v1/task/cert_info_task`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
-        else if (createdBy == 'WhoisTask') 
-        {   let resp = await fetch(`/api/v1/task/whois_task`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: params
-            }
-        )}
+        )
         let data = await resp.json()
-    };
-
+    }
 </script>
 <style>
     #tableTasksContainer thead tr th {

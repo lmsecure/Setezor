@@ -3,16 +3,16 @@
 
 <div class="p-3">
     <button class="btn btn-primary mt-1" id="updateTargets" data-bs-toggle="tooltip" data-bs-toggle="top"
-        title="Update targets" onclick="targets_table.dataLoader.reloadData()"><i
+        data-i18n-title="Update targets" onclick="targets_table.dataLoader.reloadData()"><i
             class="bi bi-arrow-clockwise"></i></button>
             <button class="btn btn-success mt-1" data-bs-toggle="modal" data-bs-target="#addTarget"
             onclick="document.getElementById('targetAddForm').reset();
             clearTargetsList();
-            fillAcunetixInstances('acunetix_instance_target_add','acunetixTargetGroupAdd')">Add Target</button>
+            fillAcunetixInstances('acunetix_instance_target_add','acunetixTargetGroupAdd')" data-i18n="Add Target"></button>
             <button class="btn btn-primary mt-1" data-bs-toggle="modal"
             onclick="document.getElementById('targetImportForm').reset();
             fillAcunetixInstances('acunetix_instance_target_import','acunetix_groups_import')" 
-            data-bs-target="#importTargetsCSV">Import targets</button>
+            data-bs-target="#importTargetsCSV" data-i18n="Import targets"></button>
     <div class="d-flex flex-column mt-2">
         <div id="targets_table" class="mt-2" style="width:87vw">
         </div>
@@ -33,10 +33,10 @@
                         fillAcunetixScanSpeeds();
                         fillAcunetixScanProfiles();
                         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
-                        document.getElementById('acunetix_scan_target_id').value='${cell.getRow().getData().target_id}'">Scan</button>
+                        document.getElementById('acunetix_scan_target_id').value='${cell.getRow().getData().target_id}'">${i18next.t('Scan')}</button>
                 <button class='btn btn-danger btn-sm' id="{{targets_tab.name}}-delete-${cell.getRow().getData().target_id}"
                 onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';
-                deleteTarget('${cell.getRow().getData().target_id}')">Delete</button>         
+                deleteTarget('${cell.getRow().getData().target_id}')">${i18next.t('Delete')}</button>         
                         `;
     }
     function target_proxy_formatter(cell, formatterParams, onRendered) {
@@ -49,8 +49,8 @@
         <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setProxy" onclick="document.getElementById('setProxyForm').reset();
         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
         document.getElementById('acunetix_proxy_group_id').value='';
-        document.getElementById('acunetix_proxy_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
-        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearProxy('${cell.getRow().getData().target_id}')">Clear</button>
+        document.getElementById('acunetix_proxy_target_id').value='${cell.getRow().getData().target_id}'">${i18next.t('Set')}</button>
+        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearProxy('${cell.getRow().getData().target_id}')">${i18next.t('Clear')}</button>
     </div>
 </div>`;
     }
@@ -64,8 +64,8 @@
         <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setHeaders" onclick="document.getElementById('setHeadersForm').reset();
         clearHeadersList();
         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
-        document.getElementById('acunetix_headers_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
-        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearHeaders('${cell.getRow().getData().target_id}')">Clear</button>
+        document.getElementById('acunetix_headers_target_id').value='${cell.getRow().getData().target_id}'">${i18next.t('Set')}</button>
+        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearHeaders('${cell.getRow().getData().target_id}')">${i18next.t('Clear')}</button>
     </div>
 </div>`;
     }
@@ -78,8 +78,8 @@
         <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setCookies" onclick="document.getElementById('setCookiesForm').reset();
         clearCookiesList();
         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
-        document.getElementById('acunetix_cookies_target_id').value='${cell.getRow().getData().target_id}'">Set</button>
-        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearCookies('${cell.getRow().getData().target_id}')">Clear</button>
+        document.getElementById('acunetix_cookies_target_id').value='${cell.getRow().getData().target_id}'">${i18next.t('Set')}</button>
+        <button class="btn btn-danger btn-sm" onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';clearCookies('${cell.getRow().getData().target_id}')">${i18next.t('Clear')}</button>
     </div>
 </div>`;
     }

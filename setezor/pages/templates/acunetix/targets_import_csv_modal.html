@@ -3,7 +3,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="importTargetsLabel">Importing targets</h5>
+                <h5 class="modal-title" id="importTargetsLabel" data-i18n="Importing targets"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="import_targets_from_csv(event)" id="targetImportForm">
@@ -15,8 +15,7 @@
                             <div class="mb-3" id="acunetix_groups_import">
                             </div>
                             <div class="mb-3">
-                                <label for="formFile" class="form-label">Tagets CSV file (each url should be on a new
-                                    line)</label>
+                                <label for="formFile" class="form-label" data-i18n="Tagets CSV file (each url should be on a new line)"></label>
                                 <input class="form-control" type="file" multiple id="targetsFile" name="targets_csv">
                             </div>
                         </div>
@@ -24,8 +23,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_importing"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Import</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Import"></button>
                 </div>
             </form>
         </div>
@@ -62,7 +61,7 @@
         }
         let resp = await fetch(`/api/v1/acunetix/groups?acunetix_id=${event.target.value}`)
         let groups = await resp.json()
-        let result = `<label for="acunetix_groups_import" class="form-label">Group (not required)</label>
+        let result = `<label for="acunetix_groups_import" class="form-label">${i18next.t('Group (not required)')}</label>
                                 <select name="group_id" class="form-select">
                                     <option value=""></option>`
         for (group of groups) {

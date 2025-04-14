@@ -16,10 +16,11 @@ class NodeService(IService):
             if (not scans) and (last_scan := await uow.scan.last(project_id=project_id)):
                 scans.append(last_scan.id)
             vis_nodes_and_interfaces = await uow.ip.vis_nodes_and_interfaces(project_id=project_id, scans=scans)
-            agents = await uow.agent.list(project_id=project_id)
+            agents = await uow.agent_in_project.for_map(project_id=project_id)
             nodes = await uow.ip.get_nodes(project_id=project_id, scans=scans)
+            server_agent = await uow.agent.find_one(name="Server", secret_key="")
+            server_agent_in_project = await uow.agent_in_project.find_one(agent_id=server_agent.id, project_id=project_id)
 
-        server_id = [agent.id for agent in agents if agent.name == "Server"]
         agents_ips = {}
         for row in vis_nodes_and_interfaces:
             if not agents_ips.get(row.ip_id):
@@ -39,10 +40,11 @@ class NodeService(IService):
                 "address": "",
                 "agents": [agent.id],
                 "agent": agent.id,
-                "parent_agent_id": agent.parent_agent_id,
+                "parent_agent_id": True if agent.id != server_agent_in_project.id else None,
                 "group": "agents_group",
                 "value": 1,
                 "shape": "dot",
+                "is_server": agent.rest_url and not agent.secret_key,
                 "label": agent.name
             })
         for node in nodes:
@@ -50,7 +52,7 @@ class NodeService(IService):
                 "id": node.id,
                 "mac_address": node.mac,
                 "address": node.ip,
-                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else server_id,
+                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [server_agent.id],
                 "agent": None,
                 "object_type": node.name,
                 "group": f"{node.start_ip}/{node.mask}",
@@ -128,10 +130,13 @@ class NodeService(IService):
     @classmethod
     async def get_node_info(cls, uow: UnitOfWork, project_id: str, ip_id: int):
         async with uow:
-            ip_obj, mac_obj, network_obj, port_soft = await uow.ip.get_node_info(project_id=project_id, ip_id=ip_id)
-        ports_list = []
-        for port, soft in port_soft:
-            ports_list.append({
+            ip_obj, mac_obj, network_obj = await uow.ip.get_node_info(project_id=project_id, ip_id=ip_id)
+            domain_objs = await uow.domain.get_node_info(project_id=project_id, ip_id=ip_id)
+            port_objs = await uow.port.get_node_info(project_id=project_id, ip_id=ip_id)
+        domain_list = [item.domain for item in domain_objs if item.domain]
+        port_list = []
+        for port, soft in port_objs:
+            port_list.append({
                 "port": port.port,
                 "protocol": port.protocol,
                 "state": port.state,
@@ -141,7 +146,8 @@ class NodeService(IService):
             "ip": ip_obj.ip,
             "mac": mac_obj.mac,
             "network": f"{network_obj.start_ip}/{network_obj.mask}",
-            "ports": ports_list
+            "domain": '; '.join(domain_list),
+            "ports": port_list
         }
         return result
 
@@ -149,14 +155,16 @@ class NodeService(IService):
 class EdgeService(IService):
 
     @classmethod
-    async def list(cls, uow: UnitOfWork, project_id: str, scans: list[str]):
+    async def list(cls, uow: UnitOfWork, project_id: str, scans: list[str], agents_parents: dict):
         async with uow:
             if (not scans) and (last_scan := await uow.scan.last(project_id=project_id)):
                 scans.append(last_scan.id)
 
-            vis_edge_agent_to_agent = await uow.route_list.vis_edge_agent_to_agent(project_id=project_id)
-            edges: list = [{"from": row[0], "to": row[1]}
-                           for row in vis_edge_agent_to_agent]
+            agents_in_project = await uow.agent_in_project.filter(project_id=project_id)
+            edges = []
+            for agent_in_project in agents_in_project:
+                for parent in agents_parents.get(agent_in_project.agent_id, []):
+                    edges.append({"from": parent["parent_agent_id_in_project"], "to": agent_in_project.id})
 
             vis_edge_agent_to_interface = await uow.route_list.vis_edge_agent_to_interface(project_id=project_id)
             edges.extend([{"from": row[0], "to": row[1], "length": 100}

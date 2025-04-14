@@ -1,27 +1,36 @@
 import datetime
+import os
+from random import randint
 from Crypto.Random import get_random_bytes
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import SQLModel
 from setezor.models import ObjectType, Network_Type, User, Role
-import setezor.unit_of_work as UOW
+from setezor.models.agent import Agent
+from setezor.models.base import generate_unique_id
+from setezor.models.object import Object
+
 from setezor.settings import DB_URI
 from setezor.tools.password import PasswordTool
 from setezor.logger import logger
 from setezor.schemas.roles import Roles
-
+from setezor.schemas.settings import Setting, SettingType
 
 engine = create_async_engine(DB_URI)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
 
 async def init_db():
+    if os.environ.get("ENGINE", "sqlite") != "sqlite":
+        return
     async with engine.begin() as conn:
-        # await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
-async def fill_db():
-    uow = UOW.UnitOfWork()
+async def fill_db(manual: bool = False):
+    if not (os.environ.get("ENGINE", "sqlite") == "sqlite" or manual):
+        return
+    from setezor.unit_of_work import UnitOfWork
+    uow = UnitOfWork()
     async with uow:
         for new_id, obj_type in [
             ('3d9cf6c43fd54aacb88878f5425f43c4','unknown') ,
@@ -63,6 +72,7 @@ async def fill_db():
             print(f"Admin password = {plain_password}")
             new_pwd = PasswordTool.hash(plain_password)
             admin_user = User(
+                id=generate_unique_id(),
                 created_at=datetime.datetime.now(),
                 login="admin",
                 hashed_password=new_pwd,
@@ -70,6 +80,18 @@ async def fill_db():
             )
             uow.user.add(admin_user.model_dump())
             logger.debug(f"CREATED object {admin_user.__class__.__name__} {admin_user.model_dump_json()}")
+            
+
+            server_agent = Agent(
+                id=generate_unique_id(),
+                name="Server",
+                description="server",
+                rest_url=os.environ.get("SERVER_REST_URL"),
+                user_id=admin_user.id,
+                is_connected=True
+            )
+            uow.agent.add(server_agent.model_dump())
+        
         await uow.commit()
 
     async with uow:
@@ -77,4 +99,17 @@ async def fill_db():
             role_obj = Role(name=role_name)
             if not await uow.role.exists(role_obj):
                 uow.role.add(role_obj.model_dump())
+        await uow.commit()
+
+
+    base_settings = [
+        Setting(name="open_reg",
+                description="Opened registration",
+                value_type=SettingType.boolean,
+                field={"value": False})
+    ]
+    async with uow:
+        for setting in base_settings:
+            if not await uow.setting.exists(setting):
+                uow.setting.add(setting.model_dump())
         await uow.commit()

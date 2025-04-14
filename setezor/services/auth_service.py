@@ -1,4 +1,5 @@
 
+import string
 from fastapi import HTTPException, status
 from setezor.interfaces.service import IService
 from setezor.schemas.auth import RegisterForm
@@ -86,30 +87,35 @@ class AuthService(IService):
         return await InviteLinkService.create_token(uow=uow, count_of_entries=count_of_entries, payload=payload)
 
     @classmethod
-    async def register_by_invite_token(cls, uow: UnitOfWork, register_form: RegisterForm):
-        async with uow:
-            invite_link = await uow.invite_link.find_one(token_hash=register_form.invite_token)
-        if not invite_link:
-            raise HTTPException(status_code=400, detail="Token not found")
+    async def register_by_invite_token(cls, uow: UnitOfWork, open_reg: bool, register_form: RegisterForm):
         if register_form.password != register_form.password_confirmation:
             raise HTTPException(status_code=400, detail="Password and password confirmation mismatch")
-        token_payload = JWT_Tool.get_payload(invite_link.token)
-        if not token_payload:
-            raise HTTPException(status_code=403, detail="Token is expired")
-        if not invite_link.count_of_entries:
-            raise HTTPException(status_code=403, detail="Invalid token")
+        if not open_reg:
+            async with uow:
+                invite_link = await uow.invite_link.find_one(token_hash=register_form.invite_token)
+            if not invite_link:
+                raise HTTPException(status_code=400, detail="Token not found")
+            token_payload = JWT_Tool.get_payload(invite_link.token)
+            if not token_payload:
+                raise HTTPException(status_code=403, detail="Token is expired")
+            if not invite_link.count_of_entries:
+                raise HTTPException(status_code=403, detail="Invalid token")
+        if not all([c in string.ascii_letters + string.digits for c in register_form.login]):
+            raise HTTPException(status_code=400, detail="Username can only contain letters and digits")        
         if await UsersService.get_by_login(uow=uow, login=register_form.login):
             raise HTTPException(status_code=400, detail="Username is already taken")
-        event = token_payload.get("event")
-        if event == "register":
-            hashed_password = PasswordTool.hash(register_form.password)
-            new_user_model = User(
-                login=register_form.login,
-                hashed_password=hashed_password
-            )
-            await UsersService.create(uow=uow, user=new_user_model)
-            async with uow:
-                await uow.invite_link.edit_one(id=invite_link.id, data={"count_of_entries": invite_link.count_of_entries-1})
-                await uow.commit()
-            return True
-        raise HTTPException(status_code=400, detail="Invalid register token")
+        
+        
+        if not open_reg:
+            event = token_payload.get("event")
+            if event == "register":
+                async with uow:
+                    await uow.invite_link.edit_one(id=invite_link.id, data={"count_of_entries": invite_link.count_of_entries-1})
+                    await uow.commit()
+        hashed_password = PasswordTool.hash(register_form.password)
+        new_user_model = User(
+            login=register_form.login,
+            hashed_password=hashed_password
+        )
+        await UsersService.create(uow=uow, user=new_user_model)
+        return True

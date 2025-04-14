@@ -10,6 +10,7 @@ from setezor.pages.project_settings import router as router_project_settings
 from setezor.pages.application_settings import router as router_application_settings
 from setezor.pages.user_settings import router as router_user_settings
 from setezor.pages.scopes import router as router_scopes
+from setezor.pages.admin_settings import router as router_admin_settings
 
 pages_routers = [
     router_auth,
@@ -24,4 +25,5 @@ pages_routers = [
     router_project_settings,
     router_user_settings,
     router_scopes,
+    router_admin_settings,
 ]

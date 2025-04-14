@@ -4,7 +4,8 @@ import hashlib
 
 from fastapi import HTTPException
 from setezor.managers.project_manager.files import FilesStructure
-from setezor.models import Project, UserProject, Object, Agent, Invite_Link
+from setezor.models import Project, UserProject, Object, Agent, AgentInProject, Domain, DNS_A
+from setezor.models.agent_parent_agent import AgentParentAgent
 from setezor.models.asn import ASN
 from setezor.models.ip import IP
 from setezor.models.mac import MAC
@@ -39,25 +40,34 @@ class ProjectManager:
                 role_id=owner_role.id
             )
             uow.user_project.add(user_in_project_obj.model_dump())
+            
+            server_agent = await uow.agent.find_one(name="Server", secret_key="")
+            
+            obj_server_id, ag_server_id = generate_unique_id(), generate_unique_id()
+            new_server_obj_model_in_project = Object(id=obj_server_id,
+                                                     agent_id=ag_server_id,
+                                                     project_id=project_id)
 
-            object_model = Object(
-                id=generate_unique_id(),
-                project_id=project_id,
-                critical_level=0
-            )
-            new_object = uow.object.add(object_model.model_dump())
-
-            server_agent = Agent(
-                id=generate_unique_id(),
-                name="Server",
-                description="server",
+            uow.object.add(new_server_obj_model_in_project.model_dump())
+            new_server_agent_in_project = AgentInProject(
+                id=ag_server_id,
+                object_id=new_server_obj_model_in_project.id,
                 color="#" + hex(randint(0, 16777215))[2:].zfill(6),
-                object_id=new_object.id,
-                project_id=project_id,
-                rest_url=os.environ.get("SERVER_REST_URL")
+                agent_id=server_agent.id,
+                project_id=project_id
             )
-            uow.agent.add(server_agent.model_dump())
+            server_agent_in_project = uow.agent_in_project.add(new_server_agent_in_project.model_dump())
+            
 
+            first_synth_agent = Agent(
+                id=generate_unique_id(),
+                name="Synthetic",
+                description="Not for active scans",
+                rest_url="",
+                user_id=owner_id,
+                is_connected=True
+            )
+            uow.agent.add(first_synth_agent.model_dump())
             obj_id, ag_id = generate_unique_id(), generate_unique_id()
             new_obj_model = Object(id=obj_id,
                                    agent_id=ag_id,
@@ -65,18 +75,24 @@ class ProjectManager:
             
             new_obj = uow.object.add(new_obj_model.model_dump())
 
-            first_synth_agent = Agent(
+            first_synth_agent_in_project = AgentInProject(
                 id=ag_id,
                 object_id=new_obj.id,
                 name="Synthetic",
                 description="Not for active scans",
                 color="#" + hex(randint(0, 16777215))[2:].zfill(6),
-                rest_url="",
-                parent_agent_id=server_agent.id,
+                agent_id=first_synth_agent.id,
+                parent_agent_id=server_agent_in_project.id,
                 project_id=project_id
             )
-            uow.agent.add(first_synth_agent.model_dump())
+            uow.agent_in_project.add(first_synth_agent_in_project.model_dump())
 
+
+            agent_parent_agent = AgentParentAgent(
+                agent_id=first_synth_agent.id,
+                parent_agent_id=server_agent.id
+            )
+            uow.agent_parent_agent.add(agent_parent_agent.model_dump())
             new_asn = ASN(id=generate_unique_id(), 
                               project_id=project_id)
             uow.asn.add(new_asn.model_dump())
@@ -90,15 +106,23 @@ class ProjectManager:
             new_mac = MAC(id=generate_unique_id(), 
                         mac="",
                         name="Default",
-                        object_id=first_synth_agent.object_id,
+                        object_id=first_synth_agent_in_project.object_id,
                         project_id=project_id)
             uow.mac.add(new_mac.model_dump())
 
-            new_ip = IP(ip="127.0.0.1", 
+            new_ip = IP(id=generate_unique_id(),
+                        ip="127.0.0.1", 
                         network_id=new_network.id, 
                         mac_id=new_mac.id, 
                         project_id=project_id)
             uow.ip.add(new_ip.model_dump())
+
+            new_domain = Domain(id=generate_unique_id(),
+                                project_id=project_id)
+            uow.domain.add(new_domain.model_dump())
+
+            new_dns_a = DNS_A(target_domain_id=new_domain.id, target_ip_id=new_ip.id, project_id=project_id)
+            uow.dns_a.add(new_dns_a.model_dump())
 
             new_scan_model = Scan(
                 id=generate_unique_id(),

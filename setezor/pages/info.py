@@ -30,12 +30,11 @@ async def info_page(
     """
     project = await ProjectManager.get_by_id(uow=uow, project_id=project_id)
     analytics = await AnalyticsService.get_whois_data(uow=uow, project_id=project_id)
-    l7_software_columns = AnalyticsService.get_l7_software_columns_tabulator_data()
     l4_software_columns = AnalyticsService.get_l4_software_columns_tabulator_data()
     ip_mac_port_columns = AnalyticsService.get_ip_mac_port_columns_tabulator_data()
     domain_ip_columns = AnalyticsService.get_domain_ip_columns_tabulator_data()
     soft_vuln_link_columns = AnalyticsService.get_soft_vuln_link_columns_tabulator_data()
-    l7_credentials_columns = AnalyticsService.get_l7_credentials_tabulator_data()
+    auth_credentials_columns = AnalyticsService.get_auth_credentials_tabulator_data()
     user = await UsersService.get(uow=uow, id=user_id)
     context =  {"request": request,
                 "analytics": analytics,
@@ -46,19 +45,13 @@ async def info_page(
                 "user_id": user_id,
                 "role": role_in_project,
                 'tabs': [
-             {
-                 'name': 'l7_software',
-                 'is_hide': False,
-                 'base_url': '/api/v1/analytics/l7_software',
-                 'columns': l7_software_columns
-             },
-             {
-                 'name': 'l4_software',
-                 'is_hide': False,
-                 'base_url': '/api/v1/analytics/l4_software',
-                 'columns': l4_software_columns
-             },
-                         {
+            {
+                'name': 'software',
+                'is_hide': False,
+                'base_url': '/api/v1/analytics/software',
+                'columns': l4_software_columns
+            },
+            {
                 'name': 'ip_mac_port',
                 'is_hide': False,
                 'base_url': '/api/v1/analytics/ip_mac_port',
@@ -70,23 +63,17 @@ async def info_page(
                 'base_url': '/api/v1/analytics/domain_ip',
                 'columns': domain_ip_columns
             },
-                         {
-                'name': 'l7_soft_vuln_link',
+            {
+                'name': 'soft_vuln_link',
                 'is_hide': False,
-                'base_url': '/api/v1/analytics/l7_soft_vuln_link',
+                'base_url': '/api/v1/analytics/soft_vuln_link',
                 'columns': soft_vuln_link_columns
             },
-                         {
-                'name': 'l4_soft_vuln_link',
+            {
+                'name': 'auth_credentials',
                 'is_hide': False,
-                'base_url': '/api/v1/analytics/l4_soft_vuln_link',
-                'columns': soft_vuln_link_columns
-            },
-                         {
-                'name': 'l7_credentials',
-                'is_hide': False,
-                'base_url': '/api/v1/analytics/l7_credentials',
-                'columns': l7_credentials_columns
+                'base_url': '/api/v1/analytics/auth_credentials',
+                'columns': auth_credentials_columns
             },
          ]}
     return TEMPLATES_DIR.TemplateResponse(

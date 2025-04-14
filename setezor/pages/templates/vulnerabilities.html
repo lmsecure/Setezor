@@ -13,21 +13,8 @@ Vulnerabilities
 <div class="container-fluid">
     <div class="row p-3">
         <div class="col">
-            <ul class="nav nav-tabs" id="myTab" role="tablist" style="margin-top: 0.2rem;">
-                <li class="nav-item w-50" role="presentation">
-                    <button class="nav-link active w-100" id="tab_vulnerabilities_l4" data-bs-toggle="tab" type="button"
-                    aria-selected="true" onclick="event_select_l4()">l4</button>
-                </li>
-                <li class="nav-item w-50" role="presentation">
-                    <button class="nav-link w-100" id="tab_vulnerabilities_l7" data-bs-toggle="tab" type="button"
-                    aria-selected="false" onclick="event_select_l7()">l7</button>
-                </li>
-            </ul>
             <div id="area_table_l4">
                 <div id="table-l4_resources"></div>
-            </div>
-            <div id="area_table_l7">
-                <div id="table-l7_resources"></div>
             </div>
         </div>
         <div class="col">
@@ -43,7 +30,7 @@ Vulnerabilities
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="screenshotsModalLabel">Screenshots</h5>
+          <h5 class="modal-title" id="screenshotsModalLabel" data-i18n="Screenshots"></h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <form id="screenshotForm">
@@ -51,25 +38,25 @@ Vulnerabilities
                 <div id="rowContainer">
                     <div class="row mb-2">
                         <div class="col-7">
-                            <label for="noteInput1" class="form-label">Note</label>
+                            <label for="noteInput1" class="form-label" data-i18n="Note"></label>
                             <input type="text" class="form-control" name="note1" id="noteInput1" required>
                         </div>
                         <div class="col-5">
-                            <label for="screenshotInput1" class="form-label">Screenshot</label>
+                            <label for="screenshotInput1" class="form-label" data-i18n="Screenshot"></label>
                             <input type="file" class="form-control" accept="image/*" name="image1" id="screenshotInput1" required>
                         </div>
                     </div>
                 </div>
                 <button class="btn btn-success mt-2" onclick="addScreenshotRow()">+</button>
                 <hr>
-                <h5>Existing Screenshots</h5>
+                <h5 data-i18n="Existing Screenshots"></h5>
                 <div id="existingScreenshots">
                     
                 </div>
             </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelAddingScreenshot">Close</button>
-                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelAddingScreenshot" data-i18n="Close"></button>
+                <button type="submit" class="btn btn-primary" data-i18n="Add"></button>
               </div>
         </form>
       </div>
@@ -79,7 +66,7 @@ Vulnerabilities
     <div class="modal-dialog modal-xl" data-dismiss="modal">
       <div class="modal-content"> 
         <div class="modal-header">
-            <h5 class="modal-title" id="screenshotsModalLabel">Screenshot</h5>
+            <h5 class="modal-title" id="screenshotsModalLabel" data-i18n="Screenshot"></h5>
             <button type="button" data-bs-toggle="modal" data-bs-target="#screenshotsModal" class="btn-close" aria-label="Close"></button>
           </div>             
         <div class="modal-body" id="zoomINBody">
@@ -156,7 +143,6 @@ Vulnerabilities
     }
     let counter = 1
     let objCount = 0
-    {% for tab in tabs %}
     var {{ tab.name }}_table = new Tabulator('#table-{{ tab.name }}', {
                             layout: "fitColumns",
                             ajaxURL: "/api/v1/{{ tab.base_url }}",
@@ -187,7 +173,7 @@ Vulnerabilities
                         {{ '{' }} title: "Actions", formatter: buttons_formatter_{{ tab.name }}, headerSort: false{{ '}' }}]
                         })
     function buttons_formatter_{{ tab.name }}(cell, formatterParams, onRendered) {
-        return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities_{{ tab.name }}('${cell.getRow().getData().id}');">Vulnerabilities (${cell.getRow().getData().vuln_count})</button>`;
+        return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities_{{ tab.name }}('${cell.getRow().getData().id}');">${i18next.t('Vulnerabilities')} (${cell.getRow().getData().vuln_count})</button>`;
     }
 
 
@@ -219,25 +205,27 @@ Vulnerabilities
                 <div class="card-wrapper d-flex h-100 justify-content-around">
                     <div id="confirmation-card-${vuln.vuln_res_soft_id}" ${vuln.confirmed?'class="card border border-success border-5"':'class="card border border-danger border-5"'} style="width: 40rem;">
                         <div class="card-body">
-                            <h3 id="confirmation-${vuln.vuln_res_soft_id}">Confirmed: ${vuln.confirmed?true:false}</h3>
+                            <h3 id="confirmation-${vuln.vuln_res_soft_id}">${i18next.t('Confirmed')}: ${vuln.confirmed?true:false}</h3>
                             <hr>
-                            <h5 class="card-title">Vulnerability</h5>
-                            <h6>Name: ${vuln.name}</h6>
+                            <h5 class="card-title">${i18next.t('Vulnerability')}</h5>
+                            <h6>${i18next.t('Name')}: ${vuln.name}</h6>
                             <h6>CVE: ${vuln.cve}</h6>
                             <h6>CWE: ${vuln.cwe}</h6>
-                            <button class="btn btn-danger" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',false)">Reset</button>
-                            <button class="btn btn-success" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',true)">Confirm</button>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID=${vuln.vuln_res_soft_id};resetContainer()">Screenshots (${vuln.screenshots_count})</button>
+                            {% if role.name == "owner" or role.name == "executor" %}
+                            <button class="btn btn-danger" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',false)">${i18next.t('Reset')}</button>
+                            <button class="btn btn-success" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',true)">${i18next.t('Confirm')}</button>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID=${vuln.vuln_res_soft_id};resetContainer()">${i18next.t('Screenshots')} (${vuln.screenshots_count})</button>
+                            {% endif %}
                             <hr>
-                            <h5>Software</h5>
-                            <h6>Vendor: ${vuln.vendor}</h6>
-                            <h6>Product: ${vuln.product}</h6>
-                            <h6>Version: ${vuln.version}</h6>
-                            <h6>Build: ${vuln.build}</h6>
-                            <h6>Patch: ${vuln.patch}</h6>
-                            <h6>Platform: ${vuln.platform}</h6>
+                            <h5>${i18next.t('Software')}</h5>
+                            <h6>${i18next.t('Vendor')}: ${vuln.vendor}</h6>
+                            <h6>${i18next.t('Product')}: ${vuln.product}</h6>
+                            <h6>${i18next.t('Version')}: ${vuln.version}</h6>
+                            <h6>${i18next.t('Build')}: ${vuln.build}</h6>
+                            <h6>${i18next.t('Patch')}: ${vuln.patch}</h6>
+                            <h6>${i18next.t('Platform')}: ${vuln.platform}</h6>
                             <hr>
-                            <h5>Links</h5>
+                            <h5>${i18next.t('Links')}</h5>
                             ${links}
                         </div>
                     </div>
@@ -268,19 +256,21 @@ Vulnerabilities
             document.getElementById("carouselCards").innerHTML = "Not found"
         }
         if (Object.keys(resource).length != 0){
-            document.getElementById("resourceINFO").innerHTML = `
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" 
-            onclick="document.getElementById('addingVulnerabilityForm').reset();"
-            >Add Vulnerability</button>
-            <p>IP: ${resource.ip}</p>
-            <p>PORT: ${resource.port}</p>
-            {% if tab.name == "l7_resources" %}
-            <p>DOMAIN: ${resource.domain}</p>
-            {% endif %}
+            let html_content = `
+                {% if role.name == "owner" or role.name == "executor" %}
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" 
+                    onclick="document.getElementById('addingVulnerabilityForm').reset();"
+                    >${i18next.t('Add Vulnerability')}</button>
+                {% endif %}
+                <p>IP: ${resource.ip}</p>
+                <p>${i18next.t('PORT')}: ${resource.port}</p>
             `
+            if (resource.domain) {
+                html_content += `<p>${i18next.t('DOMAIN')}: ${resource.domain}</p>`;
+            }
+            document.getElementById("resourceINFO").innerHTML = html_content;
         }
     }
-    {% endfor %}
 
     var myCarousel = document.getElementById('carouselCards')
     myCarousel.addEventListener('slide.bs.carousel', function (event) {
@@ -298,18 +288,16 @@ Vulnerabilities
         document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`
       })
 
-    {% for tab in tabs %}
     async function setVulnerabilityStatus_{{ tab.name }}(id, status){
         resp = await fetch(`/api/v1/{{ tab.base_url }}-vulnerability/${id}/confirm`,{method:'put',headers: {"Content-Type": "application/json",},body:JSON.stringify({"status":status})})
         status = await resp.json()
-        document.getElementById(`confirmation-${id}`).innerHTML = `Confirmed: ${status}`
+        document.getElementById(`confirmation-${id}`).innerHTML = `${i18next.t('Confirmed')}: ${status}`
         if (status){
             document.getElementById(`confirmation-card-${id}`).classList = "card border border-success border-5"
         }else{
             document.getElementById(`confirmation-card-${id}`).classList = "card border border-danger border-5"
         }
     }
-    {% endfor %}
 
     let screenshotsCounter = 1
     async function resetContainer(){
@@ -318,11 +306,11 @@ Vulnerabilities
         el.innerHTML = `
             <div class="row mb-2">
                     <div class="col-7">
-                        <label for="noteInput1" class="form-label">Note</label>
+                        <label for="noteInput1" class="form-label">${i18next.t('Note')}</label>
                         <input type="text" class="form-control" name="note${screenshotsCounter}" id="noteInput${screenshotsCounter}" required>
                     </div>
                     <div class="col-5">
-                        <label for="screenshotInput1" class="form-label">Screenshot</label>
+                        <label for="screenshotInput1" class="form-label">${i18next.t('Screenshot')}</label>
                         <input type="file" class="form-control" accept="image/*" name="image${screenshotsCounter}" id="screenshotInput${screenshotsCounter}" required>
                     </div>
                 </div>
@@ -335,7 +323,7 @@ Vulnerabilities
             result += `
             <div class="row mb-5" id="scheenshotRow${screenshot.id}">
                     <div class="col-6">
-                        <input type="text" class="form-control"  disabled value="${screenshot.note}">
+                        <input type="text" class="form-control" disabled value="${screenshot.note}">
                     </div>
                     <div class="col-5">
                         <img class="img-thumbnail" onclick="zoomImage(${screenshot.id})" 
@@ -364,11 +352,11 @@ Vulnerabilities
         let div = document.createElement("div")
         div.classList = "row mb-2"
         div.innerHTML = `<div class="col-7">
-                        <label for="noteInput${screenshotsCounter}" class="form-label">Note</label>
+                        <label for="noteInput${screenshotsCounter}" class="form-label">${i18next.t('Note')}</label>
                         <input type="text" class="form-control" name="note${screenshotsCounter}" id="noteInput${screenshotsCounter}" required>
                     </div>
                     <div class="col-5">
-                        <label for="screenshotInput${screenshotsCounter}" class="form-label">Screenshot</label>
+                        <label for="screenshotInput${screenshotsCounter}" class="form-label">${i18next.t('Screenshot')}</label>
                         <input type="file" class="form-control" accept="image/*" name="image${screenshotsCounter}" id="screenshotInput${screenshotsCounter}" required>
                     </div>`
         container.appendChild(div)
@@ -424,32 +412,9 @@ Vulnerabilities
     }
 </style>
 <script>
-    document.getElementById('area_table_l7').style.display='none';
-
-    function event_select_l4() {
-        document.getElementById('area_table_l4').style.display='block';
-        document.getElementById('area_table_l7').style.display='none'; tab_url='l4';
-        document.getElementById("resourceINFO").innerHTML = ``
-        document.getElementById('carouselCards').innerHTML = ``
-    }
-
-    function event_select_l7() {
-        document.getElementById('area_table_l4').style.display='none';
-        document.getElementById('area_table_l7').style.display='block'; tab_url='l7';
-        document.getElementById("resourceINFO").innerHTML = ``
-        document.getElementById('carouselCards').innerHTML = ``
-    }
-
     async function func_reload_data_update() {
-        if (tab_url === "l4") {
-            await getVulnerabilities_l4_resources(currentResourceID);
-            l4_resources_table.dataLoader.reloadData()
-        }
-        if (tab_url === "l7") {
-            await getVulnerabilities_l7_resources(currentResourceID);
-            l7_resources_table.dataLoader.reloadData()
-        }
-        console.log("objCount = ", objCount);
+        await getVulnerabilities_l4_resources(currentResourceID);
+        l4_resources_table.dataLoader.reloadData()
     }
 </script>
 {% endblock content %}

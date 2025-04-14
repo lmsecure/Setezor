@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addScanLabel">Editing membership</h5>
+                <h5 class="modal-title" id="addScanLabel" data-i18n="Editing membership"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -15,7 +15,7 @@
                                 <thead>
                                     <tr>
                                         <th scope="col">#</th>
-                                        <th scope="col">Address</th>
+                                        <th scope="col" data-i18n="Address"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="currentGroupTargets">
@@ -25,17 +25,17 @@
                         </div>
                         <div class="col-2">
                             <div class="row mt-5">
-                                <button class="btn btn-success mb-1" onclick="addTargets()">&larr; Add</button>
-                                <button class="btn btn-danger mt-1" onclick="removeTargets()">Remove &rarr;</button>
+                                <button class="btn btn-success mb-1" onclick="addTargets()" data-i18n="left_arrow_Add"></button>
+                                <button class="btn btn-danger mt-1" onclick="removeTargets()" data-i18n="Remove_right_arrow"></button>
                             </div>
                         </div>
                         <div class="col-5">
-                            <h4>Remaining groups</h4>
+                            <h4 data-i18n="Remaining groups"></h4>
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
                                         <th scope="col">#</th>
-                                        <th scope="col">Address</th>
+                                        <th scope="col" data-i18n="Address"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="allGroupTargets">
@@ -50,8 +50,8 @@
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="cancel_editing_membership"
-                    data-bs-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-success" onclick="saveGroupTargets()">Save</button>
+                    data-bs-dismiss="modal" data-i18n="Close"></button>
+                <button type="submit" class="btn btn-success" onclick="saveGroupTargets()" data-i18n="Save"></button>
             </div>
 
         </div>

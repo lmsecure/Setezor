@@ -27,5 +27,5 @@ class Domain(IDDependent, Base, table=True):
     dns_soa_domain_nname: List["DNS_SOA"]   = Relationship(back_populates="domain_nname", sa_relationship_kwargs={"foreign_keys": "[DNS_SOA.domain_nname_id]"})
     dns_soa_domain_rname: List["DNS_SOA"]   = Relationship(back_populates="domain_rname", sa_relationship_kwargs={"foreign_keys": "[DNS_SOA.domain_rname_id]"})
 
-    l7: List["L7"]                   = Relationship(back_populates="domain")
     whois: List["WhoIsDomain"]   = Relationship(back_populates="domain")
+    project: "Project" = Relationship(back_populates="domains")

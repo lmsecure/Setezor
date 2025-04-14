@@ -18,7 +18,7 @@ Information
         <div class="col-2">
             <div class="p-2 bd-highlight">
                 <div class="d-flex flex-column flex-shrink-0 p-3">
-                    <h4>Tables</h4>
+                    <h4 data-i18n="Tables"></h4>
                     <div class="nav flex-column nav-pills me-1" id="tab_buttons" role="tablist"
                         aria-orientation="vertical">
                         {% for tab in tabs %}
@@ -85,11 +85,11 @@ Information
                                 </select>
                             </div>
                             <input id="filter-value-{{tab.name}}" class="form-control me-1" type="text"
-                                placeholder="value to filter" style="width: 20%">
+                            data-i18n-placeholder="value to filter" style="width: 40%">
                             <button id="filter-search-{{tab.name}}" class="btn btn-primary me-1" style="width: 5rem; "
-                                onclick="{{tab.name}}ApplyFilter()">Search</button>
-                            <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" style="width: 5rem; "
-                                onclick="{{tab.name}}clearFilter()">Clear</button>
+                                onclick="{{tab.name}}ApplyFilter()" data-i18n="Search"></button>
+                            <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" style="width: 6rem; "
+                                onclick="{{tab.name}}clearFilter()" data-i18n="Clear"></button>
 
                         <style>.tabulator {
                             border-radius: 8px;
@@ -138,14 +138,6 @@ Information
                                             result.push(t_rows[i]);
                                     }
                                     return result;
-                                }
-                                function getIface() {
-                                    iface = interfaceData.interfaces.find((elem) => elem.id == interfaceData.default_interface)
-                                    return iface.name
-                                }
-                                function getAgent() {
-                                    agent = agentData.agents.find((elem) => elem.id == agentData.default_agent)
-                                    return agent.id
                                 }
                             </script>
                         </div>
@@ -397,7 +389,7 @@ Information
                             return menu;
                         };
                         var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                            {% if  tab.name == 'l7_soft_vuln_link' or tab.name =='l4_soft_vuln_link' %}
+                            {% if  tab.name =='l4_soft_vuln_link' %}
                                 layout: "fitDataTable",
                             {% else %}
                                 layout: "fitColumns",

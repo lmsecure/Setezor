@@ -16,3 +16,6 @@ class Project(IDDependent, TimeDependent, table=True):
 
 
     users: List["UserProject"] = Relationship(back_populates="project")
+    asns: List["ASN"] = Relationship(back_populates="project")
+    domains: List["Domain"] = Relationship(back_populates="project")
+    objects: List["Object"] = Relationship(back_populates="project")

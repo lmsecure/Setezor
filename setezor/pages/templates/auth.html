@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
   <script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
   <script src="/static/js/particles.min.js"></script>
-
+  <script src="/static/js/i18next.min.js"></script>
+  <script src="/static/js/translate_i18n.js"></script>
   <title>Setezor: Auth</title>
 </head>
 
@@ -20,21 +21,35 @@
   </div>
   <form onsubmit="auth(event)">
     <div class="wrapper">
-      <h2 style="margin-bottom: 2rem;">Authorization</h2>
+      <h2 style="margin-bottom: 2rem;" data-i18n="Authorization"></h2>
       <div class="input-field">
         <input type="text" name="username" required>
-        <label>Login</label>
+        <label data-i18n="Login"></label>
       </div>
       <div class="input-field">
         <input type="password" name="password" id="password" required>
-        <label>Password</label>
+        <label data-i18n="Password"></label>
         <span class="toggle-password" onclick="togglePasswordVisibility()">
           <i class="bi bi-eye"></i>
         </span>
       </div>
-      <button type="submit" value="Login">Log In</button>
+      <button type="submit" data-i18n-value="Login" data-i18n="Log In"></button>
       <div class="register">
-        <p>Don't have an account? <a href="/registration" style="color: rgb(2, 144, 214);">Register</a></p>
+        <p>
+          <span data-i18n="Don't have an account?">  </span>
+          <a href="/registration" style="color: rgb(2, 144, 214);" data-i18n="Register"></a>
+        </p>
+      </div>
+      <div class="dropdown" style="margin-top: -2rem;">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" style="--bs-btn-color: rgb(17,17,17); --bs-btn-border-color: rgb(17,17,17);"
+            data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-translate"></i>
+          <span id="currentLanguage">EN</span>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+          <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+          <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+        </ul>
       </div>
     </div>
   </form>
@@ -448,6 +463,7 @@
     };
     requestAnimationFrame(update);
   </script>
+  <script defer src="static/js/update_language.js"></script>
 </body>
 
 </html>

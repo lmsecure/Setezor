@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="setHeadersLabel">Setting headers</h5>
+                <h5 class="modal-title" id="setHeadersLabel" data-i18n="Setting headers"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="set_headers(event)" id="setHeadersForm">
@@ -13,23 +13,23 @@
                         <div class="form-group">
                             <div class="row">
                                 <div class="col-6">
-                                    <label class="col-form-label">Key</label>
+                                    <label class="col-form-label" data-i18n="Key"></label>
                                     <input type="text" class="form-control" name="key1" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="col-form-label">Value</label>
+                                    <label class="col-form-label" data-i18n="Value"></label>
                                     <input type="text" class="form-control" name="value1" required>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <button class="btn btn-success mt-1" onclick="addHeaderInList()">+</button>
-                    <button class="btn btn-danger mt-1" onclick="clearHeadersList()">Clear</button>
+                    <button class="btn btn-danger mt-1" onclick="clearHeadersList()" data-i18n="Clear"></button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_setting_headers"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Save</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Save"></button>
                 </div>
             </form>
 
@@ -60,11 +60,11 @@
         div.classList = "form-group"
         div.innerHTML = `<div class="row">
                                 <div class="col-4">
-                                    <label class="col-form-label">Key</label>
+                                    <label class="col-form-label">${i18next.t('Key')}</label>
                                     <input type="text" class="form-control" name="key${headersCount}" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="col-form-label">Value</label>
+                                    <label class="col-form-label">${i18next.t('Value')}</label>
                                     <input type="text" class="form-control" name="value${headersCount}" required>
                                 </div>
                             </div>`

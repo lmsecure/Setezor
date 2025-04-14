@@ -1,8 +1,8 @@
-"""initial
+"""Initial
 
-Revision ID: 3ac933babdaa
+Revision ID: 8c3c937660ca
 Revises: 
-Create Date: 2025-02-11 12:59:59.785600
+Create Date: 2025-04-11 13:35:29.935735
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3ac933babdaa'
+revision: str = '8c3c937660ca'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -74,7 +74,7 @@ def upgrade() -> None:
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('token_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Хеш от токена'),
     sa.Column('token', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Токен с пэйлодом'),
-    sa.Column('used', sa.Boolean(), nullable=False),
+    sa.Column('count_of_entries', sa.Integer(), nullable=True, comment='Количество допустимых использований'),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для ролей пользователя в проектах'
     )
@@ -98,6 +98,15 @@ def upgrade() -> None:
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Название роли'),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для ролей пользователя в проектах'
+    )
+    op.create_table('settings',
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Название параметра'),
+    sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Описание параметра'),
+    sa.Column('field', sa.JSON(), nullable=True, comment='Значение параметра'),
+    sa.Column('value_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Тип параметра'),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения настроек'
     )
     op.create_table('user',
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
@@ -124,6 +133,21 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения окуней'
+    )
+    op.create_table('agent',
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Имя агента'),
+    sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Описание агента'),
+    sa.Column('rest_url', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Адрес на котором запущен агент'),
+    sa.Column('secret_key', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='AES256 ключ агента'),
+    sa.Column('user_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор владельца'),
+    sa.Column('is_connected', sa.Boolean(), nullable=False, comment='Подключен ли агент'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения информации об агенте'
     )
     op.create_table('d_hardware',
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
@@ -195,6 +219,18 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения связи пользователь-проект'
+    )
+    op.create_table('agent_parent_agent',
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор агента'),
+    sa.Column('parent_agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор родительского агента'),
+    sa.ForeignKeyConstraint(['agent_id'], ['agent.id'], ),
+    sa.ForeignKeyConstraint(['parent_agent_id'], ['agent.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения агента и его родителей'
     )
     op.create_table('asn',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
@@ -287,6 +323,21 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения отношений телефон-сотрудник'
     )
+    op.create_table('screenshot',
+    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
+    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('path', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Путь до скриншота'),
+    sa.Column('resource_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ресурса'),
+    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
+    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения скриншотов на веб-ресурсе'
+    )
     op.create_table('target',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
@@ -337,20 +388,17 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения уязвимостей'
     )
-    op.create_table('agent',
+    op.create_table('agent_in_project',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
     sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
     sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Имя агента'),
-    sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Описание агента'),
     sa.Column('color', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Цвет агента на карте'),
-    sa.Column('rest_url', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Адрес на котором запущен агент'),
-    sa.Column('parent_agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор агентского инстанса'),
+    sa.Column('agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор агента'),
     sa.Column('object_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment="Идентификатор Object'a, который является агентом"),
-    sa.Column('secret_key', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='AES256 ключ агента'),
+    sa.ForeignKeyConstraint(['agent_id'], ['agent.id'], ),
     sa.ForeignKeyConstraint(['object_id'], ['object.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -478,7 +526,7 @@ def upgrade() -> None:
     sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.ForeignKeyConstraint(['agent_id'], ['agent.id'], ),
+    sa.ForeignKeyConstraint(['agent_id'], ['agent_in_project.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -495,11 +543,32 @@ def upgrade() -> None:
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Статус задачи'),
     sa.Column('params', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Аргументы задачи'),
     sa.Column('agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
-    sa.ForeignKeyConstraint(['agent_id'], ['agent.id'], ),
+    sa.Column('traceback', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Описание ошибки'),
+    sa.ForeignKeyConstraint(['agent_id'], ['agent_in_project.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения запускаемых задач'
+    )
+    op.create_table('cert',
+    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
+    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('data', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Полный вывод информации о сертификате'),
+    sa.Column('not_before_date', sa.DateTime(), nullable=False, comment='Дата до'),
+    sa.Column('not_after_date', sa.DateTime(), nullable=False, comment='Дата после'),
+    sa.Column('is_expired', sa.Boolean(), nullable=False, comment='Протухший ли сертификат'),
+    sa.Column('alt_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Альтернативное имя'),
+    sa.Column('ip_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ресурса'),
+    sa.ForeignKeyConstraint(['ip_id'], ['ip.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
+    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения информации о SSL сертификате'
     )
     op.create_table('dns_a',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
@@ -679,6 +748,24 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения сетей'
     )
+    op.create_table('node_comment',
+    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
+    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('ip_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ip адреса'),
+    sa.Column('parent_comment_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор родительского коммента'),
+    sa.Column('user_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор пользователя, оставившего коммент'),
+    sa.Column('text', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Комментарий'),
+    sa.ForeignKeyConstraint(['ip_id'], ['ip.id'], ),
+    sa.ForeignKeyConstraint(['parent_comment_id'], ['node_comment.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для комментариев на узле на карте сети'
+    )
     op.create_table('object_employee',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
@@ -758,6 +845,27 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для информации о регистраторе веб-ресурса по ip'
     )
+    op.create_table('authentication_credentials',
+    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
+    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
+    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('port_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ресурса'),
+    sa.Column('login', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Логин'),
+    sa.Column('password', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Пароль'),
+    sa.Column('need_auth', sa.Boolean(), nullable=False, comment='Нужна ли авторизация'),
+    sa.Column('role', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Роль'),
+    sa.Column('permissions', sa.Integer(), nullable=False, comment='Права'),
+    sa.Column('parameters', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Параметры'),
+    sa.ForeignKeyConstraint(['port_id'], ['port.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
+    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    comment='Таблица предназначена для хранения данных авторизации на ресурс'
+    )
     op.create_table('l4_software',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
@@ -768,70 +876,14 @@ def upgrade() -> None:
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('l4_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор порта'),
     sa.Column('software_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ПО'),
+    sa.Column('dns_a_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор DNS записи'),
+    sa.ForeignKeyConstraint(['dns_a_id'], ['dns_a.id'], ),
     sa.ForeignKeyConstraint(['l4_id'], ['port.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
     sa.ForeignKeyConstraint(['software_id'], ['d_software.id'], ),
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения ПО, которое крутится на ресурсе уровня 4'
-    )
-    op.create_table('l7',
-    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
-    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
-    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
-    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
-    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('port_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор порта'),
-    sa.Column('domain_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор домена'),
-    sa.ForeignKeyConstraint(['domain_id'], ['domain.id'], ),
-    sa.ForeignKeyConstraint(['port_id'], ['port.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    comment='Таблица предназначена для хранения ресурсов уровня приложения'
-    )
-    op.create_table('authentication_credentials',
-    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
-    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
-    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
-    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
-    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('l7_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ресурса'),
-    sa.Column('login', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Логин'),
-    sa.Column('password', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Пароль'),
-    sa.Column('need_auth', sa.Boolean(), nullable=False, comment='Нужна ли авторизация'),
-    sa.Column('role', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Роль'),
-    sa.Column('permissions', sa.Integer(), nullable=False, comment='Права'),
-    sa.Column('parameters', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Параметры'),
-    sa.ForeignKeyConstraint(['l7_id'], ['l7.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    comment='Таблица предназначена для хранения данных авторизации на ресурс'
-    )
-    op.create_table('cert',
-    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
-    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
-    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
-    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
-    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('data', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Полный вывод информации о сертификате'),
-    sa.Column('not_before_date', sa.DateTime(), nullable=False, comment='Дата до'),
-    sa.Column('not_after_date', sa.DateTime(), nullable=False, comment='Дата после'),
-    sa.Column('is_expired', sa.Boolean(), nullable=False, comment='Протухший ли сертификат'),
-    sa.Column('alt_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Альтернативное имя'),
-    sa.Column('l7_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ресурса'),
-    sa.ForeignKeyConstraint(['l7_id'], ['l7.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    comment='Таблица предназначена для хранения информации о SSL сертификате'
     )
     op.create_table('l4_software_vulnerability',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
@@ -851,44 +903,25 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     comment='Таблица предназначена для хранения уязвимостей на софте, который крутится на порту'
     )
-    op.create_table('l7_software',
+    op.create_table('l4_software_vulnerability_comment',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
     sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
     sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
-    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('l7_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор веб-ресурса'),
-    sa.Column('software_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор ПО'),
-    sa.Column('parent_l7_software_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор родительского софта на ресурсе'),
-    sa.ForeignKeyConstraint(['l7_id'], ['l7.id'], ),
-    sa.ForeignKeyConstraint(['parent_l7_software_id'], ['l7_software.id'], ),
+    sa.Column('l4_software_vulnerability_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор уязвимости на софте на l4'),
+    sa.Column('parent_comment_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор родительского коммента'),
+    sa.Column('text', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Комментарий'),
+    sa.Column('user_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор пользователя, оставившего коммент'),
+    sa.ForeignKeyConstraint(['l4_software_vulnerability_id'], ['l4_software_vulnerability.id'], ),
+    sa.ForeignKeyConstraint(['parent_comment_id'], ['l4_software_vulnerability_comment.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
-    sa.ForeignKeyConstraint(['software_id'], ['d_software.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    comment='Таблица предназначена для хранения ПО, которое крутится на ресурсе уровня приложения'
+    comment='Таблица предназначена для комментариев на уязвимости L4'
     )
-    op.create_table('l7_software_vulnerability',
-    sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
-    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
-    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Дата-время изменения сущности'),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='Дата-время удаления сущности'),
-    sa.Column('scan_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор скана'),
-    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('l7_software_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор софта на ресурсе'),
-    sa.Column('vulnerability_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор уязвимости'),
-    sa.Column('confirmed', sa.Boolean(), nullable=False, comment='Подтверждена ли уязвимость'),
-    sa.ForeignKeyConstraint(['l7_software_id'], ['l7_software.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
-    sa.ForeignKeyConstraint(['vulnerability_id'], ['vulnerability.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    comment='Таблица предназначена для хранения уязвимостей на софте, который крутится на ресурсе уровня приложения'
-    )
-    op.create_table('l7_software_vulnerability_screenshot',
+    op.create_table('l4_software_vulnerability_screenshot',
     sa.Column('project_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Идентификатор проекта'),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Задача, породившая сущность'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Дата-время создания сущности'),
@@ -898,8 +931,8 @@ def upgrade() -> None:
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('path', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Путь до скриншота'),
     sa.Column('note', sqlmodel.sql.sqltypes.AutoString(), nullable=True, comment='Заметка для скриншота'),
-    sa.Column('l7_software_vulnerability_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор софта на ресурсе'),
-    sa.ForeignKeyConstraint(['l7_software_vulnerability_id'], ['l7_software_vulnerability.id'], ),
+    sa.Column('l4_software_vulnerability_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False, comment='Идентификатор софта на ресурсе'),
+    sa.ForeignKeyConstraint(['l4_software_vulnerability_id'], ['l4_software_vulnerability.id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
     sa.ForeignKeyConstraint(['scan_id'], ['scan.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -910,19 +943,17 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('l7_software_vulnerability_screenshot')
-    op.drop_table('l7_software_vulnerability')
-    op.drop_table('l7_software')
+    op.drop_table('l4_software_vulnerability_screenshot')
+    op.drop_table('l4_software_vulnerability_comment')
     op.drop_table('l4_software_vulnerability')
-    op.drop_table('cert')
-    op.drop_table('authentication_credentials')
-    op.drop_table('l7')
     op.drop_table('l4_software')
+    op.drop_table('authentication_credentials')
     op.drop_table('whois_ip')
     op.drop_table('route_list')
     op.drop_index(op.f('ix_port_port'), table_name='port')
     op.drop_table('port')
     op.drop_table('object_employee')
+    op.drop_table('node_comment')
     op.drop_table('network')
     op.drop_table('employee_phone')
     op.drop_table('employee_email')
@@ -932,6 +963,7 @@ def downgrade() -> None:
     op.drop_table('dns_mx')
     op.drop_table('dns_cname')
     op.drop_table('dns_a')
+    op.drop_table('cert')
     op.drop_table('task')
     op.drop_table('route')
     op.drop_index(op.f('ix_ip_ip'), table_name='ip')
@@ -942,9 +974,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_mac_mac'), table_name='mac')
     op.drop_table('mac')
     op.drop_table('department')
-    op.drop_table('agent')
+    op.drop_table('agent_in_project')
     op.drop_table('vulnerability')
     op.drop_table('target')
+    op.drop_table('screenshot')
     op.drop_table('phone')
     op.drop_table('organization')
     op.drop_table('object')
@@ -952,13 +985,16 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_domain_domain'), table_name='domain')
     op.drop_table('domain')
     op.drop_table('asn')
+    op.drop_table('agent_parent_agent')
     op.drop_table('user_project')
     op.drop_table('scope')
     op.drop_table('scan')
     op.drop_table('d_software')
     op.drop_table('d_hardware')
+    op.drop_table('agent')
     op.drop_table('acunetix')
     op.drop_table('user')
+    op.drop_table('settings')
     op.drop_table('role')
     op.drop_table('project')
     op.drop_index(op.f('ix_invite_link_token_hash'), table_name='invite_link')

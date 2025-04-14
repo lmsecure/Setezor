@@ -39,23 +39,15 @@ async def vulnerabilities_page(
         "is_superuser": user.is_superuser,
         "role": role_in_project,
         "user_id": user_id,
-        "tabs": [
+        "tab":
             {'name' : 'l4_resources',
              'base_url': 'l4',
              'columns': [
                 {'field': 'id', 'title': 'ID'},
                 {'field': 'ip', 'title': 'IP'},
-                {'field': 'port', 'title': 'PORT'}]
-            },
-            {'name': 'l7_resources',
-             'base_url': "l7",
-             'columns': [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ip', 'title': 'IP'},
                 {'field': 'port', 'title': 'PORT'},
                 {'field': 'domain', 'title': 'DOMAIN'}]
-            }
-        ],
+            },
         'current_project': project_name, 
         'current_project_id': project_id,
     }

@@ -2,13 +2,13 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-
-class AgentAdd(BaseModel):
-    parent_agent_id: str
+class AgentDisplay(BaseModel):
     name: str
     description: Optional[str]
     rest_url: str
-    color: str
+    user_id: str | None = None
+
+class AgentAdd(AgentDisplay):
     secret_key: Optional[str] = ''
 
 
@@ -29,3 +29,9 @@ class InterfaceOfAgent(BaseModel):
 class BackWardData(BaseModel):
     sender: str
     data: str
+
+class AgentParents(BaseModel):
+    parents: dict[str, bool]
+
+class AgentAddToProject(BaseModel):
+    agents: dict[str, bool]

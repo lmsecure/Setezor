@@ -5,10 +5,10 @@
         <form id="WhoisForm" class="needs-validation" novalidate>
             <div id="WhoisInputContainer"></div>
             <div class="input-group" style="padding-top: 7px;" id="TargetForWhois">
-                <span class="input-group-text" id="basic-addon1">TARGET</span>
+                <span class="input-group-text" id="basic-addon1" data-i18n="TARGET"> </span>
                 <datalist id="DomainsAndIp"></datalist>
                 <input type="text" list="DomainsAndIp" class="form-control" id='inputTARGET'
-                    placeholder="Domain name or IP" aria-label="Target"
+                    data-i18n-placeholder="Domain name or IP" aria-label="Target"
                     aria-describedby="basic-addon1" required name="Target">
 
                     <button id="add_new_whois_form" onclick="(function() {
@@ -45,7 +45,7 @@
             </div>
 
             <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
-                <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+                <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
                 <button type="button" class="btn btn-primary w-50" id="startScanWhoisBtn"
                     onclick="
                     const requiredWhois = document.getElementById('WhoisForm');
@@ -68,7 +68,7 @@
                         })};var myModal = bootstrap.Modal.getInstance(document.getElementById('whoisModalWindow'));
                                     if (myModal) {
                                         myModal.hide();
-                                    }">Start</button>
+                                    }" data-i18n="Start"></button>
             </div>
         </form>
     </div>

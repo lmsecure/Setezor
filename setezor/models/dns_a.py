@@ -1,6 +1,6 @@
 
 from sqlmodel import Field, Relationship
-from typing import Optional
+from typing import List, Optional
 from .import Base, IDDependent
 
 class DNS_A(IDDependent, Base, table=True):
@@ -14,3 +14,4 @@ class DNS_A(IDDependent, Base, table=True):
 
     target_ip: Optional["IP"]           = Relationship(back_populates="dns_a_target")
     target_domain: Optional["Domain"]   = Relationship(back_populates="dns_a_target")
+    softwares: List["L4Software"] = Relationship(back_populates="dns_a")

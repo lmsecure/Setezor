@@ -9,10 +9,13 @@
 	<link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
 	<script src="/static/js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
 	<script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
+	<script src="/static/js/i18next.min.js"></script>
+	<script src="/static/js/translate_i18n.js"></script>
 	<script src="/static/js/scripts.js"></script>
 	<script src="/static/js/axios.min.js"></script>
 	<script src="static/js/agents.js"></script>
 	<script src="static/js/interfaces.js"></script>
+
 	<title>Setezor: {% block title required %}{% endblock %}</title>
 
 	{% block scripts %}{% endblock %}
@@ -57,46 +60,52 @@
 					{% if current_project %}
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0" >
 						<li class="nav-item">
-							<a class="nav-link" style="color: rgb(109, 145, 115)" aria-current="page">Project:
-								"{{current_project}}"</a>
+							<a class="nav-link" style="color: rgb(109, 145, 115)" aria-current="page" data-i18n="Project" data-current-project="{{ current_project }}"></a>
 						</li>
 					</ul>
 					{% endif %}
 				</div>
 				
-
-
 				<div class="d-flex align-items-center gap-2 ">
 					{% if is_superuser %}
 						<button class="btn btn-success" 
 						data-bs-toggle="modal" 
-						onclick='document.getElementById("inviteToSetezorToken").value=""'
-						data-bs-target="#inviteToSetezorTokenModal">
-							Invite to Setezor
+						onclick='document.getElementById("inviteToSetezorToken").value=""; document.getElementById("inviteToSetezorURL").value = "";'
+						data-bs-target="#inviteToSetezorTokenModal" data-i18n="Invite to Setezor"> 
 						</button>
 					{% endif %}
-					<a type="button" class="btn btn-outline-primary ms-auto" href="http://help.setezor.ru/"
+					
+					<div class="dropdown">
+						<button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
+								data-bs-toggle="dropdown" aria-expanded="false">
+							<i class="bi bi-translate"></i>
+							<span id="currentLanguage">EN</span>
+						</button>
+						<ul class="dropdown-menu" aria-labelledby="languageDropdown">
+							<li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+							<li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+						</ul>
+					</div>
+					<a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/?utm_source=public"
 						target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
 						data-testid="wiki_help">
-						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" title="Wiki"></i>
+						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
 					</a>
 					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
 						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-testid="about_project">
 						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
-							title="About project"></i>
+						data-i18n-title="About project"></i>
 					</button>
 					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
 						aria-hidden="true">
 						<div class="modal-dialog">
 							<div class="modal-content">
 								<div class="modal-header">
-									<h4>About</h4>
+									<h4 data-i18n="About project"></h4>
 								</div>
 								<div class="modal-body">
-									<div>
-										Setezor is a network traffic analyzer with the ability to automatically build
-										network topology. For more information, please visit our resources:
+									<div data-i18n="About Setezor text" style="margin-bottom: 0.5rem;">
 									</div>
 									<div class="list-group">
 										<a href="https://setezor.ru"
@@ -112,35 +121,44 @@
 											class="list-group-item list-group-item-action list-group-item-danger"
 											target="_blank">DockerHub</a>
 									</div>
+									<hr>
+									<div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
+									</div>
+									<div class="list-group">
+										<span>Bitcoin: </span>
+											<div class="input-group mb-3">
+												<input type="text" class="form-control" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
+												<button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
+											  </div>
+										<span>Dash: </span>
+											<div class="input-group mb-3">
+												<input type="text" class="form-control" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+												<button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
+											  </div>
+									</div>
 								</div>
 								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6>Version: v0.24.0b</h6>
+									<h6 data-i18n="SetezorVersion"></h6>
 									<button type="button" class="btn btn-secondary"
-										data-bs-dismiss="modal">Close</button>
+										data-bs-dismiss="modal" data-i18n="Close"></button>
 								</div>
 							</div>
 						</div>
 					</div>
 
-					{% if current_project %}
 					<button type="button" class="btn btn-outline-info" data-bs-toggle="offcanvas"
 						style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
 						data-bs-target="#offcanvasNotifications">
-						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif" title="Notifications"></i>
+						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Notifications"></i>
 					</button>
 
 					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProject()"
 						data-testid="exit_project"
 						style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
 						<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
-							title="Exit to project menu"></i>
+						data-i18n-title="Exit to project menu"></i>
 					</button>
-					{% endif %}
-					{% if not current_project %}
-					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
-					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
-					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
-						title="Logout"></i>{% endif %}
+
 				</button>
 				</div>
 			</div>
@@ -153,11 +171,6 @@
 					window.location.href = "/projects"
 				})
 			}
-			const logoutFromProfile = async () => {
-				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
-					window.location.href = "/login"
-				})
-			}
 		</script>
 	</header>
 	{% if current_project %}
@@ -168,24 +181,24 @@
 					<button class="btn btn-outline-light" id="menu-toggle-2" data-bs-toggle="offcanvas"
 					data-bs-target="#offcanvasNavbar"
 					style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C"
-					data-testid="open_navbar_button"><i class="bi bi-list fs-4" title="Open/Close sidebar"></i></button>
+					data-testid="open_navbar_button"><i class="bi bi-list fs-4" data-i18n-title="Open/Close sidebar"></i></button>
 				</li>
 				<li class="active">
 					<a href="/projects_dashboard" style="margin-top: 6px;">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi-kanban fs-4" title="Dashboard"></i>
+							<i class="bi-kanban fs-4" data-i18n-title="Dashboard"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Dashboard</span>
+						<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Dashboard"></span>
 					</a>
 				</li>
 				<li>
 					<a href="/network-map">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-bezier2 fs-4" title="Network Map"></i>
+							<i class="bi bi-bezier2 fs-4" data-i18n-title="Network Map"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Network Map</span>
+						<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Network Map"></span>
 					</a>
 				</li>
 				{% if role.name == "owner" or role.name == "executor"%}
@@ -194,9 +207,9 @@
 					<a href="#" onclick="openTasksModal();">
 						<button type="button" class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class=" bi bi-play-circle fs-4" title="Task manager"></i>
+							<i class=" bi bi-play-circle fs-4" data-i18n-title="Task manager"></i>
 						</button>
-							<span style="margin-left: 1rem; color: #54B49C;" >Task manager</span>
+							<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Task manager"></span>
 					</a>
 					{% endif %}
 					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
@@ -204,7 +217,7 @@
 						<div class="modal-dialog modal-xl">
 							<div class="modal-content">
 								<div class="modal-header">
-									<h4>Tasks list</h4>
+									<h4 data-i18n="Tasks list"></h4>
 								</div>
 								<div class="modal-body">
 									<div id="v-pills-tasks" role="tabpanel" aria-labelledby="v-pills-tasks-tab">
@@ -215,26 +228,26 @@
 													<button class="nav-link active" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
 														data-bs-target="#v-pills-tasks-created" type="button" role="tab"
 														aria-controls="v-pills-tasks-created" aria-selected="true"
-														id="tasks_created_pill">CREATED</button>
+														id="tasks_created_pill" data-i18n="CREATED"></button>
 												</li>
 												<li class="nav-item">
 													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
 														data-bs-target="#v-pills-tasks-started" type="button" role="tab"
 														aria-controls="v-pills-tasks-started" aria-selected="false"
-														id="tasks_started_pill">STARTED</button>
+														id="tasks_started_pill" data-i18n="STARTED"></button>
 												</li>
 												<li class="nav-item">
 													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
 														data-bs-target="#v-pills-tasks-failed" type="button" role="tab"
 														aria-controls="v-pills-tasks-failed" aria-selected="false"
-														id="tasks_failed_pill">FAILED</button>
+														id="tasks_failed_pill" data-i18n="FAILED"></button>
 												</li>
 												<li class="nav-item">
 													<button class="nav-link" data-bs-toggle="pill" style="--bs-nav-link-padding-y: 0px"
 														data-bs-target="#v-pills-tasks-finished"
 														id="tasks_finished_pill" type="button" role="tab"
 														aria-controls="v-pills-tasks-finished"
-														aria-selected="false">FINISHED</button>
+														aria-selected="false" data-i18n="FINISHED"></button>
 												</li>
 											</ul>
 										</div>
@@ -270,9 +283,9 @@
 					<a href="/scopes">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-card-list fs-4" title="Scopes"></i>
+							<i class="bi bi-card-list fs-4" data-i18n-title="Scopes"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Scopes</span>
+						<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Scopes"></span>
 					</a>
 				</li>
 				{% endif %}
@@ -281,18 +294,18 @@
 					<a href="#" data-toggle="collapse" data-target="#tools-submenu" aria-expanded="false">
 						<button class="btn btn-outline-light"
 						style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-						<i class="bi bi-tools fs-4" title="Tools"></i>
+						<i class="bi bi-tools fs-4" data-i18n-title="Tools"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;">Tools</span>
+						<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Tools"></span>
 					</a>
 					<ul class="collapse" id="tools-submenu">
 						<li>
 							<a href="#" data-toggle="collapse" data-target="#tool-category-1" aria-expanded="false">
 								<button class="btn btn-outline-light"
 								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-								<i class="bi bi-reception-4 fs-4" title="Network"></i>
+								<i class="bi bi-reception-4 fs-4" data-i18n-title="Network"></i>
 								</button>
-								<span style="color: #54B49C;">Network</span>
+								<span style="color: #54B49C;" data-i18n="Network"></span>
 							</a>
 							<ul class="collapse" id="tool-category-1">
 								<li><a href="#" onclick="nmap_full_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
@@ -305,9 +318,9 @@
 							<a href="#" data-toggle="collapse" data-target="#tool-category-2" aria-expanded="false">
 								<button class="btn btn-outline-light"
 								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-								<i class="bi bi-wifi fs-4" title="Network"></i>
+								<i class="bi bi-wifi fs-4" data-i18n-title="Web"></i>
 								</button>
-								<span style="color: #54B49C;">Web</span>
+								<span style="color: #54B49C;" data-i18n="Web"></span>
 							</a>
 							<ul class="collapse" id="tool-category-2">
 								<li><a href="#" onclick="domains_full_modal_window()"><span style="color: #54B49C;">Domains</span></a></li>
@@ -321,9 +334,9 @@
 							<a href="/tools" data-toggle="collapse" data-target="#tool-category-2" aria-expanded="false">
 								<button class="btn btn-outline-light"
 								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-								<i class="bi bi-bug fs-4" title="Network"></i>
+								<i class="bi bi-bug fs-4" data-i18n-title="Vulnerability"></i>
 								</button>
-								<span style="color: #54B49C;">Vulnerability</span>
+								<span style="color: #54B49C;" data-i18n="Vulnerability"></span>
 							</a>
 							<ul class="collapse" id="tool-category-3">
 								<li><a href="/tools" onclick=""><span style="color: #54B49C;">ACUNETIX</span></a></li>
@@ -338,18 +351,18 @@
 					<a href="/vulnerabilities">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-shield-fill-exclamation fs-4" title="Vulnerabilities"></i>
+							<i class="bi bi-shield-fill-exclamation fs-4" data-i18n-title="Vulnerabilities"></i>
 						</button>
-						<span style="margin-left: 1rem; color: #54B49C;" >Vulnerabilities</span>
+						<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Vulnerabilities"></span>
 					</a>
 				</li>
 				<li>
 					<a href="/info">
 						<button class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class="bi bi-table fs-4" title="Information"></i>
+							<i class="bi bi-table fs-4" data-i18n-title="Information"></i>
 						</button>
-						<span style=" margin-left: 1rem; color: #54B49C;" >Information</span>
+						<span style=" margin-left: 1rem; color: #54B49C;" data-i18n="Information"></span>
 					</a>
 				</li>
 				{% if role.name == "owner" or role.name == "executor" %}
@@ -357,18 +370,18 @@
 					<a href="#" data-toggle="collapse" data-target="#settings-submenu" aria-expanded="false">
 						<button class="btn btn-outline-light"
 								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-								<i class="bi bi-gear fs-4" title="Settings"></i>
+								<i class="bi bi-gear fs-4" data-i18n-title="Settings"></i>
 								</button>
-								<span style="margin-left: 1rem; color: #54B49C;" >Settings</span>
+								<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Settings"></span>
 					</a>
 					<ul class="collapse" id="settings-submenu">
 						<li>
 							<a href="/project_settings" data-toggle="collapse" data-target="#settings-category-1" aria-expanded="false">
 								<button class="btn btn-outline-light"
 								style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-								<i class="bi bi-person-workspace fs-4" title="Project settings"></i>
+								<i class="bi bi-person-workspace fs-4" data-i18n-title="Project settings"></i>
 								</button>
-								<span style="color: #54B49C;" >Project</span>
+								<span style="color: #54B49C;" data-i18n="Project settings"></span>
 							</a>
 						</li>
 						<!-- <li>
@@ -407,7 +420,7 @@
 	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
 		aria-labelledby="offcanvasNotificationsLabel">
 		<div class="offcanvas-header">
-			<h5 class="offcanvas-title" id="offcanvasNotificationsLabel">Notifications</h5>
+			<h5 class="offcanvas-title" id="offcanvasNotificationsLabel" data-i18n="Notifications"></h5>
 			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 		</div>
 		<div class="offcanvas-body" id="notifications_body">
@@ -419,25 +432,24 @@
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="exampleModalLabel">Adding scan</h1>
+					<h1 class="modal-title fs-5" id="exampleModalLabel" data-i18n="Adding scan"></h1>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-
 				</div>
 				<form onsubmit="addScan(event)">
 					<div class="modal-body">
 						<div class="mb-3">
-							<label for="scanNameID" class="col-form-label">Scan name</label>
+							<label for="scanNameID" class="col-form-label" data-i18n="Scan name"></label>
 							<input type="text" class="form-control" id="scanNameID" name="name" required>
 						</div>
 						<div class="mb-3">
-							<label for="scanDescriptionID" class="col-form-label">Description</label>
+							<label for="scanDescriptionID" class="col-form-label" data-i18n="Description"></label>
 							<input type="text" class="form-control" id="scanDescriptionID" name="description">
 						</div>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-							id="closeAddScanModalButton">Close</button>
-						<button type="submit" class="btn btn-primary">Add</button>
+							id="closeAddScanModalButton" data-i18n="Close"></button>
+						<button type="submit" class="btn btn-primary" data-i18n="Add"></button>
 					</div>
 				</form>
 			</div>
@@ -445,28 +457,36 @@
 	</div>
 	<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
 		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel">Registration token</h1>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<form onsubmit="generateRegisterToken(event)">
-					<div class="modal-body">
-						<div class="mb-3">
-							<label for="inviteToSetezorCount" class="col-form-label">Person count</label>
-							<input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
-							<label for="inviteToSetezorToken" class="col-form-label">Token</label>
-							<input type="text" class="form-control" disabled id="inviteToSetezorToken">
-						</div>
-					</div>
-					<div class="modal-footer">
-						<button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-						<button id="close-create-agent" type="submit" class="btn btn-success">Create</button>
-					</div>
-				</form>
+		  <div class="modal-content">
+			<div class="modal-header">
+			  <h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel" data-i18n="Registration token"></h1>
+			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
+			<form onsubmit="generateRegisterToken(event)">
+			  <div class="modal-body">
+				<div class="mb-3">
+				  <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
+				  <input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
+				  <label for="inviteToSetezorToken" class="col-form-label" data-i18n="Token"></label>
+				  <input type="text" class="form-control" disabled id="inviteToSetezorToken">
+				  <label for="inviteToSetezorURL" class="col-form-label" data-i18n="Registration link"></label>
+				  <div class="input-group mb-3">
+					<input type="text" class="form-control" id="inviteToSetezorURL" readonly>
+					<button class="btn btn-outline-secondary" type="button" id="copyLinkBtn" data-i18n="Copy"></button>
+				  </div>
+				  <!-- <div class="mt-2">
+								  <a href="#" id="inviteToSetezorURLLink" target="_blank">Open registration page</a>
+							  </div> -->
+				</div>
+			  </div>
+			  <div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+				<button type="submit" class="btn btn-success" data-i18n="Create"></button>
+			  </div>
+			</form>
+		  </div>
 		</div>
-	</div>
+	  </div>
 	<style>
 		#v-pills-tasks ul.nav-pills {
 			display: flex !important; 
@@ -621,6 +641,7 @@
 		});
 
 	</script>
+
 	<script>
 		{% if role and (role.name == "owner" or role.name == "executor") %}
 		let currentAcunetixName = "";
@@ -719,12 +740,12 @@
 		function redrawScanPickDropdown(scans, currentScan, scansDivIds) {
 			for (const scanDivId of scansDivIds) {
 				let el = document.getElementById(scanDivId);
-				if (!el) continue; // Пропускаем, если элемент с таким ID не найден
+				if (!el) continue;
 				let result = `<div class="btn-group">`
 				let scan_id = ''
 				if (currentScan == null) {
 					result += `
-                <button type="button" class="btn btn-success" disabled id="currentPickedScan">No scan</button>
+                <button type="button" class="btn btn-success" disabled id="currentPickedScan">${i18next.t('No scan')}</button>
             `
 				} else {
 					scan_id = currentScan.id
@@ -806,18 +827,71 @@
 			}
 		}
 		{% endif %}
-		async function generateRegisterToken(event){
-			event.preventDefault()
-			let formdata = new FormData(event.target)
-			let resp = await fetch("/api/v1/auth/generate_register_token",{
+	async function generateRegisterToken(event) {
+		event.preventDefault();
+		let formdata = new FormData(event.target);
+		
+		try {
+			let resp = await fetch("/api/v1/auth/generate_register_token", {
 				method: "POST",
 				body: JSON.stringify(Object.fromEntries(formdata)),
-				headers: { "Content-type": "application/json" },})
-				let data = await resp.json()
-				let tokenEl = document.getElementById("inviteToSetezorToken")
-				tokenEl.value = data.token
+				headers: { "Content-type": "application/json" },
+			});
+			
+			if (!resp.ok) throw new Error("Network response was not ok");
+			
+			let data = await resp.json();
+			let tokenEl = document.getElementById("inviteToSetezorToken");
+			let urlInput = document.getElementById("inviteToSetezorURL");
+			// let urlLink = document.getElementById("inviteToSetezorURLLink");
+			
+			tokenEl.value = data.token;
+			
+			const baseUrl = window.location.origin;
+			const registrationLink = `${baseUrl}/registration?token=${data.token}`;
+			
+			urlInput.value = registrationLink;
+			// urlLink.href = registrationLink;
+			
+			document.getElementById("copyLinkBtn").addEventListener("click", function() {
+				urlInput.select();
+				document.execCommand("copy");
+				this.classList.remove('btn-outline-secondary');
+				this.classList.add('btn-outline-success');
+			});
+			
+		} catch (error) {
+			console.error("Error:", error);
+			alert("Error generating token: " + error.message);
 		}
+	}
+	document.addEventListener('DOMContentLoaded', function() {
+    function handleCopy(event) {
+        const button = event.target;
+        const input = button.closest('.input-group').querySelector('input');
+        
+        navigator.clipboard.writeText(input.value)
+            .then(() => {
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                button.textContent = i18next.t('Copied!');
+                
+                setTimeout(() => {
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                    button.textContent = i18next.t('Copy');
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Ошибка при копировании: ', err);
+            });
+    }
+    
+    document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
+    document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
+});
 	</script>
+	<script defer src="static/js/update_language.js"></script>
 </body>
 
 </html>

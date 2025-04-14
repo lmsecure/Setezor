@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
     <script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
     <script src="/static/js/particles.min.js"></script>
-
+    <script src="/static/js/i18next.min.js"></script>
+    <script src="/static/js/translate_i18n.js"></script>
     <title>Setezor: Registration</title>
    
 </head>
@@ -22,26 +23,42 @@
     <form onsubmit="registration(event)">
         <div class="wrapper">
             <form action="#">
-                <h2 style="margin-bottom: 2rem;">Registration</h2>
+                <h2 style="margin-bottom: 2rem;" data-i18n="Registration"></h2>
                 <div class="input-field">
                     <input type="text" name="login" maxlength="25" required>
-                    <label>Login</label>
+                    <label data-i18n="Login"></label>
                 </div>
                 <div class="input-field">
                     <input type="password" name="password" minlength="10" required>
-                    <label>Password</label>
+                    <label data-i18n="Password"></label>
                 </div>
                 <div class="input-field">
                     <input type="password" name="password_confirmation" minlength="10" required>
-                    <label>Password Confirm</label>
+                    <label data-i18n="Password Confirm"></label>
                 </div>
+                {% if not open_reg %}
                 <div class="input-field">
                     <input type="password" name="invite_token" required>
-                    <label>Invite token</label>
+                    <label data-i18n="Invite token"></label>
                 </div>
-                <button type="submit" value="Login"">Register</button>
+                {% endif %}
+                <button type="submit" data-i18n-value="Login"" data-i18n="Register"></button>
                 <div class="login" style="margin-top: 1rem;">
-                  <p>Have an account? <a href="/login" style="  color: rgb(2, 144, 214);">Login</a></p>
+                  <p>
+                    <span data-i18n="Have an account?"></span>
+                    <a href="/login" style="color: rgb(2, 144, 214);" data-i18n="LoginAutorize"></a>
+                  </p>
+                </div>
+                <div class="dropdown" style="margin-top: -2rem;">
+                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" style="--bs-btn-color: rgb(17,17,17); --bs-btn-border-color: rgb(17,17,17);"
+                      data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-translate"></i>
+                    <span id="currentLanguage">EN</span>
+                  </button>
+                  <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                    <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+                    <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+                  </ul>
                 </div>
             </form>
         </div>
@@ -162,7 +179,7 @@ button {
   color: #fff;
   font-weight: 600;
   border: none;
-  padding: 12px 6rem;
+  padding: 12px 4.5rem;
   cursor: pointer;
   border-radius: 3px;
   font-size: 16px;
@@ -217,6 +234,20 @@ button:hover {
                     ${message}
                 </div>`
     };
+    function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = getQueryParam('token');
+        if (token) {
+            const tokenField = document.querySelector('input[name="invite_token"]');
+            if (tokenField) {
+                tokenField.value = token;
+            }
+        }
+    });
         async function registration(event) {
             event.preventDefault();
             let formData = new FormData(event.target)
@@ -424,6 +455,7 @@ button:hover {
         };
         requestAnimationFrame(update);
         </script>
+        <script defer src="static/js/update_language.js"></script>
 </body>
 
 </html>

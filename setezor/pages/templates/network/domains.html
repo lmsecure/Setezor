@@ -2,9 +2,9 @@
 <div id="DomainsInputContainer"></div>
 <div class="input-group" style="padding-top: 7px;" id="domainTarget">
 
-    <span class="input-group-text" id="basic-addon1">DOMAIN</span>
+    <span class="input-group-text" id="basic-addon1" data-i18n="DOMAIN"></span>
     <datalist id="DomainsList"></datalist>
-    <input type="text" list="DomainsList" class="form-control" id='inputDOMAIN' placeholder="Domain name"
+    <input type="text" list="DomainsList" class="form-control" id='inputDOMAIN' data-i18n-placeholder="Domain name"
         aria-label="IP" aria-describedby="basic-addon1" required name="targetDOMAIN">
 
     <button id="add_new_domains_form" onclick="(function() {
@@ -43,7 +43,7 @@
 {% macro domains_main() %}
 <div class="d-flex flex-column py-1">
     <div class="form-check form-switch  pe-2" id="traceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="Search for subdomains via crt.sh">
+    data-i18n-title="Search for subdomains via crt.sh">
         <input class="form-check-input" type="checkbox" id="crt.sh" name="crt_sh">
         <label class="form-check-label" for="trace">crt.sh</label>
     </div>
@@ -52,9 +52,9 @@
                         <label class="form-check-label" for="service">Brute subdomains</label>
                     </div> -->
     <div class="form-check form-switch" id="serviceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        title="Find DNS records">
+    data-i18n-title="Find DNS records">
         <input class="form-check-input" type="checkbox" id="dns_search" name="dns_search">
-        <label class="form-check-label" for="service">DNS search</label>
+        <label class="form-check-label" for="service" data-i18n="DNS search"></label>
     </div>
 </div>
 <hr class="my-3 bg-secondary">

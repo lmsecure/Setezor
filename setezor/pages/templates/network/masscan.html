@@ -4,7 +4,7 @@
 <div class="input-group" id="masscanIpTarget">
     <span class="input-group-text"  style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
     <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control" id='masscanInputIP' placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
+    <input type="text" list="IpList" class="form-control" id='masscanInputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="target">
     <button id="add_new_masscan_form" onclick="addNewMasscanForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
@@ -56,46 +56,46 @@
 <div class="d-flex justify-content-between py-2">
     <div class="form-check form-switch" id="masscanPortSwitch">
         <input class="form-check-input" type="checkbox" id="masscanPortsScan">
-        <label class="form-check-label" for="masscanPortsScan">Ports</label>
+        <label class="form-check-label" for="masscanPortsScan" data-i18n="Ports"></label>
     </div>
 
     <div class="w-50" id="masscanPortsSelectorDiv">
         <datalist id="masscanPortsSelectorList">
             <option hidden disabled value="1"></option>
-            <option value="80,443,8080,8443">web ports</option>
-            <option value="25,465,587,110,143,993,995">email ports</option>
-            <option value="0-65535">All</option>
+            <option value="80,443,8080,8443" data-i18n="web ports"></option>
+            <option value="25,465,587,110,143,993,995" data-i18n="email ports"></option>
+            <option value="0-65535" data-i18n="All"></option>
         </datalist>
         <input type="text" list="masscanPortsSelectorList" id="masscanPortsSelector" name="ports" class="form-control"
-            placeholder="Ports" disabled />
+        data-i18n-placeholder="Ports" disabled />
     </div>
 </div>
 <div class="d-flex justify-content-between py-2">
     <div class="form-check form-switch" id="sourcePortSwitch">
         <input class="form-check-input" type="checkbox" id="sourcePortScan">
-        <label class="form-check-label" for="sourcePortScan">Source Port</label>
+        <label class="form-check-label" for="sourcePortScan" data-i18n="Source Port"></label>
     </div>
 
     <div class="w-50" id="masscanSourcePortSelectorDiv">
         <input type="text" id="masscanSourcePortSelector" name="source_port" class="form-control"
-            placeholder="Source port" disabled />
+        data-i18n-placeholder="Source Port" disabled />
     </div>
 </div>
 <div class="d-flex justify-content-between py-2">
     <div class="form-check form-switch" id="maxRateSwitch">
         <input class="form-check-input" type="checkbox" id="maxRate">
-        <label class="form-check-label" for="maxRate">maxRate</label>
+        <label class="form-check-label" for="maxRate" data-i18n="maxRate"></label>
     </div>
 
     <div class="w-50" id="masscanMaxRateSelectorDiv">
         <input type="text" id="masscanMaxRateSelector" name="max_rate" class="form-control"
-            placeholder="Max rate" disabled />
+        data-i18n-placeholder="maxRate" disabled />
     </div>
 </div>
-<div class="invalid-feedback">Please select a valid tag.</div>
+<div class="invalid-feedback" data-i18n="Please select a valid tag."></div>
 <div class="form-check form-switch" id="searchUdpPort">
     <input class="form-check-input" type="checkbox" id="searchUdpPortInput">
-    <label class="form-check-label" for="searchUdpPortInput">Search Udp ports</label>
+    <label class="form-check-label" for="searchUdpPortInput" data-i18n="Search Udp ports"></label>
 </div>
 <div class="my-2">
     <div class="d-flex justify-content-between" id="masscanOutputGroup">
@@ -117,12 +117,12 @@
 </div>
 <div class="my-2">
     <div class="d-flex justify-content-between">
-        <label for="masscanWaitRange" class="form-label">Wait after scan</label>
+        <label for="masscanWaitRange" class="form-label" data-i18n="Wait after scan"></label>
         <input type="range" class="form-range" name="wait" min="0" max="20" step="0.5" id="masscanWaitRange">
     </div>
 </div>
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startMasscanScanBtn" onclick="
     const isTargetTabActive = document.getElementById('masscan-simple-tab').classList.contains('active');
     var params = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
@@ -231,7 +231,7 @@
             return;
         }
     }
-">Start scan</button>
+" data-i18n="Start scan"></button>
 </div>
 <script>
     $('#masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
@@ -285,7 +285,7 @@
                                     if (myModal) {
                                         myModal.hide();
                                     }
-                                ">Parse logs</button>
+                                " data-i18n="Parse logs"></button>
 
 {% endmacro %}
 
@@ -295,7 +295,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="masscanModalLabel">Masscan Сканирование</h5>
+                <h5 class="modal-title" id="masscanModalLabel" >Masscan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -350,9 +350,9 @@
                     <div class="tab-content" id="dsa" style="padding-top: 7px;">
                         <div class="nav nav-tabs me-3 mb-3" id="masscan-tab" role="tablist">
                             <button class="nav-link active" id="masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#masscan-simple-mode"
-                                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true">Target</button>
+                                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true" data-i18n="Target"></button>
                             <button class="nav-link" id="masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#masscan-scope-mode"
-                                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false">Scope</button>
+                                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false" data-i18n="Scope"></button>
                         </div>
                 
                         <div class="tab-pane fade show active" id="masscan-simple-mode" role="tabpanel" aria-labelledby="masscan-simple-tab">
@@ -400,10 +400,26 @@
 {% endmacro %}
 {% macro masscan_script_modal_to_node() %}
 <script>
-    function masscan_script_modal_to_node(ip) {
+    async function masscan_script_modal_to_node(node) {
         var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
         var inputIP = document.getElementById('masscanInputIP')
+        params = { ip_id: node.id }
+        ip = node.label
         inputIP.value = ip
+        url_address = '/api/v1/vis/node_info/' + node.id
+        resp = await fetch(url_address, { method: 'GET' })
+        json = await resp.json()
+        console.log(json)
+        var portsSelector = document.getElementById('masscanPortsSelector');
+        if (json.ports.length) {
+            document.getElementById('masscanPortsScan').checked = true
+            portsSelector.removeAttribute('disabled')
+            portsSelector.value = json.ports.map(item => item.port).join(',');
+        } else {
+            portsSelector.value = ''
+            document.getElementById('masscanPortsScan').checked = false
+            portsSelector.setAttribute('disabled', 'disabled')
+        };
         myModal.show();
     }
 
@@ -428,8 +444,8 @@
 
 {% macro masscan_scope() %}
 <div class="dropdown w-100 mt-2">
-    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de" type="button" id="masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-      Select scope
+    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
+     type="button" id="masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
     </button>
     <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeMasscanData">
     </ul>
@@ -469,9 +485,9 @@ get_masscan_scope_list('')
     <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
         <div class="nav nav-tabs me-3 mb-3" id="masscan-tab" role="tablist">
             <button class="nav-link active" id="masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#masscan-simple-mode"
-                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true">Target</button>
+                type="button" role="tab" aria-controls="masscan-simple-mode" aria-selected="true" data-i18n="Target"></button>
             <button class="nav-link" id="masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#masscan-scope-mode"
-                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false">Scope</button>
+                type="button" role="tab" aria-controls="masscan-scope-mode" aria-selected="false" data-i18n="Scope"></button>
         </div>
 
         <div class="tab-pane fade show active" id="masscan-simple-mode" role="tabpanel" aria-labelledby="masscan-simple-tab">

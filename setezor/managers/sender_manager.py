@@ -25,5 +25,8 @@ class HTTPManager(SenderInterface):
     @classmethod  # метод сервера и агента на отправку следующему звену
     async def send_json(cls, url: str, data: dict | list[dict]):
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=data, ssl=False) as resp:
-                return resp.status
+            try:
+                async with session.post(url, json=data, ssl=False) as resp:
+                    return resp.status
+            except aiohttp.client_exceptions.ClientConnectorError as e:
+                return 0

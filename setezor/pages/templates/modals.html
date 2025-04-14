@@ -54,14 +54,14 @@
     <div class="modal-dialog" data-dismiss="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="screenshotsModalLabel">Adding vulnerability</h5>
+                <h5 class="modal-title" id="screenshotsModalLabel" data-i18n="Adding vulnerability"></h5>
                 <button type="button" data-bs-toggle="modal" data-bs-target="#vulnerabilityAddModal" class="btn-close"
                     aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form onsubmit="addVulnerability(event)" id="addingVulnerabilityForm">
                     <div class="mb-3">
-                        <label for="InputVulnerabilityName" class="form-label">Name</label>
+                        <label for="InputVulnerabilityName" class="form-label" data-i18n="Name"></label>
                         <input type="text" class="form-control" id="InputVulnerabilityName" name="name">
                     </div>
                     <div class="mb-3">
@@ -73,29 +73,28 @@
                         <input type="text" class="form-control" id="InputVulnerabilityCWE" name="cwe">
                     </div>
                     <div class="mb-3">
-                        <label for="InputVulnerabilityDescription" class="form-label">Description</label>
+                        <label for="InputVulnerabilityDescription" class="form-label" data-i18n="Description"></label>
                         <input type="text" class="form-control" id="InputVulnerabilityDescription" name="description">
                     </div>
                     <div class="mb-3">
-                        <label for="InputVulnerabilityDetails" class="form-label">Details</label>
+                        <label for="InputVulnerabilityDetails" class="form-label" data-i18n="Details"></label>
                         <input type="text" class="form-control" id="InputVulnerabilityDetails" name="details">
                     </div>
                     <div class="mb-3">
-                        <label for="InputSoftwaresDict" class="form-label">Software</label>
+                        <label for="InputSoftwaresDict" class="form-label" data-i18n="Software"></label>
                         <select class="form-select" id="InputSoftwaresDict" name="software_id" required></select>
                     </div>
-                    <button type="submit" class="btn btn-success">Add</button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 <script>
-    var tab_url = "l4";
     async function addVulnerability(event) {
         event.preventDefault()
         let data = new FormData(event.target)
-        let resp = await fetch(`/api/v1/${tab_url}/${currentResourceID}/vulnerabilities`, { method: "POST", headers: {"Content-Type": "application/json",},body: JSON.stringify(Object.fromEntries(data)) })
+        let resp = await fetch(`/api/v1/l4/${currentResourceID}/vulnerabilities`, { method: "POST", headers: {"Content-Type": "application/json",},body: JSON.stringify(Object.fromEntries(data)) })
         if (resp.status == 201){
             await func_reload_data_update();
             $('#vulnerabilityAddModal').modal('hide');

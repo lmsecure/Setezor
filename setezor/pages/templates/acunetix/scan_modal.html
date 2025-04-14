@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addScanLabel">Adding scan</h5>
+                <h5 class="modal-title" id="addScanLabel" data-i18n="Adding scan"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="add_scan(event)" id="scanAddForm">
@@ -15,42 +15,42 @@
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="scan_speed" class="col-form-label">Scan Speed</label>
+                            <label for="scan_speed" class="col-form-label" data-i18n="Scan Speed"></label>
                         </div>
                         <div class="col-6" id="scanspeed">
                         </div>
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="scan_date" class="col-form-label">Scan Start Date</label>
+                            <label for="scan_date" class="col-form-label" data-i18n="Scan Start Date"></label>
                         </div>
                         <div class="col-auto">
                             <input type="date" id="scan_date" class="form-control mt-1" name="date" required
-                                placeholder="Start Date">
+                                data-i18n-placeholder="Start Date">
                         </div>
                     </div>
 
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="scan_time" class="col-form-label">Scan Start Time</label>
+                            <label for="scan_time" class="col-form-label" data-i18n="Scan Start Time"></label>
                         </div>
                         <div class="col-auto">
                             <input type="time" id="scan_time" class="form-control mt-1" name="start_time" required
-                                placeholder="Start Time">
+                                data-i18n-placeholder="Start Time">
                         </div>
                     </div>
                     <div class="row mb-1" id="acunetix_scan_interval_div">
                         <div class="col-4">
-                            <label for="scan_interval" class="col-form-label">Scan Interval</label>
+                            <label for="scan_interval" class="col-form-label" data-i18n="Scan Interval"></label>
                         </div>
                         <div class="col-auto">
                             <input type="time" id="scan_interval" class="form-control mt-1" name="interval" required
-                                placeholder="Interval">
+                            data-i18n-placeholder="Interval">
                         </div>
                     </div>
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="scan_profile_id" class="col-form-label">Scan Profile</label>
+                            <label for="scan_profile_id" class="col-form-label" data-i18n="Scan Profile"></label>
                         </div>
                         <div class="col-6" id="scan_profile_id">
 
@@ -59,23 +59,23 @@
                     <div id="acunetix_scan_ports">
                         <div class="row mb-1">
                             <div class="col-4">
-                                <label for="scan_http_ports" class="col-form-label">HTTP Ports</label>
+                                <label for="scan_http_ports" class="col-form-label" data-i18n="HTTP Ports"></label>
                             </div>
                             <div class="col-6">
                                 <select class="form-select form-select-sm" id="scan_http_ports" name="http_ports"
                                     data-allow-clear="1" data-allow-new="1" data-regex="^[0-9,\-]+[^,]$" multiple>
-                                    <option hidden disabled value="1">Choose a ports...</option>
+                                    <option hidden disabled value="1" data-i18n="Choose a ports..."></option>
                                 </select>
                             </div>
                         </div>
                         <div class="row mb-1">
                             <div class="col-4">
-                                <label for="scan_https_ports" class="col-form-label">HTTPS Ports</label>
+                                <label for="scan_https_ports" class="col-form-label" data-i18n="HTTPS Ports"></label>
                             </div>
                             <div class="col-6">
                                 <select class="form-select form-select-sm" id="scan_https_ports" name="https_ports"
                                     data-allow-clear="1" data-allow-new="1" data-regex="^[0-9,\-]+[^,]$" multiple>
-                                    <option hidden disabled value="1">Choose a ports...</option>
+                                    <option hidden disabled value="1" data-i18n="Choose a ports..."></option>
                                 </select>
                             </div>
                         </div>
@@ -83,8 +83,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_adding_scans"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Add</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </div>
             </form>
 

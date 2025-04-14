@@ -1,0 +1,750 @@
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+<title>Setezor</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/static/assets/favicon.ico">
+<link rel="stylesheet" href="/static/css/bootstrap-icons.css" />
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
+<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/bootstrap.bundle.min.js" type="module"></script>
+<script src="/static/js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
+<script src="/static/js/axios.min.js"></script>
+<script src="/static/js/i18next.min.js"></script>
+<script src="/static/js/translate_i18n.js"></script>
+
+</head>
+<body>
+<header id="myHeader">
+		<nav class="navbar navbar-dark navbar-expand-lg bg-dark">
+			<div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem;">
+				<div class="bd-highlight" style="margin-left: 40px;">
+					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+						<li class="nav-item d-inline">
+							<a class="navbar-brand" target="_blank">
+								<img src="/static/assets/logo.png" width="120px" height="auto"
+									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
+							</a>
+						</li>
+					</ul>
+				</div>
+				<div class="d-flex align-items-center gap-2 ">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown"
+                            style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            <i class="bi bi-translate"></i>
+                            <span id="currentLanguage">EN</span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+                            <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+                        </ul>
+                    </div>
+                    <a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/?utm_source=public"
+                        target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;" data-testid="wiki_help">
+                        <i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
+                    </a>
+                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#aboutModal"
+                        style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C" data-testid="about_project">
+                        <i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
+                            data-i18n-title="About project"></i>
+                    </button>
+                    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h4 data-i18n="About project"></h4>
+                                </div>
+                                <div class="modal-body">
+                                    <div data-i18n="About Setezor text">
+                                    </div>
+                                    <div class="list-group">
+                                        <a href="https://setezor.ru" class="list-group-item list-group-item-action list-group-item-success"
+                                            target="_blank">Site</a>
+                                        <a href="https://t.me/lmsecurity"
+                                            class="list-group-item list-group-item-action list-group-item-primary"
+                                            target="_blank">Telegram</a>
+                                        <a href="https://github.com/lmsecure/Setezor"
+                                            class="list-group-item list-group-item-action list-group-item-secondary"
+                                            target="_blank">GitHub</a>
+                                        <a href="https://hub.docker.com/r/lmsecure/setezor"
+                                            class="list-group-item list-group-item-action list-group-item-danger"
+                                            target="_blank">DockerHub</a>
+                                    </div>
+                                    <hr>
+                                    <div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
+                                    </div>
+                                    <div class="list-group">
+                                        <span>Bitcoin: </span>
+                                        <div class="input-group mb-3">
+                                            <input type="text" class="form-control" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz"
+                                                disabled>
+                                            <button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn"
+                                                data-i18n="Copy"></button>
+                                        </div>
+                                        <span>Dash: </span>
+                                        <div class="input-group mb-3">
+                                            <input type="text" class="form-control" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+                                            <button class="btn btn-outline-secondary" type="button" id="copyDashBtn"
+                                                data-i18n="Copy"></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
+                                    <h6 data-i18n="SetezorVersion"></h6>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+					<button class="btn btn-outline-danger" onclick="window.location.href='/projects'"
+					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
+					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
+						data-i18n-title="Back to projects"></i>
+				</button>
+				</div>
+			</div>
+			</div>
+		</nav>
+
+		<script>
+var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+      function create_toast(title, message, level="info", time="just now") {
+        var toast_holder = document.getElementById("toast_holder")
+        var toast = document.createElement("div")
+        toast.classList.add("toast", "fade")
+        toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        var toast_instance = new bootstrap.Toast(toast)
+        toast_holder.prepend(toast)
+        toast_instance.show()
+    
+        var notification_holder = document.getElementById("notifications_body")
+        var notification_toast = document.createElement("div")
+        notification_toast.classList.add("toast", "fade")
+        notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
+        notification_toast.setAttribute("data-bs-autohide",false)
+        var notification_toast_instance = new bootstrap.Toast(notification_toast)
+        notification_holder.prepend(notification_toast)
+        notification_toast_instance.show()
+    };
+    function create_html_toast(title, message, time, level) {
+        return `
+                <div class="toast-header">
+                    <svg width="25" height="25">
+                        <rect fill=${level} y="3" width="20" height="20" rx="3" />
+                    </svg>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-muted">${time}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>`
+    };
+			const logoutFromProfile = async () => {
+				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
+					window.location.href = "/login"
+				})
+			}
+		</script>
+	</header>
+
+
+    
+    <div class="d-flex flex-row justify-content-between">
+        <div class="d-flex flex-row" style="margin-left: 2rem;">
+            <h2 class="p-2" data-i18n="All Agents"></h2>
+        </div>
+        <div class="mt-3 ms-1" style="margin-right: 2rem;">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" title="create agent"
+                data-bs-target="#agentModal" data-testid="create_agent" data-i18n="Add agent">
+            </button>
+        </div>
+    </div>
+    
+    <div id="agent_table">
+    </div>
+    {% if user.is_superuser %}
+    <div class="d-flex flex-row justify-content-between mt-3">
+        <div class="d-flex flex-row">
+            <h2 class="p-2" style="margin-left: 2rem;" data-i18n="All Users"></h2>
+        </div>
+    </div>
+    <div id="users_table" >
+    </div>
+    {% endif %}
+    <div class="modal fade" id="agentModal" tabindex="-1" aria-labelledby="agentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Create agent"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table style="margin: auto">
+                        <tbody>
+                            <tr>
+                                <td data-i18n="Agent name"></td>
+                                <td><input id="agent-name" class="form-control" value="" required></td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="Agent description"></td>
+                                <td>
+                                    <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="Agent REST URL"></td>
+                                <td><input id="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+    
+                </div>
+                <div class="modal-footer">
+                    <button id="close-create-agent" type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" class="btn btn-primary" onclick="createAgent()" data-i18n="Save changes"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="parentAgentsModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="parentagentModalLabel" data-i18n="Parent agents"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="parentAgentsList">
+                </div>
+                <div class="modal-footer">
+                    <button id="closeParentAgentsModal" type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" class="btn btn-primary" onclick="saveParentAgents()" data-i18n="Save changes"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="editAgentInterfaces" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Add agent interfaces"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="interfaces_list_container">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-create-agent" type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" class="btn btn-primary" onclick="saveInterfaces()" data-i18n="Save changes"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if user.is_superuser %}
+    <div id="OpenReg" class="container mt-4" style="margin-left: 2.5rem;"></div>
+    <button class="btn btn-success" onclick="saveSettingsOpenRegParams()" style="margin-left: 4.5rem;" data-i18n="Save settings"></button>
+    {% endif %}
+    <div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form onsubmit="saveSynthInterface(event)">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-2">
+                            <label for="synthAgentInterfaceName" class="form-label" data-i18n="Interface name"></label>
+                            <input class="form-control" type="text" id="synthAgentInterfaceName" required name="name">
+                        </div>
+                        <div class="mb-2">
+                            <label for="synthAgentInterfaceIP" class="form-label" data-i18n="Interface ip"></label>
+                            <input class="form-control" type="text" id="synthAgentInterfaceIP" required name="ip">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="close-create-agent" type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal" data-i18n="Close"></button>
+                        <button type="submit" class="btn btn-primary" data-i18n="Save changes"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
+  <div id="toast_holder"></div>
+</div>
+    <style>
+        .tabulator {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-left: 2rem;
+        margin-right: 2rem;
+        width: calc(100% - 4rem);
+    }
+    
+    .tabulator .tabulator-header {
+        background-color: #007bff;
+        font-weight: bold;
+    }
+    
+    .tabulator .tabulator-row {
+        background-color: white;
+    }
+    
+    .tabulator .tabulator-row:nth-child(odd) {
+        background-color: #f8f9fa;
+    }
+    
+    .tabulator .tabulator-row:hover {
+        background-color: #e9ecef;
+    }
+    
+    .tabulator .tabulator-cell {
+        padding: 12px;
+        text-align: center;
+        vertical-align: middle;
+        border-right: 1px solid #dee2e6;
+    }
+    </style>
+    <script>
+        async function openRegistration() {
+            let response = await axios.get("/api/v1/settings/admin");
+            let el = document.getElementById("OpenReg");
+            let result = `<div class="settings-container">`;
+            console.log(response.data)
+            response.data.forEach(setting => {
+                result += `<form id="openRegSettingsForm" class="setting-item mb-3">`;
+                
+                if (setting.value_type === "boolean") {
+                    result += `
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" 
+                            id="${setting.id}" name="${setting.name}" 
+                            ${setting.field.value ? 'checked' : ''}>
+                        <label class="form-check-label" for="${setting.id}">
+                            ${setting.description}
+                        </label>
+                    </div>`;
+                } 
+                else if (setting.value_type === "integer") {
+                    result += `
+                    <div class="mb-3">
+                        <label for="${setting.id}" class="form-label">${setting.description}</label>
+                        <input type="number" class="form-control" 
+                            id="${setting.id}" name="${setting.name}" 
+                            value="${setting.field.value || ''}">
+                    </div>`;
+                } 
+                else if (setting.value_type === "string") {
+                    result += `
+                    <div class="mb-3">
+                        <label for="${setting.id}" class="form-label">${setting.description}</label>
+                        <input type="text" class="form-control" 
+                            id="${setting.id}" name="${setting.name}" 
+                            value="${setting.field.value || ''}">
+                    </div>`;
+                }
+                result += `</form>`;
+            });
+            
+            result += `</div>`;
+            el.innerHTML = result;
+        }
+        openRegistration();
+
+        async function saveSettingsOpenRegParams() {
+            const form = document.getElementById('openRegSettingsForm');
+            const formData = new FormData(form);
+            let settings = Object.fromEntries(formData.entries());
+
+            document.querySelectorAll('#openRegSettingsForm input').forEach(input => {
+                let settingId = input.id;
+                let payload = { value: settings[input.name] || '' };
+
+                if (input.type === "checkbox") {
+                    payload.value = input.checked;
+                } else if (input.type === "number") {
+                    payload.value = Number(settings[input.name] || 0);
+                }
+                if (input.type === "checkbox" && !(input.name in settings)) {
+                    payload.value = false;
+                }
+
+                sendPatchRequest(settingId, payload);
+            });
+        }
+
+        async function sendPatchRequest(settingId, payload) {
+                let response = await axios.patch(`/api/v1/settings/admin/${settingId}`, payload);
+        }
+
+                /* ip mask */
+        var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-ip'))
+        /* Agent create callback */
+        async function fillParentAgents() {
+            let resp = await fetch("/api/v1/agents")
+            let agents = await resp.json()
+            let _select = document.getElementById("parent-agent-id")
+            let result = ""
+            for (const agent of agents) {
+                result += `<option value=${agent.id}>${agent.name}</option>`
+            }
+            _select.innerHTML = result
+        }
+        async function createAgent() {
+            name = document.getElementById('agent-name').value
+            desc = document.getElementById('agent-description').value
+            rest_url = document.getElementById('agent-rest-url').value
+            agent = new Object()
+            agent.name = name
+            agent.description = desc
+            agent.rest_url = rest_url
+            resp = await fetch('/api/v1/agents',
+                {
+                    method: 'post',
+                    body: JSON.stringify(agent),
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            )
+            if (resp.ok) {
+                location.reload()
+            }
+            else {
+                console.log(`Error on create agent, response status ${resp.status}`)
+                close_button = document.getElementById('close-create-agent')
+                close_button.click()
+                text = await resp.text()
+                create_toast('Error on create agent', text, 'error')
+            }
+        }
+        async function saveInterfaces(){
+            let el = document.getElementById("interfaces_list_container")
+            let result = []
+            for (const children of el.children){
+                for (const sub_child of children.children){
+                    if (sub_child.tagName == "INPUT"){
+                        if (sub_child.checked){
+                            let new_interface = new Object()
+                            new_interface.mac = sub_child.attributes.mac.value
+                            new_interface.ip = sub_child.attributes.ip.value
+                            new_interface.name = sub_child.attributes.name.value
+                            result.push(new_interface)
+                        }
+                    }
+                }
+            }
+            let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
+            { method: 'PATCH',
+            headers: {"Content-Type": "application/json",},
+            body: JSON.stringify(result) 
+            }
+            )
+            getAgentData().then((data) => {
+                agentData = data
+                fillAgentBar("agent_tools");
+                fillAgentBar("agent_net_map");
+                fillAgentBar("agent_nmap");
+                fillAgentBar("agent_scapy");
+                fillAgentBar("agent_masscan");
+                fillAgentBar("agent_snmp");
+                fillAgentBar("agent_domains");
+                fillAgentBar("agent_cert");
+                fillAgentBar("agent_whois");
+                fillAgentBar("agent_acunetix");
+                fillAgentBar("agent_screenshoter");
+                fillAgentBar("agent_wappalyzer");
+                fillAgentBar("agent_cpeguess");
+                fillAgentBar("agent_searchvulns");
+                getInterfaceData(agentData.default_agent).then((data) => {
+                    interfaceData = data
+                    fillInterfaceBar("interface_tools");
+                    fillInterfaceBar("interface_net_map");
+                    fillInterfaceBar("interface_nmap");
+                    fillInterfaceBar("interface_scapy");
+                    fillInterfaceBar("interface_masscan");
+                    fillInterfaceBar("interface_snmp");
+                    fillInterfaceBar("interface_domains");
+                    fillInterfaceBar("interface_cert");
+                    fillInterfaceBar("interface_whois");
+                    fillInterfaceBar("interface_acunetix");
+                    fillInterfaceBar("interface_screenshoter");
+                    fillInterfaceBar("interface_wappalyzer");
+                    fillInterfaceBar("interface_cpeguess");
+                    fillInterfaceBar("interface_searchvulns");
+                })
+            })
+            $('#editAgentInterfaces').modal('hide');
+        }
+        async function saveSynthInterface(event){
+            event.preventDefault()
+            let data = new FormData(event.target)
+            let new_interface = new Object()
+            data.forEach(function(value, key){
+                new_interface[key] = value;
+            });
+            new_interface.mac=''
+            let result = [new_interface]
+            let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
+            { method: 'PATCH',
+            headers: {"Content-Type": "application/json",},
+            body: JSON.stringify(result) 
+            }
+            )
+            $('#editAgentInterfacesWhichDoesNotExist').modal('hide');
+        }
+    </script>
+    
+    <script>
+    
+        var headerMenu = function () {
+            var menu = [];
+            var columns = this.getColumns();
+            for (let column of columns) {
+                if (column.getDefinition().field) {
+                    let icon = document.createElement("i");
+                    icon.classList.add("bi");
+                    icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                    let label = document.createElement("span");
+                    let title = document.createElement("span");
+                    title.textContent = " " + column.getDefinition().title;
+                    label.appendChild(icon);
+                    label.appendChild(title);
+                    menu.push({
+                        label: label,
+                        action: function (e) {
+                            e.stopPropagation();
+                            column.toggle();
+                            if (column.isVisible()) {
+                                icon.classList.remove("bi-square");
+                                icon.classList.add("bi-check-square");
+                            } else {
+                                icon.classList.remove("bi-check-square");
+                                icon.classList.add("bi-square");
+                            }
+                            { { tab.name } } _table.redraw()
+                        }
+                    });
+                }
+            }
+            return menu;
+        }
+    
+        /* color functions */
+        function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
+    
+    
+    
+        function hexToRgb(hex) {
+            result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+    
+        function componentToHex(color) {
+            hex = color.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+        function rgbToHex(r, g, b) {
+            return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+        }
+    
+        /* change color callback */
+        async function changeAgentData(agent_id) {
+            element = document.getElementById(`agent-${agent_id}`)
+            value = element.value
+            body = { color: value }
+            resp = await fetch(
+                '/api/v1/agents/' + agent_id + '/update_color', 
+                { method: 'PATCH',
+                headers: {"Content-Type": "application/json",},
+                body: JSON.stringify(body) })
+            if (resp.ok) {
+                console.log(`Agent ${agent_id} successfuly updated with color <${JSON.stringify(value)}>`)
+            }
+            else {
+                console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
+            }
+        }
+    
+        /* color input creater */
+        function formatColor(cell, formatterParams, onRendered) {
+            agent_id = cell.getRow().getData().id
+            value = cell.getValue()
+            return `<input id="agent-${agent_id}" type="color" value="${value}" onchange="changeAgentData('${agent_id}')"/>`; //return the contents of the cell;
+        }
+    
+        /* default cell edit callback */
+        async function editCell(cell) {
+            agent_id = cell.getRow().getCells()[0].getValue()
+            value = cell.getValue()
+            field = cell.getField()
+            body = { id: agent_id, field: field, value: value }
+            resp = await fetch('/api/agent/update', { method: 'put', body: JSON.stringify(body) })
+            text = await resp.text()
+            if (resp.ok) {
+                console.log(`Agent ${agent_id} successfuly updated with value ${field}: <${value}>`)
+            }
+            else {
+                console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
+                create_toast('Error on edit cell', text, 'error')
+                cell.restoreOldValue();
+            }
+        }
+    
+        let currentAgent = 0
+        function configureAgentFormatter(cell) {
+            agent_id = cell.getRow().getData().id
+            if (cell.getRow().getData().parent_agent_name == ""){
+                return ''
+            }
+            return `<div class="d-flex justify-content-start align-items-center">
+                        ${cell.getRow().getData().is_connected == false ? `<div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
+                            ${i18next.t('Connect')}
+                        </div>`:""}    
+                        ${cell.getRow().getData().secret_key != "" ? `<div class="ms-1 btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';showParentAgents('${cell.getRow().getData().name}',currentAgent)">
+                            ${i18next.t('Parent agents')}
+                        </div>`:""}
+                    </div>
+                    `
+        }
+        let currentAgentInterfaces = []
+        async function showParentAgents(name, agent_id) {
+            resp = await fetch(`/api/v1/agents/${agent_id}/parents`)
+            if (resp.ok) {
+                let data = await resp.json()
+                let el = document.getElementById("parentAgentsList")
+                result = ``
+                for (const agent of data){
+                    result += `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" 
+                            id="agent_${agent.id}" ${agent.is_parent ? "checked":""} agent_id=${agent.id}>
+                            <label class="form-check-label" for="agent_${agent.id}">
+                                ${agent.name}
+                            </label>
+                        </div>
+                    `
+                }
+                document.getElementById("parentagentModalLabel").innerHTML = ` ${i18next.t('Parent agents of')} ${name}`
+                el.innerHTML = result
+                let myModal = new bootstrap.Modal(document.getElementById('parentAgentsModal'));
+                myModal.show();
+            }
+        }
+        async function saveParentAgents() {
+            let el = document.getElementById("parentAgentsList")
+            let parents = new Object({parents: new Object()})
+            for (const check of el.children){
+                for (const elem of check.children){
+                    if (elem.localName != "input"){
+                        continue
+                    }
+                    parents.parents[elem.attributes.agent_id.nodeValue] = elem.checked
+                }
+            }
+            let req = await fetch(`/api/v1/agents/${currentAgent}/parents`, {
+				method: "PATCH",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify(parents)
+			})
+            let close_el = document.getElementById("closeParentAgentsModal")
+            close_el.click()
+        }
+
+        async function connectAgent(id) {
+            let resp = await fetch(`/api/v1/agents/${id}/connect`, {method:"POST"})
+            if (!resp.ok){
+                let answer = await resp.json()
+                create_toast("Error", answer.detail, "error")
+                return
+            }
+            create_toast("Info", "Successful connect", "success")
+        }
+
+        /* delete row callback */
+        async function delteRowCallback(element) {
+            attributes = element.attributes
+            agent_id = attributes['agent_id'].value
+            row_id = attributes['row_id'].value
+            body = JSON.stringify({ id: agent_id })
+            resp = await fetch(`/api/agent/`, { method: 'delete', body: body })
+            if (resp.ok) {
+                agent_table.getRow(row_id).delete()
+                console.log(`Successfuly delete agent ${agent_id}`)
+            }
+            else {
+                console.log(`Error on deleting agent ${agent_id}`)
+            }
+        }
+    
+        var agent_table = new Tabulator('#agent_table', {
+            layout: "fitColumns",
+            ajaxURL: "/api/v1/agents/settings",
+            selectable: false,
+            sortMode: "remote",
+            filterMode: "remote",
+            pagination: true,
+            paginationMode: "local",
+            paginationSize: 10,
+            paginationInitialPage: 1,
+            paginationSizeSelector: [5, 10, 25, 50, 100],
+            columns: [
+                { title: 'ID', field: 'id', headerMenu: headerMenu },
+                { title: 'NAME', field: 'name', headerMenu: headerMenu },
+                { title: 'DESCRIPTION', field: 'description', headerMenu: headerMenu },
+                { title: 'URL', field: 'rest_url', headerMenu: headerMenu },
+                { title: 'CONFIGURE', field: 'configure', headerMenu: headerMenu, formatter: configureAgentFormatter }
+    
+            ]
+        }
+        )
+        var users_table = new Tabulator('#users_table', {
+            layout: "fitColumns",
+            ajaxURL: "/api/v1/user",
+            selectable: false,
+            sortMode: "remote",
+            filterMode: "remote",
+            pagination: true,
+            paginationMode: "local",
+            paginationSize: 10,
+            paginationInitialPage: 1,
+            paginationSizeSelector: [5, 10, 25, 50, 100],
+            columns: [
+                { title: 'ID', field: 'id', headerMenu: headerMenu },
+                { title: 'LOGIN', field: 'login', headerMenu: headerMenu }
+            ]
+        })
+    </script>
+    <script defer src="static/js/update_language.js"></script>
+</body>
+</html>
+{% endblock content %}

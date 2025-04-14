@@ -38,7 +38,6 @@
 
         Plotly.newPlot(elementId, data, layout, { displayModeBar: false });
 
-        return chart;
     }
 </script>
 
@@ -57,8 +56,8 @@
                     <li>
                         <a class="dropdown-item" href="#">
                             <button type="button" class="btn btn-danger flex-fill w-100"
-                                onclick="deleteProject('{{ project.id }}')">
-                                Delete
+                                onclick="deleteProject('{{ project.id }}')" data-i18n="Delete">
+                                
                             </button>
                         </a>
                     </li>
@@ -78,7 +77,7 @@
                 <div class="carousel-item active">
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
-
+                            
                             All ports
                             {% if analytics.top_ports %}
                                 {{ charts.create_donut('All ports', 'analytics.top_ports' + '_' + project.id,
@@ -174,13 +173,13 @@
 
 
                 <ul style="padding-left: 1rem;">
-                    <li><strong>Node count: </strong>{{ analytics.ip_count | safe }}</li>
-                    <li><strong>Port count: </strong>{{ analytics.port_count | safe }}</li>
+                    <li><strong data-i18n="Node count"> </strong>{{ analytics.ip_count | safe }}</li>
+                    <li><strong data-i18n="Port count"> </strong>{{ analytics.port_count | safe }}</li>
                 </ul>
 
 
                 <button type="button" class="btn btn-success flex-fill w-100"
-                    onclick="chooseProject('{{ project.id }}')">Choose
+                    onclick="chooseProject('{{ project.id }}')" data-i18n="Choose">
                 </button>
             </div>
         </div>
@@ -216,15 +215,15 @@ function deleteProject(projectId, projectName) {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="modalLabel">Project Deletion</h5>
+                        <h5 class="modal-title" id="modalLabel">${i18next.t('Project Deletion')}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to delete the project "{{project.name}}"?
+                        ${i18next.t('Are you sure you want to delete the project')} "{{project.name}}"?
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" onclick="confirmDeleteProject('${projectId}')">Delete</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Cancel')}</button>
+                        <button type="button" class="btn btn-danger" onclick="confirmDeleteProject('${projectId}')">${i18next.t('Delete')}</button>
                     </div>
                 </div>
             </div>

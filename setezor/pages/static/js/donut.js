@@ -87,6 +87,7 @@ function createProductsAndServiceName(title, mainId, labels, parents, graph_valu
     createSunburstChart(`${mainId}_donut`, labels, parents, graph_values, height);
 }
 
+
 function createSunburstChart(elementId, labels, parents, graph_values, height = null) {
     let data;
     if (labels.length === 0 || parents.length === 0 || graph_values.length === 0) {

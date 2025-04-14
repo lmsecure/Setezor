@@ -16,3 +16,4 @@ class ASN(IDDependent, Base, table=True):
     networks: List["Network"] = Relationship(back_populates="asn")
     parent_asn: Optional["ASN"] = Relationship(back_populates="child_asns", sa_relationship_kwargs={"remote_side": "[ASN.id]"})
     child_asns: List["ASN"]     = Relationship(back_populates="parent_asn")
+    project: "Project" = Relationship(back_populates="asns")

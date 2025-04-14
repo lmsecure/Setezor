@@ -5,14 +5,14 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="divisionNetmaskModalLabel">Division Netmask</h5>
+                <h5 class="modal-title" id="divisionNetmaskModalLabel" data-i18n="Division Netmask"></h5>
                 {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal"
                     aria-label="Close"></button> #}
             </div>
             <form id='divisionNetmaskModalForm'>
                 <div class="modal-body">
                     <div class="input-group" style="padding-bottom: 0.5rem;" id="divisionIpInput">
-                        <input type="text" class="form-control" id='divisionNetmaskIp' placeholder="Netmask IP"
+                        <input type="text" class="form-control" id='divisionNetmaskIp'
                             aria-label="NetmaskIp" aria-describedby="basic-addon1" name="NetmaskIp" disabled>
 
                     </div>
@@ -25,9 +25,9 @@
 
         <div class="modal-footer">
             <button id="node-cancelButton" type="button" class="btn btn-secondary"
-                data-bs-dismiss="modal">Close</button>
+                data-bs-dismiss="modal" data-i18n="Close"></button>
             <button id="changeMaskButton" type="button" class="btn btn-primary"
-                onclick="division_mask(network_mask_data, ip)">Division</button>
+                onclick="division_mask(network_mask_data, ip)" data-i18n="Division"></button>
         </div>
         </form>
     </div>
@@ -39,11 +39,11 @@
 
         var myModal = new bootstrap.Modal(document.getElementById('divisionNetmaskModal'));
         if (ipAddress || networkMask) {
-            document.getElementById("divisionNetmaskIp").value = "Network - " + network_mask_data;
+            document.getElementById("divisionNetmaskIp").value = i18next.t('Network - ') + network_mask_data;
             createButtons([Number(networkMask)]);
 
         } else {
-            alert("Mask or Ip not found");
+            alert(i18next.t('Mask or Ip not found'));
         }
         myModal.show();
     }

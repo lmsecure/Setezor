@@ -3,9 +3,9 @@ import datetime
 from time import time
 from setezor.models import Vulnerability as VulnerabilityModel, \
     Software, \
-    L7, \
-    L7Software, \
-    L7SoftwareVulnerability, Domain, IP, Port, DNS_A
+    Domain, IP, Port, DNS_A
+from setezor.models.l4_software import L4Software
+from setezor.models.l4_software_vulnerability import L4SoftwareVulnerability
 from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
@@ -50,7 +50,7 @@ class AcunetixScanTask(BaseJob):
                     "target_vuln_id"), credentials=self.credentials)) for scan_vuln in scan_vulnerabilities]
                 vulnerabilities_detail = await asyncio.gather(*vilnerabilities_detail_tasks)
                 if status == "failed":
-                    await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.failed, project_id=self.project_id)
+                    await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.failed)
                     raise Exception
                 break
             await asyncio.sleep(10)
@@ -59,19 +59,18 @@ class AcunetixScanTask(BaseJob):
         vulns_sctructs = Vulnerability.from_acunetix_response(vulnerabilities_detail)
         result = []
         data = parse_url(url=self.target_address)
-
         if domain := data.get("domain"):
             try:
                 responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, *dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
+                new_domain, new_ip, *new_dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
                 result.append(new_ip)
-                result.extend(dns_a)
+                result.extend(new_dns_a)
             except:
                 new_domain = Domain(domain=domain)
                 new_ip = IP()
-                new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+                new_dns_a = [DNS_A(target_ip=new_ip, target_domain=new_domain)]
                 result.append(new_ip)
-                result.append(new_dns_a)
+                result.extend(new_dns_a)
             result.append(new_domain)
 
         if ip := data.get("ip"):
@@ -79,27 +78,26 @@ class AcunetixScanTask(BaseJob):
             result.append(new_ip)
             new_domain = Domain()
             result.append(new_domain)
+            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+            result.append(new_dns_a)
 
         new_port = Port(port=data.get("port"), ip=new_ip)
         result.append(new_port)
 
-        new_l7 = L7(port=new_port, domain=new_domain)
-        result.append(new_l7)
-
         new_software = Software()
         result.append(new_software)
 
-        new_l7_software = L7Software(l7=new_l7, software=new_software)
-        result.append(new_l7_software)        
+        new_l4_software = L4Software(l4=new_port, dns_a=new_dns_a, software=new_software)
+        result.append(new_l4_software)        
 
         scan_result_statistic = await Scan.get_statistics(scan_id=self.acunetix_scan_id, result_id=result_id, credentials=self.credentials)
         end_date = datetime.datetime.fromisoformat(scan_result_statistic["scanning_app"]["wvs"]["end_date"])
 
         for vuln in vulns_sctructs:
             vuln_obj = VulnerabilityModel(created_at_in_acunetix=end_date, **vuln)
-            l7_software_vuln = L7SoftwareVulnerability(l7_software=new_l7_software, vulnerability=vuln_obj)
+            l4_software_vuln = L4SoftwareVulnerability(l4_software=new_l4_software, vulnerability=vuln_obj)
             result.append(vuln_obj)
-            result.append(l7_software_vuln)
+            result.append(l4_software_vuln)
         return result
 
 

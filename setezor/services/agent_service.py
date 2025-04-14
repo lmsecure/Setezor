@@ -1,11 +1,15 @@
 from typing import List
+from Crypto.Random import get_random_bytes
 from setezor.managers.websocket_manager import WS_MANAGER
-from setezor.models import Agent, Object, MAC, IP, Network, ASN
+from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS_A, Domain
+from setezor.models.agent_parent_agent import AgentParentAgent
 from setezor.models.base import generate_unique_id
 from setezor.schemas.task import WebSocketMessage
+from setezor.tools.graph import find_all_paths
 from setezor.unit_of_work import UnitOfWork
-from setezor.schemas.agent import AgentAdd, InterfaceOfAgent
+from setezor.schemas.agent import AgentAdd, AgentParents, InterfaceOfAgent
 from setezor.tools.ip_tools import get_network
+
 
 class AgentService:
     @classmethod
@@ -13,136 +17,114 @@ class AgentService:
         async with uow:
             agents = await uow.agent.list(project_id=project_id)
             return agents
-        
+
     @classmethod
-    async def get(cls, uow: UnitOfWork, id: str, project_id: str) -> Agent:
+    async def get(cls, uow: UnitOfWork, id: str) -> Agent:
         async with uow:
-            return await uow.agent.find_one(id=id, project_id=project_id)
-            
+            return await uow.agent.find_one(id=id)
+
     @classmethod
     async def get_by_id(cls, uow: UnitOfWork, id: str) -> Agent:
         async with uow:
             return await uow.agent.find_one(id=id)
 
     @classmethod
-    async def settings_page(cls, uow: UnitOfWork, project_id: str) -> list:
+    async def settings_page(cls, uow: UnitOfWork, user_id: str) -> list:
         async with uow:
-            res = await uow.agent.settings_page(project_id=project_id)
+            server_agent = await uow.agent.find_one(name="Server", secret_key="")
+            already_in_list = set()
+            res: list = await uow.agent.user_settings_page(user_id=user_id)
+            res.insert(0, server_agent)
             result = []
-            for agent, parent_agent in res:
+            for agent in res:
+                if not agent.id in already_in_list:
+                    result.append({
+                        "id": agent.id,
+                        "name": agent.name,
+                        "description": agent.description,
+                        "rest_url": agent.rest_url,
+                        "is_connected": agent.is_connected,
+                        "secret_key": agent.secret_key
+                    })
+                already_in_list.add(agent.id)
+            return result
+
+    @classmethod
+    async def parents_on_settings_page(cls, uow: UnitOfWork, agent_id: str, user_id: str) -> list:
+        async with uow:
+            server_agent = await uow.agent.find_one(name="Server", secret_key="")
+            if agent_id == server_agent.id:
+                return []
+            possible_parents = await uow.agent.possible_parent_agents(agent_id=agent_id, user_id=user_id)
+            possible_parents.insert(0, server_agent)
+            already_are_parents = {agent.parent_agent_id for agent in await uow.agent_parent_agent.filter(agent_id=agent_id) if not agent.deleted_at}
+            result = []
+            for pagent in possible_parents:
                 result.append({
-                    "id":agent.id,
-                    "name": agent.name,
-                    "description": agent.description,
-                    "color": agent.color,
-                    "rest_url": agent.rest_url,
-                    "parent_agent_id": parent_agent.id if parent_agent else None,
-                    "parent_agent_name": parent_agent.name if parent_agent else '',
-                    "secret_key": agent.secret_key
+                    "id": pagent.id,
+                    "name": pagent.name,
+                    "is_parent": pagent.id in already_are_parents
                 })
             return result
         
     @classmethod
-    async def create(cls, uow: UnitOfWork, project_id: str, agent: AgentAdd) -> Agent:
+    async def set_parents_for_agent(cls, uow: UnitOfWork, parents: AgentParents, agent_id: str, user_id: str) -> list:
         async with uow:
-            obj_id, ag_id = generate_unique_id(), generate_unique_id()
-            new_obj_model = Object(id=obj_id,
-                                   agent_id=ag_id,
-                                   project_id=project_id)
-            
-            new_obj = uow.object.add(new_obj_model.model_dump())
+            for parent, is_checked in parents.parents.items():
+                agent_parent = await uow.agent_parent_agent.find_one(agent_id=agent_id, parent_agent_id=parent)
+                if agent_parent:
+                    if is_checked:
+                        await uow.agent_parent_agent.edit_one(id=agent_parent.id, data={"deleted_at": None})
+                    else:
+                        await uow.agent_parent_agent.delete(id=agent_parent.id)
+                else:
+                    if is_checked:
+                        uow.agent_parent_agent.add(AgentParentAgent(agent_id=agent_id, parent_agent_id=parent).model_dump())
+            await uow.commit()
+            #agent_parent_agent = await uow.agent_parent_agent.filter()
 
+    @classmethod
+    async def create(cls, uow: UnitOfWork, user_id: str, agent: AgentAdd) -> Agent:
+        async with uow:
             new_agent_model = Agent(
-                id=ag_id,
-                object_id=new_obj.id,
-                name = agent.name,
-                description = agent.description,
-                color = agent.color,
-                rest_url = agent.rest_url,
-                parent_agent_id = agent.parent_agent_id,
-                project_id = project_id,
-                secret_key = agent.secret_key,
+                name=agent.name,
+                description=agent.description,
+                rest_url=agent.rest_url,
+                secret_key=get_random_bytes(32).hex(),
+                user_id=user_id,
+                is_connected=False
             )
             new_agent = uow.agent.add(new_agent_model.model_dump())
             await uow.commit()
-         
+
             return new_agent
-        
-    @classmethod
-    async def get_interfaces(cls, uow: UnitOfWork, project_id:str, id: int):
-        async with uow:
-            agent = await uow.agent.find_one(id=id, project_id=project_id)
-            macs = await uow.mac.get_interfaces(object_id=agent.object_id)
-            return macs
+
     
     @classmethod
-    async def update_agent_color(cls, uow: UnitOfWork, project_id: str, agent_id:int, color: str):
+    async def get_agents_chain(cls, uow: UnitOfWork, agent_id: str, user_id: str):
         async with uow:
-            agent_in_db = await uow.agent.find_one(id=agent_id, project_id=project_id)
-            if not agent_in_db:
-                return None
-            agent = await uow.agent.edit_one(id=agent_id, data={"color" : color})
-            await uow.commit()
-            return color
-        
-    @classmethod
-    async def save_interfaces(cls, uow: UnitOfWork, id: int, project_id: str, interfaces: List[InterfaceOfAgent]):
+            neighbours = await uow.agent_parent_agent.get_graph(user_id=user_id)
+            server_agent = await uow.agent.find_one(name="Server", secret_key="")
+        graph = {}
+        for ag, pag in neighbours:
+            if not ag in graph:
+                graph[ag] = [pag]
+            else:
+                graph[ag].append(pag)
+        paths = find_all_paths(graph, agent_id, server_agent.id)
+        agents = []
         async with uow:
-            agent = await uow.agent.find_one(id=id)
-            macs = await uow.mac.get_interfaces(object_id=agent.object_id)
-            hashMap = set()
-            for mac in macs:
-                hashMap.add((mac.mac, mac.ip))
-            for interface in interfaces:
-                if (interface.mac, interface.ip) in hashMap: continue
-                new_asn = ASN(id=generate_unique_id(), 
-                              project_id=project_id)
-                uow.asn.add(new_asn.model_dump())
-
-                start_ip, broadcast = get_network(ip=interface.ip, mask=24)
-                new_network = Network(id=generate_unique_id(), 
-                                      start_ip=start_ip, 
-                                      mask=24, 
-                                      project_id=project_id, 
-                                      asn_id=new_asn.id)
-                uow.network.add(new_network.model_dump())
-
-                new_mac = MAC(id=generate_unique_id(), 
-                              mac=interface.mac,
-                              name=interface.name,
-                              object_id=agent.object_id,
-                              project_id=project_id)
-                uow.mac.add(new_mac.model_dump())
-
-                new_ip = IP(ip=interface.ip, 
-                            network_id=new_network.id, 
-                            mac_id=new_mac.id, 
-                            project_id=project_id)
-                uow.ip.add(new_ip.model_dump())
-            await uow.commit()
-            # scans = await uow.scan.filter(project_id=project_id)
-            # if not scans:
-            #     first_scan = Scan(name="First scan", description="Initial scan after creating agents interfaces", project_id=project_id)
-            #     await uow.scan.add(first_scan.model_dump())
-            #     await uow.commit()
-            message = WebSocketMessage(title="Info", text=f"Saved interfaces for {agent.name}",type="info")
-            await WS_MANAGER.send_message(project_id=project_id, message=message) 
-        return True
-
+            for path in paths:
+                agents.append([await uow.agent.find_one(id=ag_id) for ag_id in path])
+        return agents
 
     @classmethod
-    async def get_agents_chain(cls, uow: UnitOfWork, agent_id: str, project_id: str):
-        agents_chain_urls = []
+    async def get_parents_of_user_agent(cls, uow: UnitOfWork, agent_id: str, user_id: str):
         async with uow:
-            while True:
-                agent = await uow.agent.find_one(id=agent_id, project_id=project_id)
-                if not agent.parent_agent_id: break
-                agent_id = agent.parent_agent_id
-                agents_chain_urls.append(agent)
-        return agents_chain_urls
+            return await uow.agent_parent_agent.get_parents_for_user_agent(agent_id=agent_id, user_id=user_id)
     
     @classmethod
-    async def set_key(cls, uow: UnitOfWork, id: str, key: str):
+    async def set_connected(cls, uow: UnitOfWork, id: str):
         async with uow:
-            await uow.agent.edit_one(id=id, data={"secret_key": key})
+            await uow.agent.edit_one(id=id, data={"is_connected": True})
             await uow.commit()

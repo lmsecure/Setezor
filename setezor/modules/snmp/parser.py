@@ -2,7 +2,7 @@
 from base64 import b64decode
 
 from setezor.tools.ip_tools import get_network
-from setezor.models import L7_Authentication_Credentials, L7, Port, IP, Network
+from setezor.models import Authentication_Credentials, Port, IP, Network, DNS_A, Domain
 
 
 
@@ -22,9 +22,10 @@ class SnmpParser:
             start_ip, broadcast = get_network(ip=ip, mask=24)
             network_obj = Network(start_ip = start_ip, mask=24)
             ip_obj = IP(ip=ip, network=network_obj)
+            domain_obj = Domain()
+            dns_a_obj = DNS_A(target_domain=domain_obj, target_ip=ip_obj)
             port_obj = Port(port=port, ip=ip_obj)
-            l7_obj = L7(port=port_obj)
-            result.extend([network_obj, ip_obj, port_obj, l7_obj])
+            result.extend([network_obj, ip_obj, port_obj, domain_obj, dns_a_obj])
             for item in data:
-                result.append(L7_Authentication_Credentials(l7=l7_obj, **item))
+                result.append(Authentication_Credentials(port=port_obj, **item))
         return result

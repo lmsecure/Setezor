@@ -6,23 +6,23 @@
         <div class="col-3">
             <div class="row">
                 <form onsubmit="saveToken(event)" id="tokenSaveFormSearchVulns" class="flex-column">
-                    <label for="cpeNameInput" class="form-label">Token</label>
+                    <label for="cpeNameInput" class="form-label" data-i18n="Token"></label>
                     <div class="mb-3 d-flex">
                         <input type="text" class="form-control me-2" name="token" required>
-                        <button type="submit" class="btn btn-primary">Set</button>
+                        <button type="submit" class="btn btn-primary" data-i18n="Set"></button>
                     </div>
                 </form>
             </div>
             <div class="row">
                 <form onsubmit="findVulnerabilities(event)" id="tokenSearchFormSearchVulns">
                     <div class="mb-3">
-                        <label for="cpeNameInput" class="form-label">QueryString</label>
+                        <label for="cpeNameInput" class="form-label" data-i18n="Query String"></label>
                         <input type="text" class="form-control" name="query" id="queryInput" required>
                     </div>
-                    <button type="submit" class="btn btn-success">Search</button>
+                    <button type="submit" class="btn btn-success" data-i18n="Search"></button>
                 </form>
             </div>
-            <button class="btn btn-primary mt-2" onclick="refreshCVE()">Refresh CVE</button>
+            <button class="btn btn-primary mt-2" onclick="refreshCVE()" data-i18n="Refresh CVE"></button>
         </div>
         <div class="col-9 overflow-auto" style="max-height: 700px;">
             <h5>CVE's</h5>
@@ -30,9 +30,9 @@
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Description</th>
-                        <th>Links</th>
+                        <th >ID</th>
+                        <th data-i18n="Description"></th>
+                        <th data-i18n="Links"></th>
                     </tr>
                 </thead>
                 <tbody id="vulnsList">

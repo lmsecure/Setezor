@@ -14,3 +14,4 @@ class User(IDDependent, TimeDependent, table=True):
     is_superuser: bool = Field(default=False, sa_column_kwargs={"comment": "Является ли суперпользователем"})
 
     projects: List["UserProject"] = Relationship(back_populates="user")
+    agents: List["Agent"] = Relationship(back_populates="user")

@@ -6,4 +6,4 @@ class RegisterForm(BaseModel):
     login: str
     password: str
     password_confirmation: str
-    invite_token: str
+    invite_token: str | None = None

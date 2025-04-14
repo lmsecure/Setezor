@@ -14,13 +14,12 @@ Projects
 
 <div class="d-flex flex-row justify-content-between">
     <div class="d-flex flex-row">
-        <h2 class="p-2" style="margin-left: 2rem;">All Agents</h2>
+        <h2 class="p-2" style="margin-left: 2rem;" data-i18n="All Agents"></h2>
     </div>
     {% if role.name == "owner" or role.name == "executor" %}
     <div class="mt-3 ms-1" style="margin-right: 2rem;">
-        <button type="button" class="btn btn-success" data-bs-toggle="modal" title="create agent"
-            onclick="fillParentAgents();   document.getElementById('agent-color').value = getRandomColor();" data-bs-target="#agentModal" data-testid="create_agent">   Add agent
-        </button>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-i18n-title="create agent"
+            onclick="fillPossibleAgents();   document.getElementById('agent-color').value = getRandomColor();" data-i18n="Connect agents"></button>
     </div>
     {% endif %}
 </div>
@@ -30,13 +29,13 @@ Projects
 {% if role.name == 'owner' %}
 <div class="d-flex flex-row justify-content-between mt-3">
     <div class="d-flex flex-row">
-        <h2 class="p-2" style="margin-left: 2rem;">All Users</h2>
+        <h2 class="p-2" style="margin-left: 2rem;" data-i18n="All Users"></h2>
     </div>
     <div class="mt-3 ms-1" style="margin-right: 2rem;">
         <button class="btn btn-success" 
         data-bs-toggle="modal" 
         onclick='document.getElementById("inviteToSetezorToken").value=""'
-        data-bs-target="#inviteToProjectTokenModal">Invite to Project</button>
+        data-bs-target="#inviteToProjectTokenModal" data-i18n="Invite to Project"></button>
     </div>
 </div>
 <div id="users_table" >
@@ -50,45 +49,15 @@ Projects
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="agentModalLabel">Create agent</h5>
+                <h5 class="modal-title" id="agentModalLabel" data-i18n="Connected agents"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <table style="margin: auto">
-                    <tbody>
-                        <tr>
-                            <td>Parent agent</td>
-                            <td>
-                                <select name="" id="parent-agent-id" class="form-select">
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Agent name</td>
-                            <td><input id="agent-name" class="form-control" value="" required></td>
-                        </tr>
-                        <tr>
-                            <td>Agent description</td>
-                            <td>
-                                <textarea class="form-control" id="agent-description" rows="3"></textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Agent REST URL</td>
-                            <td><input id="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
-                        </tr>
-                        <tr>
-                            <td>Agent color</td>
-                            <td><input id="agent-color" type="color" class="form-control" value=""></td>
-                        </tr>
-                    </tbody>
-                </table>
-
+            <div class="modal-body" id="agentsInProjectConnected">
             </div>
             <div class="modal-footer">
                 <button id="close-create-agent" type="button" class="btn btn-secondary"
-                    data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="createAgent()">Save changes</button>
+                    data-bs-dismiss="modal" data-i18n="Close"></button>
+                <button type="button" class="btn btn-primary" onclick="addAgentsToProject()" data-i18n="Save changes"></button>
             </div>
         </div>
     </div>
@@ -99,7 +68,7 @@ Projects
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="agentModalLabel">Add agent interfaces</h5>
+                <h5 class="modal-title" id="agentModalLabel" data-i18n="Add agent interfaces"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -108,8 +77,8 @@ Projects
             </div>
             <div class="modal-footer">
                 <button id="close-create-agent" type="button" class="btn btn-secondary"
-                    data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="saveInterfaces()">Save changes</button>
+                    data-bs-dismiss="modal" data-i18n="Close"></button>
+                <button type="button" class="btn btn-primary" onclick="saveInterfaces()" data-i18n="Save changes"></button>
             </div>
         </div>
     </div>
@@ -120,24 +89,23 @@ Projects
         <div class="modal-content">
             <form onsubmit="saveSynthInterface(event)">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="agentModalLabel">Agent is unreachable. You can create synthetic
-                        interface</h5>
+                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-2">
-                        <label for="synthAgentInterfaceName" class="form-label">Interface name</label>
+                        <label for="synthAgentInterfaceName" class="form-label" data-i18n="Interface name"></label>
                         <input class="form-control" type="text" id="synthAgentInterfaceName" required name="name">
                     </div>
                     <div class="mb-2">
-                        <label for="synthAgentInterfaceIP" class="form-label">Interface ip</label>
+                        <label for="synthAgentInterfaceIP" class="form-label" data-i18n="Interface ip"></label>
                         <input class="form-control" type="text" id="synthAgentInterfaceIP" required name="ip">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button id="close-create-agent" type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-primary" data-i18n="Save changes"></button>
                 </div>
             </form>
         </div>
@@ -147,22 +115,27 @@ Projects
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="inviteToProjectTokenModalLabel">Invite to project token</h1>
+                <h1 class="modal-title fs-5" id="inviteToProjectTokenModalLabel" data-i18n="Invite to project token"></h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
             </div>
             <form onsubmit="generateInviteLink(event)">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="inviteToProjectCount" class="col-form-label">Person count</label>
+                        <label for="inviteToProjectCount" class="col-form-label" data-i18n="Person count"></label>
                         <input type="number" id="inviteToProjectCount" min="1" value="1" class="form-control" name="count">
-                        <label for="inviteToProjectToken" class="col-form-label">Token</label>
+                        <label for="inviteToProjectToken" class="col-form-label" data-i18n="Token"></label>
                         <input type="text" class="form-control" disabled id="inviteToProjectToken">
+                        <label for="inviteToProjectURL" class="col-form-label" data-i18n="Registration link"></label>
+                        <div class="input-group mb-3">
+                          <input type="text" class="form-control" id="inviteToProjectURL" readonly>
+                          <button class="btn btn-outline-secondary" type="button" id="copyLinkProjectBtn" data-i18n="Copy"></button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button id="close-create-agent" type="submit" class="btn btn-success">Create</button>
+                    <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button id="close-create-agent" type="submit" class="btn btn-success" data-i18n="Create"></button>
                 </div>
             </form>
         </div>
@@ -205,35 +178,58 @@ Projects
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 
+    $(document).ready(function(){
+            $('#agent-rest-url').inputmask({
+                mask: 'https\\://9{1,3}.9{1,3}.9{1,3}.9{1,3}:9{1,5}',
+                definitions: {
+                    '9': {
+                        validator: '[0-9]',
+                        cardinality: 1
+                    }
+                },
+                placeholder: ' ',
+                clearIncomplete: true
+            });
+        });
+
     /* ip mask */
     var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-ip'))
     /* Agent create callback */
-    async function fillParentAgents() {
-        let resp = await fetch("/api/v1/agents")
+    async function fillPossibleAgents() {
+        let resp = await fetch("/api/v1/agents_in_project/settings/possible_agents")
         let agents = await resp.json()
-        let _select = document.getElementById("parent-agent-id")
-        let result = ""
-        for (const agent of agents) {
-            result += `<option value=${agent.id}>${agent.name}</option>`
+        let agents_container = document.getElementById("agentsInProjectConnected")
+        result = ``
+        for (const agent of agents){
+            result += `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" 
+                    id="agent_${agent.id}" agent_id=${agent.id}>
+                    <label class="form-check-label" for="agent_${agent.id}">
+                        ${agent.name} - ${agent.rest_url}
+                    </label>
+                </div>
+            `
         }
-        _select.innerHTML = result
+        agents_container.innerHTML = result
+        let myModal = new bootstrap.Modal(document.getElementById('agentModal'));
+        myModal.show();
     }
-    async function createAgent() {
-        parent_agent_id = document.getElementById('parent-agent-id').value
-        name = document.getElementById('agent-name').value
-        desc = document.getElementById('agent-description').value
-        color = document.getElementById('agent-color').value
-        rest_url = document.getElementById('agent-rest-url').value
-        agent = new Object()
-        agent.color = color
-        agent.name = name
-        agent.description = desc
-        agent.rest_url = rest_url
-        agent.parent_agent_id = parent_agent_id
-        resp = await fetch('/api/v1/agents',
+    async function addAgentsToProject() {
+        let el = document.getElementById("agentsInProjectConnected")
+        let agents = new Object({agents: new Object()})
+            for (const check of el.children){
+                for (const elem of check.children){
+                    if (elem.localName != "input"){
+                        continue
+                    }
+                    agents.agents[elem.attributes.agent_id.nodeValue] = elem.checked
+                }
+            }
+        resp = await fetch('/api/v1/agents_in_project/settings/possible_agents',
             {
-                method: 'post',
-                body: JSON.stringify(agent),
+                method: 'PATCH',
+                body: JSON.stringify(agents),
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -266,7 +262,7 @@ Projects
                 }
             }
         }
-        let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
+        let resp = await fetch(`/api/v1/agents_in_project/${currentAgent}/interfaces`,
         { method: 'PATCH',
         headers: {"Content-Type": "application/json",},
         body: JSON.stringify(result) 
@@ -338,6 +334,24 @@ Projects
             let data = await resp.json()
             let tokenEl = document.getElementById("inviteToProjectToken")
             tokenEl.value = data.token
+
+            let urlInput = document.getElementById("inviteToProjectURL");
+            // let urlLink = document.getElementById("inviteToSetezorURLLink");
+            
+            tokenEl.value = data.token;
+            
+            const baseUrl = window.location.origin;
+            const registrationLink = `${baseUrl}/projects?token=${data.token}`;
+            
+            urlInput.value = registrationLink;
+            // urlLink.href = registrationLink;
+            
+            document.getElementById("copyLinkProjectBtn").addEventListener("click", function() {
+                urlInput.select();
+                document.execCommand("copy");
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-outline-success');
+            });
     }
 </script>
 
@@ -411,12 +425,12 @@ Projects
         value = element.value
         body = { color: value }
         resp = await fetch(
-            '/api/v1/agents/' + agent_id + '/update_color', 
+            '/api/v1/agents_in_project/' + agent_id + '/update_color', 
             { method: 'PATCH',
-            headers: {"Content-Type": "application/json",},
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(body) })
         if (resp.ok) {
-            console.log(`Agent ${agent_id} successfuly updated with color <${JSON.stringify(value)}>`)
+            console.log(`Agent ${agent_id} successfully updated with color <${JSON.stringify(value)}>`)
         }
         else {
             console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
@@ -450,26 +464,23 @@ Projects
 
     let currentAgent = 0
     function configureAgentFormatter(cell) {
-        agent_id = cell.getRow().getData().id
+        let agent_id = cell.getRow().getData().id
         if (cell.getRow().getData().parent_agent_name == ""){
+            return ''
+        }
+        if (cell.getRow().getData().rest_url == ""){
             return ''
         }
         return `<div class="d-flex justify-content-start align-items-center">
                     <div class="btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';getAgentInterfaces(currentAgent)">
-                        Configure interfaces
+                        ${i18next.t('Configure interfaces')}
                     </div>
-                    ${cell.getRow().getData().rest_url != ''? `<div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
-                        Connect
-                    </div>
-                </div>`:""}
-                    
-                
-                `
+                </div>`
     }
     let currentAgentInterfaces = []
     async function getAgentInterfaces(id) {
         currentAgentInterfaces = []
-        resp = await fetch(`/api/v1/agents/${id}/remote_interfaces`)
+        resp = await fetch(`/api/v1/agents_in_project/${id}/remote_interfaces`)
         if (resp.ok) {
             data = await resp.json()
             if (data.length == 0){
@@ -517,7 +528,7 @@ Projects
 
     var agent_table = new Tabulator('#agent_table', {
         layout: "fitColumns",
-        ajaxURL: "/api/v1/agents/settings",
+        ajaxURL: "/api/v1/agents_in_project/settings",
         selectable: false,
         sortMode: "remote",
         filterMode: "remote",

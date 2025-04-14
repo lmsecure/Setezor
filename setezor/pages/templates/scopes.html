@@ -7,16 +7,16 @@ Projects
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <button class="btn btn-success mt-2" data-bs-toggle="modal" data-bs-target="#scopeAddModal">Add scope</button>
+    <button class="btn btn-success mt-2" data-bs-toggle="modal" data-bs-target="#scopeAddModal" data-i18n="Add scope"></button>
     <div class="row mt-2 flex-row">
         <div class="col-3">
             <div class="mt-2">
                 <table class="table table-hover w-100">
                     <thead>
                       <tr>
-                        <th scope="col" style="width: 20%;">Name</th>
-                        <th scope="col" style="width: 60%;">Description</th>
-                        <th scope="col" style="width: 20%;">Actions</th>
+                        <th scope="col" style="width: 20%;" data-i18n="Name"></th>
+                        <th scope="col" style="width: 60%;" data-i18n="Description"></th>
+                        <th scope="col" style="width: 20%;" data-i18n="Actions"></th>
                       </tr>
                     </thead>
                 </table>
@@ -33,23 +33,23 @@ Projects
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="staticBackdropLabel">Adding scope</h1>
+                <h1 class="modal-title fs-5" id="staticBackdropLabel" data-i18n="Adding scope"></h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="addScope(event)">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="scopeName" class="form-label">Scope name</label>
+                        <label for="scopeName" class="form-label" data-i18n="Scope name"></label>
                         <input type="text" name="name" class="form-control" id="scopeName" required aria-describedby="scopeName">
                     </div>
                     <div class="mb-3">
-                        <label for="scopeDescription" class="form-label">Scope description</label>
+                        <label for="scopeDescription" class="form-label" data-i18n="Scope description"></label>
                         <input type="text" name="description" class="form-control" id="scopeDescription" aria-describedby="scopeDescription">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Add</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-primary" data-i18n="Add"></button>
                 </div>
             </form>
         </div>
@@ -86,7 +86,7 @@ Projects
                                         </button>
                                     </div>
                                 </td>
-                                <td><button class="btn btn-danger mt-1" onclick="deleteScope('${scope.id}')">Delete</button></td>
+                                <td><button class="btn btn-danger mt-1" onclick="deleteScope('${scope.id}')">${i18next.t('Delete')}</button></td>
                                 
                             </tr>
                         </table>
@@ -128,14 +128,14 @@ Projects
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title"> Removal scope</h5>
+                        <h5 class="modal-title">${i18next.t('Removal scope')} </h5>
                     </div>
                     <div class="modal-body justify-content-center">
-                        Are you sure you want to delete the scope?
+                        ${i18next.t('Are you sure you want to delete the scope?')}
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModal"> Cancel </button>
-                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteScopeButton"> Delete </button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModal">  ${i18next.t('Cancel')} </button>
+                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteScopeButton"> ${i18next.t('Delete')} </button>
                     </div>
                 <div>
             </div>
@@ -144,6 +144,8 @@ Projects
         document.getElementById("DeleteScopeButton").onclick = async function () {
             await axios.delete(`/api/v1/scope/${scopeId}`).then(response => {
                 getScopes();
+                get_nmap_scope_list();
+                get_masscan_scope_list('')
                 })  
             };
         let modal = new bootstrap.Modal(modal_elem.children[0]);
@@ -157,14 +159,14 @@ Projects
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Removal target</h5>
+                        <h5 class="modal-title">${i18next.t('Removal target')}</h5>
                     </div>
                     <div class="modal-body justify-content-center">
-                        Are you sure you want to delete the target?
+                        ${i18next.t('Are you sure you want to delete the target?')}
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelTargetDeleteModal">Cancel</button>
-                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteTargetButton">Delete</button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelTargetDeleteModal">${i18next.t('Cancel')}</button>
+                        <button class="btn btn-danger" type="button" data-bs-dismiss="modal" id="DeleteTargetButton">${i18next.t('Delete')}</button>
                     </div>
                 <div>
             </div>
@@ -199,6 +201,8 @@ Projects
         let formData = new FormData(event.target);
         await axios.post("/api/v1/scope", formData, { headers: { 'Content-Type': 'application/json' } }).then(response => {
             getScopes();
+            get_nmap_scope_list();
+            get_masscan_scope_list('')
         });
     }
 
@@ -210,13 +214,13 @@ Projects
                 result = `
                     <table class="table table-bordered">
                         <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
-                            <button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>
+                            <button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> ${i18next.t('Add targets')} </button>
                             <tr>
-                                <th scope="col">PROTOCOL</th>
-                                <th scope="col">IP</th>
-                                <th scope="col">DOMAIN</th>
-                                <th scope="col">PORT</th>
-                                <th scope="col">ACTION</th>
+                                <th scope="col">${i18next.t('PROTOCOL')} </th>
+                                <th scope="col">${i18next.t('IP')}</th>
+                                <th scope="col">${i18next.t('DOMAIN')}</th>
+                                <th scope="col">${i18next.t('PORT')}</th>
+                                <th scope="col">${i18next.t('ACTION')}</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -227,16 +231,16 @@ Projects
                     result += `<td><span class="editable" data-field="domain">${target.domain || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
                     result += `<td>
-                                    <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">Edit</button>
-                                    <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">Delete</button>
-                                    <button class="btn btn-danger cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">Cancel</button>
-                                    <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">Confirm</button>
+                                    <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
+                                    <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">${i18next.t('Delete')}</button>
+                                    <button class="btn btn-danger cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">${i18next.t('Cancel')}</button>
+                                    <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">${i18next.t('Confirm')}</button>
                                 </td>`;
                     result += `</tr>`;
                 }
                 result += `</tbody></table>`;
             } else {
-                result = `<button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> Add targets </button>`;
+                result = `<button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> ${i18next.t('Add targets')} </button>`;
             }
             el.innerHTML = result;
         });
@@ -319,18 +323,18 @@ Projects
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title"> Choose method for adding targets on scope</h5>
+                        <h5 class="modal-title"> ${i18next.t('Choose method for adding targets on scope')}</h5>
                     </div>
                     <div class="modal-body justify-content-center">
                         <div class="col-1 w-100">
-                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsManually"> Enter targets manually </button>
-                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsFromDataBase"> Add targets from data base </button>
-                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChiveMethodAddTargetsFromFile"> Add targets from file </button>
+                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsManually"> ${i18next.t('Enter targets manually')} </button>
+                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChoiceMethodEnterTargetsFromDataBase"> ${i18next.t('Add targets from data base')} </button>
+                            <button class="btn btn-primary m-1 w-100" type="button" data-bs-dismiss="modal" id="idButtonChiveMethodAddTargetsFromFile"> ${i18next.t('Add targets from file')} </button>
                         </div>
-                        <span>To upload a file, use the .csv format of the following type: "Protocol, IP, Domain, Port"</span>
+                        <span>${i18next.t("To upload a file, use the .csv format of the following type: 'Protocol, IP, Domain, Port'")}</span>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalChoicingMethodAddingTargets"> Cancel </button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalChoicingMethodAddingTargets"> ${i18next.t('Cancel')} </button>
                     </div>
                 <div>
             </div>
@@ -350,15 +354,15 @@ Projects
             <div class="modal-dialog">
                 <div class="modal-content" style="width: 60rem;">
                     <div class="modal-header">
-                        <h5 class="modal-title"> Enter targets for adding on scope</h5>
+                        <h5 class="modal-title"> ${i18next.t('Enter targets for adding on scope')}</h5>
                     </div>
                     <div class="modal-body justify-content-center">
                         <div class="col-1 w-100">
                             <div class="input-group" style="width: calc(100% - 3rem);">
-                                <span class="text" style="width: 25%;" id="target_protocol"> Protocol: </span>
-                                <span class="text" style="width: 25%;" id="target_ip"> IP: </span>
-                                <span class="text" style="width: 25%;" id="target_doamin"> Domain: </span>
-                                <span class="text" style="width: 25%;" id="target_port"> Port: </span>
+                                <span class="text" style="width: 25%;" id="target_protocol"> ${i18next.t('Protocol')} </span>
+                                <span class="text" style="width: 25%;" id="target_ip"> IP </span>
+                                <span class="text" style="width: 25%;" id="target_doamin"> ${i18next.t('Domain')} </span>
+                                <span class="text" style="width: 25%;" id="target_port"> ${i18next.t('Port')} </span>
                             </div>
                             <div id="ScopeTargetsContainer"> </div>
                             <div class="input-group" id="idEnterScopeTargetsOriginal">
@@ -375,8 +379,8 @@ Projects
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="addEnterTargets('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); "> Add targets </button>
-                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> Cancel </button>
+                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="addEnterTargets('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); "> ${i18next.t('Add targets')} </button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> ${i18next.t('Cancel')} </button>
                     </div>
                 <div>
             </div>
@@ -392,24 +396,24 @@ Projects
             <div class="modal-dialog">
                 <div class="modal-content" style="width: 60rem;">
                     <div class="modal-header">
-                        <h5 class="modal-title"> Enter targets for adding on scope</h5>
+                        <h5 class="modal-title"> ${i18next.t('Enter targets for adding on scope')} </h5>
                     </div>
                     <div class="modal-body justify-content-center">
                         <div class="w-100">
                             <div class="container">
                                 <div class="btn-group row row-cols-3 g-2 p-1 w-100" id="IpsDomainsDropdown">
                                     <button type="button" class="btn btn-outline-primary dropdown-toggle" style="flex: none" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Select targets
+                                        ${i18next.t('Select targets')}
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">IP</a></li>
-                                        <li><a class="dropdown-item" href="#">IP:Port</a></li>
-                                        <li><a class="dropdown-item" href="#">Domains</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="IP">${i18next.t('IP')}</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="IP:Port">${i18next.t('IP-Port')}</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="Domains">${i18next.t('Domains')}</a></li>
                                     </ul>
                                     <div class="form-check ms-3" >
                                         <input class="form-check-input" type="checkbox" id="selectAllTargets">
                                         <label class="form-check-label" for="selectAllTargets">
-                                            Select All
+                                            ${i18next.t('Select All')}
                                         </label>
                                     </div>
                                 </div>
@@ -419,8 +423,8 @@ Projects
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="processSelectedItems('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); "> Add targets </button>
-                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> Cancel </button>
+                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="processSelectedItems('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); ">  ${i18next.t('Add targets')} </button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> ${i18next.t('Cancel')} </button>
                     </div>
                 <div>
             </div>
@@ -449,10 +453,10 @@ Projects
                 item.addEventListener('click', async function(e) {
                     e.preventDefault();
 
-                    let selectedText = this.textContent
-                    dropdownButton.textContent = selectedText
+                    let selectedValue = this.getAttribute('data-value')
+                    dropdownButton.textContent = selectedValue
 
-                    if (selectedText === 'IP'){
+                    if (selectedValue === 'IP'){
                         await axios.get(`/api/v1/target/get_ips`).then(response => {
                             resultContainer.innerHTML = ``
                             response.data.forEach(ip => {
@@ -466,7 +470,7 @@ Projects
                                                                 </div>`
                             })
                         });
-                    } else if (selectedText === 'Domains'){
+                    } else if (selectedValue === 'Domains'){
                         resultContainer.innerHTML = ``
                         await axios.get(`/api/v1/target/get_domains`).then(response => {
                             response.data.forEach(domain => {
@@ -478,7 +482,7 @@ Projects
                                                                 </div>`
                             })
                         })
-                    }   else if (selectedText === 'IP:Port'){
+                    }   else if (selectedValue === 'IP:Port'){
                         resultContainer.innerHTML = ``
                         await axios.get(`/api/v1/target/get_ips_ports`).then(response => {
                             response.data.forEach(ip_port => {

@@ -1,7 +1,7 @@
 {% macro show() %}
 <div class="p-3">
     <button class="btn btn-primary mt-1" id="updateScans" data-bs-toggle="tooltip" data-bs-toggle="top"
-        title="Update scans" onclick="scans_table.dataLoader.reloadData()"><i
+        data-i18n-title="Update scans" onclick="scans_table.dataLoader.reloadData()"><i
             class="bi bi-arrow-clockwise"></i></button>
     <div class="d-flex flex-row mt-2">
         <div class="flex-row">
@@ -31,7 +31,7 @@
                         onclick="document.getElementById('createReportForm').reset();
                         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
                         fillReportTemplates();
-                        document.getElementById('acunetix_report_scan_id').value='${cell.getRow().getData().scan_id}'">Create report</button>
+                        document.getElementById('acunetix_report_scan_id').value='${cell.getRow().getData().scan_id}'">${i18next.t('Create report')}</button>
         `
     }
     var scans_table = new Tabulator('#scans_table', {

@@ -12,7 +12,7 @@
             <div class="ms-1">
                 <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addGroup"
                     onclick="document.getElementById('groupAddForm').reset();
-                    fillAcunetixInstances('acunetix_instance_group_add','acunetixTargetGroupAdd')">Add Group</button>
+                    fillAcunetixInstances('acunetix_instance_group_add','acunetixTargetGroupAdd')" data-i18n="Add Group"></button>
             </div>
         </div>
     </div>
@@ -25,7 +25,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addGroupLabel">Adding group</h5>
+                <h5 class="modal-title" id="addGroupLabel" data-i18n="Adding group"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="add_group(event)" id="groupAddForm">
@@ -33,13 +33,13 @@
                     <div id="acunetix_instance_group_add">
 
                     </div>
-                    <input type="text" class="form-control mt-1" name="name" required placeholder="Group Name">
-                    <input type="text" class="form-control mt-1" name="description" placeholder="Description">
+                    <input type="text" class="form-control mt-1" name="name" required data-i18n-placeholder="Group Name">
+                    <input type="text" class="form-control mt-1" name="description" data-i18n-placeholder="Description">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_adding"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Add</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </div>
             </form>
 
@@ -89,7 +89,7 @@
         resp = await fetch("/api/v1/acunetix/config")
         data = await resp.json()
         result = `<select name='acunetix_id' required onchange='fillGroups(event, "${groups_id}")' class='form-select'>
-            <option value=''>Acunetix Name</option>`
+            <option value=''>${i18next.t('Acunetix Name')}</option>`
         for (const instance of data){
             result += `<option value='${instance.id}'>${instance.name}</option>`
         }
@@ -113,18 +113,18 @@
                         fillAcunetixScanSpeeds();
                         fillAcunetixScanProfiles();
                         currentAcunetixName='${cell.getRow().getData().acunetix_id}';
-                        document.getElementById('acunetix_scan_group_id').value='${cell.getRow().getData().group_id}'">Scan</button>
+                        document.getElementById('acunetix_scan_group_id').value='${cell.getRow().getData().group_id}'">${i18next.t('Scan')}</button>
                         <button class='btn btn-secondary btn-sm' id="{{groups_tab.name}}-target-${cell.getRow().getData().group_id}"
                         onclick="currentAcunetixName='${cell.getRow().getData().acunetix_id}';
                         getGroupTargets('${cell.getRow().getData().group_id}')"
-                        data-bs-toggle="modal" data-bs-target="#setGroupTargetsModal">Edit membership</button>
+                        data-bs-toggle="modal" data-bs-target="#setGroupTargetsModal">${i18next.t('Edit membership')}</button>
                         
             </div>
             <div class="col mt-1">
                 <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#setProxy" onclick="document.getElementById('setProxyForm').reset();
                 currentAcunetixName='${cell.getRow().getData().acunetix_id}';
                 document.getElementById('acunetix_proxy_group_id').value='${cell.getRow().getData().group_id}';
-                document.getElementById('acunetix_proxy_target_id').value=''">Set Proxy</button>
+                document.getElementById('acunetix_proxy_target_id').value=''">${i18next.t('Set Proxy')}</button>
             </div>
         </div>`;
     }

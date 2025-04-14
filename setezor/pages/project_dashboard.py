@@ -41,7 +41,7 @@ async def projects_dashboard_page(
         "current_project_id": project.id,
         'tab': {
             'name': 'analytics',
-            'base_url': f'/api/v1/analytics/l4_software',
+            'base_url': f'/api/v1/analytics/software',
             'columns': AnalyticsService.get_l4_software_columns_tabulator_data()
         },
         "analytics": {}

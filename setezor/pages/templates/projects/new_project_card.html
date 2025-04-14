@@ -55,18 +55,13 @@
                 </i>
             </div>
         </h6>
-        <div class="card-body d-flex flex-column" style="padding-top: 0px;">
-            <div class="mt-auto" style="padding-top: 0px;">
-                <h5 class="card-title">New Project</h5>
-                <div class="pb-2">
-                    <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
-                        placeholder="Project name" required onkeydown="preventEnter(event)">
-                    <div class="invalid-feedback">Please, type project name</div>
-                </div>
-                <button class="btn btn-success flex-fill w-100" id="createProjectButton" onclick="createProject()">
-                    Create
-                </button>
+        <div class="card-body d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+            <h5 class="card-title" data-i18n="New Project"></h5>
+            <div class="pb-2 w-100">
+                <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
+                data-i18n-placeholder="Project name" required onkeydown="preventEnter(event)">
             </div>
+            <button class="btn btn-success w-100" id="createProjectButton" onclick="createProject()" data-i18n="Create"></button>
         </div>
     </div>
     <div class="card h-50">
@@ -81,27 +76,38 @@
                 </i>
             </div>
         </h6>
-        <div class="card-body d-flex flex-column" style="padding-top: 0px;">
-            <div class="mt-auto" style="padding-top: 0px;">
+        <div class="card-body d-flex flex-column justify-content-center" style="height: 100%; padding-top: 0;">
+            <div>
                 <h4 class="card-title">
                     <div class="d-flex align-items-center">
-                       <h5> Enter By Token </h5>
+                        <h5 data-i18n="Enter By Token"></h5>
                     </div>
                 </h4>
                 <div class="pb-2">
-                    <input id="invite_token_enter" type="text" class="form-control" maxlength="64"
-                        placeholder="Invite Token">
-                    <div class="invalid-feedback">Please, type project name</div>
+                    <input id="invite_token_enter" name="invite_token_enter" type="text" class="form-control" maxlength="64"
+                           data-i18n-placeholder="Invite Token">
                 </div>
-                <button class="btn btn-success flex-fill w-100" id="createProjectButton" onclick="enterByToken()">
-                    Enter
-                </button>
+                <button class="btn btn-success w-100" id="enterByTokenButton" onclick="enterByToken()" data-i18n="Enter"></button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = getQueryParam('token');
+        if (token) {
+            const tokenField = document.querySelector('input[name="invite_token_enter"]');
+            if (tokenField) {
+                tokenField.value = token;
+            }
+        }
+    });
     function preventEnter(event) {
         if (event.key === "Enter") {
             event.preventDefault();

@@ -11,6 +11,7 @@ import orjson
 from setezor.managers.scheduler_manager import SchedulerManager
 from setezor.managers.websocket_manager import WS_MANAGER
 from setezor.models.target import Target
+from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_service import AgentService
 from setezor.services.data_structure_service import DataStructureService
 from setezor.services.scope_service import ScopeService
@@ -146,8 +147,9 @@ class TaskManager(Observer):
                          project_id: str,
                          scan_id: str,
                          **kwargs) -> Task:
-        agent_id = kwargs.get("agent_id")
-        agent = await AgentService.get_by_id(uow=uow, id=agent_id)
+        agent_id_in_project = kwargs.get("agent_id")
+        agent_in_project = await AgentInProjectService.get_agent_in_project(uow=uow, id=agent_id_in_project)
+        agent = await AgentService.get_by_id(uow=uow, id=agent_in_project.agent_id)
         if not agent.rest_url:
             message = WebSocketMessage(title="Error",
                                        text=f"Agent {agent.name} is synthetic",
@@ -155,14 +157,6 @@ class TaskManager(Observer):
             await WS_MANAGER.send_message(project_id=project_id, message=message)
             raise HTTPException(status_code=403,
                                 detail=f"Agent {agent.name} is synthetic")
-        if not agent.parent_agent_id:
-            message = WebSocketMessage(title="Error",
-                                       text=f"Agent {
-                                           agent.name} has no parent agent",
-                                       type="error")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
-            raise HTTPException(status_code=403,
-                                detail=f"Agent {agent.name} has no parent agent")
         if not agent.secret_key:
             message = WebSocketMessage(title="Error",
                                        text=f"Agent {
@@ -173,13 +167,12 @@ class TaskManager(Observer):
                                 detail=f"Agent {agent.name} has no secret key")
 
         agents_chain = await AgentService.get_agents_chain(uow=uow,
-                                                           agent_id=agent_id,
-                                                           project_id=project_id)
-
+                                                           agent_id=agent.id,
+                                                           user_id=agent.user_id)
         task: Task = await TasksService.create(uow=uow, project_id=project_id,
                                                scan_id=scan_id,
                                                params=kwargs,
-                                               agent_id=agent_id,
+                                               agent_id=agent_id_in_project,
                                                created_by=job.__name__)
 
         message = WebSocketMessage(title="Task status",
@@ -191,21 +184,22 @@ class TaskManager(Observer):
         task_in_agent_chain = TaskPayload(
             task_id=task.id,
             project_id=project_id,
-            agent_id=agent_id,
+            agent_id=agent_id_in_project,
             job_name=job.__name__,
             job_params=kwargs,
         )
         data = {
             "signal": "create_task",
-            "agent_id": agent_id,
+            "agent_id": agent_id_in_project,
             "project_id": project_id,
             **task_in_agent_chain.model_dump()
         }
-        payload = AgentManager.cipher_chain(agents_chain=agents_chain,
-                                            data=data,
-                                            close_connection=True)
-        body = payload["data"].encode()
-        data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+        for chain in agents_chain:
+            payload = AgentManager.cipher_chain(agents_chain=chain,
+                                                data=data,
+                                                close_connection=True)
+            body = payload["data"].encode()
+            status = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
         return task
 
     @classmethod  # метод агента на создание джобы
@@ -228,18 +222,21 @@ class TaskManager(Observer):
     @classmethod
     async def soft_stop_task(cls, uow: UnitOfWork, id: str, project_id: str) -> bool:
         task: Task = await TasksService.get(uow=uow, id=id, project_id=project_id)
+        agent_in_project = await AgentInProjectService.get_agent_in_project(uow=uow, id=task.agent_id)
+        agent = await AgentService.get_by_id(uow=uow, id=agent_in_project.agent_id)
         agents_chain = await AgentService.get_agents_chain(uow=uow,
-                                                           agent_id=task.agent_id,
-                                                           project_id=project_id)
+                                                           agent_id=agent_in_project.agent_id,
+                                                           user_id=agent.user_id)
         data = {
             "signal": "soft_stop_task",
             "id": id,
         }
-        payload = AgentManager.cipher_chain(
-            agents_chain=agents_chain, data=data, close_connection=True)
-        body = payload["data"].encode()
-        data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
-        return True
+        for chain in agents_chain:
+            payload = AgentManager.cipher_chain(
+                agents_chain=chain, data=data, close_connection=True)
+            body = payload["data"].encode()
+            data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+            return True
 
     @classmethod  # метод агента на мягкое завершение таски
     async def soft_stop_task_on_agent(cls, id: str) -> str:
@@ -271,7 +268,7 @@ class TaskManager(Observer):
                 if not payload.pop("signal", None) == "connect":
                     raise Exception("Invalid packet")
                 Spy.SECRET_KEY = payload.get("key")
-                Spy.PARENT_AGENT_URL = payload.get("parent_agent_url")
+                Spy.PARENT_AGENT_URLS = payload.get("parent_agents_urls")
                 async with aiofiles.open(os.path.join(PATH_PREFIX, "config.json"), 'w') as file:
                     await file.write(json.dumps(payload))
                 return base64.b64encode(b'OK')
@@ -319,9 +316,7 @@ class TaskManager(Observer):
         data: BackWardData,
         background_tasks: BackgroundTasks = None
     ) -> bool:
-        background_tasks.add_task(HTTPManager.send_json,
-                                  url=f"{
-                                      Spy.PARENT_AGENT_URL}/api/v1/agents/backward",
+        background_tasks.add_task(AgentManager.send_to_parent,
                                   data=data.model_dump())
         return True
 
@@ -342,23 +337,27 @@ class TaskManager(Observer):
             "raw_result": b64encoded_raw_result,
             "raw_result_extension": raw_result_extension,
         }
-        ciphered_data = AgentManager.single_cipher(
+        ciphered_data = AgentManager.single_cipher(is_connected=True,
             key=Spy.SECRET_KEY, data=result).decode()
         data_for_parent_agent = {
             "sender": agent_id,
             "data": ciphered_data
         }
-        url = f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward"
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=data_for_parent_agent, ssl=False) as resp:
-                return resp.status
+        for PARENT_URL in Spy.PARENT_AGENT_URLS:
+            status = await HTTPManager.send_json(url=f"{PARENT_URL}/api/v1/agents/backward",
+                                        data=data_for_parent_agent)
+            if status == 200:
+                break
 
     @classmethod
     async def notify(cls, agent_id: str, data: dict):
         data_for_server = AgentManager.generate_data_for_server(agent_id=agent_id,
                                                                 data=data)
-        await HTTPManager.send_json(url=f"{Spy.PARENT_AGENT_URL}/api/v1/agents/backward",
-                                    data=data_for_server)
+        for PARENT_URL in Spy.PARENT_AGENT_URLS:
+            status = await HTTPManager.send_json(url=f"{PARENT_URL}/api/v1/agents/backward",
+                                        data=data_for_server)
+            if status == 200:
+                break
 
     @classmethod
     async def task_status_changer_for_local_job(cls, data: dict, uow: UnitOfWork, project_id: str):
@@ -378,8 +377,7 @@ class TaskManager(Observer):
         await service.make_magic()
         await TasksService.set_status(uow=uow,
                                       id=task_id,
-                                      status=TaskStatus.finished,
-                                      project_id=project_id)
+                                      status=TaskStatus.finished)
         payload = WebSocketMessage(
             title="Task status",
             text=f"Task with {task_id=} {TaskStatus.finished}",

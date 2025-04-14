@@ -1,6 +1,6 @@
 import re
 from cpeguess.cpeguess import CPEGuess
-from setezor.models import IP, Port, Domain, Software, Vendor, L7, L7Software
+from setezor.models import IP, Port, DNS_A, Domain, Software, Vendor, L4Software
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
@@ -67,7 +67,7 @@ class WappalyzerParser:
         # to do - берется url со статусом 200, но его может не быть...
         if not wappalyzer_log.get('technologies', []):
             return {}
-        url = list(wappalyzer_log.get('urls').keys())[-1]                   
+        url = list(wappalyzer_log.get('urls').keys())[-1]
         result = parse_url(url)
 
         categories_id = set()
@@ -108,21 +108,23 @@ class WappalyzerParser:
     async def restruct_result(cls, data: dict):
         if not data:
             return []
-        
-        vendors = {}
-        softwares = {}
 
         result = []
+        vendors = {}
+        softwares = {}
         port = data.get("port")
         domain = data.get("domain")
         ip = data.get("ip")
 
         new_ip = None
+        dns_a_obj = None
         if domain:
             new_domain = Domain(domain=domain)
             try:
                 responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
                 new_domain, new_ip, *dns_a = DNSModule.proceed_records(domain, responses) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                if dns_a:
+                    dns_a_obj = dns_a[0]
                 result.extend([new_domain, new_ip, *dns_a])
             except:
                 result.append(new_domain)
@@ -136,47 +138,40 @@ class WappalyzerParser:
             else:
                 new_ip = IP(ip="")
                 result.append(new_ip)
-        if port:
-            new_port = Port(port=port, ip=new_ip)
-            result.append(new_port)
+            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+            if not dns_a_obj:
+                dns_a_obj = new_dns_a
+            result.append(new_dns_a)
+        new_port = Port(port=port, ip=new_ip)
+        result.append(new_port)
 
-
-        new_l7 = L7(port=new_port, domain=new_domain)
-        result.append(new_l7)
         for software in data["softwares"]:
             soft = software.model_dump()
             if all(v is None for v in soft.values()) or (not software.vendor and not software.product):
                 continue
-            
             vendor_name = soft.pop("vendor")
-                    
             if vendor_name and vendor_name in vendors:
                 vendor_obj = vendors.get(vendor_name)
             else:
                 vendor_obj = Vendor(name=vendor_name)
                 vendors[vendor_name] = vendor_obj
                 result.append(vendor_obj)
-            
             hash_string = vendor_name or "" + "_" + "_".join([v for v in soft.values() if v])
-
             if not (hash_string and hash_string in softwares):
                 soft_obj = Software(vendor=vendor_obj, **soft)
                 softwares[hash_string] = soft_obj
                 result.append(soft_obj)
-                new_l7_soft = L7Software(l7=new_l7, software=soft_obj)
-                result.append(new_l7_soft)
+                new_soft_obj = L4Software(l4=new_port, software=soft_obj, dns_a=dns_a_obj)
+                result.append(new_soft_obj)
         return result
 
     @staticmethod
     def get_groups():
         return dict(sorted(WappalyzerParser.groups.items(), key=lambda x: x[0]))
-    
+
     @staticmethod
     def get_categories_by_group():
         result = {}
         for group_name, ids in WappalyzerParser.groups.items():
             result.update({group_name : '\n'.join([name for id, name in WappalyzerParser.categories.items() if id in ids])})
         return result
-
-    
-

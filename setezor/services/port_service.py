@@ -37,6 +37,7 @@ class PortService(IService):
                 "id": res.id,
                 "ip": res.ip,
                 "port": res.port,
+                "domain": res.domain,
                 "vuln_count": res.cnt
                 })
         return result
@@ -90,3 +91,9 @@ class PortService(IService):
                 }
             )
         return result
+
+    @classmethod
+    async def get_resources_for_snmp(cls, uow: UnitOfWork, project_id: str, scan_id):
+        async with uow:
+            data = await uow.port.get_resource_for_snmp(project_id=project_id, scan_id=scan_id)
+        return [{"ip" : ip, "port" : port} for ip, port in data]

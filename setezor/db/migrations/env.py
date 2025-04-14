@@ -25,7 +25,7 @@ def run_migrations_offline() -> None:
 
 def do_migrations(connection):
     context.configure(
-        connection=connection, target_metadata=target_metadata
+        connection=connection, target_metadata=target_metadata,
     )
 
     with context.begin_transaction():

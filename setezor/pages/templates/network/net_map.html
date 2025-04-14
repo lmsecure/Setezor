@@ -24,14 +24,14 @@
                     this.textContent = 'Decluster'
                 } else {
                     this.textContent = 'Cluster'
-                }">Cluster</button>
+                }" data-i18n="Cluster"></button>
         <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
-            title="Fullscreen mode" onclick="fullscreen_network()" style="font-family: 'Times New Roman', Times, serif;"><i class="bi bi-arrows-fullscreen"></i></button>
+        data-i18n-title="Fullscreen mode" onclick="fullscreen_network()" style="font-family: 'Times New Roman', Times, serif;"><i class="bi bi-arrows-fullscreen"></i></button>
         <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
         <div class="btn-group" role="group">
             <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
                 aria-expanded="false" style="font-family: 'Times New Roman', Times, serif;">
-                <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" title="Export to"></i>
+                <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" data-i18n-title="Export to"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
                 <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
@@ -40,7 +40,7 @@
             </ul>
         </div>
         <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top" style="font-family: 'Times New Roman', Times, serif;"
-            title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
+        data-i18n-title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
 
     </div>
     <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
@@ -81,17 +81,17 @@
 </script>
 
 <div id="edge-popUp" style="display: none;">
-    <span id="edge-operation">Add Edge</span> <br>
+    <span id="edge-operation" data-i18n="Add Edge"></span> <br>
     <table style="margin: auto">
         <tbody>
             <tr>
                 <td>label</td>
-                <td><input id="edge-label" value="new value"></td>
+                <td><input id="edge-label" data-i18n-value="new value"></td>
             </tr>
         </tbody>
     </table>
-    <input type="button" value="save" id="edge-saveButton">
-    <input type="button" value="cancel" id="edge-cancelButton">
+    <input type="button" data-i18n-value="save" id="edge-saveButton">
+    <input type="button" data-i18n-value="cancel" id="edge-cancelButton">
 </div>
 
 
@@ -105,13 +105,12 @@
         </div>
     </div>
 </div>
+{% if role.name == "owner" or role.name == "executor"%}
 <div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
-    {% if role.name == "owner" or role.name == "executor"%}
     <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
-                aria-expanded="false">Device
-                type</a>
+                aria-expanded="false" data-i18n="Device type"></a>
             <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
                 {% for device_type in device_types %}
                 <li><a class="dropdown-item" href="#" onclick="set_device_type(this)"
@@ -121,12 +120,12 @@
         </li>
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
-                aria-expanded="false">Tools</a>
+                aria-expanded="false" data-i18n="Tools"></a>
             <ul class="dropdown-menu">
-                <li><a a class="dropdown-item"  onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                <li><a a class="dropdown-item"  onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))">
                     Nmap
                 </a></li>
-                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))">
                     Masscan
                 </a></li>
                 <li><a a class="dropdown-item"  onclick="domains_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
@@ -173,8 +172,8 @@
                 </ul>
         </li> -->
     </ul>
-    {% endif %}
 </div>
+{% endif %}
 <div class="dropdown xs" id="agentDropdownMenu" style="display:none">
     <!-- <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
@@ -243,24 +242,24 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="agentModalNetMapLabel">Create agent</h5>
+                <h5 class="modal-title" id="agentModalNetMapLabel" data-i18n="Create agent"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <table style="margin: auto">
                     <tbody>
                         <tr>
-                            <td>Agent name</td>
+                            <td data-i18n="Agent name"></td>
                             <td><input id="agent-name" class="form-control" value="" required></td>
                         </tr>
                         <tr>
-                            <td>Agent description</td>
+                            <td data-i18n="Agent description"></td>
                             <td>
                                 <textarea class="form-control" id="agent-description" rows="3"></textarea>
                             </td>
                         </tr>
                         <tr>
-                            <td>Agent color</td>
+                            <td data-i18n="Agent color"></td>
                             <td><input id="agent-color" type="color" class="form-control" value="#000000"></td>
                         </tr>
                     </tbody>
@@ -268,8 +267,8 @@
 
             </div>
             <div class="modal-footer">
-                <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="createAgent()">Save changes</button>
+                <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                <button type="button" class="btn btn-primary" onclick="createAgent()" data-i18n="Save changes"></button>
             </div>
         </div>
     </div>
@@ -278,27 +277,27 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="demoteAgentLabel">
-                    Are you sure you want to demote the agent to a node?</h5>
+                <h5 class="modal-title" id="demoteAgentLabel" data-i18n="Are you sure you want to demote the agent to a node?">
+                    </h5>
                 {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
             </div>
             <form id='demoteAgentModal' onsubmit="confirmDemoteOfAgent(event)">
                 <div class="modal-body">
                     
                         <div id="node-popUp">
-                            <td>Confirm deleting agent by typing his IP</td>
+                            <td data-i18n="Confirm deleting agent by typing his IP"></td>
                             <input id="demote-agent-label" class="form-control" value="" name="ip" required>
                         </div>
 
                         <div class="mt-3" id="agent_interface_bar">
-                            <td> agent_id of all edges will be transferred to the selected agent</td>
+                            <td data-i18n="agent_id of all edges will be transferred to the selected agent"> </td>
                             <div id="agent_bar3"></div>
                         </div>
                     
                 </div>
                 <div class="modal-footer">
-                    <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button id="node-demoteButton" type="submit" class="btn btn-primary">Demote Agent</button>
+                    <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button id="node-demoteButton" type="submit" class="btn btn-primary" data-i18n="Demote Agent"></button>
                 </div>
             </form>
         </div>
@@ -381,7 +380,7 @@
         nodes.forEach((node => {
             IPMap.set(node.id,node.address)
             if (node.agent) {
-                if (node.parent_agent_id == null)
+                if (node.is_server == true)
                 {
                     node.icon = new ServerIcon(color = caclculateColor(node))
                     node.shape="icon"
@@ -724,12 +723,12 @@
     function createCreateNodeModal(editing) {
         let text, action_button;
         if (editing) {
-            text = 'Editing node'
-            action_button = 'Edit'
+            text = i18next.t('Editing node');
+            action_button = i18next.t('Edit')
         }
         else {
-            text = 'Add node info'
-            action_button = 'Create'
+            text = i18next.t('Add node info')
+            action_button = i18next.t('Create')
         }
 
         var modal_elem = document.getElementById('ModalCreateNode')
@@ -746,30 +745,30 @@
                                 <table style="margin: auto">
                                 <tbody>
                                     <tr>
-                                        <td>ip</td>
+                                        <td >${i18next.t('ip')}</td>
                                         <td><input id="node-label" class="form-control" value="" required></td>
-                                        <td id="invalid-ip" class="invalid-feedback">Please, type correct ip</td>
+                                        <td id="invalid-ip" class="invalid-feedback">${i18next.t('Please, type correct ip')}</td>
                                     </tr>
                                     <tr>
-                                        <td>mac</td>
+                                        <td>${i18next.t('mac')}</td>
                                         <td><input id="node-mac" class="form-control" value="" required></td>
-                                        <td id="invalid-mac" class="invalid-feedback">Please, type correct mac</td>
+                                        <td id="invalid-mac" class="invalid-feedback">${i18next.t('Please, type correct mac')}</td>
                                     </tr>
                                     <tr>
-                                        <td>domain</td>
+                                        <td>${i18next.t('domain')}</td>
                                         <td><input id="node-domain" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
-                                        <td>os</td>
+                                        <td>${i18next.t('os')}</td>
                                         <td><input id="node-os" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
-                                        <td>vendor</td>
+                                        <td>${i18next.t('vendor')}</td>
                                         <td><input id="node-vendor" class="form-control" value=""></td>
                                     </tr>
                                     ${!editing ? 
                                         `<tr>
-                                            <td>mask</td>
+                                            <td>${i18next.t('mask')}</td>
                                             <td><input id="node-mask" class="form-control" value=""></td>
                                         </tr>` : ``}
                                 </tbody></table>
@@ -777,7 +776,7 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
                         <button id="node-saveButton" type="button" class="btn btn-primary">${action_button}</button>
                     </div>
                 </div>
@@ -791,8 +790,8 @@
     };
   function createDeleteAgentModal(editing) {
         if (editing) {
-            text = 'Are you sure you want to remove the agent?'
-            action_button = 'Remove'
+            text = i18next.t('Are you sure you want to remove the agent?');
+            action_button = i18next.t('Remove');
         }
         var modal_elem = document.getElementById('ModalDeleteAgent')
         modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -811,14 +810,14 @@
                                 </div>
 
                                    <div class="mt-3" id="agent_interface_bar">
-                                    <td> agent_id of all edges will be transferred to the selected agent</td>
+                                    <td> ${i18next.t('agent_id of all edges will be transferred to the selected agent')}</td>
                                     <select name="defaultAgent" id="agent_bar2" class='form-select'>
                                     </select>
                                 </div>
                             
                         </div>
                         <div class="modal-footer">
-                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
                             <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
                         </div>
                     </form>
@@ -846,8 +845,8 @@
     };  
     function createDeleteNodeModal(editing) {
         if (editing) {
-            text = 'Are you sure you want to remove the node?'
-            action_button = 'Remove'
+            text = i18next.t('Are you sure you want to remove the node?');
+            action_button = i18next.t('Remove');
         }
         var modal_elem = document.getElementById('ModalDeleteNode')
         modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -893,7 +892,7 @@
                                 <table style="margin: auto">
                                 <tbody>
                                     <tr>
-                                        <td >You cannot remove the last agent</td>
+                                        <td >${i18next.t('You cannot remove the last agent')}</td>
 
                                     </tr>
                                 </tbody></table>
@@ -901,7 +900,7 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
                     </div>
                 </div>
             </div>
@@ -1262,242 +1261,266 @@
     }
     let nodeForComment
     async function createNodeInformation(node) {
-        if (node.agent == null) {
-            params = { ip_id: node.id}
-            ip = node.label
-            url_address = '/api/v1/vis/node_info/' + node.id
-            resp = await fetch(url_address, { method: 'GET' })
-            json = await resp.json()
-            source_table = document.getElementById('div_node_info')
-            html_text = `<div><h5>Node ${node.label}</h5></div>\n`
-            table = '<table class="table table-bordered table-hover" style="min-width: 325px; max-width: 325px;">'
-            nodeForComment = node
-            if (json.ip) {
-                table += `
-                        <tr>
-                            <td> ip </td>
-                            <td>${json.ip}</td>
-                            <td></td>
-                        </tr>`
-            }
-            if (json.domain) {
-                table += `
-                        <tr>
-                            <td> domain </td>
-                            <td> ${json.domain} </td>
-                            <td>  </td>
-                        </tr>`
-            }
-            if (json.mac) {
-                table += `
-                        <tr>
-                            <td> mac </td>
-                            <td> ${json.mac} </td>
-                            <td>  </td>
-                        </tr>`
-            }
-            if (json.os) {
-                table += `
-                        <tr>
-                            <td> os </td>
-                            <td> ${json.os} </td>
-                            <td>  </td>
-                        </tr>`
-            }
-            if (json.vendor) {
-                table += `
-                        <tr>
-                            <td> vendor </td>
-                            <td> ${json.vendor} </td>
-                            <td>  </td>
-                        </tr>`
-            }
-            if (json.network) {
-                network_mask_data = json.network
-                table += `
-                        <tr>
-                            <td> network mask </td>
-                            <td> ${json.network} </td>
-                            <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">Union</button>
-                            <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">Division</button></td>
-                        </tr>`
-            }
-            table += '</table>\n'
-            html_text += table
-            if (json.ports.length) {
-                html_ports = '<div"><h4>Ports</h4>\n</div><div style="overflow-y: auto; max-height: 200px;"><table class="table table-bordered table-hover align-middle"">\n'
-                html_ports += `
-                        <tr>
-                            <td> Port </td>
-                            <td> Protocol </td>
-                            <td> State </td>
-                            <td> Software </td>
-                        </tr>`
-
-                json.ports.forEach((port) => {
-                    html_ports += `
-                        <tr>
-                            <td> ${port.port} </td>
-                            <td> ${port.protocol} </td>
-                            <td> ${port.state} </td>
-                            <td> ${port.software} </td>
-                        </tr>
-                    `
-                })
-                html_ports += '</table></div>\n'
-                html_text += html_ports
-            }
-            let html_all_comments = '';
-            let html_child_comments = '';
+    if (node.agent == null) {
+        params = { ip_id: node.id }
+        ip = node.label
+        url_address = '/api/v1/vis/node_info/' + node.id
+        resp = await fetch(url_address, { method: 'GET' })
+        json = await resp.json()
+        source_table = document.getElementById('div_node_info')
+        
+        html_text = `
+        <div>
+            <h5>${i18next.t('Node')} ${node.label}</h5>
+            <ul class="nav nav-pills mb-3" id="node-info-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="node-tab" data-bs-toggle="pill" data-bs-target="#node-info" type="button" role="tab">${i18next.t('Node Info')}</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ports-tab" data-bs-toggle="pill" data-bs-target="#ports-info" type="button" role="tab">${i18next.t('Ports')}</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="comments-tab" data-bs-toggle="pill" data-bs-target="#comments-info" type="button" role="tab">${i18next.t('Comments')}</button>
+                </li>
+            </ul>
             
+            <div class="tab-content" id="node-info-tabs-content">
+                <!-- Вкладка с информацией о ноде -->
+                <div class="tab-pane fade show active" id="node-info" role="tabpanel">
+                    <table class="table table-bordered table-hover">
+        `;
 
-            all_comments_response = await axios.get(`/api/v1/vis/comment/${params.ip_id}`).then(response => {
-                    response.data.forEach(comment => {
-                        let createdAt
-                        if (comment.updated_at == null){
-                            createdAt = new Date(comment.created_at);
-                        } else {
-                            createdAt = new Date(comment.updated_at);
-                        }
-                        let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
-                        if (comment.deleted_at == null) {
-                        html_all_comments += `
-                                <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
-                                    <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
-                                    <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                            <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
-                                                <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
-                                            </div>
-                                            <div style="display: flex; gap: 10px;">`
-                                                if ("{{ role.name }}" == "owner" || "{{ user_id }}" == comment.user_id ) {
-                                                html_all_comments += `<div class="column">
-                                                    <button class="btn btn-outline-danger btn-xs h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${comment.id}')">Delete</button>
-                                                </div>
-                                                <div class="column">
-                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="editToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Edit</button>
-                                                </div>` + ``
-                                                }
-                                                html_all_comments += `<div class="column">
-                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Reply</button>
-                                                </div>
-                                            </div>
+        nodeForComment = node
+        if (json.ip) {
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('ip')} </td>
+                        <td>${json.ip}</td>
+                        <td></td>
+                    </tr>`
+        }
+        if (json.domain) {
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('domain')} </td>
+                        <td> ${json.domain} </td>
+                        <td>  </td>
+                    </tr>`
+        }
+        if (json.mac) {
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('mac')} </td>
+                        <td> ${json.mac} </td>
+                        <td>  </td>
+                    </tr>`
+        }
+        if (json.os) {
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('os')} </td>
+                        <td> ${json.os} </td>
+                        <td>  </td>
+                    </tr>`
+        }
+        if (json.vendor) {
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('vendor')} </td>
+                        <td> ${json.vendor} </td>
+                        <td>  </td>
+                    </tr>`
+        }
+        if (json.network) {
+            network_mask_data = json.network
+            html_text += `
+                    <tr>
+                        <td> ${i18next.t('network mask')} </td>
+                        <td> ${json.network} </td>
+                        <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">${i18next.t('Union')}</button>
+                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t('Division')}</button></td>
+                    </tr>`
+        }
+        
+        html_text += `</table></div>`;
+        
+        if (json.ports.length) {
+            html_text += `
+                <div class="tab-pane fade" id="ports-info" role="tabpanel">
+                    <div style="overflow-y: auto; max-height: 400px;">
+                        <table class="table table-bordered table-hover align-middle">
+                            <tr>
+                                <td> ${i18next.t('Port')} </td>
+                                <td> ${i18next.t('Protocol')} </td>
+                                <td> ${i18next.t('State')} </td>
+                                <td> ${i18next.t('Software')} </td>
+                            </tr>`;
+
+            json.ports.forEach((port) => {
+                html_text += `
+                    <tr>
+                        <td> ${port.port} </td>
+                        <td> ${port.protocol} </td>
+                        <td> ${port.state} </td>
+                        <td> ${port.software} </td>
+                    </tr>`
+            });
+            
+            html_text += `</table></div></div>`;
+        } else {
+            html_text += `
+                <div class="tab-pane fade" id="ports-info" role="tabpanel">
+                    <p>${i18next.t('No ports information available')}</p>
+                </div>`;
+        }
+
+        let html_all_comments = '';
+        let html_child_comments = '';
+        
+        all_comments_response = await axios.get(`/api/v1/vis/comment/${params.ip_id}`).then(response => {
+            response.data.forEach(comment => {
+                let createdAt
+                if (comment.updated_at == null){
+                    createdAt = new Date(comment.created_at);
+                } else {
+                    createdAt = new Date(comment.updated_at);
+                }
+                let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                if (comment.deleted_at == null) {
+                html_all_comments += `
+                        <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
+                            <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                        <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">`
+                                        if ("{{ role.name }}" == "owner" || "{{ user_id }}" == comment.user_id ) {
+                                        html_all_comments += `<div class="column">
+                                            <button class="btn btn-outline-danger btn-xs h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${comment.id}')">${i18next.t('Delete')}</button>
+                                        </div>
+                                        <div class="column">
+                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="editToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Edit')}</button>
+                                        </div>` + ``
+                                        }
+                                        html_all_comments += `<div class="column">
+                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Reply')}</button>
                                         </div>
                                     </div>
                                 </div>
-                                <hr class="comment-hr" data-deleted="false">`;}
-                                else {
-                                    html_all_comments += `
-                                <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
+                            </div>
+                        </div>
+                        <hr class="comment-hr" data-deleted="false">`;}
+                        else {
+                            html_all_comments += `
+                        <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
 
-                                    <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                        <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <div class="column">
+                                        <span class="text-muted small" style="font-size: 0.8em">${i18next.t('Deleted')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="comment-hr" data-deleted="true">`;
+                        }
+                        comment.child_comments.forEach(child =>{
+                            let createdAt
+                            if (child.updated_at == null){
+                                createdAt = new Date(child.created_at);
+                            } else {
+                                createdAt = new Date(child.updated_at);
+                            }
+                            const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+                            if (child.deleted_at == null) {
+                            html_all_comments += `
+                                <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
+                                    <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
-                                                <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
+                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                <span class="text-muted small">${formattedDate}</span>
+                                            </div>
+                                            <div style="display: flex; gap: 10px;">`
+                                                if ("{{ role.name }}" == "owner" || "{{ user_id }}" == child.user_id ) {
+                                                    html_all_comments += `<div class="column">
+                                                    <button class="btn btn-outline-danger btn-sm h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${child.id}')">${i18next.t('Delete')}</button>
+                                                </div>
+                                                <div class="column">
+                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${child.id}" onclick="editToComment('${child.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Edit')}</button>
+                                                </div>`
+                                            }
+                                            html_all_comments += `</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="comment-hr" data-deleted="false">`
+                                ;}
+                                else {
+                                    html_all_comments += `
+                                <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
+                                    <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                    <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                            <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
+                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                <span class="text-muted small">${formattedDate}</span>
                                             </div>
                                             <div style="display: flex; gap: 10px;">
                                                 <div class="column">
-                                                <span class="text-muted small" style="font-size: 0.8em">Deleted</span>
+                                                <span class="text-muted small" style="font-size: 0.8em">${i18next.t('Deleted')}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <hr class="comment-hr" data-deleted="true">`;
+                                <hr class="comment-hr" data-deleted="true">`
+                                ;
                                 }
-                                comment.child_comments.forEach(child =>{
-                                    let createdAt
-                                    if (child.updated_at == null){
-                                        createdAt = new Date(child.created_at);
-                                    } else {
-                                        createdAt = new Date(child.updated_at);
-                                    }
-                                    const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
-                                    if (child.deleted_at == null) {
-                                    html_all_comments += `
-                                        <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
-                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
-                                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                        <span class="text-muted small" style="word-break: break-all">${child.login}</span>
-                                                        <span class="text-muted small">${formattedDate}</span>
-                                                    </div>
-                                                    <div style="display: flex; gap: 10px;">`
-                                                        if ("{{ role.name }}" == "owner" || "{{ user_id }}" == child.user_id ) {
-                                                            html_all_comments += `<div class="column">
-                                                            <button class="btn btn-outline-danger btn-sm h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${child.id}')">Delete</button>
-                                                        </div>
-                                                        <div class="column">
-                                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${child.id}" onclick="editToComment('${child.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">Edit</button>
-                                                        </div>`
-                                                    }
-                                                    html_all_comments += `</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <hr class="comment-hr" data-deleted="false">`
-                                        ;}
-                                        else {
-                                            html_all_comments += `
-                                        <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
-                                            <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
-                                            <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                                    <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                        <span class="text-muted small" style="word-break: break-all">${child.login}</span>
-                                                        <span class="text-muted small">${formattedDate}</span>
-                                                    </div>
-                                                    <div style="display: flex; gap: 10px;">
-                                                        <div class="column">
-                                                        <span class="text-muted small" style="font-size: 0.8em">Deleted</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <hr class="comment-hr" data-deleted="true">`
-                                        ;
-                                        }
-                                });
-                    });
-                });
-                const hideDeletedKey = `hideDeletedComments_${node.id}`;
-                const isChecked = localStorage.getItem(hideDeletedKey) === 'true';
-                html_text += `<hr>`
-                {% if role.name == "owner" %}
-                html_text += `<div class="form-check">
+                        });
+            });
+        });
+        
+        const hideDeletedKey = `hideDeletedComments_${node.id}`;
+        const isChecked = localStorage.getItem(hideDeletedKey) === 'true';
+        
+        html_text += `
+                <div class="tab-pane fade" id="comments-info" role="tabpanel">
+                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${isChecked ? 'checked' : ''}>
                         <label class="form-check-label" for="hideDeletedComments">
-                            Hide deleted comments
+                            ${i18next.t('Hide deleted comments')}
                         </label>
-                    </div>`
-                {% else %}
-                html_text += `<div class="form-check" style="opacity:0">
-                        <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${isChecked ? 'checked' : ''} disabled>
-                        <label class="form-check-label" for="hideDeletedComments" disabled>
-                            Hide deleted comments
-                        </label>
-                    </div>`
-                {% endif %}
-                html_text += `<div id="commentsContainer" style="overflow-y: auto; max-height: 300px;">`
+                    </div>
+                    <div id="commentsContainer" style="overflow-y: auto; max-height: 300px; margin-top: 10px;">
+                        ${html_all_comments}
+                    </div>
+                    <form id="addCommentForm" class="mt-3">
+                        <div class="form-group w-100">
+                            <label for="AddCommentForm">${i18next.t('New comment')}</label>
+                            <textarea class="form-control" id="AddCommentForm" rows="3" required></textarea>
+                        </div>
+                        <button class="btn btn-primary w-100" style="margin-top: 0.5rem" type="submit">${i18next.t('Send')}</button>
+                    </form>
+                </div>
+            </div>
+        </div>`;
         
-        html_text += html_all_comments
-        html_text += `</div>`
-            html_add_comment = `<form id="addCommentForm">
-                            <div class="form-group w-100">
-                                <label for="AddCommentForm">New comment</label>
-                                <textarea class="form-control" id="AddCommentForm" rows="3" required></textarea>
-                            </div>
-                            <button class="btn btn-primary w-100" style="margin-top: 0.5rem" type="submit">Send</button>
-                        </form>`
-            html_text += html_add_comment
-            source_table.innerHTML = html_text
-            const hideDeletedCheckbox = document.getElementById('hideDeletedComments');
-            function toggleDeletedComments() {
+        source_table.innerHTML = html_text;
+        
+        const hideDeletedCheckbox = document.getElementById('hideDeletedComments');
+        function toggleDeletedComments() {
             const hideDeleted = hideDeletedCheckbox.checked;
             localStorage.setItem(hideDeletedKey, hideDeleted);
             
@@ -1516,29 +1539,42 @@
                 }
             });
         }
+        
         if (isChecked) {
             toggleDeletedComments();
         }
+        
         hideDeletedCheckbox.addEventListener('change', toggleDeletedComments);
-            document.getElementById('addCommentForm').addEventListener('submit', function(event) {
+        
+        document.getElementById('addCommentForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             const commentText = document.getElementById('AddCommentForm').value;
-            axios.post('/api/v1/vis/comment', { text: commentText, ip_id: params.ip_id }, {
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
+            
+            try {
+                await axios.post('/api/v1/vis/comment', { 
+                    text: commentText, 
+                    ip_id: params.ip_id 
+                }, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
                 document.getElementById('AddCommentForm').value = '';
-                createNodeInformation(node);
-            })
-            .catch(error => {
+
+                await createNodeInformation(node);
+                
+                const commentsTab = document.getElementById('comments-tab');
+                const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+                tabInstance.show();
+                
+            } catch (error) {
                 console.error('Error:', error);
-            });
+            }
         });
-        }
-        else {
-            document.getElementById('div_node_info').innerHTML = ``;
-        }
     }
+    else {
+        document.getElementById('div_node_info').innerHTML = ``;
+    }
+}
     function editToComment(commentId) {
     const commentContainer = document.getElementById(`commentContainer-${commentId}`);
     const commentText = commentContainer.querySelector('h5, p');
@@ -1561,12 +1597,12 @@
     
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-outline-secondary btn-sm';
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = i18next.t('Cancel');
     cancelBtn.onclick = () => cancelCommentEdit(commentId);
 
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn btn-outline-success btn-sm';
-    confirmBtn.textContent = 'Confirm';
+    confirmBtn.textContent = i18next.t('Confirm');
     confirmBtn.onclick = () => confirmCommentEdit(commentId);
 
     buttonsContainer.appendChild(cancelBtn);
@@ -1641,9 +1677,12 @@ async function confirmCommentEdit(commentId) {
     }
 }
     async function deleteComment(commentId) {
-        await axios.delete(`/api/v1/vis/comment/${commentId}`).then(response => {
-                createNodeInformation(nodeForComment);
-                })  
+        await axios.delete(`/api/v1/vis/comment/${commentId}`)
+            await createNodeInformation(nodeForComment);
+
+            const commentsTab = document.getElementById('comments-tab');
+            const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+            tabInstance.show();
             };
 
     function replyToComment(commentId) {
@@ -1660,17 +1699,17 @@ async function confirmCommentEdit(commentId) {
         replyForm.classList.add('mt-2');
         replyForm.innerHTML = `
             <div class="form-group">
-                <textarea class="form-control" id="replyText-${commentId}" rows="2" placeholder="Write a reply..." required></textarea>
+                <textarea class="form-control" id="replyText-${commentId}" rows="2" placeholder="${i18next.t('Write a reply...')}" required></textarea>
             </div>
             <div class="d-flex justify-content-sm-end">
-            <button class="btn btn-success btn-sm m-1" type="submit">Send Reply</button>
+            <button class="btn btn-success btn-sm m-1" type="submit">${i18next.t('Send Reply')}</button>
             </div>
         `;
 
-        replyForm.addEventListener('submit', function(event) {
+        replyForm.addEventListener('submit', async function(event) {
             event.preventDefault();
             const replyText = document.getElementById(`replyText-${commentId}`).value;
-
+            try {
             axios.post('/api/v1/vis/comment', {
                 text: replyText,
                 parent_comment_id: commentId,
@@ -1678,12 +1717,16 @@ async function confirmCommentEdit(commentId) {
             }, {
                 headers: { 'Content-Type': 'application/json' }
             })
-            .then(response => {
-                createNodeInformation(nodeForComment);
-            })
-            .catch(error => {
+            document.getElementById('AddCommentForm').value = '';
+
+            await createNodeInformation(nodeForComment);
+
+            const commentsTab = document.getElementById('comments-tab');
+            const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+            tabInstance.show();
+        } catch (error) {
                 console.error('Error:', error);
-            });
+            }
     });
 
     const commentElement = document.getElementById(`commentContainer-${commentId}`);
@@ -1806,7 +1849,7 @@ async function confirmCommentEdit(commentId) {
         data = await resp.json()
 
         let parent = `<div class="col-4">
-                            <label for="acunetix_scan_instances" class="col-form-label">Acunetix Name</label>
+                            <label for="acunetix_scan_instances" class="col-form-label">${i18next.t('Acunetix Name')}</label>
                         </div>
                         <div class="col-6" id="acunetix_scan_instances">
                         </div>`
@@ -1814,7 +1857,7 @@ async function confirmCommentEdit(commentId) {
         document.getElementById('acunetix_scan_instances_parent').innerHTML = parent
 
         result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
-            <option value=''>Acunetix Name</option>`
+            <option value=''>${i18next.t('Acunetix Name')}</option>`
         for (const instance of data){
             result += `<option value='${instance.id}'>${instance.name}</option>`
         }

@@ -3,7 +3,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addScanLabel">Creating report</h5>
+                <h5 class="modal-title" id="addScanLabel" data-i18n="Creating report"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form onsubmit="createReport(event)" id="createReportForm">
@@ -11,7 +11,7 @@
                 <div class="modal-body">
                     <div class="row mb-1">
                         <div class="col-4">
-                            <label for="report_profile_id" class="col-form-label">Report Template</label>
+                            <label for="report_profile_id" class="col-form-label" data-i18n="Report Template"></label>
                         </div>
                         <div class="col-6" id="report_profile_id">
                             
@@ -20,8 +20,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancel_creating_report"
-                        data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success">Add</button>
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </div>
             </form>
 

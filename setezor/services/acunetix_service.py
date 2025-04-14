@@ -17,11 +17,11 @@ from setezor.interfaces.service import IService
 from setezor.models.d_software import Software
 from setezor.models.domain import Domain
 from setezor.models.ip import IP
+from setezor.models.l4_software import L4Software
+from setezor.models.l4_software_vulnerability import L4SoftwareVulnerability
 from setezor.models.port import Port
 from setezor.models.task import Task
-from setezor.models.l7 import L7
 from setezor.models import Scan
-from setezor.models.l7_software import L7Software
 from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
 from setezor.modules.project_manager.acunetix import AcunetixApi
@@ -32,7 +32,6 @@ from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.modules.acunetix.acunetix_config import Config
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.models import Vulnerability as VulnerabilityModel
-from setezor.models.l7_software_vulnerability import L7SoftwareVulnerability
 from setezor.models.dns_a import DNS_A
 from setezor.tools.url_parser import parse_url
 
@@ -102,9 +101,6 @@ class AcunetixService(IService):
                 else:
                     new_port = Port(port=80, ip=new_ip)
                 result.append(new_port)
-
-            new_resource = L7(port=new_port, domain=new_domain)
-            result.append(new_resource)
         return result
 
     @classmethod
@@ -222,6 +218,9 @@ class AcunetixService(IService):
         ports = {}
         domains = {}
         result = []
+        empty_domains = {}
+        empty_dns = {}
+        found_dns = {}
         async with uow:
             for index, target in enumerate(sync_payload.targets):
                 scope_id = target.scope_id
@@ -253,18 +252,19 @@ class AcunetixService(IService):
                 if domain := data.get("domain"):
                     if domain in domains:
                         new_domain = domains[domain]
+                        new_dns_a = found_dns[domain]
                     else:
                         try:
                             responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                            new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
+                            new_domain, new_ip, new_dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
                             if new_ip.ip in ips and new_ip.ip:
                                 new_ip = ips[new_ip.ip]
-                                dns_a.target_ip = new_ip
-                                result.append(dns_a)
+                                new_dns_a.target_ip = new_ip
+                                result.append(new_dns_a)
                             else:
                                 ips[new_ip.ip] = new_ip
                                 result.append(new_ip)
-                                result.append(dns_a)
+                                result.append(new_dns_a)
                         except:
                             new_domain = Domain(domain=domain)
                             new_ip = IP()
@@ -273,18 +273,26 @@ class AcunetixService(IService):
                             result.append(new_dns_a)
                         
                         domains[domain] = new_domain
+                        found_dns[domain] = new_dns_a
                         result.append(new_domain)
 
                 if ip := data.get("ip"):
                     if ip in ips:
                         new_ip = ips[ip]
+                        new_domain = empty_domains[ip]
+                        new_dns_a = empty_dns[ip]
                     else:
                         new_ip = IP(ip=ip)
                         ips[ip] = new_ip
                         result.append(new_ip)
-
-                    new_domain = Domain()
-                    result.append(new_domain)
+                        
+                        new_domain = Domain()
+                        result.append(new_domain)
+                        
+                        new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+                        result.append(new_dns_a)
+                        empty_domains[ip] = new_domain
+                        empty_dns[ip] = new_dns_a
 
 
                 key = f"{new_ip.ip or new_domain.domain}_{data.get("port")}"
@@ -295,14 +303,12 @@ class AcunetixService(IService):
                     ports[key] = new_port
                     result.append(new_port)
 
-                new_l7 = L7(port=new_port, domain=new_domain)
-                result.append(new_l7)
 
                 new_software = Software()
                 result.append(new_software)
 
-                new_l7_software = L7Software(l7=new_l7, software=new_software)
-                result.append(new_l7_software)
+                new_l4_software = L4Software(l4=new_port, dns_a=new_dns_a, software=new_software)
+                result.append(new_l4_software)
 
                 scans = await api.get_target_scans(target_id=acunetix_target_id)
                 for scan in scans:
@@ -323,9 +329,9 @@ class AcunetixService(IService):
                 vulnerabilities = Vulnerability.from_acunetix_response(vulnerabilities)
                 for vuln in vulnerabilities:
                     vuln_obj = VulnerabilityModel(created_at_in_acunetix=end_date, **vuln)
-                    l7_software_vuln = L7SoftwareVulnerability(l7_software=new_l7_software, vulnerability=vuln_obj)
+                    l4_software_vuln = L4SoftwareVulnerability(l4_software=new_l4_software, vulnerability=vuln_obj)
                     result.append(vuln_obj)
-                    result.append(l7_software_vuln)
+                    result.append(l4_software_vuln)
 
                 message = WebSocketMessage(title="Import", text=f"{index + 1} / {len(sync_payload.targets)}",type="info")
                 await WS_MANAGER.send_message(project_id=project_id, message=message)

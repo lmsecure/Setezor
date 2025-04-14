@@ -27,7 +27,7 @@ async function getInterfaceData(id) {
         }
         return new InterfaceData([], undefined)
     }
-    const resp = await fetch(`/api/v1/agents/${id}/interfaces`);
+    const resp = await fetch(`/api/v1/agents_in_project/${id}/interfaces`);
     if (resp.ok) {
         const data = await resp.json();
         const ifaces = data.map(

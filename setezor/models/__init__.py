@@ -21,10 +21,6 @@ from .task import Task
 from .route import Route
 from .route_list import RouteList
 from .project import Project
-from .l7 import L7
-from .l7_software import L7Software
-from .l7_software_vulnerability import L7SoftwareVulnerability
-from .l7_software_vulnerability_screenshot import L7SoftwareVulnerabilityScreenshot
 from .l4_software_vulnerability_screenshot import L4SoftwareVulnerabilityScreenshot
 from .screenshot import Screenshot
 from .d_vendor import Vendor
@@ -34,7 +30,7 @@ from .acunetix import Acunetix
 from .whois_ip import WhoIsIP
 from .whois_domain import WhoIsDomain
 from .certificate import Cert
-from .auth_credentials_resource import L7_Authentication_Credentials
+from .auth_credentials_resource import Authentication_Credentials
 from .user import User
 from .user_project import UserProject
 from .scope import Scope
@@ -58,7 +54,9 @@ from .vulnerability_link import VulnerabilityLink
 from .invite_link import Invite_Link
 from .node_comment import NodeComment
 from .l4_software_vulnerability_comment import L4SoftwareVulnerabilityComment
-from .l7_software_vulnerability_comment import L7SoftwareVulnerabilityComment
+from .settings import Settings
+from .agent_in_project import AgentInProject
+from .agent_parent_agent import AgentParentAgent
 
 
 def get_model_by_name(model_name:str):
