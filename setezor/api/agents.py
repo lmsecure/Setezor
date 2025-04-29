@@ -69,5 +69,5 @@ async def agents(
     background_tasks: BackgroundTasks,
 ) -> bool:
     background_tasks.add_task(
-        AgentManager.decipher_data_from_agent, uow=uow, data=data)
+        AgentManager.decipher_data_from_project_agent, uow=uow, data=data)
     return True

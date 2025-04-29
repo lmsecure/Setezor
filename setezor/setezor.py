@@ -1,7 +1,10 @@
+import atexit
 import sys
 import os
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager, contextmanager
+import tempfile
 from dotenv import load_dotenv
+from Crypto.Random import get_random_bytes
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
@@ -9,11 +12,12 @@ import click
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+from OpenSSL import crypto
 load_dotenv()
 
 sys.path[0] = ''
 from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
-from setezor.settings import STATIC_FILES_DIR_PATH, SSL_KEY_FILE_PATH, SSL_CERT_FILE_PATH
+from setezor.settings import STATIC_FILES_DIR_PATH
 from setezor.db.alembic import AlembicManager
 
 @asynccontextmanager
@@ -23,6 +27,44 @@ async def startup_event(app: FastAPI):
     await fill_db()
     yield
 
+def generate_self_signed_cert():
+    key = crypto.PKey()
+    key.generate_key(crypto.TYPE_RSA, 2048)
+    cert = crypto.X509()
+    cert.get_subject().CN = get_random_bytes(10).hex()
+    cert.set_serial_number(1000)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(365*24*60*60)  # 1 year
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(key)
+    cert.sign(key, "sha256")
+    
+    return (
+        crypto.dump_certificate(crypto.FILETYPE_PEM, cert),
+        crypto.dump_privatekey(crypto.FILETYPE_PEM, key)
+    )
+
+
+@contextmanager
+def temp_ssl_files(cert_pem, key_pem):
+    with ExitStack() as stack:
+        cert_file = stack.enter_context(
+            tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+        )
+        key_file = stack.enter_context(
+            tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+        )
+        cert_file.write(cert_pem)
+        key_file.write(key_pem)
+
+        cert_file.flush()
+        key_file.flush()
+        
+        atexit.register(lambda: os.unlink(cert_file.name))
+        atexit.register(lambda: os.unlink(key_file.name))
+        yield cert_file.name, key_file.name
+
+        
 def create_app():
     if not os.environ.get("SERVER_REST_URL", None):
         raise Exception("No SERVER_REST_URL specified")
@@ -60,24 +102,19 @@ def create_app():
 
 
 @click.group(chain=False, invoke_without_command=True)
-@click.option('-s', '--spy', default=False, type=bool, show_default=True, help='Enable spy', is_flag=True)
-@click.option('-p', '--port', default=16661, type=int, show_default=True, help='Spy port')
-@click.option('-h', '--host', default="0.0.0.0", type=str, show_default=True, help='Spy host')
-def run_app(spy: bool, port: int, host: str):
+@click.option('-p', '--port', default=16661, type=int, show_default=True, help='Server port')
+@click.option('-h', '--host', default="0.0.0.0", type=str, show_default=True, help='Server host')
+def run_app(port: int, host: str):
     """Command starts web application"""
     if click.get_current_context().invoked_subcommand is not None: 
         return
-    if spy:
-        from setezor.spy import Spy
-        import setezor.managers.task_manager
-        app = Spy.create_app()
-    else:
-        app = create_app()
-    uvicorn.run(app=app, 
-                host=host, 
-                port=port, 
-                ssl_keyfile=SSL_KEY_FILE_PATH,
-                ssl_certfile=SSL_CERT_FILE_PATH)
+    app = create_app()
+    with temp_ssl_files(*generate_self_signed_cert()) as (cert_path, key_path):
+        uvicorn.run(app=app, 
+                    host=host, 
+                    port=port, 
+                    ssl_keyfile=key_path,
+                    ssl_certfile=cert_path)
 
 @run_app.command()
 def list_users():

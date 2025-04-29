@@ -61,7 +61,7 @@ async function getAgentData() {
                 hex_rgb.b
             );
         });
-        return new AgentData(agents, agents[0].id);
+        return new AgentData(agents, agents[agents.length - 1].id);
     }
 }
 

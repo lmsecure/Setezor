@@ -15,6 +15,7 @@ class Agent(IDDependent, TimeDependent, table=True):
     secret_key: Optional[str]    = Field(default="", sa_column_kwargs={"comment": "AES256 ключ агента"})
     user_id: Optional[str]       = Field(foreign_key="user.id", sa_column_kwargs={"comment": "Идентификатор владельца"})
     is_connected: bool           = Field(default=False, sa_column_kwargs={"comment": "Подключен ли агент"})
+    flag: bool                   = Field(default=False, sa_column_kwargs={"comment": "Флаг агента"})
 
     user: "User" = Relationship(back_populates="agents")
     projects: List["AgentInProject"] = Relationship(back_populates="agent")

@@ -163,8 +163,8 @@ class AnalyticsService:
             "ipaddr",
             "domain",
             "port",
-            "state",
             "protocol",
+            "state",
             "service_name",
             "vendor",
             "product",
@@ -186,33 +186,30 @@ class AnalyticsService:
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
             tabulator_dashboard_data = await uow.ip.get_ip_mac_port_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "id",
-            "ipaddr", 
-            "port", 
-            "mac"
-            ]
-
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
+        tabulator_transform_dashboard_data = []
+        for id, row in enumerate(tabulator_dashboard_data, 1):
+            tabulator_transform_dashboard_data.append({
+                "id" : id,
+                "ipaddr" : row[0],
+                "port" : row[1],
+                "mac" : row[2]
+            })
+        return tabulator_transform_dashboard_data
 
     @classmethod
     async def get_domain_ip_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
         async with uow:
             last_scan_id = await cls.get_last_scan_id(uow=uow, project_id=project_id)
             tabulator_dashboard_data = await uow.ip.get_domain_ip_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "ipaddr", 
-            "port", 
-            "domain", 
-            ]
-
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
+        tabulator_transform_dashboard_data = []
+        for id, row in enumerate(tabulator_dashboard_data, 1):
+            tabulator_transform_dashboard_data.append({
+                "id" : id,
+                "ipaddr" : row[0],
+                "port" : row[1],
+                "domain" : row[2]
+            })
+        return tabulator_transform_dashboard_data
 
     @classmethod
     async def get_l4_soft_vuln_link_tabulator_data(cls, uow: UnitOfWork, project_id: str) -> list:
@@ -285,7 +282,7 @@ class AnalyticsService:
             ip, domain, port, auth = item
             result.append({
                     "id" : id,
-                    "ip" : ip.ip,
+                    "ipaddr" : ip.ip,
                     "domain" : domain.domain,
                     "port" : port.port,
                     "login" : auth.login,
@@ -323,7 +320,8 @@ class AnalyticsService:
 
     @classmethod
     def get_domain_ip_columns_tabulator_data(cls) -> list:
-        return [{'field': 'ipaddr', 'title': 'IP'},
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'ipaddr', 'title': 'IP'},
                 {'field': 'port', 'title': 'PORT'},
                 {'field': 'domain', 'title': 'DOMAIN'},
                 ]
@@ -347,7 +345,7 @@ class AnalyticsService:
     @classmethod
     def get_auth_credentials_tabulator_data(cls) -> list:
         return [       {'field': 'id', 'title': 'ID'},
-                       {'field': 'ip', 'title': 'IP'},
+                       {'field': 'ipaddr', 'title': 'IP'},
                        {'field': 'domain', 'title': 'DOMAIN'},
                        {'field': 'port', 'title': 'PORT'},
                        {'field': 'login', 'title': 'LOGIN'},

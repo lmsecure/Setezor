@@ -80,43 +80,23 @@ class IPRepository(SQLAlchemyRepository[IP]):
 
 
     async def get_ip_mac_port_data(self, project_id: str, last_scan_id: str):
-        row_number_column = func.row_number().over(
-        order_by=func.count(IP.ip).desc()
-        ).label("id")
-        tabulator_dashboard_data = (
-            select(
-                row_number_column,
-                IP.ip,
-                Port.port,
-                MAC.mac,
-            )
-            .outerjoin(Port, IP.id == Port.ip_id)
-            .outerjoin(MAC, IP.mac_id == MAC.id)
-            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
-            .group_by(
-                Port.port,
-                IP.ip,
-                MAC.mac
-            )
-            .order_by(func.count(IP.ip).desc())
-        )
-        result = await self._session.exec(tabulator_dashboard_data)
+        stmt = select(IP.ip, Port.port, MAC.mac).select_from(IP)\
+                .join(Port, IP.id == Port.ip_id, isouter=True)\
+                .join(MAC, IP.mac_id == MAC.id, isouter=True)\
+                .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, IP.ip != None)
+        result = await self._session.exec(stmt)
         return result.all()
 
 
     async def get_domain_ip_data(self, project_id: str, last_scan_id: str):
-        tabulator_dashboard_data = (
-            select(
-                IP.ip,
-                Port.port,
-                Domain.domain,
-            ).select_from(Port)
-            .join(IP, Port.ip_id == IP.id)
-            .join(DNS_A, DNS_A.target_ip_id == IP.id)
-            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)
-            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Domain.domain != ""))
-        result = await self._session.exec(tabulator_dashboard_data)
+        stmt = select(IP.ip, Port.port, Domain.domain,).select_from(IP)\
+                .join(Port, IP.id == Port.ip_id, isouter=True)\
+                .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
+                .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Domain.domain != "")
+        result = await self._session.exec(stmt)
         return result.all()
+
 
 
     async def get_ip_data(self, project_id: str, last_scan_id: str):

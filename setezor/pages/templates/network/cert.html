@@ -2,55 +2,60 @@
 
 <span class="input-group-text" id="basic-addon1" data-i18n="TARGET"></span>
 <datalist id="DomainsAndIp"></datalist>
-<input type="text" list="DomainsAndIp" class="form-control" id='inputTargetTLS' data-i18n-placeholder="Domain name or IP"  style="width: 7rem;"
+<input type="text" list="DomainsAndIp" class="form-control"  id='inputTargetTLS' data-i18n-placeholder="Domain name or IP"  style="width: 7rem;"
     aria-label="TargetTLS" aria-describedby="basic-addon1" required name="TargetTLS">
 {% endmacro %}
 {% macro cert_input_port() %}
 <span class="input-group-text" id="basic-addon1" data-i18n="PORT"></span>
-<input type="text" class="form-control" id='inputPort' placeholder="Port" aria-label="Port"
+<input type="text" class="form-control"  id='inputPort' placeholder="Port" aria-label="Port"
     aria-describedby="basic-addon1" required name="Port" value="443">
 {% endmacro %}
 {% macro cert_plus_button() %}
-<button id="add_new_tls_form" onclick="(function() {
-                        let original = document.getElementById('TargetTLS');
-                        let clone = original.cloneNode(true);
-                    
-                        let newInputTarget = clone.querySelector('[id^=\'inputTargetTLS\']');
-                        newInputTarget.id = 'inputTargetTLS_' + Date.now();
-                        newInputTarget.value = '';
-                        
-                        let newInputPort = clone.querySelector('[id^=\'inputPort\']');
-                        newInputPort.id = 'inputPort_' + Date.now();
-                        newInputPort.value = '443';
-                    
-                        let existingMinusButton = clone.querySelector('.btn-danger');
-                        if (existingMinusButton) {
-                            existingMinusButton.remove();
-                        }
-                    
-                        let removeButton = document.createElement('button');
-                        removeButton.textContent = '-';
-                        removeButton.type = 'button';
-                        removeButton.className = 'btn btn-danger';
-                        removeButton.style.width = '3rem';
-                        removeButton.onclick = () => {
-                            clone.remove();
-                        };
-                    
-                        clone.appendChild(removeButton);
-                    
-                        let addButton = clone.querySelector('#add_new_tls_form');
-                        if (addButton) {
-                            addButton.remove();
-                        }
-                    
-                        document.getElementById('TLSInputContainer').appendChild(clone);
-                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+<button id="add_new_tls_form" onclick="addNewCertForm()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+<script>
+    function addNewCertForm() {
+            const original = document.getElementById('TargetTLS');
+            const clone = original.cloneNode(true);
+            const newInputTarget = clone.querySelector('[id^="inputTargetTLS"]');
+            newInputTarget.id = 'inputTargetTLS_' + Date.now();
+            const newInputPort = clone.querySelector('[id^="inputPort"]');
+            newInputPort.id = 'inputPort_' + Date.now();
+            const originalInputTarget = document.getElementById('inputTargetTLS');
+            const originalInputPort = document.getElementById('inputPort');
+            newInputTarget.value = originalInputTarget.value;
+            newInputPort.value = originalInputPort.value;
+            originalInputTarget.value = ''
+            originalInputPort.value = 443
+
+            let existingMinusButton = clone.querySelector('.btn-danger');
+            if (existingMinusButton) {
+                existingMinusButton.remove();
+            }
+        
+            let removeButton = document.createElement('button');
+            removeButton.textContent = '-';
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-danger';
+            removeButton.style.width = '3rem';
+            removeButton.onclick = () => {
+                clone.remove();
+            };
+        
+            clone.appendChild(removeButton);
+        
+            let addButton = clone.querySelector('#add_new_tls_form');
+            if (addButton) {
+                addButton.remove();
+            }
+        
+            document.getElementById('TLSInputContainer').appendChild(clone);
+        }
+</script>
 
 {% endmacro %}
 {% macro cert_start() %}
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="
                     const requiredTLS = document.getElementById('CertForm');
 
@@ -89,33 +94,37 @@
 </div>
 {% endmacro %}
 
-{% macro cert_modal() %}
-<div id="certModalWindow" class="modal fade" tabindex="-1" aria-labelledby="certModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="certModalLabel">TLS/SSL CERT</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa">
-                        <form id="CertForm" class="needs-validation" novalidate>
-                            <div id="TLSInputContainer"></div>
-                            <div class="input-group" style="padding-top: 7px;" id="TargetTLS">
-                                {{cert_input_port()}}
-                            </div>
-                            {{cert_start()}}
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% macro nmap_script_modal_to_info_tabs() %}
+
 <script>
-    function cert_modal_window() {
-        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
+     async function cert_script_modal_to_info_tabs(rows) {
+        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));        
+        if (rows.length > 0) {
+            addNewCertForm();
+        }
+
+        let inputForms = document.querySelectorAll('[id^="TargetTLS"]');
+        
+        for (let row = 0; row < rows.length; row++) {
+            let currentForm = inputForms[row] || addNewCertForm();
+            
+            let inputIP = currentForm.querySelector('[id^="inputTargetTLS"]');
+            let inputPort = currentForm.querySelector('[id^="inputPort"]');
+            
+            if (inputIP && rows[row].ipaddr) {
+                inputIP.value = rows[row].ipaddr;
+            }
+            
+            if (inputPort && rows[row].port) {
+                inputPort.value = rows[row].port;
+            }
+            
+            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+                addNewCertForm();
+                inputForms = document.querySelectorAll('[id^="TargetTLS"]');
+            }
+        }
+        
         myModal.show();
     }
 

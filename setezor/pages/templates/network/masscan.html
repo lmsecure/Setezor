@@ -4,17 +4,27 @@
 <div class="input-group" id="masscanIpTarget">
     <span class="input-group-text"  style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
     <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control" id='masscanInputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
+    <input type="text" list="IpList" class="form-control ip" id='masscanInputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="target">
+    <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1" data-i18n="PORT"></span>
+    <input type="text" class="form-control port" id='inputPortMasscan' placeholder="Port" aria-label="Port" style="margin-bottom: 0.5rem;"
+        aria-describedby="basic-addon1" required name="Port">
     <button id="add_new_masscan_form" onclick="addNewMasscanForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
 <script>
       function addNewMasscanForm() {
         const original = document.getElementById('masscanIpTarget');
         const clone = original.cloneNode(true);
-        const newInput = clone.querySelector('input');
-        newInput.id = 'inputTarget_' + Date.now();
-        newInput.value = '';
+        const newInputIP = clone.querySelector('[id^="masscanInputIP"]');
+        newInputIP.id = 'masscanInputIP_' + Date.now();
+        const newInputPort = clone.querySelector('[id^="inputPortMasscan"]');
+        newInputPort.id = 'inputPortMasscan_' + Date.now();
+        const originalInputIP = document.getElementById('masscanInputIP');
+        const originalInputPort = document.getElementById('inputPortMasscan');
+        newInputIP.value = originalInputIP.value;
+        newInputPort.value = originalInputPort.value;
+        originalInputIP.value = ''
+        originalInputPort.value = ''
 
         const existingMinusButton = clone.querySelector('.btn-danger');
         if (existingMinusButton) {
@@ -122,19 +132,14 @@
     </div>
 </div>
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startMasscanScanBtn" onclick="
     const isTargetTabActive = document.getElementById('masscan-simple-tab').classList.contains('active');
     var params = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
-
     const UDPcheckbox = document.getElementById('searchUdpPortInput');
     let ping;
     let search_udp_port;
-    if (params.ports === undefined) {
-        ping = true;
-    } else {
-        ping = false;
-    }
+
     if (UDPcheckbox.checked) {
         search_udp_port = true;
     } else {
@@ -150,14 +155,46 @@
     } = params;
 
     if (isTargetTabActive) {
-        const ips = [];
-        for (const d of document.getElementById('MasscanInputContainer').getElementsByClassName('form-control')) {
-            ips.push(d.value);
+        const ipPortPairs = [];
+        const onlyIps = [];
+
+        const ipElements = document.getElementById('MasscanInputContainer').getElementsByClassName('form-control ip');
+        const portElements = document.getElementById('MasscanInputContainer').getElementsByClassName('form-control port');
+
+        for (let i = 0; i < ipElements.length; i++) {
+            if (ipElements[i].value && portElements[i].value) {
+                ipPortPairs.push({
+                    ip: ipElements[i].value,
+                    port: portElements[i].value
+                });
+            } else if (ipElements[i].value && !portElements[i].value) {
+                onlyIps.push({
+                    ip: ipElements[i].value
+                });
+            }
         }
-        var paramsForValues = Object.fromEntries(new FormData(document.getElementById('masscanScanForm')).entries());
-        ips.push(params.target)
-        for (const ip of ips) {
-            fetch('/api/v1/task/masscan_scan_task', {
+
+        let mainIp = document.getElementById('masscanInputIP').value;
+        let mainPort = document.getElementById('inputPortMasscan').value;
+
+        if (mainIp && mainPort) {
+            ipPortPairs.push({
+                ip: mainIp,
+                port: mainPort
+            });
+        } else if (mainIp && !mainPort) {
+            onlyIps.push({
+                ip: mainIp
+            });
+        }
+
+        const executeMasscanRequest = (target, ports = '') => {
+            if (!ports) {
+                ping = true;
+            } else {
+                ping = false;
+            }
+            return fetch('/api/v1/task/masscan_scan_task', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -166,33 +203,63 @@
                     agent_id: getAgent(),
                     format,
                     wait,
-                    target: ip,
+                    target: target,
                     search_udp_port,
                     source_port,
                     max_rate,
-                    ports,
+                    ports: ports,
                     ping,
                     scope_id: ''
                 })
-            }).then(response => {
-                if (response.status !== 201) {
-                    response.json().then(data => {
-                        const errorMessage = data.detail[0].msg || 'Create task error';
-                        create_toast('Error', errorMessage, 'error');
-                    });
-                } else {
+            });
+        };
+
+        for (const pair of ipPortPairs) {
+            executeMasscanRequest(pair.ip, pair.port)
+                .then(response => {
+                    if (response.status !== 201) {
+                        response.json().then(data => {
+                            let errorMessage = data.detail[0].msg || 'Create task error';
+                            create_toast('Error', errorMessage, 'error');
+                        });
+                    } else {
                     var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
                     if (myModal) {
                         myModal.hide();
                     }
-                }
-            }).catch(error => {
-                create_toast('Error', 'An error occurred while sending the request', 'error');
-                console.error('Error:', error);
-            });
+                }})
+                .catch(error => {
+                    create_toast('Error', 'An error occurred while sending the request', 'error');
+                    console.error('Error:', error);
+                });
+        }
+
+        for (const ip of onlyIps) {
+            executeMasscanRequest(ip.ip, params.ports)
+                .then(response => {
+                    if (response.status !== 201) {
+                        response.json().then(data => {
+                            let errorMessage = data.detail[0].msg || 'Create task error';
+                            create_toast('Error', errorMessage, 'error');
+                        });
+                    }  else {
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('masscanModalWindow'));
+                    if (myModal) {
+                        myModal.hide();
+                    } 
+                }})
+                .catch(error => {
+                    create_toast('Error', 'An error occurred while sending the request', 'error');
+                    console.error('Error:', error);
+                });
         }
     } else {
         if (selectedScopeForMasscan) {
+            if (params.ports === undefined) {
+                ping = true;
+            } else {
+                ping = false;
+            }
             fetch('/api/v1/task/masscan_scan_task', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -289,27 +356,51 @@
 
 {% endmacro %}
 
-{% macro masscan_modal() %}
-
-<div id="masscanModalWindow" class="modal fade" tabindex="-1" aria-labelledby="masscanModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="masscanModalLabel" >Masscan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="masscanScanForm" class="needs-validation" style="padding-top: 7px;" novalidate>
-                    {{ masscan_main() }}
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% macro masscan_modal_to_info_tabs() %}
 
 <script>
-    function masscan_modal_window() {
+
+    async function masscan_script_modal_to_info_tabs(rows) {
         var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
+        let portsSelector = document.getElementById('masscanPortsSelector');
+
+        $('#masscanModalWindow').on('hidden.bs.modal', function () {
+            $(this).find('form').trigger('reset');
+            $(this).find('#MasscanInputContainer').html('');
+        });
+        
+        if (rows.length > 0) {
+            addNewMasscanForm();
+        }
+
+        let inputForms = document.querySelectorAll('[id^="masscanIpTarget"]');
+        
+        for (let row = 0; row < rows.length; row++) {
+            let currentForm = inputForms[row] || addNewMasscanForm();
+            
+            let inputIP = currentForm.querySelector('[id^="masscanInputIP"]');
+            let inputPort = currentForm.querySelector('[id^="inputPortMasscan"]');
+            
+            if (inputIP && rows[row].ipaddr) {
+                inputIP.value = rows[row].ipaddr;
+            }
+            
+            if (inputPort && rows[row].port) {
+                inputPort.value = rows[row].port;
+            }
+            
+            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+                addNewMasscanForm();
+                inputForms = document.querySelectorAll('[id^="masscanIpTarget"]');
+            }
+                // if (rows[row].port || rows[row].port != null){
+                //     document.getElementById('portsScan').checked = true
+                //     portsSelector.removeAttribute('disabled')
+                //     portsSelector.value = Array.from(new Set(rows.map(row => row.port))).join(',');
+                // }
+
+        }
+        
         myModal.show();
     }
 
@@ -377,6 +468,14 @@
 <script>
     function masscan_full_modal_window() {
         var myModal = new bootstrap.Modal(document.getElementById('masscanModalWindow'));
+        $('#masscanModalWindow').on('hidden.bs.modal', function () {
+                $(this).find('form').trigger('reset');
+                $(this).find('#MasscanInputContainer').html('');
+            });
+            let portsSelector = document.getElementById('masscanPortsSelector');
+            portsSelector.value = ''
+            document.getElementById('masscanPortsScan').checked = false
+            portsSelector.setAttribute('disabled', 'disabled')
         myModal.show();
     }
 
@@ -409,12 +508,11 @@
         url_address = '/api/v1/vis/node_info/' + node.id
         resp = await fetch(url_address, { method: 'GET' })
         json = await resp.json()
-        console.log(json)
         var portsSelector = document.getElementById('masscanPortsSelector');
         if (json.ports.length) {
             document.getElementById('masscanPortsScan').checked = true
             portsSelector.removeAttribute('disabled')
-            portsSelector.value = json.ports.map(item => item.port).join(',');
+            portsSelector.value = Array.from(new Set(json.ports.map(item => item.port))).join(',');
         } else {
             portsSelector.value = ''
             document.getElementById('masscanPortsScan').checked = false

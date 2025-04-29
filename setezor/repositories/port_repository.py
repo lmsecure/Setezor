@@ -15,17 +15,42 @@ class PortRepository(SQLAlchemyRepository[Port]):
         if ip_id:
             stmt = select(Port).join(IP, Port.ip_id == IP.id).filter(Port.port == port,
                                                                      IP.id == ip_id,
+                                                                     Port.protocol == port_obj.protocol,
                                                                      Port.project_id == port_obj.project_id,
                                                                      Port.scan_id == port_obj.scan_id
                                                                      )
         else:
-            stmt = select(Port).join(IP, Port.ip_id == IP.id).filter(Port.port == port, 
-                                                                     IP.ip == ip.ip, 
+            stmt = select(Port).join(IP, Port.ip_id == IP.id).filter(Port.port == port,
+                                                                     IP.ip == ip.ip,
+                                                                     Port.protocol == port_obj.protocol,
                                                                      Port.project_id == port_obj.project_id,
                                                                      Port.scan_id == port_obj.scan_id
                                                                      )
         result = await self._session.exec(stmt)
-        return result.first()
+        obj = result.first()
+
+        if not obj:
+            return
+
+        # Если у имеющегося в базе объекта уже есть обнаруженный сервис
+        #   и при этом у нового объекта так же обнаружен сервис, отличный от имеющегося
+        #   то создается новый объект
+        #   иначе, возвращается существующий объект
+        # Если у имеющегося объекта нет сервиса
+        #   то сервис обновляется на новый
+        #   по той же логике обновляются state и protocol
+        # TODO: может возникнуть проблема в том случае, если в логах nmap не будет сервиса, но будет софт
+        if obj.service_name:
+            if port_obj.service_name and obj.service_name != port_obj.service_name:
+                return
+        else:
+            obj.service_name = port_obj.service_name
+        if obj.state:
+            if port_obj.state and obj.state != port_obj.state:
+                obj.state = port_obj.state
+        else:
+            obj.state = port_obj.state
+        return obj
 
 
     async def get_node_info(self, ip_id: str, project_id: str):
@@ -52,7 +77,7 @@ class PortRepository(SQLAlchemyRepository[Port]):
         return top_ports_result
 
 
-    async def resource_list(self, project_id: str):
+    async def resource_list(self, project_id: str, scan_id: str):
         stmt = select(
                 Port.id,
                 IP.ip,
@@ -60,12 +85,12 @@ class PortRepository(SQLAlchemyRepository[Port]):
                 Domain.domain,
                 func.count(L4SoftwareVulnerability.id).label('cnt')).select_from(Port)\
             .join(IP, IP.id == Port.ip_id)\
-            .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
-            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
-            .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
+            .join(L4Software, L4Software.l4_id == Port.id)\
+            .join(DNS_A, DNS_A.id == L4Software.dns_a_id)\
+            .join(Domain, Domain.id == DNS_A.target_domain_id)\
             .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id, isouter=True)\
-            .filter(Port.project_id == project_id)\
-            .group_by(Port.id)
+            .filter(Port.project_id == project_id, Port.scan_id == scan_id)\
+            .group_by(Port.id, IP.ip, Port.port, Domain.domain)
         result = await self._session.exec(stmt)
         return result.all()
 

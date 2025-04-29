@@ -92,7 +92,7 @@ docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor:/root/.loc
 ```
 1. Запустить Агента:
 ```bash
-docker run --network=host --cap-add=NET_ADMIN -d lmsecure/setezor:latest -s -p 16662
+docker run --network=host --cap-add=NET_ADMIN -d lmsecure/setezor.agent:latest
 ```
 
 **Функционал CLI:**

@@ -11,37 +11,7 @@
                     data-i18n-placeholder="Domain name or IP" aria-label="Target"
                     aria-describedby="basic-addon1" required name="Target">
 
-                    <button id="add_new_whois_form" onclick="(function() {
-                        const original = document.getElementById('TargetForWhois');
-                        const clone = original.cloneNode(true);
-                        const newInput = clone.querySelector('input');
-                        newInput.id = 'inputTarget_' + Date.now(); // Уникальный ID
-                        newInput.value = '';
-                        // newInput.name = 'targetDOMAIN' + Date.now(); // Уникальный Name
-                        
-                        const existingMinusButton = clone.querySelector('.btn-danger');
-                        if (existingMinusButton) {
-                            existingMinusButton.remove();
-                        }
-
-                        const removeButton = document.createElement('button');
-                        removeButton.textContent = '-';
-                        removeButton.type = 'button';
-                        removeButton.className = 'btn btn-danger';
-                        removeButton.style.width = '3rem';
-                        removeButton.onclick = () => {
-                            clone.remove();
-                        };
-
-                        clone.appendChild(removeButton);
-
-                        const addButton = clone.querySelector('#add_new_whois_form');
-                        if (addButton) {
-                            addButton.remove();
-                        }
-
-                        document.getElementById('WhoisInputContainer').appendChild(clone);
-                    })()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+                    <button id="add_new_whois_form" onclick="addNewWhoisForm()" type="button" class="btn btn-success" style="width: 3rem">+</button>
             </div>
 
             <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
@@ -73,7 +43,40 @@
         </form>
     </div>
 </div>
+<script>
+    function addNewWhoisForm() {
+        const original = document.getElementById('TargetForWhois');
+            const clone = original.cloneNode(true);
+            const newInputTarget = clone.querySelector('[id^="inputTARGET"]');
+            newInputTarget.id = 'inputTARGET_' + Date.now();
+            const originalInputTarget = document.getElementById('inputTARGET');
+            newInputTarget.value = originalInputTarget.value;
+            originalInputTarget.value = ''
 
+            let existingMinusButton = clone.querySelector('.btn-danger');
+            if (existingMinusButton) {
+                existingMinusButton.remove();
+            }
+        
+            let removeButton = document.createElement('button');
+            removeButton.textContent = '-';
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-danger';
+            removeButton.style.width = '3rem';
+            removeButton.onclick = () => {
+                clone.remove();
+            };
+        
+            clone.appendChild(removeButton);
+        
+            let addButton = clone.querySelector('#add_new_whois_form');
+            if (addButton) {
+                addButton.remove();
+            }
+        
+            document.getElementById('WhoisInputContainer').appendChild(clone);
+        }
+</script>
 {% endmacro %}
 
 {% macro whois_full_modal() %}
@@ -130,6 +133,54 @@
         var myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'));
         var inputIP = document.getElementById('inputTARGET')
         inputIP.value = ip
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("whoisModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+
+{% endmacro %}
+{% macro whois_script_modal_to_info_tabs() %}
+<script>
+    async function whois_script_modal_to_info_tabs(rows) {
+        var myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'));        
+        if (rows.length > 0) {
+            addNewWhoisForm();
+        }
+
+        let inputForms = document.querySelectorAll('[id^="TargetForWhois"]');
+        
+        for (let row = 0; row < rows.length; row++) {
+            let currentForm = inputForms[row] || addNewWhoisForm();
+            
+            let inputIP = currentForm.querySelector('[id^="inputTARGET"]');
+            
+            if (inputIP && rows[row].ipaddr) {
+                inputIP.value = rows[row].ipaddr;
+            } else if (inputIP && rows[row].domain){
+                inputIP.value = rows[row].domain;
+            }
+            
+            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+                addNewWhoisForm();
+                inputForms = document.querySelectorAll('[id^="TargetForWhois"]');
+            }
+        }
+        
         myModal.show();
     }
 

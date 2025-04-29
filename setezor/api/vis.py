@@ -7,7 +7,8 @@ from setezor.dependencies.uow_dependency import UOWDep
 from setezor.models.d_object_type import ObjectType
 from setezor.models.node_comment import NodeComment
 from setezor.schemas.comment import NodeCommentForm
-from setezor.services import NodeService, EdgeService, IPService, AgentInProjectService
+from setezor.schemas.credentials import CredentialsForm
+from setezor.services import NodeService, EdgeService, IPService, AgentInProjectService, CredentialsService
 from setezor.schemas.ip import ChangeObjectType
 from setezor.schemas.roles import Roles
 
@@ -110,6 +111,26 @@ async def delete_comment(
     await NodeService.delete_comment(uow=uow, project_id=project_id, user_id=user_id, comment_id=comment_id)
 
 
+@router.get("/credentials/{ip_id}")
+async def get_credentials_for_node(
+    ip_id: str,
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    user_id: str = Depends(get_user_id)
+) -> list[Dict]:
+    result = await CredentialsService.get_credentials_for_node(uow=uow, ip_id=ip_id, project_id=project_id)
+    return result
+
+
+@router.post("/credentials")
+async def add_credentials_to_node(
+    payload: CredentialsForm,
+    uow: UOWDep,
+    project_id: str = Depends(get_current_project),
+    user_id: str = Depends(get_user_id)
+) -> dict:
+    new_cred_obj = await CredentialsService.add_credentials(uow=uow, project_id=project_id, data=payload.model_dump())
+    return new_cred_obj
 
 
 @router.put("/set_object_type")

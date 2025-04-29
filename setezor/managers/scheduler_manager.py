@@ -38,14 +38,12 @@ class CustomScheduler(Scheduler, Observable, Observer):
     async def give_result_to_task_manager(self,
                                           task_id: str,
                                           agent_id: str,
-                                          result: list,
-                                          raw_result: bytes,
+                                          result: dict,
                                           raw_result_extension: str):
         for observer in self._observers:
             await observer.send_result_to_parent_agent(agent_id=agent_id,
                                                        task_id=task_id,
-                                                       result=result,
-                                                       raw_result=raw_result,
+                                                       task_data=result,
                                                        raw_result_extension=raw_result_extension)
 
     async def write_local_result(self,

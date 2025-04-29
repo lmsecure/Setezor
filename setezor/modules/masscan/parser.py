@@ -9,11 +9,11 @@ from setezor.models import IP, Port, MAC, Network, DNS_A, Domain
 
 class BaseMasscanParser:
 
-    async def parse(input_data: str):
+    def parse(input_data: str):
         pass
 
     @classmethod
-    async def _parser_results(cls, format: str, input_data: str):
+    def _parser_results(cls, format: str, input_data: str):
         parsers: dict = {
             'xml': XMLParser,
             'oX': XMLParser,
@@ -22,12 +22,11 @@ class BaseMasscanParser:
             'list': ListParser,            
             'oL': ListParser,
         }
-        loop = asyncio.get_event_loop()
         parser = parsers.get(format)
-        return await parser.parse(input_data=input_data)
+        return parser.parse(input_data=input_data)
 
     @classmethod
-    async def restruct_result(cls, data: dict, agent_id: int, interface_ip_id: int):
+    def restruct_result(cls, data: dict, agent_id: int, interface_ip_id: int):
         result = []
         ips_objs = dict()
         for ip_target, ports_target in data.items():
@@ -48,7 +47,7 @@ class BaseMasscanParser:
 class XMLParser(BaseMasscanParser):
 
     @classmethod
-    async def parse(cls, input_data: str) -> dict[str, list]:
+    def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:
             raise Exception("Masscan xml log file empty")
         port_result = dict()
@@ -75,7 +74,7 @@ class XMLParser(BaseMasscanParser):
 class JsonParser(BaseMasscanParser):
 
     @classmethod
-    async def parse(cls, input_data: str) -> dict[str, list]:
+    def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:
             raise Exception("Masscan json log file empty")
         port_result = dict()
@@ -101,7 +100,7 @@ class JsonParser(BaseMasscanParser):
 class ListParser(BaseMasscanParser):
 
     @classmethod
-    async def parse(cls, input_data: str) -> dict[str, list]:
+    def parse(cls, input_data: str) -> dict[str, list]:
         if not input_data:
             raise Exception("Masscan list log file empty")
         if isinstance(input_data, bytes):

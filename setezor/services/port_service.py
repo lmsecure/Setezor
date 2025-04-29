@@ -30,7 +30,8 @@ class PortService(IService):
     @classmethod
     async def get_resources(cls, uow: UnitOfWork, project_id: str) -> List:
         async with uow:
-            resources = await uow.port.resource_list(project_id=project_id)
+            last_scan = await uow.scan.last(project_id=project_id)
+            resources = await uow.port.resource_list(project_id=project_id, scan_id=last_scan.id)
         result = []
         for res in resources:
             result.append({
@@ -64,7 +65,7 @@ class PortService(IService):
         async with uow:
             resource_vulnerabilities = await uow.port.vulnerabilities(l4_id=l4_id, project_id=project_id)
             links_objs = await uow.vulnerability_link.all_on_l4(project_id=project_id, l4_id=l4_id)
-            count_scr = await uow.screenshots.count_on_l4(project_id=project_id, l4_id=l4_id)
+            count_scr = await uow.l4_software_vulnerability_screenshot.count_on_l4(project_id=project_id, l4_id=l4_id)
         links = {}
         for vuln_id, link in links_objs:
             if (item := links.get(vuln_id)):

@@ -112,7 +112,8 @@ class AgentInProjectService:
                     "parent_agent_id": parent_agent.id if parent_agent else None,
                     "parent_agent_name": ', '.join([item.get("parent_agent_name") for item in parents.get(agent.id, [])]),
                     "secret_key": agent.secret_key,
-                    "user_name": user.login if user else ''
+                    "user_name": user.login if user else '',
+                    "object_id": agent_in_project.object_id
             })
         return result
 

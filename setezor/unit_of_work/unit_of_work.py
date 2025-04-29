@@ -42,7 +42,7 @@ from setezor.repositories import \
     AuthenticationCredentialsRepository, \
     NodeCommentRepository, \
     ScanRepository, \
-    ScreenshotsRepository
+    L4SoftwareVulnerabilityScreenshotRepository
 
 
 from setezor.repositories import SQLAlchemyRepository
@@ -205,7 +205,7 @@ class UnitOfWork(IUnitOfWork):
     def node_comment(self) -> NodeCommentRepository: return NodeCommentRepository(self.__session)
 
     @property
-    def screenshots(self) -> ScreenshotsRepository: return ScreenshotsRepository(self.__session)
+    def l4_software_vulnerability_screenshot(self) -> L4SoftwareVulnerabilityScreenshotRepository: return L4SoftwareVulnerabilityScreenshotRepository(self.__session)
 
     @property
     def setting(self) -> SettingRepository: return SettingRepository(self.__session)

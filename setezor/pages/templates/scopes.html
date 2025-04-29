@@ -199,12 +199,35 @@ Projects
     async function addScope(event) {
         event.preventDefault();
         let formData = new FormData(event.target);
+
+        for (let [key, value] of formData.entries()){
+            if (typeof value === 'string'){
+                formData.set(key, sanitize_scope(value))
+            }
+        }
+
         await axios.post("/api/v1/scope", formData, { headers: { 'Content-Type': 'application/json' } }).then(response => {
             getScopes();
             get_nmap_scope_list();
             get_masscan_scope_list('')
         });
     }
+    function sanitize_scope(string) {
+			const map = {
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#x27;',
+				"/": '&#x2F;',
+			};
+			const reg = /[&<>"'/]/ig;
+            if (string) {
+				return string.replace(reg, (match) => map[match]);
+			} else {
+				return ""
+			}
+		}
 
     async function getScopeTargets(id) {
         let el = document.getElementById("scopeTargetsContainer");
@@ -226,9 +249,9 @@ Projects
                         <tbody>`;
                 for (const target of response.data) {
                     result += `<tr id="target-${target.id}">`;
-                    result += `<td><span class="editable" data-field="protocol">${target.protocol || ''}</span></td>`;
+                    result += `<td><span class="editable" data-field="protocol">${sanitize_scope(target.protocol) || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="ip">${target.ip || ''}</span></td>`;
-                    result += `<td><span class="editable" data-field="domain">${target.domain || ''}</span></td>`;
+                    result += `<td><span class="editable" data-field="domain">${sanitize_scope(target.domain) || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
                     result += `<td>
                                     <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
@@ -538,18 +561,31 @@ Projects
         let suffix_id = Date.now();
         let original = document.getElementById('idEnterScopeTargetsOriginal');
         let clone = original.cloneNode(true);
+        
         let newInputProtocol = clone.querySelector('[id^=input_target_protocol]');
         newInputProtocol.id = 'input_target_protocol_' + suffix_id;
-        newInputProtocol.value = '';
+        let originalInputProtocol = document.getElementById('input_target_protocol');
+        newInputProtocol.value = originalInputProtocol.value;
+        originalInputProtocol.value = ''
+
         let newInputIP = clone.querySelector('[id^=input_target_ip]');
         newInputIP.id = 'input_target_ip_' + suffix_id;
-        newInputIP.value = '';
+        let originalInputIP = document.getElementById('input_target_ip');
+        newInputIP.value = originalInputIP.value;
+        originalInputIP.value = ''
+
         let newInputDomain = clone.querySelector('[id^=input_target_domain]');
         newInputDomain.id = 'input_target_domain_' + suffix_id;
-        newInputDomain.value = '';
+        let originalInputDomain = document.getElementById('input_target_domain');
+        newInputDomain.value = originalInputDomain.value;
+        originalInputDomain.value = ''
+
         let newInputPort = clone.querySelector('[id^=input_target_port]');
         newInputPort.id = 'input_target_port_' + suffix_id;
-        newInputPort.value = '';
+        let originalInputPort = document.getElementById('input_target_port');
+        newInputPort.value = originalInputPort.value;
+        originalInputPort.value = ''
+
         let existingMinusButton = clone.querySelector('.btn-danger');
         if (existingMinusButton) {
             existingMinusButton.remove();
@@ -580,9 +616,9 @@ Projects
         let targets = []
         for (let i = 0; i < targetsProtocol.length; i++) {
             targets.push({
-                "protocol" : targetsProtocol[i].value || null,
+                "protocol" : sanitize_scope(targetsProtocol[i].value) || null,
                 "ip" : targetsIP[i].value || null,
-                "domain" : targetsDomain[i].value || null,
+                "domain" : sanitize_scope(targetsDomain[i].value) || null,
                 "port" : Number(targetsPort[i].value) || null
             }) }
         await axios.post(`/api/v1/scope/${id}/add_targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{

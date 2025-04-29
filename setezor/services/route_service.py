@@ -52,7 +52,7 @@ class NodeService(IService):
                 "id": node.id,
                 "mac_address": node.mac,
                 "address": node.ip,
-                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [server_agent.id],
+                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [server_agent_in_project.id],
                 "agent": None,
                 "object_type": node.name,
                 "group": f"{node.start_ip}/{node.mask}",
@@ -137,6 +137,7 @@ class NodeService(IService):
         port_list = []
         for port, soft in port_objs:
             port_list.append({
+                "port_id": port.id,
                 "port": port.port,
                 "protocol": port.protocol,
                 "state": port.state,

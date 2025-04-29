@@ -13,6 +13,17 @@ Information
 
 {% block content %}
 
+{% import 'network/nmap.html' as nmap %}
+{{ nmap.nmap_script_modal_to_info_tabs() }}
+{% import 'network/masscan.html' as masscan%}
+{{ masscan.masscan_modal_to_info_tabs() }}
+{% import 'network/cert.html' as cert%}
+{{ cert.nmap_script_modal_to_info_tabs() }}
+{% import 'network/whois.html' as whois%}
+{{ whois.whois_script_modal_to_info_tabs() }}
+{% import 'network/domains.html' as domains%}
+{{ domains.domains_script_modal_to_info_tabs() }}
+
 <div id="main_bar" class="container-fluid justify-content-between bd-highlight mb-3">
     <div class="row">
         <div class="col-2">
@@ -84,12 +95,85 @@ Information
                                     <option value="like">like</option>
                                 </select>
                             </div>
-                            <input id="filter-value-{{tab.name}}" class="form-control me-1" type="text"
+                            <input id="filter-value-{{tab.name}}" name="filter-value-{{tab.name}}" class="form-control me-1" type="text"
                             data-i18n-placeholder="value to filter" style="width: 40%">
                             <button id="filter-search-{{tab.name}}" class="btn btn-primary me-1" style="width: 5rem; "
                                 onclick="{{tab.name}}ApplyFilter()" data-i18n="Search"></button>
-                            <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" style="width: 6rem; "
+                            <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" style="width: 7rem; "
                                 onclick="{{tab.name}}clearFilter()" data-i18n="Clear"></button>
+
+                        {% if tab.name == 'software' or tab.name == 'ip_mac_port' %}
+                            <div class="me-1">
+                                <select class="form-select" style="width: 12rem; " id="filter-tools-{{tab.name}}">
+                                    <option value="nmap">nmap</option>
+                                    <option value="masscan">masscan</option>
+                                    <option value="cert">cert</option>
+                                    <option value="whois">whois</option>
+                                </select>
+                            </div>
+                        {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip' %}
+                        <div class="me-1">
+                            <select class="form-select" style="width: 12rem; " id="filter-tools-{{tab.name}}">
+                                <option value="nmap">nmap</option>
+                                <option value="masscan">masscan</option>
+                                <option value="cert">cert</option>
+                                <option value="domains">domains</option>
+                                <option value="whois">whois</option>
+                            </select>
+                        </div>   
+                        {% endif %}    
+                            <script>
+                                function {{tab.name}}get_selected_rows()
+                                {
+                                    let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
+                                    let t_rows = {{tab.name}}_table.getData()
+                                    console.log(t_rows)
+                                    let selected_id = [];
+                                    for (const [k, v] of {{tab.name}}_selected_row)
+                                    {
+                                        if (v)
+                                            selected_id.push(Number(k.split('-')[2]));
+                                    }
+                                    let result = [];
+                                    for (let i = 0; i < t_rows.length; i++)
+                                    {
+                                        if (selected_id.includes(t_rows[i].id))
+                                            result.push(t_rows[i]);
+                                    }
+                                    return result;
+                                }
+                                function {{tab.name}}open_modal_tools()
+                                {
+                                    let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
+                                    rows = {{tab.name}}get_selected_rows();
+                                    
+                                    {
+                                        switch (tool) {
+                                        case "nmap":
+                                            nmap_script_modal_to_info_tabs(rows);
+                                            break;
+                                        case "masscan":
+                                            masscan_script_modal_to_info_tabs(rows);
+                                            break;
+                                        case "domains":
+                                            domains_script_modal_to_info_tabs(rows)
+                                            break;
+                                        case "cert":
+                                            cert_script_modal_to_info_tabs(rows)
+                                            break;
+                                        case "whois":
+                                            whois_script_modal_to_info_tabs(rows)
+                                            break;
+                                        default:
+                                            break;
+                                        }
+                                    }
+                                }
+                            </script>
+                            {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
+                                <button class="btn btn-success" style="width: 7rem;"  onclick="{{tab.name}}open_modal_tools();" data-i18n="Start"></button>
+                            {% endif %}
+                        
 
                         <style>.tabulator {
                             border-radius: 8px;
@@ -120,26 +204,6 @@ Information
                             vertical-align: middle;
                             border-right: 1px solid #dee2e6;
                         }</style>
-                            <script>
-                                function {{tab.name}}get_selected_rows()
-                                {
-                                    let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
-                                    let t_rows = {{tab.name}}_table.getData()
-                                    let selected_id = [];
-                                    for (const [k, v] of {{tab.name}}_selected_row)
-                                    {
-                                        if (v)
-                                            selected_id.push(Number(k.split('-')[2]));
-                                    }
-                                    let result = [];
-                                    for (let i = 0; i < t_rows.length; i++)
-                                    {
-                                        if (selected_id.includes(t_rows[i].id))
-                                            result.push(t_rows[i]);
-                                    }
-                                    return result;
-                                }
-                            </script>
                         </div>
 
                         {% if tab.name == 'resource_software' %}
@@ -215,7 +279,7 @@ Information
                         function checkbox_formatter(cell, formatterParams, onRendered)
                         {
                             let checkbox_id = '{{tab.name}}-checkbox-' + cell.getRow().getData().id;
-                            return `<input type='checkbox' class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
+                            return `<input type='checkbox' name="{{tab.name}}-checkbox" class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
                         }
                         function {{tab.name}}addRow() {
                             rowIndex = ""
@@ -389,7 +453,7 @@ Information
                             return menu;
                         };
                         var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                            {% if  tab.name =='l4_soft_vuln_link' %}
+                            {% if  tab.name =='soft_vuln_link' %}
                                 layout: "fitDataTable",
                             {% else %}
                                 layout: "fitColumns",
@@ -414,6 +478,9 @@ Information
                             paginationSizeSelector: [5, 10, 25, 50, 100],
                             validationMode: 'highlight',
                             columns: [
+                                {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
+                                    {{ '{' }} title: "Select", field: "selected", formatter: checkbox_formatter, headerSort: false {{ '}' }}
+                                {% endif %},
                                 {% for col in tab.columns %}
                                     {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
                                     {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}

@@ -4,6 +4,7 @@ from setezor.models import IP, Port, DNS_A, Domain, Software, Vendor, L4Software
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
+from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.tools.url_parser import parse_url
 
 
@@ -121,8 +122,9 @@ class WappalyzerParser:
         if domain:
             new_domain = Domain(domain=domain)
             try:
-                responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, *dns_a = DNSModule.proceed_records(domain, responses) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                responses = [await DNSModule.resolve_domain(domain, "A")]
+                domains = DNSModule.proceed_records(responses)
+                new_domain, new_ip, *dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
                 if dns_a:
                     dns_a_obj = dns_a[0]
                 result.extend([new_domain, new_ip, *dns_a])

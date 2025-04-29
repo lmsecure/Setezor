@@ -1,14 +1,13 @@
 import asyncio
 import datetime
-from time import time
 from setezor.models import Vulnerability as VulnerabilityModel, \
     Software, \
     Domain, IP, Port, DNS_A
 from setezor.models.l4_software import L4Software
 from setezor.models.l4_software_vulnerability import L4SoftwareVulnerability
 from setezor.modules.acunetix.scan import Scan
-from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
+from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.schemas.task import TaskStatus
 from setezor.services.task_service import TasksService
 from setezor.tasks.base_job import BaseJob
@@ -61,8 +60,9 @@ class AcunetixScanTask(BaseJob):
         data = parse_url(url=self.target_address)
         if domain := data.get("domain"):
             try:
-                responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, *new_dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
+                responses = [await DNSModule.resolve_domain(domain, "A")]
+                domains = DNSModule.proceed_records(responses)
+                new_domain, new_ip, *new_dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
                 result.append(new_ip)
                 result.extend(new_dns_a)
             except:

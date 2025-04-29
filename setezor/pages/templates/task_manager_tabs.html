@@ -48,9 +48,10 @@
         for (const task of tasks) {
             result += `
     <tr>
-        <td>${task.id}</td>
-        <td>${task.created_by}</td>
-        <td>${task.created_at}</td>
+        <td ">${task.id}</td>
+        <td ">${task.created_by}</td>
+        <td ">${task.created_at}</td>
+        ${task.status == "FINISHED" ? `<td ">${task.updated_at}</td>` : ``}
         <td colspan="2"><textarea class="form-control" disabled rows="3">${task.params}</textarea></td>
         <td style="text-align: center;vertical-align: middle;">
             ${task.status == "STARTED" ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
@@ -63,6 +64,7 @@
                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
             </svg>
             </button>` : ``}
+            ${task.status == "FAILED" ? `<textarea class="form-control" disabled rows="3">${task.traceback}</textarea>` : ``}
         </td>
     </tr>`;
         }
@@ -73,10 +75,12 @@
                 <th>ID</th>
                 <th>${i18next.t('Created By')}</th>
                 <th>${i18next.t('Created At')}</th>
+                ${status == "FINISHED" ? `<th class="text-center">${i18next.t('Finished At')}</th>` : ''}
                 <th>${i18next.t('Params')}</th>
                 <th></th>
-                ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "CREATED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "FAILED" ? `<th class="text-center">${i18next.t('Error')}</th>` : ''}
             </tr>
         </thead>
         <tbody>

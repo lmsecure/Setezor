@@ -101,7 +101,7 @@ class AuthService(IService):
             if not invite_link.count_of_entries:
                 raise HTTPException(status_code=403, detail="Invalid token")
         if not all([c in string.ascii_letters + string.digits for c in register_form.login]):
-            raise HTTPException(status_code=400, detail="Username can only contain letters and digits")        
+            raise HTTPException(status_code=400, detail="Username can only contain letters and digits")
         if await UsersService.get_by_login(uow=uow, login=register_form.login):
             raise HTTPException(status_code=400, detail="Username is already taken")
         

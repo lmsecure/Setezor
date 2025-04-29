@@ -22,6 +22,7 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
         result = await self._session.exec(stmt)
         return result.first()
 
+
     async def get_data_for_tabulator(self, project_id: str, last_scan_id: str):
         stmt = select(IP, Domain, Port, Authentication_Credentials).select_from(Port).\
                 join(Authentication_Credentials, Port.id == Authentication_Credentials.port_id).\
@@ -29,5 +30,13 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
                 join(DNS_A, DNS_A.target_ip_id == IP.id).\
                 join(Domain, Domain.id == DNS_A.target_domain_id).\
                 filter(Port.project_id == project_id, Port.scan_id == last_scan_id)
+        result = await self._session.exec(stmt)
+        return result.all()
+
+
+    async def get_credentials_for_node(self, ip_id: str, project_id: str):
+        stmt = select(Port, Authentication_Credentials).select_from(Port)\
+                .join(Authentication_Credentials, Port.id == Authentication_Credentials.port_id)\
+                .filter(Port.project_id == project_id, Port.ip_id == ip_id)
         result = await self._session.exec(stmt)
         return result.all()

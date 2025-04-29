@@ -6,3 +6,4 @@ tmp_chain.py
 config.json
 .env*
 build.sh
+*.deb

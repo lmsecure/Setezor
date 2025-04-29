@@ -39,6 +39,6 @@ from .auth_log_repository import AuthLog_Repository
 from .invite_link_repository import InviteLinkRepository
 from .authentication_credentials_repository import AuthenticationCredentialsRepository
 from .node_comment_repository import NodeCommentRepository
-from .screenshots_repository import ScreenshotsRepository
+from .l4_software_vulnerability_screenshots_repository import L4SoftwareVulnerabilityScreenshotRepository
 from .setting_repository import SettingRepository
 from .agent_in_project_repository import AgentInProjectRepository

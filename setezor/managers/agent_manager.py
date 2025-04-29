@@ -12,8 +12,6 @@ from setezor.schemas.task import TaskStatus, WebSocketMessage
 from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_service import AgentService
 from setezor.services.task_service import TasksService
-from setezor.spy import Spy
-from setezor.tools.ip_tools import get_interfaces
 from setezor.managers.cipher_manager import Cryptor
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.managers.task_result_writer import TaskResultWriter
@@ -39,20 +37,10 @@ class AgentManager:
             data = {
                 "next_agent_url": f"{agent.rest_url}/api/v1/agents/forward",
                 "close_connection": close_connection,
-                "agent_id": agent.id,
                 "data": ciphered_payload_by_current_agent.decode()
             }
         return data
 
-    @classmethod
-    def generate_data_for_server(cls, agent_id: str, data: dict):
-        ciphered_payload_by_current_agent = cls.single_cipher(key=Spy.SECRET_KEY,
-                                                              is_connected=True,
-                                                              data=data)
-        return {
-            "sender": agent_id,
-            "data": ciphered_payload_by_current_agent.decode()
-        }
 
     @classmethod
     async def get_interfaces_on_agent(cls, uow: UnitOfWork, project_id: str, agent_id_in_project: str, user_id: str):
@@ -81,11 +69,11 @@ class AgentManager:
                                            "agent_id": agent.id
                                        },
                                        close_connection=False)
-            body = payload["data"].encode()
-            data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+            next_agent_url = payload.pop("next_agent_url")
+            data, status = await HTTPManager.send_json(url=next_agent_url, data=payload)
             if isinstance(data, aiohttp.client_exceptions.ClientConnectorError):
                 continue
-            b64decoded = base64.b64decode(data)
+            b64decoded = base64.b64decode(data["data"])
             try:
                 deciphered_data = Cryptor.decrypt(data=b64decoded, key=agent.secret_key)
             except Exception as e:
@@ -93,12 +81,6 @@ class AgentManager:
             return orjson.loads(deciphered_data.decode())
         raise HTTPException(status_code=404, detail=f"{agent.name} is unreachable")
     
-
-    @classmethod
-    def interfaces(cls):
-        interfaces = [iface.model_dump() for iface in get_interfaces() if iface.ip]
-        initial_data = orjson.dumps(interfaces)
-        return base64.b64encode(Cryptor.encrypt(initial_data, Spy.SECRET_KEY))
 
     @classmethod
     async def connect_new_agent(cls, uow: UnitOfWork, agent_id: str, user_id: str):
@@ -121,18 +103,19 @@ class AgentManager:
         data = {
             "signal": "connect",
             "key": agent.secret_key,
-            "parent_agents_urls": parent_agents
+            "parent_agents_urls": parent_agents,
+            "agent_id": agent.id
         }
         for chain in agents_chains:
-            payload = cls.cipher_chain(
-                agents_chain=chain, data=data, close_connection=False)
-            body = payload["data"].encode()
-
-            connection_data = await HTTPManager.send_bytes(url=payload["next_agent_url"], data=body)
+            payload = cls.cipher_chain(agents_chain=chain, data=data, close_connection=False)
+            next_agent_url = payload.pop("next_agent_url")
+            connection_data, status = await HTTPManager.send_json(url=next_agent_url, data=payload)
             if isinstance(connection_data, aiohttp.client_exceptions.ClientConnectorError):
                 continue
             try:
-                if base64.b64decode(connection_data.decode()) == b'OK':
+                if status != 200:
+                    continue
+                if connection_data["status"] == 'OK':
                     await AgentService.set_connected(uow=uow, id=agent_id)
                     return
             except binascii.Error:
@@ -140,7 +123,7 @@ class AgentManager:
         raise HTTPException(status_code=500, detail=f"{agent.name} has not been connected")
 
     @classmethod
-    async def decipher_data_from_agent(cls, uow: UnitOfWork, data: BackWardData):
+    async def decipher_data_from_project_agent(cls, uow: UnitOfWork, data: BackWardData):
         agent_in_project = await AgentInProjectService.get_agent_in_project(uow=uow, id=data.sender)
         if not agent_in_project:
             return
@@ -176,18 +159,15 @@ class AgentManager:
                 await WS_MANAGER.send_message(project_id=project_id,
                                               message=payload)
             case "result_entities":
-                b64decoded_entities = base64.b64decode(
-                    copy_of_dict["entities"].encode())
                 task_id = copy_of_dict["task_id"]
-                if raw_result := copy_of_dict.get("raw_result"):
-                    extension = copy_of_dict.get("raw_result_extension")
-                    raw_data = base64.b64decode(raw_result.encode())
+                task_data = copy_of_dict["result"]
+                if (raw_result := task_data.get("raw_result")) and (extension := copy_of_dict.get("raw_result_extension")):
                     await TaskResultWriter.write_raw_result(task_id=task_id,
-                                                            data=raw_data,
+                                                            data=raw_result,
                                                             extension=extension,
                                                             uow=uow)
                 await TaskResultWriter.write_result(task_id=task_id,
-                                                    data=b64decoded_entities,
+                                                    data=task_data,
                                                     uow=uow)
                 await TasksService.set_status(uow=uow,
                                               id=task_id,
@@ -199,10 +179,3 @@ class AgentManager:
                 )
                 await WS_MANAGER.send_message(project_id=project_id,
                                               message=payload)
-
-    @classmethod
-    async def send_to_parent(cls, data: dict):
-        for url in Spy.PARENT_AGENT_URLS:
-            status = await HTTPManager.send_json(url=f"{url}/api/v1/agents/backward", data=data)
-            if status == 200:
-                return

@@ -21,9 +21,9 @@
     <div class="btn-group" role="group" style="padding-left: 0.47rem;">
         <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
                 if (cluster) {
-                    this.textContent = 'Decluster'
+                    this.textContent = i18next.t('Decluster')
                 } else {
-                    this.textContent = 'Cluster'
+                    this.textContent = i18next.t('Cluster')
                 }" data-i18n="Cluster"></button>
         <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
         data-i18n-title="Fullscreen mode" onclick="fullscreen_network()" style="font-family: 'Times New Roman', Times, serif;"><i class="bi bi-arrows-fullscreen"></i></button>
@@ -40,11 +40,32 @@
             </ul>
         </div>
         <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top" style="font-family: 'Times New Roman', Times, serif;"
-        data-i18n-title="Update network" onclick="get_nodes_and_edges(/*true*/);"><i class="bi bi-arrow-clockwise"></i></button>
+        data-i18n-title="Update network" onclick="get_nodes_and_edges(/*true*/).then(() => {cluster_by_netmask()})"><i class="bi bi-arrow-clockwise"></i></button>
 
     </div>
-    <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
+    <!-- <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
         <div data-agent-bar="agent_net_map"></div>
+    </div> -->
+    <div class="ms-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scansPickModal" data-i18n="Pick scans"></button>
+    </div>
+    <div class="modal fade" id="scansPickModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 data-i18n="Pick scans"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form onsubmit="showMapForScans(event).then(() => {cluster_by_netmask()})">
+                    <div class="modal-body" id="scansContainer">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                        <button type="submit" class="btn btn-primary" data-i18n="Show"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 <script>
@@ -86,7 +107,7 @@
         <tbody>
             <tr>
                 <td>label</td>
-                <td><input id="edge-label" data-i18n-value="new value"></td>
+                <td><input id="edge-label" name="edge-label" data-i18n-value="new value"></td>
             </tr>
         </tbody>
     </table>
@@ -105,8 +126,8 @@
         </div>
     </div>
 </div>
-{% if role.name == "owner" or role.name == "executor"%}
 <div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
+    {% if role.name == "owner" or role.name == "executor"%}
     <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
@@ -172,8 +193,8 @@
                 </ul>
         </li> -->
     </ul>
+    {% endif %}
 </div>
-{% endif %}
 <div class="dropdown xs" id="agentDropdownMenu" style="display:none">
     <!-- <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
@@ -237,6 +258,7 @@
 </div>
 <div id="ModalDeleteNode">
 </div>
+<div id="ModalAddCredentials"></div>
 
 <div class="modal fade" id="agentModalNetMap" tabindex="-1" aria-labelledby="agentModalNetMapLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -250,7 +272,7 @@
                     <tbody>
                         <tr>
                             <td data-i18n="Agent name"></td>
-                            <td><input id="agent-name" class="form-control" value="" required></td>
+                            <td><input id="agent-name" name="agent-name" class="form-control" value="" required></td>
                         </tr>
                         <tr>
                             <td data-i18n="Agent description"></td>
@@ -260,7 +282,7 @@
                         </tr>
                         <tr>
                             <td data-i18n="Agent color"></td>
-                            <td><input id="agent-color" type="color" class="form-control" value="#000000"></td>
+                            <td><input id="agent-color" name="agent-color" type="color" class="form-control" value="#000000"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -364,9 +386,20 @@
     }
     let IPMap = new Map();
     async function get_nodes_and_edges(scans=[], update = false) {
+        cluster = false
         const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
         var nodes = ajax_request(`/api/v1/vis/nodes?${params}`, 'get', async = true);
         var edges = ajax_request(`/api/v1/vis/edges?${params}`, 'get', async = true);
+        if (nodes.length < 1000) {
+            cluster = true
+        }
+        if (nodes.length > 10000) {
+            alert(i18next.t('There are too many objects loaded on the map, we can only process 10000 nodes, please select a scan with fewer nodes or see the node information on the Info tab.'))
+            return
+        }
+        if (nodes.length > 3000) {
+            alert(i18next.t('A large number of objects are detected on the map, the loading waiting time may be increased'))
+        }
         try {
             await waitForAgentData()
             nodes.forEach((node) => {
@@ -746,30 +779,30 @@
                                 <tbody>
                                     <tr>
                                         <td >${i18next.t('ip')}</td>
-                                        <td><input id="node-label" class="form-control" value="" required></td>
+                                        <td><input id="node-label" name="node-label" class="form-control" value="" required></td>
                                         <td id="invalid-ip" class="invalid-feedback">${i18next.t('Please, type correct ip')}</td>
                                     </tr>
                                     <tr>
                                         <td>${i18next.t('mac')}</td>
-                                        <td><input id="node-mac" class="form-control" value="" required></td>
+                                        <td><input id="node-mac" name="node-mac" class="form-control" value="" required></td>
                                         <td id="invalid-mac" class="invalid-feedback">${i18next.t('Please, type correct mac')}</td>
                                     </tr>
                                     <tr>
                                         <td>${i18next.t('domain')}</td>
-                                        <td><input id="node-domain" class="form-control" value=""></td>
+                                        <td><input id="node-domain" name="node-domain" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
                                         <td>${i18next.t('os')}</td>
-                                        <td><input id="node-os" class="form-control" value=""></td>
+                                        <td><input id="node-os" name="node-os" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
                                         <td>${i18next.t('vendor')}</td>
-                                        <td><input id="node-vendor" class="form-control" value=""></td>
+                                        <td><input id="node-vendor" name="node-vendor" class="form-control" value=""></td>
                                     </tr>
                                     ${!editing ? 
                                         `<tr>
                                             <td>${i18next.t('mask')}</td>
-                                            <td><input id="node-mask" class="form-control" value=""></td>
+                                            <td><input id="node-mask" name="node-mask" class="form-control" value=""></td>
                                         </tr>` : ``}
                                 </tbody></table>
                             </div>
@@ -956,7 +989,7 @@
                 tooltipDelay: 100,
                 hover: true,
                 navigationButtons: true,
-                keyboard: true
+                keyboard: false
             },
             physics: {
                 enabled: true,
@@ -1014,7 +1047,7 @@
         };
 
         if (to_update_data == true) {
-            get_nodes_and_edges()
+            get_nodes_and_edges().then(() => {cluster_by_netmask();})
         }
         network = new vis.Network(container, networkData, options);
     };
@@ -1033,7 +1066,7 @@
                 cluster = cluster_status;
                 if (!cluster_status) { document.getElementById("cluster_nodes").textContent = 'Cluster'; }
                     
-                if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
+                // if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
             }
             else {
                 network.moveTo({ position: network.getPosition(params.nodes[0]), scale: 2 })
@@ -1098,7 +1131,7 @@
             }
             cluster = false
         }
-        if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
+        // if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
     };
     network.on('oncontext', function (params) {
         let node = network.getNodeAt(params.pointer.DOM)
@@ -1282,6 +1315,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="comments-tab" data-bs-toggle="pill" data-bs-target="#comments-info" type="button" role="tab">${i18next.t('Comments')}</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="credentials-tab" data-bs-toggle="pill" data-bs-target="#credentials-info" type="button" role="tab">${i18next.t('Credentials')}</button>
+                </li>
             </ul>
             
             <div class="tab-content" id="node-info-tabs-content">
@@ -1374,6 +1410,43 @@
                 </div>`;
         }
 
+        // table Credentials on node
+        html_text +=`<div class="tab-pane fade" id="credentials-info" role="tabpanel">
+                        <div style="overflow-y: auto; max-height: 400px;">`;
+        await axios.get(`/api/v1/vis/credentials/${params.ip_id}`).then(response => {
+            html_text += `  <table class="table table-bordered table-hover align-middle" id="credentials-table">`
+            if (response.data.length > 0) {
+                html_text += `
+                                <tr>
+                                    <td> ${i18next.t('Port')} </td>
+                                    <td> ${i18next.t('Protocol')} </td>
+                                    <td> ${i18next.t('Login')} </td>
+                                    <td> ${i18next.t('Password')} </td>
+                                    <td> ${i18next.t('Need authorization')} </td>
+                                    <td> ${i18next.t('Permissions')} </td>
+                                    <td> ${i18next.t('Parameters')} </td>
+                                </tr>`
+                for (let row of response.data) {
+                    html_text += `<tr>
+                                    <td>${row.port}</td>
+                                    <td>${row.protocol}</td>
+                                    <td>${sanitize(row.login)}</td>
+                                    <td>${sanitize(row.password)}</td>
+                                    <td>${row.need_auth}</td>
+                                    <td>${row.permissions}</td>
+                                    <td>${sanitize(row.parameters)}</td>
+                                </tr>`
+                }
+            } else {
+                html_text += `<p>${i18next.t('No credentials available')}</p>`;
+            }
+            html_text += `</table>`;
+        });
+        html_text += `</div>`;
+        if (json.ports.length > 0)
+            html_text += `<button class="btn btn-primary" onclick="addCredentials()" style="margin-top: 1rem;"> ${i18next.t('Add credentials')} </button>`;
+        html_text += `</div>`;
+
         let html_all_comments = '';
         let html_child_comments = '';
         
@@ -1389,7 +1462,7 @@
                 if (comment.deleted_at == null) {
                 html_all_comments += `
                         <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
-                            <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all">${sanitize(comment.text)}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1417,7 +1490,7 @@
                             html_all_comments += `
                         <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
 
-                            <h5 style="margin-bottom: 0; word-break: break-all">${comment.text}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all">${sanitize(comment.text)}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1445,7 +1518,7 @@
                             if (child.deleted_at == null) {
                             html_all_comments += `
                                 <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                    <p style="margin-bottom: 0; word-break: break-all">${sanitize(child.text)}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1470,7 +1543,7 @@
                                 else {
                                     html_all_comments += `
                                 <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all">${child.text}</p>
+                                    <p style="margin-bottom: 0; word-break: break-all">${sanitize(child.text)}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1575,6 +1648,114 @@
         document.getElementById('div_node_info').innerHTML = ``;
     }
 }
+
+    function addCredentials() {
+        console.log(json.ports);
+        let modal_context = document.getElementById("ModalAddCredentials")
+        let context = `
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5> Add credentials </h5>
+                    </div>
+                    <form id="id_formAddCred" onsubmit="submitAddCredentials(event)">
+                        <div class="modal-body">`
+            context += `
+                            <div class="form-group">
+                                <label for="portSelect">${i18next.t('Port')}:</label>
+                                <select class="form-control" id="portSelect" name="port_id" required>`
+        for (let port of json.ports) {
+            context += `
+                                    <option value=${port.port_id}>${port.port} - ${port.protocol}</option>`
+        }
+        context += `
+                                </select>
+                            </div>`
+        context += `
+                            <div class="form-group">
+                                <label for="login">${i18next.t('Login')}:</label>
+                                <input type="text" class="form-control" id="login" name="login" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">${i18next.t('Password')}:</label>
+                                <input class="form-control" id="password" name="password">
+                            </div>
+                            <div class="form-group">
+                                <label for="need_auth">${i18next.t('Need authorization')}:</label>
+                                <input type="hidden" name="need_auth" value=0>
+                                <input type="checkbox" class="form-check-input" id="need_auth" name="need_auth" value=1>
+                            </div>
+                            <div class="form-group">
+                                <label for="permissions">${i18next.t('Permissions')}:</label>
+                                <select class="form-control" id="permissionsSelect" name="permissions" required>
+                                    <option value=0>no permissions</option>
+                                    <option value=1>read</option>
+                                    <option value=2>write</option>
+                                    <option value=3>read/write</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="Parameters">${i18next.t('Parameters')}:</label>
+                                <input type="text" class="form-control" id="parameters" name="parameters">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                            <button type="submit" class="btn btn-primary">${i18next.t('Add')}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `
+        modal_context.innerHTML = context;
+        let modal = new bootstrap.Modal(modal_context.children[0]);
+        modal.show();
+    }
+
+    async function submitAddCredentials(event) {
+        event.preventDefault();
+        let formData = new FormData(event.target);
+        let params = JSON.stringify(Object.fromEntries(formData));
+        try {
+            let new_credo = await axios.post('/api/v1/vis/credentials', params, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const credentialsTable = document.getElementById('credentials-table');
+            if (credentialsTable.rows.length === 0) {
+                const newHat = credentialsTable.insertRow();
+                newHat.innerHTML = `
+                    <tr>
+                        <td> ${i18next.t('Port')} </td>
+                        <td> ${i18next.t('Protocol')} </td>
+                        <td> ${i18next.t('Login')} </td>
+                        <td> ${i18next.t('Password')} </td>
+                        <td> ${i18next.t('Need authorization')} </td>
+                        <td> ${i18next.t('Permissions')} </td>
+                        <td> ${i18next.t('Parameters')} </td>
+                    </tr>`
+            }
+
+            const newRow = credentialsTable.insertRow();
+            newRow.innerHTML = `
+                <td>${new_credo.data.port}</td>
+                <td>${new_credo.data.protocol}</td>
+                <td>${sanitize(new_credo.data.login)}</td>
+                <td>${sanitize(new_credo.data.password)}</td>
+                <td>${new_credo.data.need_auth}</td>
+                <td>${new_credo.data.permissions}</td>
+                <td>${sanitize(new_credo.data.parameters)}</td>
+            `;
+            event.target.reset();
+            let modal = bootstrap.Modal.getInstance(document.getElementById("ModalAddCredentials").children[0]);
+            modal.hide();
+        } catch (error) {
+            console.error('Error submitting credentials:', error);
+        }
+    }
+
+
     function editToComment(commentId) {
     const commentContainer = document.getElementById(`commentContainer-${commentId}`);
     const commentText = commentContainer.querySelector('h5, p');

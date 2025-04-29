@@ -47,7 +47,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(DNS_A, DNS_A.target_ip_id == IP.id)
             .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)
             .join(L4Software, Port.id == L4Software.l4_id, isouter=True)
-            .join(Software, L4Software.software_id == Software.id, isouter=True)
+            .join(Software, L4Software.software_id == Software.id)
             .join(Vendor, Software.vendor_id == Vendor.id, isouter=True)
             .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
             .group_by(
@@ -76,12 +76,13 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
         stmt = select(Vendor.name, Software.product, Software.type,
                       Software.version, Software.build, Software.patch,
                       Software.platform, Software.cpe23, 
-                      Vulnerability.name.label("vulnerability_name"), Vulnerability.cve, Vulnerability.cwe, VulnerabilityLink.link).select_from(VulnerabilityLink)\
-                .join(Vulnerability, Vulnerability.id == VulnerabilityLink.vulnerability_id)\
+                      Vulnerability.name.label("vulnerability_name"), Vulnerability.cve, Vulnerability.cwe, VulnerabilityLink.link).select_from(Vulnerability)\
+                .join(VulnerabilityLink, Vulnerability.id == VulnerabilityLink.vulnerability_id, isouter=True)\
                 .join(L4SoftwareVulnerability, L4SoftwareVulnerability.vulnerability_id == Vulnerability.id)\
                 .join(L4Software, L4Software.id == L4SoftwareVulnerability.l4_software_id)\
                 .join(Software, Software.id == L4Software.software_id)\
-                .join(Vendor, Vendor.id == Software.vendor_id)
+                .join(Vendor, Vendor.id == Software.vendor_id)\
+                .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id)
         result = await self._session.exec(stmt)
         return result.all()
 

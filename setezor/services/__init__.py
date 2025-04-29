@@ -20,3 +20,4 @@ from .target_service import TargetService
 from .auth_log_service import Auth_Log_Service
 from .role_service import RoleService
 from .settings_service import SettingsService
+from .credentials_service import CredentialsService

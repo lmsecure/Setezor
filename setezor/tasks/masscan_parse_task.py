@@ -27,8 +27,8 @@ class MasscanLogTask(BaseJob):
 
     async def _task_func(self):
         data = b64decode(self.file.split(',')[1])
-        ports = await BaseMasscanParser._parser_results(format=self.filename.split('.')[-1], input_data=data)
-        result = await BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
+        ports = BaseMasscanParser._parser_results(format=self.filename.split('.')[-1], input_data=data)
+        result = BaseMasscanParser.restruct_result(data=ports, agent_id=self.agent_id, interface_ip_id=self.interface_ip_id)
         return result
 
     @BaseJob.local_task_notifier

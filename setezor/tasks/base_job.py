@@ -51,7 +51,7 @@ class BaseJob(Job):
                                          data=task_status_data)
             logger.debug(f"STARTED TASK {func.__qualname__}")
             try:
-                result, raw_result, raw_result_extension = await func(self, *args, **kwargs)
+                result, raw_result_extension = await func(self, *args, **kwargs)
             except Exception as e:
                 task_status_data["status"] = TaskStatus.failed
                 task_status_data["traceback"] = str(e)
@@ -65,7 +65,6 @@ class BaseJob(Job):
                 task_id=task_id,
                 agent_id=agent_id,
                 result=result,
-                raw_result=raw_result,
                 raw_result_extension=raw_result_extension
             )
             return result

@@ -1,14 +1,7 @@
-
 import json
-import traceback
-
-from time import time
 from base64 import b64decode
-
-from setezor.schemas.task import TaskStatus
 from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from setezor.services import DataStructureService, TasksService
 from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
 
 

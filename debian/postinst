@@ -1,6 +1,0 @@
-#!/bin/bash
-#DEBHELPER#
-
-setcap cap_net_raw=eip "$(readlink -f `which /usr/local/share/setezor/venv/setezor/bin/python3`)"
-setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which nmap`
-setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip `which masscan`

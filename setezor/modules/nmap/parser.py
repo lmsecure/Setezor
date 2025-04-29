@@ -3,16 +3,14 @@ from typing import TypedDict
 from typing_extensions import deprecated
 import re
 import json
-
+import xmltodict
 from setezor.tools.ip_tools import get_network
 
 try:
     # from exceptions.loggers import get_logger
-    from tools.xml_utils import XMLParser
     from network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 except ImportError:
     # from ...exceptions.loggers import get_logger
-    from ...tools.xml_utils import XMLParser
     from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 
 from cpeguess.cpeguess import CPEGuess
@@ -39,10 +37,39 @@ class NmapStructure:
     traces: list[RouteStruct] = field(default_factory=list)
 
 
-class NmapParser(XMLParser):
+class NmapParser:
     """Класс парсинга сырых результаов сканирования nmap-а
     """    
+    @staticmethod
+    def parse_xml(input_xml: str) -> dict:
+        """Метод преобразования xml-логов nmap в dict формат
 
+        Args:
+            input_xml (str): логи nmap-а в формате xml
+
+        Raises:
+            NmapParserError: _description_
+
+        Returns:
+            dict: логи nmap-а
+        """        
+        try:
+            tag = '</nmaprun>'
+            closed_tag = input_xml[-15:]
+            if isinstance(closed_tag, bytes):
+                tag = tag.encode()
+            if tag not in closed_tag:
+                input_xml += tag
+            dict_xml = xmltodict.parse(input_xml)
+            json_result = json.dumps(dict_xml).replace('@', '')
+            # logger.debug('Parse input xml file with size "%s"', len(input_xml if isinstance(input_xml, bytes) else input_xml.encode()))
+            return json.loads(json_result)
+        except Exception as e:
+            raise e
+            # logger.error('Failed parse xml file with error\n%s', traceback.format_exc())
+            raise Exception('Error with parsing nmap xml-file')
+    
+    
     @classmethod
     def to_list(csl, data: dict | list) -> list:
         """Если на вход принимает словарь - преобразует его в лист

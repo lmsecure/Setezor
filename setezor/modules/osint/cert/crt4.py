@@ -1,14 +1,7 @@
-import os
 import ssl
-import sys
 import OpenSSL.crypto
-import json
-import aiofiles
 from datetime import datetime
-#from setezor.exceptions.loggers import get_logger
 from typing import Dict
-
-#logger = get_logger(__package__, handlers=[])
 
 
 class CertInfo:
@@ -55,19 +48,11 @@ class CertInfo:
         return cert_data
 
     @classmethod
-    def get_cert_and_parse(cls, resource:dict): #certificates_folder: str):
+    def get_cert_and_parse(cls, resource:dict):
         port = resource.get("port")
         host = resource.get("domain") if resource.get("domain") else resource.get("ip")
         cert = cls.get_cert(host=host, port=port)
         if not cert:
             return []
-        #cls.write_to_file(certificates_folder, host, port, cert)
-        return cls.parse_cert(cert=cert), cert
+        return cert
 
-    @classmethod
-    # переименовать и поменять формат даты-время
-    def write_to_file(cls, certificates_folder: str, host: str, port: int, cert: str):
-        date_and_time = datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S")
-        filename = f"{host}:{port}_{date_and_time}.crt"
-        with open(os.path.join(certificates_folder, filename), mode='w', encoding="utf-8") as file:
-            file.write(cert)

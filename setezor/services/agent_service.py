@@ -44,6 +44,7 @@ class AgentService:
                         "description": agent.description,
                         "rest_url": agent.rest_url,
                         "is_connected": agent.is_connected,
+                        "flag": agent.flag,
                         "secret_key": agent.secret_key
                     })
                 already_in_list.add(agent.id)
@@ -92,7 +93,6 @@ class AgentService:
                 rest_url=agent.rest_url,
                 secret_key=get_random_bytes(32).hex(),
                 user_id=user_id,
-                is_connected=False
             )
             new_agent = uow.agent.add(new_agent_model.model_dump())
             await uow.commit()

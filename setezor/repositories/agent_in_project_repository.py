@@ -20,7 +20,8 @@ class AgentInProjectRepository(SQLAlchemyRepository[AgentInProject]):
                 .join(ParentAgent, ParentAgent.id == AgentParentAgent.parent_agent_id)\
                 .join(AgentInProject, AgentInProject.agent_id == Agent.id, isouter=True)\
                 .join(ParentAgentInProject, ParentAgentInProject.agent_id == ParentAgent.id, isouter=True)\
-            .filter(AgentParentAgent.deleted_at == None, (Agent.user_id.in_(list_users)))
+            .filter(AgentParentAgent.deleted_at == None, (Agent.user_id.in_(list_users)))\
+            .order_by(AgentInProject.created_at)
 
         res = await self._session.exec(stmt)
         return res.all()
@@ -33,17 +34,20 @@ class AgentInProjectRepository(SQLAlchemyRepository[AgentInProject]):
                 .join(AgentParentAgent, AgentParentAgent.agent_id == Agent.id, isouter=True)\
                 .join(ParentAgent, ParentAgent.id == AgentParentAgent.parent_agent_id, isouter=True)\
                 .join(User, User.id == Agent.user_id, isouter=True)\
-            .filter(AgentInProject.project_id == project_id, AgentParentAgent.deleted_at == None)
+            .filter(AgentInProject.project_id == project_id, AgentParentAgent.deleted_at == None)\
+            .order_by(AgentInProject.created_at)
 
         res = await self._session.exec(stmt)
         return res.all()
-
+    
     async def list_for_tasks(self, project_id: str):
         stmt = select(Agent, AgentInProject).select_from(Agent)\
                 .join(AgentInProject, AgentInProject.agent_id == Agent.id)\
-                .filter(AgentInProject.project_id == project_id)
+                .filter(AgentInProject.project_id == project_id)\
+                .order_by(AgentInProject.created_at)
         res = await self._session.exec(stmt)
         return res.all()
+
 
     async def for_map(self, project_id: str):
         stmt = select(AgentInProject.id, Agent.name, Agent.rest_url, Agent.secret_key).select_from(Agent)\

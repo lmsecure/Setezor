@@ -3,8 +3,11 @@
 <div class="input-group" id="ipTarget">
     <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
     <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control" id='inputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
+    <input type="text" list="IpList" class="form-control ip" id='inputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
+    <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1" data-i18n="PORT"></span>
+    <input type="text" class="form-control port" id='inputPortNmap' placeholder="Port" aria-label="Port" style="margin-bottom: 0.5rem;"
+    aria-describedby="basic-addon1" required name="Port">
     <button id="add_new_nmap_form" onclick="addNewNmapForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
 
@@ -12,9 +15,17 @@
     function addNewNmapForm() {
         const original = document.getElementById('ipTarget');
         const clone = original.cloneNode(true);
-        const newInput = clone.querySelector('input');
-        newInput.id = 'inputTarget_' + Date.now();
-        newInput.value = '';
+        const newInputIP = clone.querySelector('[id^="inputIP"]');
+        newInputIP.id = 'inputIP_' + Date.now();
+        const newInputPort = clone.querySelector('[id^="inputPortNmap"]');
+        newInputPort.id = 'inputPortNmap_' + Date.now();
+        const originalInputIP = document.getElementById('inputIP');
+        const originalInputPort = document.getElementById('inputPortNmap');
+        newInputIP.value = originalInputIP.value;
+        newInputPort.value = originalInputPort.value;
+        originalInputIP.value = ''
+        originalInputPort.value = ''
+        
 
         const existingMinusButton = clone.querySelector('.btn-danger');
         if (existingMinusButton) {
@@ -216,7 +227,7 @@
 </div>
 
 <div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
+    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startScanSimpleBtn" onclick="
                         let params = {};
 
@@ -246,7 +257,7 @@
                             if (eee.children[0].checked)
                                 params['requestDiscovery'] = eee.children[0].value;
                         }
-
+                        
                         params['targetPorts'] = document.getElementById('portsSelector').value;
                         if (params['targetPorts'] === undefined || params['targetPorts'] === '') {
                             params['targetPorts'] = '-sn';
@@ -259,18 +270,43 @@
                         params['interface'] = getIface().name;
                         params['interface_ip_id'] = getIface().ip_id;
 
-                        const isTargetTabActive = document.getElementById('nmap-simple-tab').classList.contains('active');
+
+                        let isTargetTabActive = document.getElementById('nmap-simple-tab').classList.contains('active');
 
                         if (isTargetTabActive) {
-                            const ips = [];
-                            for (const d of document.getElementById('NmapInputContainer').getElementsByClassName('form-control')) {
-                                ips.push(d.value);
-                            }
-                            ips.push(document.getElementById('inputIP').value)
+                                let ipPortPairs = [];
+                                let onlyIp = []
+                                let ipElements = document.getElementById('NmapInputContainer').getElementsByClassName('form-control ip');
+                                let portElements = document.getElementById('NmapInputContainer').getElementsByClassName('form-control port');
 
-                            for (const ip of ips) {
-                                let IpParams = { ...params, targetIP: ip };
-
+                                for (let i = 0; i < ipElements.length; i++){
+                                    if(ipElements[i].value && portElements[i].value){
+                                        ipPortPairs.push({
+                                            ip: ipElements[i].value,
+                                            port: portElements[i].value
+                                        })
+                                    } else if (ipElements[i].value && !portElements[i].value) {
+                                        onlyIp.push({
+                                            ip: ipElements[i].value})
+                                    }
+                                }
+                                let mainIp = document.getElementById('inputIP').value;
+                                let mainPort = document.getElementById('inputPortNmap').value;
+                                if (mainIp && mainPort) {
+                                    ipPortPairs.push({
+                                        ip: mainIp,
+                                        port: mainPort
+                                    });
+                                } else if (mainIp && !mainPort) {
+                                    onlyIp.push({
+                                        ip: mainIp})
+                                }
+                                for (let pair of ipPortPairs) {
+                                    let IpParams = {
+                                        ...params,
+                                        targetPorts: '-p ' + pair.port,
+                                        targetIP: pair.ip
+                                    };
                                 fetch('/api/v1/task/nmap_scan_task', {
                                     method: 'POST',
                                     headers: {
@@ -280,7 +316,7 @@
                                 }).then(response => {
                                     if (response.status !== 201) {
                                         response.json().then(data => {
-                                            const errorMessage = data.detail[0].msg || 'Create task error';
+                                            let errorMessage = data.detail[0].msg || 'Create task error';
                                             create_toast('Error', errorMessage, 'error');
                                         });
                                     } else {
@@ -293,7 +329,34 @@
                                     create_toast('Error', 'An error occurred while sending the request', 'error');
                                     console.error('Error:', error);
                                 });
-                            }
+                            } for (let ips of onlyIp) {
+                                    console.log('params:', params)
+                                    let IpParams = {
+                                        ...params,
+                                        targetIP: ips.ip
+                                    };
+                                fetch('/api/v1/task/nmap_scan_task', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify(IpParams)
+                                }).then(response => {
+                                    if (response.status !== 201) {
+                                        response.json().then(data => {
+                                            let errorMessage = data.detail[0].msg || 'Create task error';
+                                            create_toast('Error', errorMessage, 'error');
+                                        });
+                                    } else {
+                                        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
+                                        if (myModal) {
+                                            myModal.hide();
+                                        }
+                                    }
+                                }).catch(error => {
+                                    create_toast('Error', 'An error occurred while sending the request', 'error');
+                                    console.error('Error:', error);
+                                });}
                         } else {
                             if (selectedScopeForNmap != '') {
                                 params['targetIP'] = null;
@@ -354,7 +417,7 @@
 
 {% macro nmap_xml() %}
 <button class="btn btn-primary w-100" id="nmap-dropdownMenuButton2" onclick="
-        var input = document.createElement('input');
+        let input = document.createElement('input');
         input.type = 'file';
         input.multiple = true;
         input.accept = '.xml'
@@ -435,6 +498,14 @@
 <script>
     function nmap_full_modal_window() {
         var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
+        $('#nmapModalWindow').on('hidden.bs.modal', function () {
+                $(this).find('form').trigger('reset');
+                $(this).find('#NmapInputContainer').html('');
+            });
+            let portsSelector = document.getElementById('portsSelector');
+            portsSelector.value = ''
+            document.getElementById('portsScan').checked = false
+            portsSelector.setAttribute('disabled', 'disabled')
         myModal.show();
     }
 
@@ -455,7 +526,6 @@
     });
 </script>
 
-
 {% endmacro %}
 
 {% macro nmap_script_modal_to_node() %}
@@ -463,19 +533,18 @@
     async function nmap_script_modal_to_node(node) {
         var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
 
-        var inputIP = document.getElementById('inputIP')
+        let inputIP = document.getElementById('inputIP')
         params = { ip_id: node.id }
         ip = node.label
         inputIP.value = ip
         url_address = '/api/v1/vis/node_info/' + node.id
         resp = await fetch(url_address, { method: 'GET' })
         json = await resp.json()
-        console.log(json)
-        var portsSelector = document.getElementById('portsSelector');
+        let portsSelector = document.getElementById('portsSelector');
         if (json.ports.length) {
             document.getElementById('portsScan').checked = true
             portsSelector.removeAttribute('disabled')
-            portsSelector.value = json.ports.map(item => item.port).join(',');
+            portsSelector.value = Array.from(new Set(json.ports.map(item => item.port))).join(',');
         } else {
             portsSelector.value = ''
             document.getElementById('portsScan').checked = false
@@ -503,32 +572,51 @@
 
 {% endmacro %}
 
-{% macro nmap_script_modal() %}
-
-<div id="nmapModalWindow" class="modal fade" tabindex="-1" aria-labelledby="nmapModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nmapModalLabel">Nmap</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="nmapScanSimpleForm" class="needs-validation" novalidate>
-                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
-                        <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel"
-                            aria-labelledby="nmap-simple-tab">
-                            {{ nmap_main() }}
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% macro nmap_script_modal_to_info_tabs() %}
 
 <script>
-    function nmap_modal_window() {
+
+    async function nmap_script_modal_to_info_tabs(rows) {
         var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
+        let portsSelector = document.getElementById('portsSelector');
+
+        $('#nmapModalWindow').on('hidden.bs.modal', function () {
+            $(this).find('form').trigger('reset');
+            $(this).find('#NmapInputContainer').html('');
+        });
+        
+        if (rows.length > 0) {
+            addNewNmapForm();
+        }
+
+        let inputForms = document.querySelectorAll('[id^="ipTarget"]');
+        
+        for (let row = 0; row < rows.length; row++) {
+            let currentForm = inputForms[row] || addNewNmapForm();
+            
+            let inputIP = currentForm.querySelector('[id^="inputIP"]');
+            let inputPort = currentForm.querySelector('[id^="inputPortNmap"]');
+            
+            if (inputIP && rows[row].ipaddr) {
+                inputIP.value = rows[row].ipaddr;
+            }
+            
+            if (inputPort && rows[row].port) {
+                inputPort.value = rows[row].port;
+            }
+            
+            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+                addNewNmapForm();
+                inputForms = document.querySelectorAll('[id^="ipTarget"]');
+            }
+                // if (rows[row].port || rows[row].port != null){
+                //     document.getElementById('portsScan').checked = true
+                //     portsSelector.removeAttribute('disabled')
+                //     portsSelector.value = Array.from(new Set(rows.map(row => row.port))).join(',');
+                // }
+
+        }
+        
         myModal.show();
     }
 

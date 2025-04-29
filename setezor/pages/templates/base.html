@@ -108,7 +108,7 @@
 									<div data-i18n="About Setezor text" style="margin-bottom: 0.5rem;">
 									</div>
 									<div class="list-group">
-										<a href="https://setezor.ru"
+										<a href="https://setezor.net"
 											class="list-group-item list-group-item-action list-group-item-success"
 											target="_blank">Site</a>
 										<a href="https://t.me/lmsecurity"
@@ -127,12 +127,12 @@
 									<div class="list-group">
 										<span>Bitcoin: </span>
 											<div class="input-group mb-3">
-												<input type="text" class="form-control" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
+												<input type="text" class="form-control" name="bitcoin" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
 												<button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
 											  </div>
 										<span>Dash: </span>
 											<div class="input-group mb-3">
-												<input type="text" class="form-control" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+												<input type="text" class="form-control" name="dash" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
 												<button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
 											  </div>
 									</div>
@@ -214,7 +214,7 @@
 					{% endif %}
 					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
 						aria-hidden="true">
-						<div class="modal-dialog modal-xl">
+						<div class="modal-dialog modal-xl" style="--bs-modal-width: 1300px">
 							<div class="modal-content">
 								<div class="modal-header">
 									<h4 data-i18n="Tasks list"></h4>
@@ -468,10 +468,13 @@
 				  <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
 				  <input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
 				  <label for="inviteToSetezorToken" class="col-form-label" data-i18n="Token"></label>
-				  <input type="text" class="form-control" disabled id="inviteToSetezorToken">
+				  <div class="input-group mb-3">
+					<input type="text" class="form-control" name="invite_to_setezor_token" disabled id="inviteToSetezorToken">
+					<button class="btn btn-outline-secondary" type="button" id="copyRegisterTokenBtn" data-i18n="Copy"></button>
+				  </div>
 				  <label for="inviteToSetezorURL" class="col-form-label" data-i18n="Registration link"></label>
 				  <div class="input-group mb-3">
-					<input type="text" class="form-control" id="inviteToSetezorURL" readonly>
+					<input type="text" class="form-control" name="invite_to_setezor_url" id="inviteToSetezorURL" readonly>
 					<button class="btn btn-outline-secondary" type="button" id="copyLinkBtn" data-i18n="Copy"></button>
 				  </div>
 				  <!-- <div class="mt-2">
@@ -582,7 +585,22 @@
 			$("#wrapper").toggleClass("toggled-2");
 			$('#menu ul').hide();
 		});
-
+        function sanitize(string) {
+			const map = {
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#x27;',
+				"/": '&#x2F;',
+			};
+			const reg = /[&<>"'/]/ig;
+			if (string) {
+				return string.replace(reg, (match) => map[match]);
+			} else {
+				return ""
+			}
+		}
 		function initMenu() {
 			$('#menu ul').hide(); // Скрыть все вложенные списки
 			$('#menu ul').children('.current').parent().show(); // Показать вложенные списки текущего элемента
@@ -843,7 +861,6 @@
 			let data = await resp.json();
 			let tokenEl = document.getElementById("inviteToSetezorToken");
 			let urlInput = document.getElementById("inviteToSetezorURL");
-			// let urlLink = document.getElementById("inviteToSetezorURLLink");
 			
 			tokenEl.value = data.token;
 			
@@ -851,14 +868,6 @@
 			const registrationLink = `${baseUrl}/registration?token=${data.token}`;
 			
 			urlInput.value = registrationLink;
-			// urlLink.href = registrationLink;
-			
-			document.getElementById("copyLinkBtn").addEventListener("click", function() {
-				urlInput.select();
-				document.execCommand("copy");
-				this.classList.remove('btn-outline-secondary');
-				this.classList.add('btn-outline-success');
-			});
 			
 		} catch (error) {
 			console.error("Error:", error);
@@ -866,30 +875,32 @@
 		}
 	}
 	document.addEventListener('DOMContentLoaded', function() {
-    function handleCopy(event) {
-        const button = event.target;
-        const input = button.closest('.input-group').querySelector('input');
-        
-        navigator.clipboard.writeText(input.value)
-            .then(() => {
-                button.classList.remove('btn-outline-secondary');
-                button.classList.add('btn-success');
-                button.textContent = i18next.t('Copied!');
-                
-                setTimeout(() => {
-                    button.classList.remove('btn-success');
-                    button.classList.add('btn-outline-secondary');
-                    button.textContent = i18next.t('Copy');
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Ошибка при копировании: ', err);
-            });
-    }
-    
-    document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
-    document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
-});
+		function handleCopy(event) {
+			const button = event.target;
+			const input = button.closest('.input-group').querySelector('input');
+			
+			navigator.clipboard.writeText(input.value)
+				.then(() => {
+					button.classList.remove('btn-outline-secondary');
+					button.classList.add('btn-success');
+					button.textContent = i18next.t('Copied!');
+					
+					setTimeout(() => {
+						button.classList.remove('btn-success');
+						button.classList.add('btn-outline-secondary');
+						button.textContent = i18next.t('Copy');
+					}, 2000);
+				})
+				.catch(err => {
+					console.error('Ошибка при копировании: ', err);
+				});
+		}
+		
+			document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
+			document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
+			document.getElementById('copyRegisterTokenBtn').addEventListener('click', handleCopy);
+			document.getElementById('copyLinkBtn').addEventListener('click', handleCopy);
+	});
 	</script>
 	<script defer src="static/js/update_language.js"></script>
 </body>

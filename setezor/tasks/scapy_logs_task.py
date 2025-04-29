@@ -1,5 +1,4 @@
 
-from time import time
 from base64 import b64decode
 from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork

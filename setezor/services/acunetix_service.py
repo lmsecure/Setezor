@@ -24,7 +24,8 @@ from setezor.models.task import Task
 from setezor.models import Scan
 from setezor.modules.acunetix.target import Target
 from setezor.modules.acunetix.vulnerability import Vulnerability
-from setezor.modules.project_manager.acunetix import AcunetixApi
+from setezor.modules.acunetix.acunetix import AcunetixApi
+from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.schemas.task import WebSocketMessage
 from setezor.services.data_structure_service import DataStructureService
 from setezor.tasks.acunetix_scan_task import AcunetixScanTask
@@ -71,8 +72,9 @@ class AcunetixService(IService):
             data = parse_url(url=target["address"])
             scheme = target["address"].split("://")[0]
             if domain := data.get("domain"):
-                responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                new_domain, new_ip, dns_a = DNSModule.proceed_records(domain, responses)
+                responses = [await DNSModule.resolve_domain(domain, "A")]
+                domains = DNSModule.proceed_records(responses)
+                new_domain, new_ip, dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain)
                 if new_ip.ip in ips:
                     new_ip = ips[new_ip.ip]
                     dns_a.ip = new_ip
@@ -255,8 +257,9 @@ class AcunetixService(IService):
                         new_dns_a = found_dns[domain]
                     else:
                         try:
-                            responses =  [await DNSModule.resolve_domain(domain=domain, record="A")]
-                            new_domain, new_ip, new_dns_a = DNSModule.proceed_records(domain, responses) # может не разрезолвить
+                            responses = [await DNSModule.resolve_domain(domain=domain, record="A")]
+                            domains = DNSModule.proceed_records(responses)
+                            new_domain, new_ip, new_dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
                             if new_ip.ip in ips and new_ip.ip:
                                 new_ip = ips[new_ip.ip]
                                 new_dns_a.target_ip = new_ip

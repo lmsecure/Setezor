@@ -58,6 +58,16 @@ async def soft_stop_task(
     return await TaskManager.soft_stop_task(uow=uow, id=id, project_id=project_id)
 
 
+@router.post("/{id}/deleteTask")
+async def delete_task(
+    uow: UOWDep,
+    id : str,
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+) -> bool:
+    return await TaskManager.delete_task(uow=uow, id=id, project_id=project_id)
+
+
 @router.post("/dns_task", status_code=201)
 async def create_dns_task(
     uow: UOWDep,

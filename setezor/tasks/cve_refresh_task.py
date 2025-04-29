@@ -1,22 +1,10 @@
-import json
-import traceback
-import asyncio
-from time import time
-
-from setezor.schemas.task import TaskStatus
-from setezor.services.data_structure_service import DataStructureService
-from setezor.services.task_service import TasksService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
-from cpeguess.cpeguess import CPEGuess
-
 from .base_job import BaseJob
 from setezor.models import Vulnerability, \
     L4SoftwareVulnerability, \
     VulnerabilityLink
 
 from setezor.modules.search_vulns.search_vulns import SearchVulns
-from setezor.modules.acunetix.schemes.vulnerability import Vulnerability as VulnerabilityScheme
-
 
 class CVERefresher(BaseJob):
     def __init__(self, uow: UnitOfWork, 
@@ -72,7 +60,7 @@ class CVERefresher(BaseJob):
                     vuln = Vulnerability(name=cve, cve=cve, description=data["description"])
                     self.vulnerabilities[cve] = vuln
                     if data["cvss_ver"]:
-                        setattr(vuln, f"cvss{data["cvss_ver"][0]}_score", data.get("cvss"))
+                        setattr(vuln, f"cvss{data["cvss_ver"][0]}_score", float(data.get("cvss")))
                         setattr(vuln, f"cvss{data["cvss_ver"][0]}", data.get("cvss_vec"))
                     vulnerabilities.append(vuln)
                 

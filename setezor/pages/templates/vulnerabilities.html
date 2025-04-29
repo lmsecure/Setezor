@@ -108,7 +108,7 @@ Vulnerabilities
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
     let currentResourceID = 0
-    let currentResourceVulnerabilityID = 0
+    let currentResourceVulnerabilityID = ""
     var headerMenu = function () {
         var menu = [];
         var columns = this.getColumns();
@@ -208,22 +208,22 @@ Vulnerabilities
                             <h3 id="confirmation-${vuln.vuln_res_soft_id}">${i18next.t('Confirmed')}: ${vuln.confirmed?true:false}</h3>
                             <hr>
                             <h5 class="card-title">${i18next.t('Vulnerability')}</h5>
-                            <h6>${i18next.t('Name')}: ${vuln.name}</h6>
-                            <h6>CVE: ${vuln.cve}</h6>
-                            <h6>CWE: ${vuln.cwe}</h6>
+                            <h6>${i18next.t('Name')}: ${sanitize(vuln.name)}</h6>
+                            <h6>CVE: ${sanitize(vuln.cve)}</h6>
+                            <h6>CWE: ${sanitize(vuln.cwe)}</h6>
                             {% if role.name == "owner" or role.name == "executor" %}
                             <button class="btn btn-danger" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',false)">${i18next.t('Reset')}</button>
                             <button class="btn btn-success" onclick="setVulnerabilityStatus_{{ tab.name }}('${vuln.vuln_res_soft_id}',true)">${i18next.t('Confirm')}</button>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID=${vuln.vuln_res_soft_id};resetContainer()">${i18next.t('Screenshots')} (${vuln.screenshots_count})</button>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#screenshotsModal" id="screenshot-btn-${vuln.vuln_res_soft_id}" onclick="currentResourceVulnerabilityID='${vuln.vuln_res_soft_id}';resetContainer()">${i18next.t('Screenshots')} (${vuln.screenshots_count})</button>
                             {% endif %}
                             <hr>
                             <h5>${i18next.t('Software')}</h5>
-                            <h6>${i18next.t('Vendor')}: ${vuln.vendor}</h6>
-                            <h6>${i18next.t('Product')}: ${vuln.product}</h6>
-                            <h6>${i18next.t('Version')}: ${vuln.version}</h6>
-                            <h6>${i18next.t('Build')}: ${vuln.build}</h6>
-                            <h6>${i18next.t('Patch')}: ${vuln.patch}</h6>
-                            <h6>${i18next.t('Platform')}: ${vuln.platform}</h6>
+                            <h6>${i18next.t('Vendor')}: ${sanitize(vuln.vendor)}</h6>
+                            <h6>${i18next.t('Product')}: ${sanitize(vuln.product)}</h6>
+                            <h6>${i18next.t('Version')}: ${sanitize(vuln.version)}</h6>
+                            <h6>${i18next.t('Build')}: ${sanitize(vuln.build)}</h6>
+                            <h6>${i18next.t('Patch')}: ${sanitize(vuln.patch)}</h6>
+                            <h6>${i18next.t('Platform')}: ${sanitize(vuln.platform)}</h6>
                             <hr>
                             <h5>${i18next.t('Links')}</h5>
                             ${links}
@@ -315,7 +315,7 @@ Vulnerabilities
                     </div>
                 </div>
         `
-        let resp = await fetch(`/api/l7-vulnerability/${currentResourceVulnerabilityID}/screenshots`)
+        let resp = await fetch(`/api/v1/l4-vulnerability/${currentResourceVulnerabilityID}/screenshots`)
         let screenshots = await resp.json()
         let scr = document.getElementById("existingScreenshots")
         let result = ""
@@ -323,26 +323,26 @@ Vulnerabilities
             result += `
             <div class="row mb-5" id="scheenshotRow${screenshot.id}">
                     <div class="col-6">
-                        <input type="text" class="form-control" disabled value="${screenshot.note}">
+                        <input type="text" class="form-control" disabled value="${sanitize(screenshot.note)}">
                     </div>
                     <div class="col-5">
-                        <img class="img-thumbnail" onclick="zoomImage(${screenshot.id})" 
+                        <img class="img-thumbnail" onclick="zoomImage('${screenshot.id}')"
                         data-bs-toggle="modal" data-bs-target="#zoomedImage"
-                        src="/api/l7-vulnerability-screenshot/${screenshot.id}" alt="">
+                        src="/api/v1/l4-vulnerability/get-screenshot/${screenshot.id}" alt="">
                     </div>
                     <div class="col-1">
-                        <span class="btn btn-danger" onclick="deleteScreenshot(${screenshot.id})">X</span>
+                        <span class="btn btn-danger" onclick="deleteScreenshot('${screenshot.id}')">X</span>
                     </div>
                 </div>
-            ` 
+            `
         }
         scr.innerHTML = result
     }
 
     function zoomImage(id){
         document.getElementById("zoomINBody").innerHTML = `
-        <img class="img-fluid w-100" data-bs-target="#screenshotsModal" data-bs-toggle="modal"  
-        src="/api/l7-vulnerability-screenshot/${id}" alt="">
+        <img class="img-fluid w-100" data-bs-target="#screenshotsModal" data-bs-toggle="modal"
+        src="/api/v1/l4-vulnerability/get-screenshot/${id}" alt="">
         `
     }
 
@@ -363,7 +363,7 @@ Vulnerabilities
     }
 
     async function deleteScreenshot(id){
-        let resp = await fetch(`/api/l7-vulnerability-screenshot/${id}`,{method:"DELETE"})
+        let resp = await fetch(`/api/v1/l4-vulnerability/${id}/screenshots`,{method:"DELETE"})
         if (resp.status == 200){
             let el = document.getElementById(`scheenshotRow${id}`)
             el.remove()
@@ -377,17 +377,21 @@ Vulnerabilities
         e.preventDefault();
         let map = {}
         let form = new FormData(screenshotForm)
+        
         for (const [key, value] of form){
             if (typeof(value) == "object"){
                 var reader = new FileReader();
                 reader.onload = (function (key, file) {
                     return async function (e) {
                         data = {file: e.target.result, filename: file.name, note:map["note" + key.slice(-1)]}
-                        resp = await fetch(`/api/l7-vulnerability/${currentResourceVulnerabilityID}/screenshots`, {method:"POST", body:JSON.stringify(data)})
-                        let cnt = await resp.json()
-                        let el = document.getElementById(`screenshot-btn-${currentResourceVulnerabilityID}`)
-                        el.innerHTML = `Screenshots (${cnt})`
-                        document.getElementById("cancelAddingScreenshot").click()
+                        data.note = sanitize(data.note)
+                        resp = await axios.post(`/api/v1/l4-vulnerability/${currentResourceVulnerabilityID}/screenshots`, data, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        let cnt = resp.data;
+                        let el = document.getElementById(`screenshot-btn-${currentResourceVulnerabilityID}`);
+                        el.innerHTML = `Screenshots (${cnt})`;
+                        document.getElementById("cancelAddingScreenshot").click();
                     }
                 })(key, value)
                 reader.readAsDataURL(value);
