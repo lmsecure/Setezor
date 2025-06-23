@@ -8,12 +8,12 @@ from setezor.modules.sniffing.scapy_parser import ScapyParser
 
 class ScapyLogsTask(BaseJob):
 
-    def __init__(self, uow: UnitOfWork, scheduler, name: str, task_id: int, 
+    def __init__(self, task_manager, scheduler, name: str, task_id: int, 
                  project_id: str, 
                  scan_id: str, 
                  agent_id: int, file: str):
         super().__init__(scheduler=scheduler, name=name)
-        self.uow: UnitOfWork = uow
+        self.task_manager = task_manager
         self.task_id = task_id
         self.project_id = project_id
         self.scan_id = scan_id

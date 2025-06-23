@@ -33,28 +33,12 @@ Information
                     <div class="nav flex-column nav-pills me-1" id="tab_buttons" role="tablist"
                         aria-orientation="vertical">
                         {% for tab in tabs %}
-                        {% if not tab.is_hide %}
                         <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}"
                             data-bs-toggle="tab"
                             data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab"
                             aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}
                         </button>
-                        {% endif %}
                         {% endfor %}
-                        <div id="collapseExtra" class="accordion-collapse collapse" aria-labelledby="headingExtra"
-                            data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
-                                {% for tab in tabs %}
-                                {% if tab.is_hide %}
-                                <button class="nav-link {% if loop.index0 == 0 %}active{% endif %} w-100" id="infotabs-{{tab.name}}" 
-                                    data-bs-toggle="tab"
-                                    data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab"
-                                    aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}
-                                </button>
-                                {% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -68,8 +52,6 @@ Information
                     <div class="d-flex flex-row justify-content-between">
                         <div id="filter {{tab.name}}" class="d-flex flex-row py-2">
                             <div class="btn-group" style="padding-right: 0.3rem;" role="group">
-                                <!-- <button class="btn btn-primary" id="{{tab.name}}-add-row" onclick="{{tab.name}}addRow()"><i
-                                        class="bi bi-plus-square"></i></button> -->
                                 <button class="btn btn-primary" id="{{tab.name}}-reload-data"
                                     onclick="{{tab.name}}_table.dataLoader.reloadData()"><i
                                         class="bi bi-arrow-clockwise" style="font-family: 'Times New Roman', Times, serif;"></i></button>
@@ -77,7 +59,9 @@ Information
                             <div class="me-1">
                                 <select class="form-select" id="filter-field-{{tab.name}}">
                                     {% for col in tab.columns %}
-                                    <option value={{col.field}}>{{col.title}}</option>
+                                        {% if col.title != "ID" %}
+                                            <option value="{{ col.field }}">{{ col.title }}</option>
+                                        {% endif %}
                                     {%endfor%}
                                 </select>
                             </div>
@@ -85,12 +69,10 @@ Information
                             <div class="me-1">
                                 <select class="form-select" id="filter-type-{{tab.name}}">
                                     <option value="=">=</option>
-                                    <option value="<">
-                                        < </option>
-                                    <option value="<=">
-                                        <= </option>
-                                    <option value=">">></option>
-                                    <option value=">=">>=</option>
+                                    <option value="<">&lt;</option>
+                                    <option value="<=">&lt;=</option>
+                                    <option value=">">&gt;</option>
+                                    <option value=">=">&gt;=</option>
                                     <option value="!=">!=</option>
                                     <option value="like">like</option>
                                 </select>
@@ -121,375 +103,221 @@ Information
                                 <option value="whois">whois</option>
                             </select>
                         </div>   
-                        {% endif %}    
-                            <script>
-                                function {{tab.name}}get_selected_rows()
-                                {
-                                    let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
-                                    let t_rows = {{tab.name}}_table.getData()
-                                    console.log(t_rows)
-                                    let selected_id = [];
-                                    for (const [k, v] of {{tab.name}}_selected_row)
-                                    {
-                                        if (v)
-                                            selected_id.push(Number(k.split('-')[2]));
-                                    }
-                                    let result = [];
-                                    for (let i = 0; i < t_rows.length; i++)
-                                    {
-                                        if (selected_id.includes(t_rows[i].id))
-                                            result.push(t_rows[i]);
-                                    }
-                                    return result;
-                                }
-                                function {{tab.name}}open_modal_tools()
-                                {
-                                    let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
-                                    rows = {{tab.name}}get_selected_rows();
-                                    
-                                    {
-                                        switch (tool) {
-                                        case "nmap":
-                                            nmap_script_modal_to_info_tabs(rows);
-                                            break;
-                                        case "masscan":
-                                            masscan_script_modal_to_info_tabs(rows);
-                                            break;
-                                        case "domains":
-                                            domains_script_modal_to_info_tabs(rows)
-                                            break;
-                                        case "cert":
-                                            cert_script_modal_to_info_tabs(rows)
-                                            break;
-                                        case "whois":
-                                            whois_script_modal_to_info_tabs(rows)
-                                            break;
-                                        default:
-                                            break;
-                                        }
-                                    }
-                                }
-                            </script>
-                            {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
-                                <button class="btn btn-success" style="width: 7rem;"  onclick="{{tab.name}}open_modal_tools();" data-i18n="Start"></button>
-                            {% endif %}
-                        
-
-                        <style>.tabulator {
-                            border-radius: 8px;
-                            overflow: hidden;
-                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        }
-                        
-                        .tabulator .tabulator-header {
-                            background-color: #007bff;
-                            font-weight: bold;
-                        }
-                        
-                        .tabulator .tabulator-row {
-                            background-color: white;
-                        }
-                        
-                        .tabulator .tabulator-row:nth-child(odd) {
-                            background-color: #f8f9fa;
-                        }
-                        
-                        .tabulator .tabulator-row:hover {
-                            background-color: #e9ecef;
-                        }
-                        
-                        .tabulator .tabulator-cell {
-                            padding: 12px;
-                            text-align: center;
-                            vertical-align: middle;
-                            border-right: 1px solid #dee2e6;
-                        }</style>
-                        </div>
-
-                        {% if tab.name == 'resource_software' %}
-                        <!-- FIXME -->
-                        <!-- <div id="download_report_container">
-                            <div class="d-flex p-1">
-                                <div class="dropdown">
-                                    <button class="btn btn-secondary dropdown-toggle" type="button"
-                                        id="reports_dropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <span class="bi bi-download"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="reports_dropdown">
-                                        <li><a class="dropdown-item"
-                                                href="javascript:window.location='/api/v1/reports/xlsx'">xlsx</a></li>
-                                        <li>
-                                            <button class="dropdown-item" onclick="get_csv_report()">
-                                                csv
-                                            </button>
-                                            <script type="text/javascript">
-                                                async function get_csv_report() {
-                                                    filters = resource_software_table.getFilters()
-                                                    filters = JSON.stringify(filters)
-                                                    params = new URLSearchParams({ filters: filters })
-                                                    resp = await fetch(`/api/v1/reports/csv?${params}`)
-                                                    blob = await resp.blob()
-                                                    var file = window.URL.createObjectURL(blob);
-                                                    window.location.assign(file);
-                                                }
-                                            </script>
-                                        </li>
-                                        <li><a class="dropdown-item disabled" href="#">pdf</a></li>
-                                        <li><a class="dropdown-item disabled" href="#">docx</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div> -->
                         {% endif %}
-
-                        <script>
-                            function create_url_params_from_filter() {
-                                filters = resource_software_table.getFilters()
-                                filters = JSON.stringify(filters)
-                                param = new URLSearchParams({ filters: filters })
-                                return param
-                            }
-                            function {{tab.name}}clearFilter(){
-                                document.getElementById('filter-value-{{tab.name}}').value = ''
-                                {{tab.name}}_table.clearFilter()
-                            }
-
-                            function {{tab.name}}ApplyFilter() {
-                                let field = document.getElementById('filter-field-{{tab.name}}').value.toString()
-                                let option = document.getElementById('filter-type-{{tab.name}}').value.toString()
-                                let value = document.getElementById('filter-value-{{tab.name}}').value.toString()
-                                {{tab.name}}_table.setFilter(field, option, value)
-                            }
-
-                        </script>
+                        {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
+                            <button class="btn btn-success" style="width: 7rem;"  onclick="{{tab.name}}open_modal_tools();" data-i18n="Start"></button>
+                        {% endif %}    
                     </div>
 
-                    <div id="{{tab.name}}-table" style="max-height: 650px;"></div>
-                    <div id="{{tab.name}}ModalDelete"></div>
-                    <script>
-                        function buttons_formatter(cell, formatterParams, onRendered) {
-                            return `<div class='btn btn-primary btn-sm' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="{{tab.name}}editEvent(this)">Edit</div>
-                            <div class='btn btn-danger btn-sm' id="{{tab.name}}-delete-${cell.getRow().getData().id}" onclick="{{tab.name}}deleteEvent(this)">Delete</div>
-                            <div class='btn btn-success btn-sm' id="{{tab.name}}-save-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}saveEvent(this)">Save</div>
-                            <div class='btn btn-warning btn-sm' id="{{tab.name}}-cancel-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}cancelEvent(this)">Cancel</div>
-                            <div class='btn btn-success btn-sm' id="{{tab.name}}-create-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}createRowEvent(this)">Create</div>
-                            <div class='btn btn-warning btn-sm' id="{{tab.name}}-cancel-create-${cell.getRow().getData().id}" style="display:none" onclick="{{tab.name}}cancelCreateEvent(this)">Cancel</div>`;
-                        }
-                        let {{tab.name}}_selected_row = new Map();
-                        function checkbox_formatter(cell, formatterParams, onRendered)
+                </div>
+
+                <div id="{{tab.name}}-table" ></div>
+
+                <style>
+                    .tabulator {
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    }
+                    
+                    
+                    .tabulator .tabulator-row {
+                        background-color: white;
+                    }
+                    
+                    .tabulator .tabulator-row:nth-child(odd) {
+                        background-color: #f8f9fa;
+                    }
+                    
+                    .tabulator .tabulator-row:hover {
+                        background-color: #e9ecef;
+                    }
+                    
+                    .tabulator .tabulator-cell {
+                        padding: 12px;
+                        text-align: center;
+                        vertical-align: middle;
+                        border-right: 1px solid #dee2e6;
+                    }
+                </style>
+                <script>
+                    function {{tab.name}}get_selected_rows()
+                    {
+                        let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
+                        let t_rows = {{tab.name}}_table.getData()
+                        console.log(t_rows)
+                        let selected_id = [];
+                        for (const [k, v] of {{tab.name}}_selected_row)
                         {
-                            let checkbox_id = '{{tab.name}}-checkbox-' + cell.getRow().getData().id;
-                            return `<input type='checkbox' name="{{tab.name}}-checkbox" class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
+                            if (v)
+                                selected_id.push(Number(k.split('-')[2]));
                         }
-                        function {{tab.name}}addRow() {
-                            rowIndex = ""
-                            {{tab.name}}_table.addRow({ id: rowIndex }, true);
-                            {{tab.name}}_table.validate(rowIndex)
-                            document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = "none"
-                            document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = "none"
-                            document.getElementById("{{tab.name}}-create-" + rowIndex).style.display = ""
-                            document.getElementById("{{tab.name}}-cancel-create-" + rowIndex).style.display = ""
-                            {{tab.name}}_table.selectRow(rowIndex)
+                        let result = [];
+                        for (let i = 0; i < t_rows.length; i++)
+                        {
+                            if (selected_id.includes(t_rows[i].id))
+                                result.push(t_rows[i]);
+                        }
+                        return result;
+                    }
+                    function {{tab.name}}open_modal_tools()
+                    {
+                        let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
+                        rows = {{tab.name}}get_selected_rows();
+                        
+                        {
+                            switch (tool) {
+                            case "nmap":
+                                nmap_script_modal_to_info_tabs(rows);
+                                break;
+                            case "masscan":
+                                masscan_script_modal_to_info_tabs(rows);
+                                break;
+                            case "domains":
+                                domains_script_modal_to_info_tabs(rows)
+                                break;
+                            case "cert":
+                                cert_script_modal_to_info_tabs(rows)
+                                break;
+                            case "whois":
+                                whois_script_modal_to_info_tabs(rows)
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+                    }
 
+                    function {{tab.name}}clearFilter(){
+                        document.getElementById('filter-value-{{tab.name}}').value = ''
+                        {{tab.name}}_table.clearFilter()
+                    }
+
+                    function {{tab.name}}ApplyFilter() {
+                        let field = document.getElementById('filter-field-{{tab.name}}').value.toString();
+                        let type = document.getElementById('filter-type-{{tab.name}}').value.toString();
+                        let value = document.getElementById('filter-value-{{tab.name}}').value.toString();
+                        
+                        if (field && value) {
+                            {{tab.name}}_table.setFilter(field, type, value);
                         }
-                        function {{tab.name}}editEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            document.getElementById("{{tab.name}}-cancel-" + rowIndex).style.display = ""
-                            document.getElementById("{{tab.name}}-save-" + rowIndex).style.display = ""
-                            document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = "none"
-                            element.style.display = "none"
-                            {{tab.name}}_table.selectRow(rowIndex)
-                        }
-                        function {{tab.name}}saveEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            if ({{tab.name}}_table.getRow(rowIndex).getCells().every(element => element.isValid() === true)) {
-                            document.getElementById("{{tab.name}}-cancel-" + rowIndex).style.display = "none"
-                            document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = ""
-                            document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = ""
-                            element.style.display = "none"
-                            fetch("{{tab.base_url}}/from_table", { method: 'PUT', body: JSON.stringify({{tab.name}}_table.getRow(rowIndex).getData())
-                        })
-                        {{tab.name}}_table.deselectRow(rowIndex)
-                        {{tab.name}}_table.dataLoader.reloadData()
-                            } else {
-                            {{tab.name}}_table.validate()
-                        }
-                        }
-                        function {{tab.name}}cancelEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            document.getElementById("{{tab.name}}-edit-" + rowIndex).style.display = ""
-                            document.getElementById("{{tab.name}}-save-" + rowIndex).style.display = "none"
-                            document.getElementById("{{tab.name}}-delete-" + rowIndex).style.display = ""
-                            element.style.display = "none"
-                            var row = {{tab.name}} 
-                            _table.getRow(rowIndex)
-                        var cells = row.getCells()
-                        for (i = 0; i < cells.length; i++) {
-                            if (cells[i].getOldValue() != null) {
-                                cells[i].restoreOldValue();
-                            }
-                        }
-                        {{tab.name}}_table.deselectRow()
-                        }
-                        function {{tab.name}}deleteEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            {{tab.name}}_table.getRow(rowIndex).delete()
-                            create_modal("{{tab.name}}ModalDelete", "Row deletion", "Are you sure? Deletion can have cascade effect.", "Delete",
-                                function () { fetch("{{tab.base_url}}/", { method: "DELETE", body: JSON.stringify({ id: rowIndex }) }) })
-                                .show()
-                        }
-                        function {{tab.name}}createRowEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            if ({{tab.name}}_table.getRow(rowIndex).getCells().every(element => element.isValid() === true)) {
-                            fetch("{{tab.base_url}}/from_table", { method: "POST", body: JSON.stringify({{tab.name}}_table.getRow(rowIndex).getData())
-                        })
-                        {{tab.name}}_table.dataLoader.reloadData()
-                            } else {
-                            {{tab.name}}_table.validate()
-                        }
-                        }
-                        function {{tab.name}}cancelCreateEvent(element) {
-                            var rowIndex = element.id.split("-").at(-1)
-                            {{tab.name}}_table.getRow(rowIndex).delete()
-                        }
-                        function isRowSelected(cell) {
-                            return cell.getRow().isSelected()
-                        }
-                        function getForiegnKeys(url) {
-                            var response = ''
-                            $.ajax({
-                                url: url,
-                                type: 'GET',
-                                async: false,
-                                success: function (json) { response = json }
-                            })
-                            return response
-                        }
-                        {% for col in tab.columns %} {% if col.editor_entity %}
-                        var foriegnData{{ col.field }} = getForiegnKeys("/api/v1/{{col.editor_entity}}/all_short"){% endif %} {% endfor %}
-                        function foriegnKeyReplace(data) {
-                            var foriegnData = data;
-                            function wrapped(cell) {
-                                var value = cell.getValue()
-                                var finded = foriegnData.find(obj => { return obj.value == value })
-                                if (finded === undefined) {
-                                    return ''
-                                } else {
-                                    return finded.label
-                                }
-                            }
-                            return wrapped
-                        }
-                        function datetimeFormatter(cell) {
-                            try {
-                                res = luxon.DateTime.fromSeconds(cell.getValue()).toFormat('dd.MM.yyyy HH:mm:ss.S')
-                                if (res === 'Invalid DateTime') { throw 'Datetime Error' }
-                                return res
-                            } catch (error) {
-                                return ''
-                            }
-                        }
-                        function datetimeEditor(cell, onRendered, success, cancel) {
-                            try {
-                                var cellValue = luxon.DateTime.fromSeconds(cell.getValue()).toFormat('dd.MM.yyyy hh:mm:ss')
-                                if (cellValue === 'Invalid DateTime') { throw 'Datetime Error' }
-                            } catch (error) {
-                                var cellValue = ""
-                            }
-                            input = document.createElement("input");
-                            var mask = new Inputmask("99.99.9999 99:99:99")
-                            mask.mask(input)
-                            input.setAttribute("type", "text");
-                            input.style.padding = "4px";
-                            input.style.width = "100%";
-                            input.style.boxSizing = "border-box";
-                            input.value = cellValue;
-                            onRendered(function () {
-                                input.focus();
-                                input.style.height = "100%";
-                            });
-                            function onChange() {
-                                try {
-                                    v = luxon.DateTime.fromFormat(input.value, 'dd.MM.yyyy hh:mm:ss').toSeconds()
-                                    success(v);
-                                } catch {
-                                    cancel()
-                                }
-                            }
-                            input.addEventListener("blur", onChange);
-                            input.addEventListener("change", onChange)
-                            return input;
-                        }
-                        var headerMenu = function () {
-                            var menu = [];
-                            var columns = this.getColumns();
-                            for (let column of columns) {
-                                if (column.getDefinition().field) {
-                                    let icon = document.createElement("i");
-                                    icon.classList.add("bi");
-                                    icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
-                                    let label = document.createElement("span");
-                                    let title = document.createElement("span");
-                                    title.textContent = " " + column.getDefinition().title;
-                                    label.appendChild(icon);
-                                    label.appendChild(title);
-                                    menu.push({
-                                        label: label,
-                                        action: function (e) {
-                                            e.stopPropagation();
-                                            column.toggle();
-                                            if (column.isVisible()) {
-                                                icon.classList.remove("bi-square");
-                                                icon.classList.add("bi-check-square");
-                                            } else {
-                                                icon.classList.remove("bi-check-square");
-                                                icon.classList.add("bi-square");
-                                            }
-                                            {{tab.name}}_table.redraw()
+                    }
+                    function {{tab.name}}getCurrentFilters() {
+                        return {{tab.name}}_table.getFilters();
+                    }
+
+                    let {{tab.name}}_selected_row = new Map();
+                    function checkbox_formatter(cell, formatterParams, onRendered)
+                    {
+                        let checkbox_id = '{{tab.name}}-checkbox-' + cell.getRow().getData().id;
+                        return `<input type='checkbox' name="{{tab.name}}-checkbox" class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
+                    }
+                    function isRowSelected(cell) {
+                        return cell.getRow().isSelected()
+                    }
+                    var headerMenu = function () {
+                        var menu = [];
+                        var columns = this.getColumns();
+                        for (let column of columns) {
+                            if (column.getDefinition().field) {
+                                let icon = document.createElement("i");
+                                icon.classList.add("bi");
+                                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                                let label = document.createElement("span");
+                                let title = document.createElement("span");
+                                title.textContent = " " + column.getDefinition().title;
+                                label.appendChild(icon);
+                                label.appendChild(title);
+                                menu.push({
+                                    label: label,
+                                    action: function (e) {
+                                        e.stopPropagation();
+                                        column.toggle();
+                                        if (column.isVisible()) {
+                                            icon.classList.remove("bi-square");
+                                            icon.classList.add("bi-check-square");
+                                        } else {
+                                            icon.classList.remove("bi-check-square");
+                                            icon.classList.add("bi-square");
                                         }
-                                    });
-                                }
+                                        {{tab.name}}_table.redraw()
+                                    }
+                                });
                             }
-                            return menu;
-                        };
-                        var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                            {% if  tab.name =='soft_vuln_link' %}
-                                layout: "fitDataTable",
-                            {% else %}
-                                layout: "fitColumns",
-                            {% endif %}
-                            ajaxURL: "{{tab.base_url}}",
+                        }
+                        return menu;
+                    };
+                    var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
+                        {% if  tab.name =='soft_vuln_link' or tab.name == 'auth_credentials' or tab.name == 'software' %}
+                            layout: "fitDataStretch",
+                        {% else %}
+                            layout: "fitColumns",
+                        {% endif %}
+                        ajaxURL: "{{tab.base_url}}",
 
-                            ajaxURLGenerator: function (url, config, params) {
-                                //url - the url from the ajaxURL property or setData function
-                                //config - the request config object from the ajaxConfig property
-                                //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+                        ajaxURLGenerator: function (url, config, params) {
+                            //url - the url from the ajaxURL property or setData function
+                            //config - the request config object from the ajaxConfig property
+                            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
 
-                                //return request url
-                                return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
-                            },
-                            selectable: false,
-                            sortMode: "local",
-                            filterMode: "local",
-                            pagination: true,
-                            paginationMode: "local",
-                            paginationSize: 10,
-                            paginationInitialPage: 1,
-                            paginationSizeSelector: [5, 10, 25, 50, 100],
-                            validationMode: 'highlight',
-                            columns: [
-                                {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
-                                    {{ '{' }} title: "Select", field: "selected", formatter: checkbox_formatter, headerSort: false {{ '}' }}
-                                {% endif %},
-                                {% for col in tab.columns %}
-                                    {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
-                                    {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}
-                                    {% if col.formatter %}, editorParams: { values: foriegnData{{ col.field }}, itemFormatter: function(label, value, item, element) { label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>` } }, formatter: {{ col.formatter }} (foriegnData{{ col.field }}) {% endif %}
-                                    {% if col.validator %}, validator: "{{col.validator}}"{% endif %} {{ '}' }},
-                                {% endfor %}
-                                
-                                ] })
-                    </script>
+                            //return request url
+                            const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                            const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                            return url + "?page=" + params.page + "&size=" + params.size + "&sort=" + sort + "&filter=" + filter; //encode parameters as a json object
+                        },
+                        selectable: false,
+                        sortMode: "remote",
+                        filterMode: "remote",
+                        pagination: true,
+                        paginationMode: "remote",
+                        paginationSize: 10,
+                        paginationInitialPage: 1,
+                        paginationSizeSelector: [5, 10, 25, 50, 100],
+                        validationMode: 'highlight',
+                        columns: [
+                            {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' %}
+                                { 
+                                    title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' title='Select all/none'><i class='bi bi-check-square'> Select </i></button></div>", 
+                                    field: "selected", 
+                                    formatter: checkbox_formatter, 
+                                    headerSort: false,
+                                    headerTooltip: "Click to select/deselect all",
+                                    hozAlign: "center",
+                                    headerHozAlign: "center",
+                                    headerClick: function(e, column){
+                                        const checkboxes = document.querySelectorAll('input[name="{{tab.name}}-checkbox"]');
+                                        let allChecked = true;
+                                        
+                                        checkboxes.forEach(checkbox => {
+                                            if(!checkbox.checked) {
+                                                allChecked = false;
+                                            }
+                                        });
+                                        
+                                        const newState = !allChecked;
+                                        const btn = column.getElement().querySelector('.select-all-btn');
+                                        
+                                        checkboxes.forEach(checkbox => {
+                                            checkbox.checked = newState;
+                                            const clickEvent = new Event('click');
+                                            checkbox.dispatchEvent(clickEvent);
+                                        });
+                                    },
+                                    formatterParams: {
+                                        selectAll: false
+                                    }
+                                }
+                            {% endif %},
+                            {% for col in tab.columns %}
+                                {{'{'}}
+                                title: "{{col.title}}",
+                                field: "{{col.field}}",
+                                headerMenu: headerMenu
+                                {{ '}' }},
+                            {% endfor %}
+                            
+                            ] })
+                </script>
                 </div>
                 {% endfor %}
             </div>

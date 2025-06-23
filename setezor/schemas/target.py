@@ -12,4 +12,4 @@ class TargetCreateForm(BaseModel):
     protocol: Optional[str] = ""
     
 class TargetCreate(BaseModel):
-    targets: str | list[TargetCreateForm]
+    targets: list[TargetCreateForm]

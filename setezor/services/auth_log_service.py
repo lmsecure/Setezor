@@ -1,12 +1,11 @@
-from setezor.interfaces.service import IService
+from setezor.services.base_service import BaseService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import AuthLog
 
 
-class Auth_Log_Service(IService):
-    @classmethod
-    async def log_event(cls, uow: UnitOfWork, login:str, event: str):
-        async with uow:
+class Auth_Log_Service(BaseService):
+    async def log_event(self, login:str, event: str):
+        async with self._uow:
             event = AuthLog(login=login, event=event)
-            uow.auth_log.add(event.model_dump())
-            await uow.commit()
+            self._uow.auth_log.add(event.model_dump())
+            await self._uow.commit()

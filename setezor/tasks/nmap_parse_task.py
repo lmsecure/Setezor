@@ -1,19 +1,20 @@
 from base64 import b64decode
-from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.tasks.base_job import BaseJob
 from setezor.modules.nmap.parser import NmapParser
 
 
 
 class NmapParseTask(BaseJob):
-    def __init__(self, uow: UnitOfWork, scheduler, name: str, task_id: str, 
+    def __init__(self, 
+                 task_manager, 
+                 scheduler, name: str, task_id: str, 
                  project_id: str, 
                  scan_id: str, 
                  agent_id: str, 
                  file: str, filename: str, interface_ip_id: str, mac: str, ip: str):
         super().__init__(scheduler=scheduler, name=name)
-        self.uow: UnitOfWork = uow
         self.task_id = task_id
+        self.task_manager = task_manager
         self.project_id = project_id
         self.scan_id = scan_id
         self.agent_id = agent_id

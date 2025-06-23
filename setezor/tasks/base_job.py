@@ -5,6 +5,7 @@ from aiojobs._job import Job
 from setezor.schemas.task import TaskStatus
 from setezor.logger import logger
 
+
 class BaseJob(Job):
     def __init__(self, scheduler, name: str, update_graph: bool = True, agent_id: int | None = None):
         super().__init__(None, scheduler)  # FixMe add custom exception handler
@@ -47,8 +48,8 @@ class BaseJob(Job):
                 "type": "success",
                 "traceback": ""
             }
-            await self._scheduler.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
-                                         data=task_status_data)
+            await self.task_manager.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
+                                 data=task_status_data)
             logger.debug(f"STARTED TASK {func.__qualname__}")
             try:
                 result, raw_result_extension = await func(self, *args, **kwargs)
@@ -57,11 +58,12 @@ class BaseJob(Job):
                 task_status_data["traceback"] = str(e)
                 task_status_data["type"] = "error"
 
-                await self._scheduler.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
-                                             data=task_status_data)
-                logger.error(f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
+                await self.task_manager.notify(agent_id=agent_id,   # меняем инфу по статусу задачи на сервере
+                                     data=task_status_data)
+                logger.error(
+                    f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return
-            await self._scheduler.give_result_to_task_manager(
+            await self.task_manager.send_result_to_parent_agent(
                 task_id=task_id,
                 agent_id=agent_id,
                 result=result,
@@ -76,7 +78,6 @@ class BaseJob(Job):
             task_id = self.task_id
             scan_id = self.scan_id
             project_id = self.project_id
-            uow = self.uow
             task_status_data = {
                 "signal": "task_status",
                 "task_id": task_id,
@@ -84,22 +85,23 @@ class BaseJob(Job):
                 "type": "success",
                 "traceback": ""
             }
-            await self._scheduler.change_task_status_local(data=task_status_data, project_id=project_id, uow=uow)
-            logger.debug(f"STARTED TASK {func.__qualname__}. {task_status_data}")
+            await self.task_manager.task_status_changer_for_local_job(data=task_status_data, project_id=project_id)
+            logger.debug(
+                f"STARTED TASK {func.__qualname__}. {task_status_data}")
             try:
                 result = await func(self, *args, **kwargs)
             except Exception as e:
                 task_status_data["status"] = TaskStatus.failed
                 task_status_data["traceback"] = str(e)
                 task_status_data["type"] = "error"
-                await self._scheduler.change_task_status_local(data=task_status_data, project_id=project_id, uow=uow)
-                logger.error(f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
+                await self.task_manager.task_status_changer_for_local_job(data=task_status_data, project_id=project_id)
+                logger.error(
+                    f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return
-            await self._scheduler.write_local_result(uow=self.uow,
-                                                     project_id=project_id,
-                                                     task_id=task_id,
-                                                     scan_id=scan_id,
-                                                     result=result)
+            await self.task_manager.local_writer(project_id=project_id,
+                                       task_id=task_id,
+                                       scan_id=scan_id,
+                                       result=result)
             return result
         return wrapped
 

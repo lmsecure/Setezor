@@ -69,8 +69,8 @@ def create_app():
     if not os.environ.get("SERVER_REST_URL", None):
         raise Exception("No SERVER_REST_URL specified")
     from fastapi.responses import RedirectResponse
-    from setezor.api.routers import api_routers 
-    from setezor.pages.routers import pages_routers
+    from setezor.api import api_routers 
+    from setezor.pages import pages_routers
     app = FastAPI(title="Setezor", lifespan=startup_event)
     
     for router in pages_routers:
@@ -120,8 +120,14 @@ def run_app(port: int, host: str):
 def list_users():
     """Display all users in database"""
     import asyncio
-    from setezor.managers import UserManager
-    users = asyncio.run(UserManager.list_users())
+    from setezor.managers.user_manager import UserManager
+    from setezor.services import UserProjectService, UsersService, RoleService
+    um = UserManager.new_instance(
+        users_service=UsersService.new_instance(),
+        user_project_service=UserProjectService.new_instance(),
+        role_service=RoleService.new_instance(),
+    )
+    users = asyncio.run(um.list_users())
     print(users)
 
 @run_app.command()
@@ -129,8 +135,14 @@ def list_users():
 def reset_password(login: str):
     """Resets user's password"""
     import asyncio
-    from setezor.managers import UserManager
-    result = asyncio.run(UserManager.reset_user_password(login=login))
+    from setezor.managers.user_manager import UserManager
+    from setezor.services import UserProjectService, UsersService, RoleService
+    um = UserManager.new_instance(
+        users_service=UsersService.new_instance(),
+        user_project_service=UserProjectService.new_instance(),
+        role_service=RoleService.new_instance(),
+    )
+    result = asyncio.run(um.reset_user_password(login=login))
     print(result)
 
 @run_app.command()

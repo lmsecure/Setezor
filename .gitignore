@@ -7,3 +7,14 @@ config.json
 .env*
 build.sh
 *.deb
+tests
+requirements-test.txt
+Makefile
+.pytest_cache
+tests_pw
+playwright.config.js
+package-lock.json
+package.json
+node_modules
+test-results
+playwright-report

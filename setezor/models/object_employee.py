@@ -11,5 +11,5 @@ class Object_Employee(IDDependent, Base, table=True):
     object_id: str = Field(foreign_key="object.id", sa_column_kwargs={"comment":"Идентификатор объекта"})
     employee_id: str = Field(foreign_key="employee.id", sa_column_kwargs={"comment":"Идентификатор сотрудника"})
 
-    object: "Object" = Relationship(back_populates="employees")
-    employee: "Employee" = Relationship(back_populates="objects")
+    object: "Object" = Relationship(back_populates="employees") # type: ignore
+    employee: "Employee" = Relationship(back_populates="objects") # type: ignore

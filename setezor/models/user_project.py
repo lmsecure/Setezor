@@ -12,7 +12,7 @@ class UserProject(IDDependent, TimeDependent, table=True):
     
     user_id: str = Field(foreign_key="user.id", sa_column_kwargs={"comment":"Идентификатор пользователя"})
     project_id: str = Field(foreign_key="project.id", sa_column_kwargs={"comment":"Идентификатор проекта"})
-    role_id: str = Field(foreign_key="role.id", sa_column_kwargs={"comment":"Идентификатор роли"})
+    role_id: str = Field(foreign_key="user_role.id", sa_column_kwargs={"comment":"Идентификатор роли"})
 
-    user: List["User"] = Relationship(back_populates="projects")
-    project: List["Project"] = Relationship(back_populates="users")
+    user: List["User"] = Relationship(back_populates="projects") # type: ignore
+    project: List["Project"] = Relationship(back_populates="users") # type: ignore

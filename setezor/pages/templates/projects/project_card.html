@@ -235,10 +235,7 @@ function deleteProject(projectId, projectName) {
 }
 
 function confirmDeleteProject(projectId) {
-    const formData = new FormData();
-    formData.set('project_id', projectId);
-
-    fetch('/api/v1/project/', {
+    fetch('/api/v1/project/'+projectId, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',

@@ -32,12 +32,12 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
         Возвращает (значение, количество)
         """
         device_types_query = text("""
-            SELECT d_object_type.name, COUNT(d_object_type.name) AS count
+            SELECT setezor_d_object_type.name, COUNT(setezor_d_object_type.name) AS count
             FROM object
-            JOIN d_object_type ON object.object_type_id = d_object_type.id
+            JOIN setezor_d_object_type ON object.object_type_id = setezor_d_object_type.id
             WHERE object.project_id = :project_id
             AND object.scan_id = :last_scan_id
-            GROUP BY d_object_type.name
+            GROUP BY setezor_d_object_type.name
             ORDER BY count DESC
         """)
 

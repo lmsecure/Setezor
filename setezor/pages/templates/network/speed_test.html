@@ -1,0 +1,183 @@
+
+
+{% macro speed_test_full_script_modal(prefix) %}
+
+    <div class="modal fade" id="{{ prefix }}SpeedTestModalWindow" tabindex="-1" aria-labelledby="{{ prefix }}SpeedTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="{{ prefix }}SpeedTestModalLabel" data-i18n="Speed test task"></h5>
+                    <button type="button" id="id_button_{{ prefix }}_SpeedTestModalClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-end mb-2" id="agent_interface_bar_speed_test">
+                        <div id="scans_bar_speed_test" class="ms-3"></div>
+                    </div>
+                    <form id="id_formSpeedTest" name="SpeedTestModalName" onsubmit="SpeedTestTask(event)">
+                        <div id="modal_speed_test_body" class="container"></div>
+                        <div class="d-flex justify-content-end mb-2">
+                            <button type="submit" class="btn btn-primary" style="margin-right: 0.8rem;" id="createSpeedTestButton" data-i18n="Start scan"></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <script>
+        async function speed_test_modal_window(prefix) {
+            let myModal = new bootstrap.Modal(document.getElementById("{{ prefix }}SpeedTestModalWindow"));
+            let modal_speed_test_body = document.getElementById("modal_speed_test_body");
+
+            let agent_list_1 = await axios.get("/api/v1/agents_in_project/settings").then(resp => { return resp.data })
+            let agent_list_2 = await axios.get("/api/v1/agents_in_project/settings").then(resp => { return resp.data })
+
+            let context = `
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="id_select_agent_from">${i18next.t('Agent from')} </label>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select w-100" name="agent_id_from" id="id_select_agent_from" onchange="updateSourceIPs(this.value)">
+                            ${agent_list_1.map((agent, index) => index === 0 ? '': `<option value="${agent.id}">${agent.name}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="id_select_interface_from"> ${i18next.t('Source interface')} </label>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select w-100" name="interface_from" id="id_select_interface_from">
+                        </select>
+                    </div>
+                </div>
+
+               <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="id_select_agent_to"> ${i18next.t('Agent to')} </label>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select w-100" name="agent_id_to" id="id_select_agent_to" onchange="updateTargetIPs(this.value)">
+                            ${agent_list_2.map((agent, index) => index === 0 ? '': `<option value="${agent.id}">${agent.name}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="id_select_interface_to"> ${i18next.t('Target interface')} </label>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select w-100" name="interface_to" id="id_select_interface_to">
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <label for="id_terget_port" class="form-label"> ${i18next.t('Target Port')} </label>
+                        <div class="d-flex flex-row">
+                            <input type="number" class="form-control w-100" id="id_source_port" name="target_port" min="1" max="65535" value="" style="appearance: textfield;" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <label for="id_protocol"> ${i18next.t('Protocol')}: </label>
+                        <div class="d-flex flex-row">
+                            <div class="form-check" style="margin-right: 1rem;">
+                                <input class="form-check-input" type="radio" name="protocol" id="id_protocol_tcp" value="0" checked>
+                                <label class="form-check-label" for="id_protocol_tcp">TCP</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="protocol" id="id_protocol_udp" value="1">
+                                <label class="form-check-label" for="id_protocol_udp">UDP</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <div class="d-flex flex-row">
+                            <label for="id_slider_duration"> ${i18next.t('Duration')}: </label>
+                            <span id="id_slider_duration_value" style="margin-left: 5px;">5</span>
+                        </div>
+                    </div>
+                    <div class="col-8">
+                        <div class="d-flex flex-row">
+                            <span id="id_slider_duration_min" class="me-2">2</span>
+                            <input type="range" class="form-range w-100" id="id_slider_duration" name="duration" min="2" max="100" step="1" value="5" oninput="document.getElementById('id_slider_duration_value').textContent = value;">
+                            <span id="id_slider_duration_max" class="me-2">100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <div class="d-flex flex-row">
+                            <label for="id_slider_packet_size"> ${i18next.t('Packet size')}: </label>
+                            <span id="id_slider_packet_size_value" style="margin-left: 5px;">1200</span>
+                        </div>
+                    </div>
+                    <div class="col-8">
+                        <div class="d-flex flex-row">
+                            <span id="id_slider_packet_size_min" class="me-2">100</span>
+                            <input type="range" class="form-range w-100" id="id_slider_rate" name="packet_size" min="100" max="1400" step="50" value="1200" oninput="document.getElementById('id_slider_packet_size_value').textContent = value;">
+                            <span id="id_slider_packet_size_max" class="me-2">1400</span>
+                        </div>
+                    </div>
+                </div>
+            `
+            updateTargetIPs(agent_list_1[1].id);
+            updateSourceIPs(agent_list_2[1].id);
+
+            modal_speed_test_body.innerHTML = context;
+            myModal.show();
+        }
+
+        async function updateSourceIPs(agentId) {
+            const response = await axios.get(`/api/v1/agents_in_project/${agentId}/interfaces`);
+            const interfaces = response.data;
+            const targetIpSelect = document.getElementById('id_select_interface_from');
+            targetIpSelect.innerHTML = interfaces.map((iface) =>`<option value='${JSON.stringify({ip_id_from: iface.ip_id})}'>${iface.name} - ${iface.ip}</option>`).join('');
+        }
+
+        async function updateTargetIPs(agentId) {
+            const response = await axios.get(`/api/v1/agents_in_project/${agentId}/interfaces`);
+            const interfaces = response.data;
+            const targetIpSelect = document.getElementById('id_select_interface_to');
+            targetIpSelect.innerHTML = interfaces.map((iface) =>`<option value='${JSON.stringify({ip_id_to: iface.ip_id, target_ip: iface.ip})}'>${iface.name} - ${iface.ip}</option>`).join('');
+        }
+
+
+        async function SpeedTestTask(event) {
+            event.preventDefault();
+            let formData = new FormData(event.target);
+            let params = Object.fromEntries(formData);
+            let data = {};
+            data["agent_id_from"] = params["agent_id_from"];
+            Object.assign(data, JSON.parse(params["interface_from"]));
+            data["agent_id"] = params["agent_id_to"];
+            Object.assign(data, JSON.parse(params["interface_to"]));
+            data["target_port"] = params["target_port"];
+            data["protocol"] = Number(params["protocol"]);
+            data["duration"] = Number(params["duration"]);
+            data["packet_size"] = Number(params["packet_size"]);
+            await axios.post('/api/v1/task/speed_test_task', data, {headers: { 'Content-Type': 'application/json' }});
+
+            event.target.reset();
+            document.getElementById("id_button_{{ prefix }}_SpeedTestModalClose").click();
+        }
+
+
+id_button_SpeedTestModalClose
+    </script>
+
+{% endmacro %}

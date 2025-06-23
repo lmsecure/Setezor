@@ -7,7 +7,7 @@
 <div id="v-pills-snmp">
     <div id="snmp" class="row">
 
-            <form onsubmit=startScan161udpPort(event) id="SnmpForm">
+            <form onsubmit=startScan161udpPort(event) name="SnmpFormName" id="SnmpForm">
 
                     <div id="snmpInputContainer"></div>
 
@@ -21,7 +21,7 @@
                     </div>
 
                         <label class="mt-3" for="" data-i18n="Community strings dictionary (default if empty):"></label>
-                    <form id='idChoiceDictCommunityStrings'>
+                    <form id='idChoiceDictCommunityStrings' name="ChoiceDictCommunityStringsFormName">
                         <div class="mb-3">
                                 <input class="form-control me-3" type="file" accept=".txt" id="fileFromSNMPbrute_cs">
                         </div>

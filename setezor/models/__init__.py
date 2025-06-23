@@ -25,6 +25,9 @@ from .l4_software_vulnerability_screenshot import L4SoftwareVulnerabilityScreens
 from .screenshot import Screenshot
 from .d_vendor import Vendor
 from .d_software import Software
+from .d_software_type import SoftwareType
+from .d_software_version import SoftwareVersion
+
 from .vulnerability import Vulnerability
 from .acunetix import Acunetix
 from .whois_ip import WhoIsIP
@@ -57,6 +60,7 @@ from .l4_software_vulnerability_comment import L4SoftwareVulnerabilityComment
 from .settings import Settings
 from .agent_in_project import AgentInProject
 from .agent_parent_agent import AgentParentAgent
+from .network_speed_test import NetworkSpeedTest
 
 
 def get_model_by_name(model_name:str):

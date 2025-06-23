@@ -1,6 +1,8 @@
 import re
 from cpeguess.cpeguess import CPEGuess
 from setezor.models import IP, Port, DNS_A, Domain, Software, Vendor, L4Software
+from setezor.models.d_software_type import SoftwareType
+from setezor.models.d_software_version import SoftwareVersion
 from setezor.network_structures import SoftwareStruct
 # from setezor.modules.osint.dns_info.dns_info import DNS
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
@@ -111,8 +113,6 @@ class WappalyzerParser:
             return []
 
         result = []
-        vendors = {}
-        softwares = {}
         port = data.get("port")
         domain = data.get("domain")
         ip = data.get("ip")
@@ -147,24 +147,51 @@ class WappalyzerParser:
         new_port = Port(port=port, ip=new_ip)
         result.append(new_port)
 
+
+        vendors = {}
+        softwares = {}
+        softwares_versions = {}
+        software_type_obj = SoftwareType(name="Web")
+
         for software in data["softwares"]:
             soft = software.model_dump()
-            if all(v is None for v in soft.values()) or (not software.vendor and not software.product):
+            vendor_name = soft.pop('vendor', '')
+            soft.pop('patch', None)
+            soft.pop('platform', None)
+            if not any(soft.values()):
                 continue
-            vendor_name = soft.pop("vendor")
-            if vendor_name and vendor_name in vendors:
+            product = soft.pop("product", "") or ""
+            software_hash_string = vendor_name + product
+            version = soft.pop("version", "") or ""
+            build = soft.pop("build", "") or ""
+            cpe23 = soft.pop("cpe23", "") or ""
+            soft_version_hash_string = vendor_name + product + version + build + cpe23
+
+            if vendor_name in vendors:
                 vendor_obj = vendors.get(vendor_name)
             else:
                 vendor_obj = Vendor(name=vendor_name)
                 vendors[vendor_name] = vendor_obj
                 result.append(vendor_obj)
-            hash_string = vendor_name or "" + "_" + "_".join([v for v in soft.values() if v])
-            if not (hash_string and hash_string in softwares):
-                soft_obj = Software(vendor=vendor_obj, **soft)
-                softwares[hash_string] = soft_obj
-                result.append(soft_obj)
-                new_soft_obj = L4Software(l4=new_port, software=soft_obj, dns_a=dns_a_obj)
-                result.append(new_soft_obj)
+                     
+            if software_hash_string in softwares:
+                software_obj = softwares[software_hash_string]
+            else:
+                software_obj = Software(product=product, vendor=vendor_obj, _type=software_type_obj)
+                softwares[software_hash_string] = software_obj
+                result.append(software_obj)
+
+            if soft_version_hash_string in softwares_versions:
+                soft_version_obj = softwares_versions[soft_version_hash_string]
+            else:  
+                soft_version_obj = SoftwareVersion(software=software_obj,
+                                                    version=version,
+                                                    build=build,
+                                                    cpe23=cpe23)
+                softwares_versions[soft_version_hash_string] = soft_version_obj
+                result.append(soft_version_obj)
+            L4Software_obj = L4Software(l4=new_port, software_version=soft_version_obj, dns_a=dns_a_obj)
+            result.append(L4Software_obj)
         return result
 
     @staticmethod

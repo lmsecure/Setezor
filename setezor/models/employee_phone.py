@@ -11,7 +11,7 @@ class Employee_Phone(IDDependent, Base, table=True):
     }
 
     employee_id: str = Field(foreign_key="employee.id", sa_column_kwargs={"comment":"Идентификатор сотрудника"})
-    phone_id: str = Field(foreign_key="phone.id", sa_column_kwargs={"comment":"Идентификатор телефона"})
+    phone_id: str = Field(foreign_key="organization_phone.id", sa_column_kwargs={"comment":"Идентификатор телефона"})
 
-    employee: "Employee" = Relationship(back_populates="phones")
-    phone: "Phone" = Relationship(back_populates="employees")
+    employee: "Employee" = Relationship(back_populates="phones") # type: ignore
+    phone: "Phone" = Relationship(back_populates="employees") # type: ignore

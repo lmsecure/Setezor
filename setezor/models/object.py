@@ -13,7 +13,7 @@ class Object(IDDependent, Base, table=True):
         "comment": "Таблица предназначена для хранения объектов"
     }
 
-    object_type_id: Optional[str] = Field(default=str("3d9cf6c43fd54aacb88878f5425f43c4"), foreign_key="d_object_type.id", sa_column_kwargs={"comment":"Идентификатор типа объекта"})
+    object_type_id: Optional[str] = Field(default=str("3d9cf6c43fd54aacb88878f5425f43c4"), foreign_key="setezor_d_object_type.id", sa_column_kwargs={"comment":"Идентификатор типа объекта"})
     critical_level: int = Field(default=0, sa_column_kwargs={"comment":"Уровень критичности объекта"})
     note: Optional[str] = Field(sa_column_kwargs={"comment":"Примечание к объекту"})
     agent_id: Optional[str] = Field(sa_column_kwargs={"comment":"Идентификатор агента"})
@@ -21,5 +21,5 @@ class Object(IDDependent, Base, table=True):
     macs: List["MAC"] = Relationship(back_populates="object")
     object_type: Optional["ObjectType"] = Relationship(back_populates="objects")
     employees: List["Object_Employee"]  = Relationship(back_populates="object")
-    agents: List["AgentInProject"] = Relationship(back_populates="_object")
-    project: "Project" = Relationship(back_populates="objects")
+    agents: List["AgentInProject"] = Relationship(back_populates="_object") # type: ignore
+    project: "Project" = Relationship(back_populates="objects") # type: ignore

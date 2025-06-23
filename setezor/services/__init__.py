@@ -1,9 +1,7 @@
-from .dns_service import DNSService
 from .domain_service import DomainsService
 from .ip_service import IPService
 from .task_service import TasksService
 from .user_service import UsersService
-from .data_structure_service import DataStructureService
 from .user_project_service import UserProjectService
 from .object_type_service import ObjectTypeService
 from .acunetix_service import AcunetixService
@@ -21,3 +19,4 @@ from .auth_log_service import Auth_Log_Service
 from .role_service import RoleService
 from .settings_service import SettingsService
 from .credentials_service import CredentialsService
+from .network_speed_test_service import NetworkSpeedTestService

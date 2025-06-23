@@ -15,7 +15,7 @@ class Project(IDDependent, TimeDependent, table=True):
     search_vulns_token: Optional[str] = Field(sa_column_kwargs={"comment":"Токен для search vulns"})
 
 
-    users: List["UserProject"] = Relationship(back_populates="project")
-    asns: List["ASN"] = Relationship(back_populates="project")
-    domains: List["Domain"] = Relationship(back_populates="project")
-    objects: List["Object"] = Relationship(back_populates="project")
+    users: List["UserProject"] = Relationship(back_populates="project") # type: ignore
+    asns: List["ASN"] = Relationship(back_populates="project") # type: ignore
+    domains: List["Domain"] = Relationship(back_populates="project") # type: ignore
+    objects: List["Object"] = Relationship(back_populates="project") # type: ignore

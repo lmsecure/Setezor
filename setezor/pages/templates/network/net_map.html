@@ -56,7 +56,7 @@
                     <h5 data-i18n="Pick scans"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form onsubmit="showMapForScans(event).then(() => {cluster_by_netmask()})">
+                <form name="showMapForScansFormName" onsubmit="showMapForScans(event).then(() => {cluster_by_netmask()})">
                     <div class="modal-body" id="scansContainer">
                     </div>
                     <div class="modal-footer">
@@ -303,7 +303,7 @@
                     </h5>
                 {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
             </div>
-            <form id='demoteAgentModal' onsubmit="confirmDemoteOfAgent(event)">
+            <form id='demoteAgentModal' name="demoteAgentFormName" onsubmit="confirmDemoteOfAgent(event)">
                 <div class="modal-body">
                     
                         <div id="node-popUp">
@@ -433,8 +433,6 @@
                 }
             }
         }))
-        {% for col in table %} {% if col.editor_entity %}
-        foriegnData{ { col.field } } = getForiegnKeys("/api/{{col.editor_entity}}/all_short"){% endif %} {% endfor %}
         if (update == true) {
             nodes.forEach(elem => {
                 networkData.nodes.update(elem)
@@ -746,13 +744,6 @@
         return resp
     }
 
-    // function saveEdgeData(data, callback) {
-    //     Функция была промежуточной между addEdges и createEdgeInDatabase, зачем она хз
-    //     if (typeof data.to === "object") data.to = data.to.id;
-    //     if (typeof data.from === "object") data.from = data.from.id;
-    //     data.label = '';
-    //     createEdgeInDatabase(data, callback)
-    // }
     function createCreateNodeModal(editing) {
         let text, action_button;
         if (editing) {
@@ -773,7 +764,7 @@
                         {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
                     </div>
                     <div class="modal-body">
-                        <form id='createNodeModal'>
+                        <form id='createNodeModal' name="createNodeFormName">
                             <div id="node-popUp" style="">
                                 <table style="margin: auto">
                                 <tbody>
@@ -834,7 +825,7 @@
                         <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
                         {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
                     </div>
-                    <form id='deleteAgentModal' onsubmit="confirmDeletingOfAgent(event)">
+                    <form id='deleteAgentModal' name="deleteAgentFormName" onsubmit="confirmDeletingOfAgent(event)">
                         <div class="modal-body">
                             
                                 <div id="node-popUp" style="">
@@ -889,7 +880,7 @@
                         <h5 class="modal-title" id="exampleModalLabel">${text}</h5>
                         {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
                     </div>
-                    <form id='deleteNodeModal' onsubmit="confirmDeletingOfNode(event)">
+                    <form id='deleteNodeModal' name="deleteNodeFormName" onsubmit="confirmDeletingOfNode(event)">
                         <div class="modal-footer">
                             <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
@@ -920,7 +911,7 @@
                         {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
                     </div>
                     <div class="modal-body">
-                        <form id='deleteLastAgentModal'>
+                        <form id='deleteLastAgentModal' name="deleteLastAgentFormName">
                             <div id="node-popUp" style="">
                                 <table style="margin: auto">
                                 <tbody>
@@ -981,7 +972,7 @@
                 length: 500,  // длина грани
                 hoverWidth: 3, // ширина грани при наведении
                 smooth: {
-                    type: "continuous",
+                    type: "dynamic",
                 },
             },
             interaction: {
@@ -989,7 +980,8 @@
                 tooltipDelay: 100,
                 hover: true,
                 navigationButtons: true,
-                keyboard: false
+                keyboard: false,
+                selectConnectedEdges: false
             },
             physics: {
                 enabled: true,
@@ -1292,6 +1284,44 @@
     function exportToPNG() {
         download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
     }
+    network.on("selectEdge", function (params) {
+        const edgeId = params.edges[0];
+        if (edgeId) {
+            const connectedNodes = network.getConnectedNodes(edgeId);
+            axios.get(`/api/v1/vis/speed_test_result/?ip_id_from=${connectedNodes[0]}&ip_id_to=${connectedNodes[1]}`).then(response => {
+            const speedTestData = response.data;
+
+            if (speedTestData.length > 0) {
+            source_table = document.getElementById('div_node_info')
+            html_text = `<div>
+                <h5>${i18next.t('Edge')}</h5>
+                <ul class="nav nav-pills mb-3" id="edge-info-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="edge-tab" data-bs-toggle="pill" data-bs-target="#edge-info" type="button" role="tab">${i18next.t('Speed test')}</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="edge-info-tabs-content">
+                    <div class="tab-pane fade show active" id="edge-info" role="tabpanel">
+                        <table class="table table-bordered table-hover">
+                            <tr>
+                                <th scope="col">${i18next.t('Speed')}</th>
+                                <th scope="col">${i18next.t('Port')}</th>
+                                <th scope="col">${i18next.t('Protocol')}</th>
+                            </tr>`;
+                            for (let row of response.data) {
+                                html_text += `<tr>
+                                    <td>${row.speed.toFixed(2)} ${i18next.t('mbps')}</td>
+                                    <td>${row.port}</td>
+                                    <td>${row.protocol}</td>
+                                </tr>`}
+
+                                html_text += `</table>
+                    </div>
+                </div>
+            `;
+            source_table.innerHTML = html_text;
+        }})
+    }});
     let nodeForComment
     async function createNodeInformation(node) {
     if (node.agent == null) {
@@ -1579,7 +1609,7 @@
                     <div id="commentsContainer" style="overflow-y: auto; max-height: 300px; margin-top: 10px;">
                         ${html_all_comments}
                     </div>
-                    <form id="addCommentForm" class="mt-3">
+                    <form id="addCommentForm" name="addCommentFormName" class="mt-3">
                         <div class="form-group w-100">
                             <label for="AddCommentForm">${i18next.t('New comment')}</label>
                             <textarea class="form-control" id="AddCommentForm" rows="3" required></textarea>
@@ -1657,9 +1687,9 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5> Add credentials </h5>
+                        <h5> ${i18next.t('Add credentials')} </h5>
                     </div>
-                    <form id="id_formAddCred" onsubmit="submitAddCredentials(event)">
+                    <form id="id_formAddCred" name="AddCredentialsFormName" onsubmit="submitAddCredentials(event)">
                         <div class="modal-body">`
             context += `
                             <div class="form-group">

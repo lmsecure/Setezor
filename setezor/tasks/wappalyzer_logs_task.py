@@ -7,7 +7,7 @@ from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
 
 class WappalyzerLogsTask(BaseJob):
 
-    def __init__(self, uow: UnitOfWork, 
+    def __init__(self, task_manager, 
                  scheduler, 
                  name: str, 
                  task_id: str, 
@@ -17,7 +17,7 @@ class WappalyzerLogsTask(BaseJob):
                  groups: list[str], 
                  log_file: str):
         super().__init__(scheduler=scheduler, name=name)
-        self.uow: UnitOfWork = uow
+        self.task_manager = task_manager
         self.task_id = task_id
         self.project_id = project_id
         self.scan_id = scan_id

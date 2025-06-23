@@ -1,6 +1,6 @@
 
 from fastapi import HTTPException
-from setezor.interfaces.service import IService
+from setezor.services.base_service import BaseService
 from setezor.models import Scope, Target
 from setezor.schemas.scope import ScopeCreateForm
 from setezor.schemas.target import TargetCreate
@@ -8,67 +8,75 @@ from setezor.unit_of_work.unit_of_work import UnitOfWork
 
 from io import StringIO
 
-class ScopeService(IService):
-    @classmethod
-    async def create(cls, uow: UnitOfWork, project_id: str, scope: ScopeCreateForm) -> Scope:
+class ScopeService(BaseService):
+    async def create(self, project_id: str, scope: ScopeCreateForm) -> Scope:
         new_scope_model = Scope(
             name=scope.name,
             description=scope.description,
             project_id=project_id
         )
-        async with uow:
-            new_scope = uow.scope.add(new_scope_model.model_dump())
-            await uow.commit()
+        async with self._uow:
+            new_scope = self._uow.scope.add(new_scope_model.model_dump())
+            await self._uow.commit()
             return new_scope
         
-    @classmethod
-    async def list(cls, uow: UnitOfWork, project_id: str):
-        async with uow:
-            return await uow.scope.project_scopes(project_id=project_id)
+    async def list(self, project_id: str):
+        async with self._uow:
+            return await self._uow.scope.project_scopes(project_id=project_id)
         
-    @classmethod
-    async def get(cls, uow: UnitOfWork, id: str):
-        async with uow:
-            return await uow.scope.find_one(id=id)
+    async def get(self, id: str):
+        async with self._uow:
+            return await self._uow.scope.find_one(id=id)
         
-    @classmethod
-    async def create_targets(cls, uow: UnitOfWork, project_id: str, id: str, payload: TargetCreate):
+    async def create_targets(self, project_id: str, id: str, payload: TargetCreate):
         
         targets = payload.targets
         result = []
+
         for target in targets:
+            if not (target.ip or target.domain):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Each target must have at least 'ip' or 'domain'"
+                )
             params = target.model_dump()
             if target.ip or target.domain:
                 result.append(params)
-        async with uow:
+        async with self._uow:
             for params in result:
                 if params:
                     new_target = Target(
                         project_id=project_id,
                         scope_id=id,
                         **params)
-                    if not await uow.target.find_one(**new_target.model_dump()):
-                        uow.target.add(new_target.model_dump())
-            await uow.commit()
-            return await uow.target.for_scope(scope_id=id, project_id=project_id)
+                    if not await self._uow.target.find_one(**new_target.model_dump()):
+                        self._uow.target.add(new_target.model_dump())
+            await self._uow.commit()
+            return await self._uow.target.for_scope(scope_id=id, project_id=project_id)
     
-    @classmethod
-    async def get_targets(cls, uow: UnitOfWork, project_id: str, id: str):
-        async with uow:
-            return await uow.target.for_scope(project_id=project_id, scope_id=id)
+    async def get_targets(self, project_id: str, id: str):
+        async with self._uow:
+            return await self._uow.target.for_scope(project_id=project_id, scope_id=id)
         
-    @classmethod
-    async def delete_scope_by_id(cls, uow: UnitOfWork, id: str):
-        async with uow:
-            await uow.scope.delete(id=id)
-            await uow.commit()
+    async def get_filtred_targets(self, project_id: str, id: str, page: int = 1, limit: int = 50):
+        async with self._uow:
+            return await self._uow.target.for_scope_filtred(
+                project_id=project_id, 
+                scope_id=id,
+                page=page,
+                limit=limit
+            )
+        
+    async def delete_scope_by_id(self, id: str):
+        async with self._uow:
+            await self._uow.scope.delete(id=id)
+            await self._uow.commit()
             return True
 
 
-    @classmethod
-    async def get_csv_from_scope(cls, uow: UnitOfWork, project_id: str, scope_id: str) -> bytes:
-        async with uow:
-            targets = await uow.target.for_scope(project_id=project_id, scope_id=scope_id)
+    async def get_csv_from_scope(self, project_id: str, scope_id: str) -> bytes:
+        async with self._uow:
+            targets = await self._uow.target.for_scope(project_id=project_id, scope_id=scope_id)
         if not targets:
             raise HTTPException(status_code=204)
         result = StringIO()

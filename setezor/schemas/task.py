@@ -139,3 +139,14 @@ class SnmpBruteCommunityStringPayload(BaseModel):
     target_ip: str | None = None
     target_port: int | None = None
     community_strings_file: str
+
+class SpeedTestTaskPayload(BaseModel):
+    agent_id: str
+    agent_id_from: str
+    ip_id_from: str
+    ip_id_to: str
+    target_ip: str
+    target_port: int
+    duration: Optional[int] = 5
+    packet_size: Optional[int] = 1400
+    protocol: Optional[int] = 0

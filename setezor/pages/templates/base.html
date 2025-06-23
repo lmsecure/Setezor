@@ -40,6 +40,8 @@
 	{{cpe.cpe_full_script_modal()}}   
 	{% import 'network/search_vulns.html' as search_vulns%}
 	{{search_vulns.search_vulns_full_script_modal()}}   
+	{% import 'network/speed_test.html' as speed_test %}
+	{{speed_test.speed_test_full_script_modal()}}
 </head>
 
 <body>
@@ -49,8 +51,8 @@
 				<div class="bd-highlight" style="margin-left: 40px;">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item d-inline">
-							<a class="navbar-brand" target="_blank">
-								<img src="/static/assets/logo.png" width="120px" height="auto"
+							<a class="navbar-brand" href="/projects">
+								<img src="/static/assets/logo.png"  width="120px" height="auto"
 									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
 							</a>
 						</li>
@@ -207,9 +209,9 @@
 					<a href="#" onclick="openTasksModal();">
 						<button type="button" class="btn btn-outline-light"
 							style=" --bs-btn-padding-x: 0.2rem; --bs-btn-border-width: 0px; --bs-btn-line-height: 0.5; --bs-btn-color: #54B49C; --bs-btn-hover-bg: none; --bs-btn-hover-color: #54B49C">
-							<i class=" bi bi-play-circle fs-4" data-i18n-title="Task manager"></i>
+							<i class=" bi bi-play-circle fs-4" data-i18n-title="Tasks list"></i>
 						</button>
-							<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Task manager"></span>
+							<span style="margin-left: 1rem; color: #54B49C;" data-i18n="Tasks list"></span>
 					</a>
 					{% endif %}
 					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
@@ -312,6 +314,7 @@
 								<li><a href="#" onclick="masscan_full_modal_window()"><span style="color: #54B49C;">MASSCAN</span></a></li>
 								<li><a href="#" onclick="scapy_full_modal_window()"><span style="color: #54B49C;">SCAPY</span></a></li>
 								<li><a href="#" onclick="snmp_full_modal_window()"><span style="color: #54B49C;">SNMP</span></a></li>
+								<li><a href="#" onclick="speed_test_modal_window()"><span style="color: #54B49C;">Speed Test</span></a></li>
 							</ul>
 						</li>
 						<li>
@@ -435,7 +438,7 @@
 					<h1 class="modal-title fs-5" id="exampleModalLabel" data-i18n="Adding scan"></h1>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
-				<form onsubmit="addScan(event)">
+				<form onsubmit="addScan(event)" name="addScanFormName">
 					<div class="modal-body">
 						<div class="mb-3">
 							<label for="scanNameID" class="col-form-label" data-i18n="Scan name"></label>
@@ -462,7 +465,7 @@
 			  <h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel" data-i18n="Registration token"></h1>
 			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
-			<form onsubmit="generateRegisterToken(event)">
+			<form onsubmit="generateRegisterToken(event)" name="generateRegisterTokenFormName">
 			  <div class="modal-body">
 				<div class="mb-3">
 				  <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
@@ -575,17 +578,7 @@
 		}
 	</style>
 	<script>
-		$("#menu-toggle").click(function (e) {
-			e.preventDefault();
-			$("#wrapper").toggleClass("toggled");
-		});
-
-		$("#menu-toggle-2").click(function (e) {
-			e.preventDefault();
-			$("#wrapper").toggleClass("toggled-2");
-			$('#menu ul').hide();
-		});
-        function sanitize(string) {
+		function sanitize(string) {
 			const map = {
 				'&': '&amp;',
 				'<': '&lt;',
@@ -601,6 +594,17 @@
 				return ""
 			}
 		}
+		$("#menu-toggle").click(function (e) {
+			e.preventDefault();
+			$("#wrapper").toggleClass("toggled");
+		});
+
+		$("#menu-toggle-2").click(function (e) {
+			e.preventDefault();
+			$("#wrapper").toggleClass("toggled-2");
+			$('#menu ul').hide();
+		});
+
 		function initMenu() {
 			$('#menu ul').hide(); // Скрыть все вложенные списки
 			$('#menu ul').children('.current').parent().show(); // Показать вложенные списки текущего элемента
@@ -628,35 +632,45 @@
 			});
 		}
 		$(document).ready(function () {
-			initMenu();
+    initMenu();
 
-			$('#menu li a[data-target="#settings-submenu"]').click(function (e) {
-				e.preventDefault();
-
-				var settingsSubmenu = $('#settings-submenu');
-				if (!settingsSubmenu.is(':visible')) {
-					settingsSubmenu.slideDown('normal');
-				}
-
-				// Убедиться, что #wrapper открыт
-				if ($('#wrapper').hasClass('toggled-2')) {
-					$('#wrapper').removeClass('toggled-2');
-				}
-			});
-			$('#menu li a[data-target="#tools-submenu"]').click(function (e) {
-				e.preventDefault();
-
-				var toolsSubmenu = $('#tools-submenu');
-				if (!toolsSubmenu.is(':visible')) {
-					toolsSubmenu.slideDown('normal');
-				}
-
-				// Убедиться, что #wrapper открыт
-				if ($('#wrapper').hasClass('toggled-2')) {
-					$('#wrapper').removeClass('toggled-2');
-				}
-			});
+    // Обработчик для закрытия меню при клике вне его области
+    $(document).click(function (e) {
+			// Проверяем, что клик был не по элементам меню и не по кнопкам открытия меню
+			if (!$(e.target).closest('#wrapper, #menu-toggle, #menu-toggle-2').length) {
+				// Закрываем меню
+				$('#wrapper').addClass('toggled toggled-2');
+				$('#menu ul').slideUp('normal');
+			}
 		});
+
+		// Останавливаем всплытие событий клика внутри меню, чтобы они не достигали document
+		$('#wrapper, #menu-toggle, #menu-toggle-2').click(function (e) {
+			e.stopPropagation();
+		});
+
+		$('#menu li a[data-target="#settings-submenu"]').click(function (e) {
+			e.preventDefault();
+			var settingsSubmenu = $('#settings-submenu');
+			if (!settingsSubmenu.is(':visible')) {
+				settingsSubmenu.slideDown('normal');
+			}
+			if ($('#wrapper').hasClass('toggled-2')) {
+				$('#wrapper').removeClass('toggled-2');
+			}
+		});
+		
+		$('#menu li a[data-target="#tools-submenu"]').click(function (e) {
+			e.preventDefault();
+			var toolsSubmenu = $('#tools-submenu');
+			if (!toolsSubmenu.is(':visible')) {
+				toolsSubmenu.slideDown('normal');
+			}
+			if ($('#wrapper').hasClass('toggled-2')) {
+				$('#wrapper').removeClass('toggled-2');
+			}
+		});
+	});
 
 	</script>
 
@@ -752,6 +766,7 @@
 						"scans_bar_wappalyzer",
 						"scans_bar_cpeguess",
 						"scans_bar_searchvulns",
+						"scans_bar_speed_test"
 					]);
 			});
 		});
@@ -802,6 +817,7 @@
 								"scans_bar_wappalyzer",
 								"scans_bar_cpeguess",
 								"scans_bar_searchvulns",
+								"scans_bar_speed_test"
 							])
 						let el = document.getElementById("closeAddScanModalButton")
 						el.click()
@@ -836,6 +852,7 @@
 								"scans_bar_wappalyzer",
 								"scans_bar_cpeguess",
 								"scans_bar_searchvulns",
+								"scans_bar_speed_test"
 							])
 						let el = document.getElementById("closeAddScanModalButton")
 						el.click();

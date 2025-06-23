@@ -17,6 +17,8 @@ from .snmp_brute_community_string_task import SnmpBruteCommunityStringTask
 from setezor.managers.project_manager.structure import Folders
 from setezor.restructors.nmap_scan_task_restructor import NmapScanTaskRestructor
 from setezor.restructors.masscan_scan_task_restructor import MasscanTaskRestructor
+from .speed_test_task import SpeedTestClientTask, SpeedTestServerTask
+from setezor.restructors.speed_test_task_restructor import SpeedTestClientTaskRestructor, SpeedTestServerTaskRestructor
 
 FOLDERS = {
     NmapScanTask.__name__: Folders.nmap_logs_path.value,
@@ -35,6 +37,8 @@ RESTRUCTORS = {
     SnmpBruteCommunityStringTask.__name__: SnmpTaskRestructor,
     DNSTask.__name__: DNS_Scan_Task_Restructor,
     SdFindTask.__name__: Sd_Scan_Task_Restructor,
+    SpeedTestClientTask.__name__: SpeedTestClientTaskRestructor,
+    SpeedTestServerTask.__name__: SpeedTestServerTaskRestructor
 }
 
 
@@ -45,7 +49,7 @@ def get_task_by_class_name(name: str):
     if model_class and issubclass(model_class, BaseJob):
         return model_class
     else:
-        raise ValueError(f"Модель с именем {name} не найдена или не является SQLModel.")
+        return None
     
 
 def get_folder_for_task(name: str):

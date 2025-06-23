@@ -29,7 +29,7 @@ Network Map
         </div>
         <div class="col-3" id="node_info_map_div">
             <div class="container-fluid my-2">
-                <form class="d-flex" onsubmit="findNodesByIP(event)">
+                <form name="findNodesByIPFormName" class="d-flex" onsubmit="findNodesByIP(event)">
                     <div class="input-group" id="ipTarget">
                         <span class="input-group-text" id="basic-addon1" >IP</span>
                         <input type="text" class="form-control" id='inputIP' data-i18n-placeholder="IP address or netmask"
@@ -79,8 +79,12 @@ Network Map
         }
         el.innerHTML = result
     }
-    function findSingleNodeByIP(addr) {
+    async function findSingleNodeByIP(addr) {
         network.focus(addr, { scale: 5, locked: false, animation: { duration: 500 } })
+        let nodesData = network.body.data.nodes;
+        let nodeId = addr;
+        let nodeInfo = nodesData.get(nodeId);
+        createNodeInformation(nodeInfo)
     }
 </script>
 {% import 'acunetix/scan_modal.html' as acunetix_scan_modal with context%}

@@ -4,7 +4,7 @@ from setezor.dependencies import get_current_project
 from setezor.dependencies.project import role_required
 from setezor.models import Acunetix
 from setezor.services import AcunetixService
-from setezor.dependencies.uow_dependency import UOWDep
+from setezor.db.uow_dependency import UOWDep
 from setezor.schemas.roles import Roles
 
 

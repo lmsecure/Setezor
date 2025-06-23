@@ -7,6 +7,7 @@ class AgentDisplay(BaseModel):
     description: Optional[str]
     rest_url: str
     user_id: str | None = None
+    flag: bool | None = False
 
 class AgentAdd(AgentDisplay):
     secret_key: Optional[str] = ''

@@ -4,7 +4,7 @@ from sqlmodel import Field, Relationship
 from .import ProjectDependent, IDDependent, TimeDependent
 
 class Scope(IDDependent, TimeDependent, ProjectDependent, table=True):
-    __tablename__ = "scope"
+    __tablename__ = "project_scope"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения скопов"
     }

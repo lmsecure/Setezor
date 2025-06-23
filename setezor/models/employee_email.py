@@ -11,7 +11,7 @@ class Employee_Email(IDDependent, Base, table=True):
     }
 
     employee_id: str = Field(foreign_key="employee.id", sa_column_kwargs={"comment":"Идентификатор сотрудника"})
-    email_id: str = Field(foreign_key="email.id", sa_column_kwargs={"comment":"Идентификатор почты"})
+    email_id: str = Field(foreign_key="organization_email.id", sa_column_kwargs={"comment":"Идентификатор почты"})
 
-    employee: "Employee" = Relationship(back_populates="emails")
-    email: "Email" = Relationship(back_populates="employees")
+    employee: "Employee" = Relationship(back_populates="emails") # type: ignore
+    email: "Email" = Relationship(back_populates="employees") # type: ignore

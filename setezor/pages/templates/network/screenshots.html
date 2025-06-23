@@ -1,7 +1,7 @@
 {% macro screenshot_main() %}
 <div class="d-flex flex-column">
     <div class="tab-content" id="dsa">
-        <form id="ScreenshotForm" class="needs-validation" onsubmit="createScreenshotTask(event)">
+        <form id="ScreenshotForm" name="ScreenshotFormName" class="needs-validation" onsubmit="createScreenshotTask(event)">
             <div class="input-group mb-3">
                 <span class="input-group-text" id="inputScreenshotURL-addon1">URL</span>
                 <input type="text" class="form-control" id='inputScreenshotURL'
@@ -47,7 +47,7 @@
                 </div>
                 <div class="d-flex flex-column">
                     <div class="tab-content" id="dsa">
-                        <form id="DomainForm" class="needs-validation" novalidate>
+                        <form id="DomainForm" name="DomainFormName" class="needs-validation" novalidate>
                             {{ screenshot_main() }}
                         </form>
                     </div>

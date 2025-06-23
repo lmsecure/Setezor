@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Depends, Response
-from setezor.dependencies.uow_dependency import UOWDep
-from setezor.dependencies.project import get_current_project
+from fastapi import APIRouter
 from setezor.modules.wappalyzer.wappalyzer import WappalyzerParser
 
 router = APIRouter(

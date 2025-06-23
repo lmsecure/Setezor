@@ -59,7 +59,7 @@
                     aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form onsubmit="addVulnerability(event)" id="addingVulnerabilityForm">
+                <form onsubmit="addVulnerability(event)" id="addingVulnerabilityForm" name="addVulnerabilityFormName">
                     <div class="mb-3">
                         <label for="InputVulnerabilityName" class="form-label" data-i18n="Name"></label>
                         <input type="text" class="form-control" id="InputVulnerabilityName" name="name">
@@ -82,7 +82,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="InputSoftwaresDict" class="form-label" data-i18n="Software"></label>
-                        <select class="form-select" id="InputSoftwaresDict" name="software_id" required></select>
+                        <select class="form-select" id="InputSoftwaresDict" name="software_version_id" required></select>
                     </div>
                     <button type="submit" class="btn btn-success" data-i18n="Add"></button>
                 </form>
@@ -107,7 +107,7 @@
         el.innerHTML += "<option selected></option>"
         for (const software of softwares) {
             el.innerHTML += `
-                <option value="${software.id}">Vendor: ${software.vendor}, Product: ${software.product}, Version: ${software.version}</option>
+                <option value="${software.software_version_id}">Vendor: ${software.vendor}, Product: ${software.product}, Version: ${software.version}</option>
             `
         }
     }

@@ -25,7 +25,11 @@ from .whois_domain_repository import WhoisDomainRepository
 from .whois_ip_repository import WhoisIPRepository
 from .agent_repository import AgentRepository
 from .vendor_repository import VendorRepository
+
 from .software_repository import SoftwareRepository
+from .software_type_repository import SoftwareTypeRepository
+from .software_version_repository import SoftwareVersionRepository
+
 from .asn_repository import ASN_Repository
 from .vulnerability_repository import VulnerabilityRepository
 from .scan_repository import ScanRepository
@@ -42,3 +46,4 @@ from .node_comment_repository import NodeCommentRepository
 from .l4_software_vulnerability_screenshots_repository import L4SoftwareVulnerabilityScreenshotRepository
 from .setting_repository import SettingRepository
 from .agent_in_project_repository import AgentInProjectRepository
+from .network_speed_test_repository import NetworkSpeedTestRepository

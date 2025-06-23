@@ -1,9 +1,9 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Response
-from setezor.dependencies.uow_dependency import UOWDep
+from setezor.db.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, role_required
 from setezor.services import AcunetixService
-from ..schemes.group import GroupForm, GroupMembershipSet, GroupTargetProxy
+from setezor.schemas.acunetix.schemes.group import GroupForm, GroupMembershipSet, GroupTargetProxy
 from setezor.schemas.roles import Roles
 
 

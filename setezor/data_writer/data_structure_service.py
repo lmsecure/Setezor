@@ -3,6 +3,7 @@ from sqlalchemy import Column
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlmodel import SQLModel
+from setezor.services.base_service import BaseService
 from setezor.unit_of_work import UnitOfWork
 from setezor.models import get_model_by_name
 from setezor.repositories import SQLAlchemyRepository
@@ -10,36 +11,33 @@ from setezor.settings import COMMIT_STEP
 
 common_semaphore = asyncio.Semaphore(1)
 
-class DataStructureService:
-
-    def __init__(self, uow: UnitOfWork, result: list[SQLModel], project_id: str, scan_id: str):
-        self.uow = uow
+class DataStructureService(BaseService):
+    async def make_magic(self, result: list[SQLModel], project_id: str, scan_id: str):
         self.result = result
         self.project_id = project_id
         self.scan_id = scan_id
         self.new_objects = []
 
-        for obj in result:
+        for obj in self.result:
             if hasattr(obj, "project_id"):
                 obj.project_id = project_id
             if hasattr(obj, "scan_id"):
                 obj.scan_id = scan_id
 
-    async def make_magic(self):
         async with common_semaphore:
-            async with self.uow as uow:
+            async with self._uow:
                 for index in range(len(self.result)):
                     new_object = await self.prepare_object(self.result[index])
                     if not new_object: continue
                     await self.prepare_relationships(new_object)
                     self.new_objects.append(new_object)
                 for i in range(0, len(self.new_objects), COMMIT_STEP):
-                    uow.session.add_all(self.new_objects[i:i+COMMIT_STEP])
-                    await uow.flush()
-                await uow.commit()
+                    self._uow.session.add_all(self.new_objects[i:i+COMMIT_STEP])
+                    await self._uow.flush()
+                await self._uow.commit()
             
     async def prepare_object(self, obj: SQLModel):
-        repo: SQLAlchemyRepository = self.uow.get_repo_by_model(obj.__class__)
+        repo: SQLAlchemyRepository = self._uow.get_repo_by_model(obj.__class__)
         existing_object = await repo.exists(obj)
         if not existing_object: # Если такого объекта нет в бд, то раскручиваем его
             return obj
@@ -83,7 +81,7 @@ class DataStructureService:
             if obj_in_relation.id:
                 continue
             else: # если объект повязан, то проверяем, есть ли такой уже в базе, чтобы не создать дубликат
-                repo: SQLAlchemyRepository = self.uow.get_repo_by_model(obj_in_relation.__class__)
+                repo: SQLAlchemyRepository = self._uow.get_repo_by_model(obj_in_relation.__class__)
                 existing_object = await repo.exists(obj_in_relation)
                 if not existing_object: # Если такого объекта нет в бд, то раскручиваем его
                     await self.prepare_relationships(obj_in_relation)

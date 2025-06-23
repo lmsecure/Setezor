@@ -1,7 +1,7 @@
 
 
 from sqlalchemy import Select, case, desc
-from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, Software, Vendor, DNS_A, Domain
+from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, SoftwareVersion, Software, SoftwareType, Vendor, DNS_A, Domain
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, select, func
 
@@ -56,7 +56,8 @@ class PortRepository(SQLAlchemyRepository[Port]):
     async def get_node_info(self, ip_id: str, project_id: str):
         stmt = select(Port, Software).select_from(Port)\
             .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
-            .join(Software, L4Software.software_id == Software.id, isouter=True)\
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id, isouter=True)\
+            .join(Software, SoftwareVersion.software_id == Software.id, isouter=True)\
             .filter(Port.ip_id == ip_id, Port.project_id == project_id)
         result = await self._session.exec(stmt)
         return result.all()
@@ -99,11 +100,15 @@ class PortRepository(SQLAlchemyRepository[Port]):
         stmt = select(L4SoftwareVulnerability.id.label("abc"), 
                       L4SoftwareVulnerability.confirmed.label("confirmed"),
                       Vendor,
+                      SoftwareVersion,
                       Software,
+                      SoftwareType,
                       Vulnerability)\
         .join(L4SoftwareVulnerability, L4SoftwareVulnerability.vulnerability_id== Vulnerability.id)\
         .join(L4Software, L4Software.id == L4SoftwareVulnerability.l4_software_id)\
-        .join(Software, L4Software.software_id == Software.id)\
+        .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
+        .join(Software, SoftwareVersion.software_id == Software.id)\
+        .join(SoftwareType, Software.type_id == SoftwareType.id)\
         .join(Port, Port.id == L4Software.l4_id)\
         .join(Vendor, Vendor.id == Software.vendor_id)\
         .filter(Port.id == l4_id)

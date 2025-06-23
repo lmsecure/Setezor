@@ -1,5 +1,5 @@
 from sqlalchemy import Select
-from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_A, DNS_NS, Domain, Software, L4Software, AgentInProject
+from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_A, DNS_NS, Domain, AgentInProject
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select, func, or_
 
@@ -79,24 +79,144 @@ class IPRepository(SQLAlchemyRepository[IP]):
         return ip_count_result
 
 
-    async def get_ip_mac_port_data(self, project_id: str, last_scan_id: str):
+    async def get_ip_mac_port_data(
+        self,
+        project_id: str,
+        last_scan_id: str,
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "port": Port.port,
+            "mac": MAC.mac,
+        }
+        
         stmt = select(IP.ip, Port.port, MAC.mac).select_from(IP)\
-                .join(Port, IP.id == Port.ip_id, isouter=True)\
-                .join(MAC, IP.mac_id == MAC.id, isouter=True)\
-                .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, IP.ip != None)
-        result = await self._session.exec(stmt)
-        return result.all()
+            .join(Port, IP.id == Port.ip_id, isouter=True)\
+            .join(MAC, IP.mac_id == MAC.id, isouter=True)\
+            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, IP.ip != None)
+        
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+                    
+                    if type_op == "=":
+                        stmt = stmt.filter(column == value)
+                    elif type_op == "!=":
+                        stmt = stmt.filter(column != value)
+                    elif type_op == ">":
+                        stmt = stmt.filter(column > value)
+                    elif type_op == ">=":
+                        stmt = stmt.filter(column >= value)
+                    elif type_op == "<":
+                        stmt = stmt.filter(column < value)
+                    elif type_op == "<=":
+                        stmt = stmt.filter(column <= value)
+                    elif type_op == "like":
+                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+        
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                
+                if field in field_mapping:
+                    column = field_mapping[field]
+                    if direction == "desc":
+                        order_clauses.append(column.desc())
+                    else:
+                        order_clauses.append(column.asc())
+            
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        
+        count_query = select(func.count()).select_from(stmt.alias())
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
+        
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()
 
 
-    async def get_domain_ip_data(self, project_id: str, last_scan_id: str):
-        stmt = select(IP.ip, Port.port, Domain.domain,).select_from(IP)\
-                .join(Port, IP.id == Port.ip_id, isouter=True)\
-                .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
-                .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
+
+    async def get_domain_ip_data(
+        self,
+        project_id: str,
+        last_scan_id: str,
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "port": Port.port,
+            "domain": Domain.domain,
+        }
+        
+        stmt = select(IP.ip, Port.port, Domain.domain).select_from(IP)\
+            .join(Port, IP.id == Port.ip_id, isouter=True)\
+            .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
+            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
             .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Domain.domain != "")
-        result = await self._session.exec(stmt)
-        return result.all()
-
+        
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+                    
+                    if type_op == "=":
+                        stmt = stmt.filter(column == value)
+                    elif type_op == "!=":
+                        stmt = stmt.filter(column != value)
+                    elif type_op == ">":
+                        stmt = stmt.filter(column > value)
+                    elif type_op == ">=":
+                        stmt = stmt.filter(column >= value)
+                    elif type_op == "<":
+                        stmt = stmt.filter(column < value)
+                    elif type_op == "<=":
+                        stmt = stmt.filter(column <= value)
+                    elif type_op == "like":
+                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+        
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                
+                if field in field_mapping:
+                    column = field_mapping[field]
+                    if direction == "desc":
+                        order_clauses.append(column.desc())
+                    else:
+                        order_clauses.append(column.asc())
+            
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        
+        count_query = select(func.count()).select_from(stmt.alias())
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
+        
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()
 
 
     async def get_ip_data(self, project_id: str, last_scan_id: str):

@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Response, UploadFile
-from setezor.api.acunetix.schemes.target import SyncPayload, TargetToSync
-from setezor.dependencies.uow_dependency import UOWDep
+from setezor.schemas.acunetix.schemes.target import SyncPayload, TargetToSync
+from setezor.db.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.services import AcunetixService
 from setezor.schemas.roles import Roles

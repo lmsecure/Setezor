@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Setezor</title>
+<title>Setezor: Admin settings</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/static/assets/favicon.ico">
@@ -27,7 +27,7 @@
 				<div class="bd-highlight" style="margin-left: 40px;">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item d-inline">
-							<a class="navbar-brand" target="_blank">
+							<a class="navbar-brand"  href="/projects">
 								<img src="/static/assets/logo.png" width="120px" height="auto"
 									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
 							</a>
@@ -116,25 +116,43 @@
 			</div>
 		</nav>
 
-		<script>
-var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
-      function create_toast(title, message, level="info", time="just now") {
-        var toast_holder = document.getElementById("toast_holder")
-        var toast = document.createElement("div")
-        toast.classList.add("toast", "fade")
-        toast.innerHTML = create_html_toast(title, message, time, levels[level])
-        var toast_instance = new bootstrap.Toast(toast)
-        toast_holder.prepend(toast)
-        toast_instance.show()
-    
-        var notification_holder = document.getElementById("notifications_body")
-        var notification_toast = document.createElement("div")
-        notification_toast.classList.add("toast", "fade")
-        notification_toast.innerHTML = create_html_toast(title, message, time, levels[level])
-        notification_toast.setAttribute("data-bs-autohide",false)
-        var notification_toast_instance = new bootstrap.Toast(notification_toast)
-        notification_holder.prepend(notification_toast)
-        notification_toast_instance.show()
+<script>
+    var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
+    function create_toast(title, message, level = "info", position = "bottom-0 end-0") {
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = now.getMonth() + 1;
+        var day = now.getDate();
+        var hours = now.getHours();
+        var minutes = now.getMinutes();
+        var seconds = now.getSeconds();
+
+        var dateString = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
+        var timeString = `${hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+        var dateTimeString = `${dateString} ${timeString}`;
+
+        var toast_holder = document.getElementById("toast_holder");
+
+        toast_holder.className = "position-fixed " + position + " p-3";
+
+        const max_toasts = 5;
+        if (toast_holder.children.length >= max_toasts) {
+            toast_holder.removeChild(toast_holder.firstChild);
+        }
+
+        var toast = document.createElement("div");
+        toast.classList.add("toast", "fade");
+        toast.innerHTML = create_html_toast(title, message, dateTimeString, levels[level]);
+        var toast_instance = new bootstrap.Toast(toast);
+        toast_holder.append(toast);
+        toast_instance.show();
+
+        var notification_toast = document.createElement("div");
+        notification_toast.classList.add("toast", "fade");
+        notification_toast.innerHTML = create_html_toast(title, message, dateTimeString, levels[level]);
+        notification_toast.setAttribute("data-bs-autohide", false);
+        var notification_toast_instance = new bootstrap.Toast(notification_toast);
+        notification_toast_instance.show();
     };
     function create_html_toast(title, message, time, level) {
         return `
@@ -158,8 +176,6 @@ var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#19
 		</script>
 	</header>
 
-
-    
     <div class="d-flex flex-row justify-content-between">
         <div class="d-flex flex-row" style="margin-left: 2rem;">
             <h2 class="p-2" data-i18n="All Agents"></h2>
@@ -267,7 +283,7 @@ var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#19
     <div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form onsubmit="saveSynthInterface(event)">
+                <form onsubmit="saveSynthInterface(event)" name="saveSynthInterfaceFormName">
                     <div class="modal-header">
                         <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -348,7 +364,7 @@ var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#19
             let result = `<div class="settings-container">`;
             console.log(response.data)
             response.data.forEach(setting => {
-                result += `<form id="openRegSettingsForm" class="setting-item mb-3">`;
+                result += `<form id="openRegSettingsForm" name="openRegSettingsFormName" class="setting-item mb-3">`;
                 
                 if (setting.value_type === "boolean") {
                     result += `

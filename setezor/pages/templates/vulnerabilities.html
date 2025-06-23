@@ -33,7 +33,7 @@ Vulnerabilities
           <h5 class="modal-title" id="screenshotsModalLabel" data-i18n="Screenshots"></h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <form id="screenshotForm">
+        <form id="screenshotForm" name="screenshotFormName">
             <div class="modal-body" >
                 <div id="rowContainer">
                     <div class="row mb-2">
@@ -222,8 +222,6 @@ Vulnerabilities
                             <h6>${i18next.t('Product')}: ${sanitize(vuln.product)}</h6>
                             <h6>${i18next.t('Version')}: ${sanitize(vuln.version)}</h6>
                             <h6>${i18next.t('Build')}: ${sanitize(vuln.build)}</h6>
-                            <h6>${i18next.t('Patch')}: ${sanitize(vuln.patch)}</h6>
-                            <h6>${i18next.t('Platform')}: ${sanitize(vuln.platform)}</h6>
                             <hr>
                             <h5>${i18next.t('Links')}</h5>
                             ${links}

@@ -5,7 +5,7 @@ from sqlmodel import JSON, Column, Field
 
 
 class Settings(IDDependent, table=True):
-    __tablename__ = "settings"
+    __tablename__ = "setezor_settings"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения настроек"
     }

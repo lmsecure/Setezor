@@ -3,7 +3,7 @@
 """
 
 
-from setezor.api.acunetix.schemes.target_config import ScanSpeedValues
+from setezor.schemas.acunetix.schemes.target_config import ScanSpeedValues
 from setezor.modules.acunetix.scan import Scan
 from setezor.modules.acunetix.acunetix_config import Config
 from setezor.modules.acunetix.report import Report

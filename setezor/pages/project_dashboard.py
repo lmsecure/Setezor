@@ -1,9 +1,8 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, Request
-from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_user_id, get_user_role_in_project, role_required
-from setezor.models.role import Role
-from setezor.managers import ProjectManager
 from setezor.services.analytics_service import AnalyticsService
+from setezor.services.project_service import ProjectService
 from setezor.services.user_service import UsersService
 from .import TEMPLATES_DIR
 from setezor.schemas.roles import Roles
@@ -14,7 +13,9 @@ router = APIRouter(tags=["Pages"])
 @router.get('/projects_dashboard')
 async def projects_dashboard_page(
     request: Request,
-    uow: UOWDep,
+    project_service: Annotated[ProjectService, Depends(ProjectService.new_instance)],
+    users_service: Annotated[UsersService, Depends(UsersService.new_instance)],
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     user_id: str = Depends(get_user_id),
     role_in_project: Roles = Depends(get_user_role_in_project),
@@ -28,8 +29,8 @@ async def projects_dashboard_page(
     Returns:
         Response: отрендеренный шаблон страницы
     """
-    project = await ProjectManager.get_by_id(uow=uow, project_id=project_id)
-    user = await UsersService.get(uow=uow, id=user_id)
+    project = await project_service.get_by_id(project_id=project_id)
+    user = await users_service.get(user_id)
 
     context = {
         "request": request,
@@ -42,7 +43,7 @@ async def projects_dashboard_page(
         'tab': {
             'name': 'analytics',
             'base_url': f'/api/v1/analytics/software',
-            'columns': AnalyticsService.get_l4_software_columns_tabulator_data()
+            'columns': analytics_service.get_l4_software_columns_tabulator_data()
         },
         "analytics": {}
     }

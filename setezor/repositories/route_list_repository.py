@@ -21,7 +21,7 @@ class RouteListRepository(SQLAlchemyRepository[RouteList]):
         return (await self._session.exec(query)).all()
 
     async def vis_edge_agent_to_interface(self, project_id: str):
-        query = select(IP.id, AgentInProject.id)\
+        query = select(AgentInProject.id, IP.id)\
         .join(MAC, IP.mac_id == MAC.id)\
         .join(AgentInProject, AgentInProject.object_id == MAC.object_id).filter(IP.project_id==project_id)
         return await self._session.exec(query)

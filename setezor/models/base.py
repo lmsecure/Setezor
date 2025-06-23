@@ -20,4 +20,4 @@ class ProjectDependent(SQLModel):
     created_by: Optional[str]   = Field(default="", sa_column_kwargs={"comment":"Задача, породившая сущность"})
 
 class Base(TimeDependent, ProjectDependent):
-    scan_id: Optional[str]      = Field(foreign_key="scan.id", sa_column_kwargs={"comment":"Идентификатор скана"})
+    scan_id: Optional[str]      = Field(foreign_key="project_scan.id", sa_column_kwargs={"comment":"Идентификатор скана"})

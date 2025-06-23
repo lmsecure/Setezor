@@ -12,52 +12,9 @@ from setezor.interfaces.observer import Observable, Observer
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 
 
-class CustomScheduler(Scheduler, Observable, Observer):
+class CustomScheduler(Scheduler):
     def __init__(self, *args, **kwrags):
         super().__init__(*args, **kwrags)
-        self._observers = []
-
-    def attach(self, observer: Observer) -> None:
-        self._observers.append(observer)
-
-    def detach(self, observer: Observer) -> None:
-        self._observers.remove(observer)
-
-    async def notify(self,
-                     agent_id: str,
-                     data: dict) -> None:
-        for observer in self._observers:
-            await observer.notify(agent_id=agent_id,
-                                  data=data)
-
-    async def change_task_status_local(self, data: dict, uow: UnitOfWork, project_id: str):
-        for observer in self._observers:
-            await observer.task_status_changer_for_local_job(data=data, uow=uow, project_id=project_id)
-    
-    
-    async def give_result_to_task_manager(self,
-                                          task_id: str,
-                                          agent_id: str,
-                                          result: dict,
-                                          raw_result_extension: str):
-        for observer in self._observers:
-            await observer.send_result_to_parent_agent(agent_id=agent_id,
-                                                       task_id=task_id,
-                                                       task_data=result,
-                                                       raw_result_extension=raw_result_extension)
-
-    async def write_local_result(self,
-                                 uow: UnitOfWork,
-                                 task_id: str,
-                                 result: list,
-                                 scan_id: str,
-                                 project_id: str):
-        for observer in self._observers:
-            await observer.local_writer(uow=uow,
-                                        result=result,
-                                        project_id=project_id,
-                                        scan_id=scan_id,
-                                        task_id=task_id)
 
     async def spawn_job(self, job: BaseJob) -> Job:
         if self._closed:

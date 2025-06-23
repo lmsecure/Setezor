@@ -10,4 +10,4 @@ class Organization(IDDependent, Base, table=True):
     }
 
     name: str
-    departments: List["Department"] = Relationship(back_populates="organization")
+    departments: List["Department"] = Relationship(back_populates="organization") # type: ignore

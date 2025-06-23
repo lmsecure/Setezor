@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}
-Projects
+Project settings
 {% endblock title %}
 {% block scripts %}
 
@@ -25,7 +25,7 @@ Projects
     {% if role.name == "owner" or role.name == "executor" %}
     <div class="mt-3 ms-1" style="margin-right: 2rem;">
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-i18n-title="create agent"
-            onclick="fillPossibleAgents();   document.getElementById('agent-color').value = getRandomColor();" data-i18n="Connect agents"></button>
+            onclick="fillPossibleAgents();   document.getElementById('agent-color').value = getRandomColor();" data-i18n="Connect agents" data-testid="connect-agents"></button>
     </div>
     {% endif %}
 </div>
@@ -93,7 +93,7 @@ Projects
 <div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form onsubmit="saveSynthInterface(event)">
+            <form onsubmit="saveSynthInterface(event)" name="saveSynthInterfaceFormName">
                 <div class="modal-header">
                     <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -125,7 +125,7 @@ Projects
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
             </div>
-            <form onsubmit="generateInviteLink(event)">
+            <form onsubmit="generateInviteLink(event)" name="generateInviteLinkFormName">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="inviteToProjectCount" class="col-form-label" data-i18n="Person count"></label>
@@ -207,6 +207,14 @@ Projects
     async function fillPossibleAgents() {
         let resp = await fetch("/api/v1/agents_in_project/settings/possible_agents")
         let agents = await resp.json()
+        if (agents.length == 0){
+            create_toast(
+                'No agents available', 
+                `There are no agents available in this project, please create an agent on this page <a href="/admin_settings" class="alert-link">Admin Settings</a>`, 
+                'warning'
+                );
+            return
+        }
         let agents_container = document.getElementById("agentsInProjectConnected")
         result = ``
         for (const agent of agents){

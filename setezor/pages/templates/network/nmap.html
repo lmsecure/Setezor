@@ -6,7 +6,7 @@
     <input type="text" list="IpList" class="form-control ip" id='inputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
         aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
     <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1" data-i18n="PORT"></span>
-    <input type="text" class="form-control port" id='inputPortNmap' placeholder="Port" aria-label="Port" style="margin-bottom: 0.5rem;"
+    <input type="text" class="form-control port" id='inputPortNmap' data-i18n-placeholder="Port" aria-label="Port" style="margin-bottom: 0.5rem;"
     aria-describedby="basic-addon1" required name="Port">
     <button id="add_new_nmap_form" onclick="addNewNmapForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
 </div>
@@ -478,12 +478,12 @@
                         </div>
                 
                         <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
-                            <form id="nmapScanSimpleForm" class="needs-validation" novalidate>
+                            <form id="nmapScanSimpleForm" name="nmapScanSimpleFormName" class="needs-validation" novalidate>
                                 {{ nmap_ip() }}
                         </div>
                 
                         <div class="tab-pane fade" id="nmap-scope-mode" role="tabpanel" aria-labelledby="nmap-scope-tab">
-                            <form id="nmapScanScopeForm" class="needs-validation" novalidate>
+                            <form id="nmapScanScopeForm" name="nmapScanScopeFormName" class="needs-validation" novalidate>
                                 {{ nmap_scope() }}
                         </div>
                         {{ nmap_main() }}
@@ -651,12 +651,12 @@
         </div>
 
         <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
-            <form id="nmapScanSimpleForm" class="needs-validation" novalidate>
+            <form id="nmapScanSimpleForm" name="nmapScanSimpleFormName" class="needs-validation" novalidate>
                 {{ nmap_ip() }}
         </div>
 
         <div class="tab-pane fade" id="nmap-scope-mode" role="tabpanel" aria-labelledby="nmap-scope-tab">
-            <form id="nmapScanScopeForm" class="needs-validation" novalidate>
+            <form id="nmapScanScopeForm" name="nmapScanScopeFormName" class="needs-validation" novalidate>
                 {{ nmap_scope() }}
         </div>
         {{ nmap_main() }}

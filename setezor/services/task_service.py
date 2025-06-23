@@ -1,16 +1,15 @@
 import json
 
 from typing import List
-from setezor.managers.websocket_manager import WS_MANAGER
+from setezor.tools.websocket_manager import WS_MANAGER
 from setezor.schemas.task import TaskStatus, WebSocketMessage
-from setezor.interfaces.service import IService
+from setezor.services.base_service import BaseService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import Task
 
 
-class TasksService(IService):
-    @classmethod
-    async def create(cls, uow: UnitOfWork, project_id: str, scan_id: str, params: dict, created_by: str, agent_id: int | None = None) -> Task:
+class TasksService(BaseService):
+    async def create(self, project_id: str, scan_id: str, params: dict, created_by: str, agent_id: int | None = None) -> Task:
         task_to_add = Task(
             status=TaskStatus.created,
             project_id=project_id,
@@ -20,30 +19,26 @@ class TasksService(IService):
             created_by=created_by
         )
         task_dict = task_to_add.model_dump()
-        async with uow:
-            task = uow.task.add(task_dict)
-            await uow.commit()
+        async with self._uow:
+            task = self._uow.task.add(task_dict)
+            await self._uow.commit()
         return task
 
-    @classmethod
-    async def list(cls, uow: UnitOfWork, status: str, project_id: str) -> List[Task]:
-        async with uow:
-            tasks = await uow.task.filter(project_id=project_id, status=status)
+    async def list(self, status: str, project_id: str) -> List[Task]:
+        async with self._uow:
+            tasks = await self._uow.task.filter(project_id=project_id, status=status)
         return tasks
 
-    @classmethod
-    async def get(cls, uow: UnitOfWork, id: int, project_id: str) -> Task:
-        async with uow:
-            return await uow.task.find_one(id=id, project_id=project_id)
+    async def get(self, id: int, project_id: str) -> Task:
+        async with self._uow:
+            return await self._uow.task.find_one(id=id, project_id=project_id)
 
-    @classmethod
-    async def get_by_id(cls, uow: UnitOfWork, id: str) -> Task:
-        async with uow:
-            return await uow.task.find_one(id=id)
+    async def get_by_id(self, id: str) -> Task:
+        async with self._uow:
+            return await self._uow.task.find_one(id=id)
 
-    @classmethod
-    async def set_status(cls, uow: UnitOfWork, id: int, status: TaskStatus, traceback: str = "") -> int:
-        async with uow:
-            task_id = await uow.task.edit_one(id=id, data={"status": status, "traceback": traceback})
-            await uow.commit()
+    async def set_status(self, id: int, status: TaskStatus, traceback: str = "") -> int:
+        async with self._uow:
+            task_id = await self._uow.task.edit_one(id=id, data={"status": status, "traceback": traceback})
+            await self._uow.commit()
         return task_id

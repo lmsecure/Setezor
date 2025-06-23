@@ -4,7 +4,7 @@ from sqlmodel import Field
 
 class Acunetix(IDDependent, TimeDependent, ProjectDependent, table=True):
 
-    __tablename__ = "acunetix"
+    __tablename__ = "setezor_tools_acunetix"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения окуней"
     }

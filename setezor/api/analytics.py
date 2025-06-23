@@ -1,6 +1,7 @@
-from typing import Dict
-from fastapi import APIRouter, Depends
-from setezor.dependencies.uow_dependency import UOWDep
+import json
+from typing import Annotated, Optional
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from setezor.dependencies.project import get_current_project, role_required
 from setezor.services import AnalyticsService
 from setezor.schemas.roles import Roles
@@ -12,161 +13,219 @@ router = APIRouter(
 
 @router.get("/software")
 async def analytics_l4_software(
-    uow: UOWDep,
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_l4_software_tabulator_data(uow=uow, project_id=project_id)
+) -> JSONResponse:
+    total, data = await analytics_service.get_l4_software_tabulator_data(
+        project_id=project_id,
+        page=page,
+        size=size,
+        sort=sort,
+        filter=filter
+    )
+    
+    last_page = (total + size - 1) // size
+    return JSONResponse(content={"data": data, "last_page": last_page})
 
 @router.get("/ip_mac_port")
 async def analytics_ip_mac_port(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_ip_mac_port_tabulator_data(uow=uow, project_id=project_id)
+) -> JSONResponse:
+        total, data = await aganytics_service.get_ip_mac_port_tabulator_data(
+            project_id=project_id, 
+            page=page, 
+            size=size,
+            sort=sort,
+            filter=filter)
+        last_page = (total + size - 1) // size
+        return JSONResponse(content={"data": data, "last_page": last_page})
 
 @router.get("/domain_ip")
 async def analytics_domain_ip(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_domain_ip_tabulator_data(uow=uow, project_id=project_id)
+) -> JSONResponse:
+        total, data = await aganytics_service.get_domain_ip_tabulator_data(
+            project_id=project_id, 
+            page=page, 
+            size=size,
+            sort=sort,
+            filter=filter)
+        last_page = (total + size - 1) // size
+        return JSONResponse(content={"data": data, "last_page": last_page})
 
 @router.get("/soft_vuln_link")
 async def analytics_soft_vuln_link(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_l4_soft_vuln_link_tabulator_data(uow=uow, project_id=project_id)
-
-@router.get("/ip")
-async def analytics_ip(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_ip_tabulator_data(uow=uow, project_id=project_id)
-
-@router.get("/mac")
-async def analytics_mac(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_mac_tabulator_data(uow=uow, project_id=project_id)
-
-@router.get("/port")
-async def analytics_port(
-    uow: UOWDep,
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list:
-    return await AnalyticsService.get_port_tabulator_data(uow=uow, project_id=project_id)
-
+) -> JSONResponse:
+        total, data = await aganytics_service.get_l4_soft_vuln_link_tabulator_data(
+            project_id=project_id, 
+            page=page, 
+            size=size,
+            sort=sort,
+            filter=filter)
+        last_page = (total + size - 1) // size
+        return JSONResponse(content={"data": data, "last_page": last_page})
 
 @router.get("/auth_credentials")
 async def get_auth_credentials(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+        total, data = await aganytics_service.get_auth_credentials(
+            project_id=project_id, 
+            page=page, 
+            size=size,
+            sort=sort,
+            filter=filter)
+        last_page = (total + size - 1) // size
+        return JSONResponse(content={"data": data, "last_page": last_page})
+
+@router.get("/ip")
+async def analytics_ip(
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list:
-    return await AnalyticsService.get_auth_credentials(uow=uow, project_id=project_id)
+    return await aganytics_service.get_ip_tabulator_data(project_id=project_id)
+
+@router.get("/mac")
+async def analytics_mac(
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> list:
+    return await aganytics_service.get_mac_tabulator_data(project_id=project_id)
+
+@router.get("/port")
+async def analytics_port(
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> list:
+    return await aganytics_service.get_port_tabulator_data(project_id=project_id)
+
+
 
 @router.get("/get_device_types")
 async def get_device_types(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
-    return await AnalyticsService.get_device_types(uow=uow, project_id=project_id)
+    return await aganytics_service.get_device_types(project_id=project_id)
 
 @router.get("/get_object_count")
 async def get_object_count(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> int:
-    return await AnalyticsService.get_object_count(uow=uow, project_id=project_id)
+    return await aganytics_service.get_object_count(project_id=project_id)
 
 @router.get("/get_ip_count")
 async def get_ip_count(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> int:
-    return await AnalyticsService.get_ip_count(uow=uow, project_id=project_id)
+    return await aganytics_service.get_ip_count(project_id=project_id)
 
 @router.get("/get_mac_count")
 async def get_mac_count(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> int:
-    return await AnalyticsService.get_mac_count(uow=uow, project_id=project_id)
+    return await aganytics_service.get_mac_count(project_id=project_id)
 
 @router.get("/get_port_count")
 async def get_port_count(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> int:
-    return await AnalyticsService.get_port_count(uow=uow, project_id=project_id)
+    return await aganytics_service.get_port_count(project_id=project_id)
 
 @router.get("/get_software_version_cpe")
 async def get_software_version_cpe(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
-    return await AnalyticsService.get_software_version_cpe(uow=uow, project_id=project_id)
+    return await aganytics_service.get_software_version_cpe(project_id=project_id)
 
 @router.get("/get_top_products")
 async def get_top_products(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list[tuple]:
-    return await AnalyticsService.get_top_products(uow=uow, project_id=project_id)
+    return await aganytics_service.get_top_products(project_id=project_id)
 
 @router.get("/get_top_ports")
 async def get_top_ports(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list[tuple]:
-    return await AnalyticsService.get_top_ports(uow=uow, project_id=project_id)
+    return await aganytics_service.get_top_ports(project_id=project_id)
 
 @router.get("/get_top_protocols")
 async def get_top_protocols(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list[tuple]:
-    return await AnalyticsService.get_top_protocols(uow=uow, project_id=project_id)
+    return await aganytics_service.get_top_protocols(project_id=project_id)
 
 @router.get("/get_vulnerabilities")
 async def get_vulnerabilities(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
-    return await AnalyticsService.get_vulnerabilities(uow=uow, project_id=project_id)
+    return await aganytics_service.get_vulnerabilities(project_id=project_id)
 
 @router.get("/get_ports_and_protocols")
 async def get_ports_and_protocols(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
-    return await AnalyticsService.get_ports_and_protocols(uow=uow, project_id=project_id)
+    return await aganytics_service.get_ports_and_protocols(project_id=project_id)
 
 @router.get("/get_products_and_service_name")
 async def get_products_and_service_name(
-    uow: UOWDep,
+    aganytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
-    return await AnalyticsService.get_products_and_service_name(uow=uow, project_id=project_id)
+    return await aganytics_service.get_products_and_service_name(project_id=project_id)

@@ -1,5 +1,5 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, Request
-from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_user_id
 from setezor.services.user_service import UsersService
 from .import TEMPLATES_DIR
@@ -9,7 +9,7 @@ router = APIRouter(tags=["Pages"])
 @router.get('/admin_settings')
 async def admin_settings_page(
     request: Request,
-    uow: UOWDep,
+    users_service: Annotated[UsersService, Depends(UsersService.new_instance)],
     user_id: str = Depends(get_user_id),
 ):
     """Формирует html страницу отображения топологии сети на основе jinja2 шаблона и возвращает её
@@ -20,7 +20,7 @@ async def admin_settings_page(
     Returns:
         Response: отрендеренный шаблон страницы
     """
-    user = await UsersService.get(uow=uow, id=user_id)
+    user = await users_service.get(user_id=user_id)
     context = {
         "request": request,
         'user': user

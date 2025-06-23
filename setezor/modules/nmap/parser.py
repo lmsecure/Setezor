@@ -4,6 +4,8 @@ from typing_extensions import deprecated
 import re
 import json
 import xmltodict
+from setezor.models.d_software_type import SoftwareType
+from setezor.models.d_software_version import SoftwareVersion
 from setezor.tools.ip_tools import get_network
 
 try:
@@ -314,6 +316,8 @@ class NmapParser:
         address_in_traceses = dict()
         vendors = {}
         softwares = {}
+        software_types = {}
+        softwares_versions = {}
         empty_vendor = Vendor(name='')
         vendors[''] = empty_vendor
         result.append(empty_vendor)
@@ -335,24 +339,54 @@ class NmapParser:
             for port, soft in zip(ports, softs):
                 l4_obj = Port(ip=ip_obj, **port)
                 result.append(l4_obj)
-                if any([v for k, v in soft.items() if k != 'port']):
-                    soft.pop('port', None)
-                    vendor_name = soft.pop('vendor', '')
-                    if vendor_name in vendors:
-                        vendor_obj = vendors.get(vendor_name)
-                    else:
-                        vendor_obj = Vendor(name=vendor_name)
-                        vendors[vendor_name] = vendor_obj
-                        result.append(vendor_obj)
+                soft.pop('port', None)
+                soft.pop('patch', None)
+                soft.pop('platform', None)
+                vendor_name = soft.pop('vendor', '') or ""
+                if not any(soft.values()):
+                    continue
+                soft_type_hash_string = soft.pop("type", "") or ""
+                product = soft.pop("product", "") or ""
+                software_hash_string = vendor_name + product
+                version = soft.pop("version", "") or ""
+                build = soft.pop("build", "") or ""
+                cpe23 = soft.pop("cpe23", "") or ""
+                soft_version_hash_string = vendor_name + product + version + build + cpe23
 
-                    hash_string = vendor_name or "_" + "_".join([v for v in soft.values() if v])
+                if vendor_name in vendors:
+                    vendor_obj = vendors.get(vendor_name)
+                else:
+                    vendor_obj = Vendor(name=vendor_name)
+                    vendors[vendor_name] = vendor_obj
+                    result.append(vendor_obj)
+                
+                if soft_type_hash_string in software_types:
+                    software_type_obj = software_types[soft_type_hash_string]
+                else:
+                    software_type_obj = SoftwareType(name=soft_type_hash_string)
+                    software_types[soft_type_hash_string] = software_type_obj
+                    result.append(software_type_obj)
 
-                    if not (hash_string and hash_string in softwares):
-                        soft_obj = Software(vendor=vendor_obj, **soft)
-                        softwares[hash_string] = soft_obj
-                        result.append(soft_obj)
-                        L4Software_obj = L4Software(l4=l4_obj, software=soft_obj, dns_a=dns_a_obj)
-                        result.append(L4Software_obj)
+                
+                if software_hash_string in softwares:
+                    software_obj = softwares[software_hash_string]
+                else:
+                    software_obj = Software(product=product, vendor=vendor_obj, _type=software_type_obj)
+                    softwares[software_hash_string] = software_obj
+                    result.append(software_obj)
+
+                if soft_version_hash_string in softwares_versions:
+                    soft_version_obj = softwares_versions[soft_version_hash_string]
+                else:  
+                    soft_version_obj = SoftwareVersion(software=software_obj,
+                                                       version=version,
+                                                       build=build,
+                                                       cpe23=cpe23)
+                    softwares_versions[soft_version_hash_string] = soft_version_obj
+                    result.append(soft_version_obj)
+                L4Software_obj = L4Software(l4=l4_obj, software_version=soft_version_obj, dns_a=dns_a_obj)
+                result.append(L4Software_obj)
+
         if traceroute:
             for i in range(len(data.addresses)):
                 froms_tos = []

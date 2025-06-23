@@ -19,21 +19,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
-        python-version: "3.11"
+        python-version: "3.12"
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r setezor/requirements.txt
     - name: Test run
       run: |
-        python3 setezor/setezor_cli.py & setezor_pid=$?
+        python setezor/setezor.py & setezor_pid=$?
         echo "Pid is $setezor_pid"
         sleep 5
         
-        curl --insecure -s -o /dev/null -w "%{http_code}" https://0.0.0.0:16661/projects/
+        curl --insecure -s -o /dev/null -w "%{http_code}" https://0.0.0.0:16661/login
         status_code=$?
         if [[ $status_code="200" ]];
         then

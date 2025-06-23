@@ -1,3 +1,5 @@
+from setezor.services.project_service import ProjectService
+from setezor.services.software import SoftwareService
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from .base_job import BaseJob
 from setezor.models import Vulnerability, \
@@ -7,15 +9,17 @@ from setezor.models import Vulnerability, \
 from setezor.modules.search_vulns.search_vulns import SearchVulns
 
 class CVERefresher(BaseJob):
-    def __init__(self, uow: UnitOfWork, 
+    def __init__(self, task_manager,
                  scheduler, 
                  name: str, 
                  task_id: str, 
                  project_id: str, 
-                 scan_id: str, 
+                 scan_id: str,
+                 project_service: ProjectService,
+                 software_service: SoftwareService, 
                  agent_id: int):
         super().__init__(scheduler=scheduler, name=name)
-        self.uow: UnitOfWork = uow
+        self.task_manager = task_manager
         self.task_id = task_id
         self.project_id = project_id
         self.scan_id = scan_id
@@ -23,14 +27,16 @@ class CVERefresher(BaseJob):
         self.vulnerabilities = {}
         self.links = set()
         self.results = {}
+        self.project_service = project_service
+        self.software_service = software_service
         self._coro = self.run()
 
     async def get_vulnerabilities(self, dataset, token: str, model, key: str):
         vulnerabilities = []    
-        for vendor_name, lx_soft, software in dataset:   
-            cpe23 = software.cpe23.split(", ")[0] if software.cpe23 else ""
+        for vendor_name, lx_soft, soft_version, software in dataset:   
+            cpe23 = soft_version.cpe23.split(", ")[0] if soft_version.cpe23 else ""
             if not cpe23:
-                cpe23 = f"cpe:2.3:a:{vendor_name}:{software.product}:{software.version}:*:*:*:*:*:*:*"
+                cpe23 = f"cpe:2.3:a:{vendor_name}:{software.product}:{soft_version.version}:*:*:*:*:*:*:*"
                 
             if cpe23 in self.results:
                 result = self.results.get(cpe23)
@@ -77,16 +83,14 @@ class CVERefresher(BaseJob):
     
     async def _task_func(self):
         token = ""
-        async with self.uow as uow:
-            project = await uow.project.find_one(id=self.project_id)
-            token = project.search_vulns_token
+        project = await self.project_service.get_by_id(project_id=self.project_id)
+        token = project.search_vulns_token
         if not token:
             return
         new_vulnerabilities = []
-        async with self.uow as uow:
-            l4_soft_with_cpe23 = await uow.software.for_search_vulns(project_id=self.project_id, 
-                                                                                         scan_id=self.scan_id)
-        
+        l4_soft_with_cpe23 = await self.software_service.for_search_vulns(project_id=self.project_id,
+                                                                    scan_id=self.scan_id)
+
         l4_software_vulnerabilities = await self.get_vulnerabilities(l4_soft_with_cpe23, 
                                                                      token, 
                                                                      L4SoftwareVulnerability,

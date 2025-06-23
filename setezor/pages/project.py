@@ -1,7 +1,7 @@
 
+from typing import Annotated
 from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Depends, Request
-from setezor.dependencies.uow_dependency import UOWDep
 from setezor.dependencies.project import get_user_id
 from setezor.services import UserProjectService
 from setezor.services.analytics_service import AnalyticsService
@@ -14,7 +14,9 @@ router = APIRouter(tags=["Pages"])
 @router.get("/projects")
 async def projects_page(
     request: Request,
-    uow: UOWDep,
+    users_service:  Annotated[UsersService, Depends(UsersService.new_instance)],
+    user_project_service: Annotated[UserProjectService, Depends(UserProjectService.new_instance)],
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
     user_id: str = Depends(get_user_id),
 ):
     """Формирует html страницу выбора проекта на основе jinja2 шаблона и возвращает её
@@ -25,18 +27,18 @@ async def projects_page(
     Returns:
         Response: отрендеренный шаблон страницы
     """
-    projects = await UserProjectService.get_user_projects(uow=uow, user_id=user_id)
-    user = await UsersService.get(uow=uow, id=user_id)
+    projects = await user_project_service.get_user_projects(user_id=user_id)
+    user = await users_service.get(user_id=user_id)
 
     result = []
     for project_obj, role in projects:
         analytics = {
-            "top_ports": await AnalyticsService.get_top_ports(uow, project_obj.id),
-            "top_protocols": await AnalyticsService.get_top_protocols(uow, project_obj.id),
-            "top_products": await AnalyticsService.get_top_products(uow, project_obj.id),
-            "device_types": await AnalyticsService.get_device_types(uow, project_obj.id),
-            "ip_count" : await AnalyticsService.get_ip_count(uow, project_obj.id),
-            "port_count" : await AnalyticsService.get_port_count(uow, project_obj.id)
+            "top_ports": await analytics_service.get_top_ports(project_obj.id),
+            "top_protocols": await analytics_service.get_top_protocols(project_obj.id),
+            "top_products": await analytics_service.get_top_products(project_obj.id),
+            "device_types": await analytics_service.get_device_types(project_obj.id),
+            "ip_count" : await analytics_service.get_ip_count(project_obj.id),
+            "port_count" : await analytics_service.get_port_count(project_obj.id)
         }
 
         analytics['top_ports'] = {

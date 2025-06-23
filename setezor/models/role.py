@@ -4,7 +4,7 @@ from typing import List
 
 
 class Role(IDDependent, TimeDependent, table=True):
-    __tablename__ = "role"
+    __tablename__ = "user_role"
     __table_args__ = {
         "comment": "Таблица предназначена для ролей пользователя в проектах"
     }

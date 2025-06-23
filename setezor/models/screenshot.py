@@ -4,7 +4,7 @@ from sqlmodel import Field
 
 
 class Screenshot(IDDependent, Base, table=True):
-    __tablename__ = "screenshot"
+    __tablename__ = "software_web_screenshot"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения скриншотов на веб-ресурсе"
     }

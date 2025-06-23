@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}
-Projects
+Scopes
 {% endblock title %}
 {% block scripts %}
 
@@ -25,7 +25,8 @@ Projects
                 </div>
             </div>
         </div>
-        <div class="col-8" id="scopeTargetsContainer" style="height: 80vh; border: 1px solid black; overflow-y: auto;"></div>
+        <div class="col-8" id="scopeTargetsContainer" style="overflow-y: auto;"></div>
+        <div class="col-8" id="scopeTargetsContainer" style="overflow-y: auto;"></div>
     </div>
 </div>
 <div class="modal fade" id="scopeAddModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
@@ -36,7 +37,7 @@ Projects
                 <h1 class="modal-title fs-5" id="staticBackdropLabel" data-i18n="Adding scope"></h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form onsubmit="addScope(event)">
+            <form onsubmit="addScope(event)" name="addScopeFormName">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="scopeName" class="form-label" data-i18n="Scope name"></label>
@@ -61,9 +62,25 @@ Projects
 <div id="idModalForWritingDataBaseTargets"> </div>
 <div id="deleteScopeModalContainer"></div>
 <div id="deleteTargetModalContainer"></div>
+<style>
+    .is-invalid {
+    border-color: #dc3545 !important;
+}
 
+.invalid-feedback {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+</style>
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}');
+
+    let currentPage = 1;
+    let currentLimit = 10;
+    let totalPages = 1;
+    let currentScopeId = null;
 
     async function getScopes() {
         await axios.get("/api/v1/scope").then(response => {
@@ -229,44 +246,166 @@ Projects
 			}
 		}
 
-    async function getScopeTargets(id) {
+    async function getScopeTargets(id, page = 1, limit = 10) {
+        currentScopeId = id;
+        currentPage = page;
+        currentLimit = limit;
+        
         let el = document.getElementById("scopeTargetsContainer");
-        await axios.get(`/api/v1/scope/${id}/targets`).then(response => {
+        
+        function createPageSizeSelector() {
+            return `
+                <div class="page-size-selector">
+                    <label for="pageSize">${i18next.t('Show rows')}:</label>
+                    <select id="pageSize" onchange="changePageSize(this.value)" class="form-select form-select-sm">
+                        <option value="10" ${limit === 10 ? 'selected' : ''}>10</option>
+                        <option value="25" ${limit === 25 ? 'selected' : ''}>25</option>
+                        <option value="50" ${limit === 50 ? 'selected' : ''}>50</option>
+                        <option value="100" ${limit === 100 ? 'selected' : ''}>100</option>
+                    </select>
+                </div>`;
+        }
+        
+        try {
+            const response = await axios.get(`/api/v1/scope/${id}/targets`, {
+                params: { page, limit }
+            });
+            
+            const { data, total, total_pages, has_next, has_prev } = response.data;
+            totalPages = total_pages;
+            
             let result = '';
-            if (response.data.length) {
+            
+            if (data.length) {
                 result = `
-                    <table class="table table-bordered">
-                        <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
-                            <button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> ${i18next.t('Add targets')} </button>
-                            <tr>
-                                <th scope="col">${i18next.t('PROTOCOL')} </th>
-                                <th scope="col">${i18next.t('IP')}</th>
-                                <th scope="col">${i18next.t('DOMAIN')}</th>
-                                <th scope="col">${i18next.t('PORT')}</th>
-                                <th scope="col">${i18next.t('ACTION')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                for (const target of response.data) {
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                        <button class="btn btn-success mb-2" onclick="choosingMethodAddingTargets('${id}')">
+                            ${i18next.t('Add targets')}
+                        </button>
+                        ${createPageSizeSelector()}
+                        <div class="pagination-info mb-2">
+                            ${i18next.t('Showing')} ${((page - 1) * limit) + 1}-${Math.min(page * limit, total)} 
+                            ${i18next.t('of')} ${total} ${i18next.t('targets')}
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
+                                <tr>
+                                    <th scope="col">${i18next.t('PROTOCOL')}</th>
+                                    <th scope="col">${i18next.t('IP')}</th>
+                                    <th scope="col">${i18next.t('DOMAIN')}</th>
+                                    <th scope="col">${i18next.t('PORT')}</th>
+                                    <th scope="col">${i18next.t('ACTION')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                
+                for (const target of data) {
                     result += `<tr id="target-${target.id}">`;
                     result += `<td><span class="editable" data-field="protocol">${sanitize_scope(target.protocol) || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="ip">${target.ip || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="domain">${sanitize_scope(target.domain) || ''}</span></td>`;
                     result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
                     result += `<td>
-                                    <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
-                                    <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">${i18next.t('Delete')}</button>
-                                    <button class="btn btn-danger cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">${i18next.t('Cancel')}</button>
-                                    <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">${i18next.t('Confirm')}</button>
-                                </td>`;
+                            <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
+                            <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">${i18next.t('Delete')}</button>
+                            <button class="btn btn-secondary cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">${i18next.t('Cancel')}</button>
+                            <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">${i18next.t('Confirm')}</button>
+                    </td>`;
                     result += `</tr>`;
                 }
-                result += `</tbody></table>`;
+                
+                result += `</tbody></table></div>`;
+                
+                result += createPaginationHTML(page, total_pages, has_prev, has_next);
+                
             } else {
-                result = `<button class="btn btn-success m-3" onclick="choosingMethodAddingTargets('${id}')"> ${i18next.t('Add targets')} </button>`;
+                result = `
+                    <div class="text-center">
+                        <p class="mb-3">${i18next.t('No targets found')}</p>
+                        <button class="btn btn-success" onclick="choosingMethodAddingTargets('${id}')">
+                            ${i18next.t('Add targets')}
+                        </button>
+                    </div>`;
             }
+            
             el.innerHTML = result;
-        });
+            
+        } catch (error) {
+            console.error('Error loading targets:', error);
+            el.innerHTML = `<div class="alert alert-danger">${i18next.t('Error loading targets')}</div>`;
+        }
+    }
+
+    function createPaginationHTML(currentPage, totalPages, hasPrev, hasNext) {
+        if (totalPages <= 1) return '';
+        
+        let paginationHTML = `
+            <nav aria-label="Targets pagination" class="mt-3">
+                <ul class="pagination justify-content-center flex-wrap">`;
+        
+        paginationHTML += `
+            <li class="page-item ${!hasPrev ? 'disabled' : ''}">
+                <button class="page-link" onclick="changePage(${currentPage - 1})" ${!hasPrev ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i> ${i18next.t('Previous')}
+                </button>
+            </li>`;
+        
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        if (startPage > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <button class="page-link" onclick="changePage(1)">1</button>
+                </li>`;
+            if (startPage > 2) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" onclick="changePage(${i})">${i}</button>
+                </li>`;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationHTML += `
+                <li class="page-item">
+                    <button class="page-link" onclick="changePage(${totalPages})">${totalPages}</button>
+                </li>`;
+        }
+        
+        paginationHTML += `
+            <li class="page-item ${!hasNext ? 'disabled' : ''}">
+                <button class="page-link" onclick="changePage(${currentPage + 1})" ${!hasNext ? 'disabled' : ''}>
+                    ${i18next.t('Next')} <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>`;
+        
+        paginationHTML += `
+                </ul>
+            </nav>`;
+        
+        return paginationHTML;
+    }
+
+    function changePage(page) {
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+            getScopeTargets(currentScopeId, page, currentLimit);
+        }
+    }
+
+    function changePageSize(limit) {
+        currentLimit = parseInt(limit);
+        getScopeTargets(currentScopeId, 1, currentLimit);
     }
 
     function editTarget(targetId) {
@@ -277,11 +416,10 @@ Projects
         const confirmBtn = row.querySelector('.confirm-btn');
         const editableFields = row.querySelectorAll('.editable');
 
-
         editableFields.forEach(field => {
             const text = field.innerText;
             field.setAttribute('data-original', text);
-            field.innerHTML = `<input type="text" value="${text}" />`;
+            field.innerHTML = `<input type="text" class="form-control form-control-sm" value="${text}" />`;
         });
 
         editBtn.style.display = 'none';
@@ -321,22 +459,55 @@ Projects
 
         editableFields.forEach(field => {
             const input = field.querySelector('input');
-            if (input.value == ""){
-                updatedData[field.getAttribute('data-field')] = null
-            }else{
-                updatedData[field.getAttribute('data-field')] = input.value;
+            const fieldName = field.getAttribute('data-field');
+            
+            if (input.value === "") {
+                updatedData[fieldName] = null;
+            } else {
+                updatedData[fieldName] = input.value;
             }
-            field.innerHTML = input.value;
+            field.innerHTML = input.value || '';
         });
 
-        editBtn.style.display = 'inline-block';
-        deleteBtn.style.display = 'inline-block';
-        cancelBtn.style.display = 'none';
-        confirmBtn.style.display = 'none';
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        confirmBtn.disabled = true;
 
-        response = await axios.put(`/api/v1/target/${targetId}`, updatedData).catch(function(err){
-            getScopeTargets(scopeId)
-        })
+        try {
+            await axios.put(`/api/v1/target/${targetId}`, updatedData);
+            
+            editBtn.style.display = 'inline-block';
+            deleteBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'none';
+            confirmBtn.style.display = 'none';
+            confirmBtn.innerHTML = i18next.t('Confirm');
+            confirmBtn.disabled = false;
+            
+        } catch (error) {
+            console.error('Error updating target:', error);
+            confirmBtn.innerHTML = i18next.t('Confirm');
+            confirmBtn.disabled = false;
+            
+            getScopeTargets(currentScopeId, currentPage, currentLimit);
+        }
+    }
+
+    async function deleteTarget(scopeId, targetId) {
+            const deleteBtn = document.querySelector(`#target-${targetId} .delete-btn`);
+            const originalText = deleteBtn.innerHTML;
+            
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            deleteBtn.disabled = true;
+            
+            try {
+                await axios.delete(`/api/v1/target/${targetId}`);
+
+                getScopeTargets(currentScopeId, currentPage, currentLimit);
+                
+            } catch (error) {
+                console.error('Error deleting target:', error);
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+            }
     }
 
     async function choosingMethodAddingTargets(id) {
@@ -390,19 +561,19 @@ Projects
                             <div id="ScopeTargetsContainer"> </div>
                             <div class="input-group" id="idEnterScopeTargetsOriginal">
                                 <datalist id="ProtocolList"></datalist>
-                                <input type="text" style="margin-top: 0.5rem" list="ProtocolList" class="form-control" id="input_target_protocol" placeholder="Protocol" aria-label="Protocol" aria-describedby="target_protocol" required name="input_target_protocol">
+                                <input type="text" style="margin-top: 0.5rem" list="ProtocolList" class="form-control" id="input_target_protocol" placeholder="${i18next.t('Protocol')}" aria-label="Protocol" aria-describedby="target_protocol" required name="input_target_protocol">
                                 <datalist id="IPList"></datalist>
-                                <input type="text" style="margin-top: 0.5rem" list="IPList" class="form-control" id="input_target_ip" placeholder="IP" aria-label="IP" aria-describedby="target_ip" required name="input_target_ip">
+                                <input type="text" style="margin-top: 0.5rem" list="IPList" class="form-control" id="input_target_ip" placeholder="${i18next.t('IP')}" aria-label="IP" aria-describedby="target_ip" required name="input_target_ip">
                                 <datalist id="DomainList"></datalist>
-                                <input type="text" style="margin-top: 0.5rem" list="DomainList" class="form-control" id="input_target_domain" placeholder="Domain" aria-label="Domain" aria-describedby="target_domain" required name="input_target_domain">
+                                <input type="text" style="margin-top: 0.5rem" list="DomainList" class="form-control" id="input_target_domain" placeholder="${i18next.t('Domain')}" aria-label="Domain" aria-describedby="target_domain" required name="input_target_domain">
                                 <datalist id="PortList"></datalist>
-                                <input type="text" style="margin-top: 0.5rem" list="PortList" class="form-control" id="input_target_port" placeholder="Port" aria-label="Port" aria-describedby="target_port" required name="input_target_port">
+                                <input type="text" style="margin-top: 0.5rem" list="PortList" class="form-control" id="input_target_port" placeholder="${i18next.t('Port')}" aria-label="Port" aria-describedby="target_port" required name="input_target_port">
                                 <button id="id_add_new_targets_group" onclick="addNewTargetLine()" type="button" class="btn btn-success" style="width: 3rem; margin-top: 0.5rem"> + </button>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="addEnterTargets('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); "> ${i18next.t('Add targets')} </button>
+                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="addEnterTargets('${id}'); "> ${i18next.t('Add targets')} </button>
                         <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> ${i18next.t('Cancel')} </button>
                     </div>
                 <div>
@@ -552,7 +723,7 @@ Projects
                 })
             }
         })
-        await axios.post(`/api/v1/scope/${id}/add_targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
+        await axios.post(`/api/v1/scope/${id}/targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
             getScopeTargets(id)
         })
     }
@@ -609,21 +780,119 @@ Projects
 
     
     async function addEnterTargets(id) {
-        const targetsProtocol = document.querySelectorAll('[id^="input_target_protocol"]');
-        const targetsIP= document.querySelectorAll('[id^="input_target_ip"]');
-        const targetsDomain = document.querySelectorAll('[id^="input_target_domain"]');
-        const targetsPort = document.querySelectorAll('[id^="input_target_port"]');  
-        let targets = []
-        for (let i = 0; i < targetsProtocol.length; i++) {
-            targets.push({
-                "protocol" : sanitize_scope(targetsProtocol[i].value) || null,
-                "ip" : targetsIP[i].value || null,
-                "domain" : sanitize_scope(targetsDomain[i].value) || null,
-                "port" : Number(targetsPort[i].value) || null
-            }) }
-        await axios.post(`/api/v1/scope/${id}/add_targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
-                                        getScopeTargets(id)
-                                    })
+        try {
+            const targetsProtocol = document.querySelectorAll('[id^="input_target_protocol"]');
+            const targetsIP = document.querySelectorAll('[id^="input_target_ip"]');
+            const targetsDomain = document.querySelectorAll('[id^="input_target_domain"]');
+            const targetsPort = document.querySelectorAll('[id^="input_target_port"]');
+            
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+
+            let hasErrors = false;
+            let targets = [];
+            
+            for (let i = 0; i < targetsProtocol.length; i++) {
+                const protocol = targetsProtocol[i].value.trim();
+                const ip = targetsIP[i].value.trim();
+                const domain = targetsDomain[i].value.trim();
+                const port = targetsPort[i].value.trim();
+                
+                if (!protocol && !ip && !domain && !port) {
+                    continue;
+                }
+
+                if (protocol && !/^[a-zA-Z]+$/.test(protocol)) {
+                    markInputAsInvalid(targetsProtocol[i], "Protocol should contain only letters");
+                    hasErrors = true;
+                }
+                
+                if (ip && !isValidIP(ip)) {
+                    markInputAsInvalid(targetsIP[i], "Invalid IP address format");
+                    hasErrors = true;
+                }
+                
+                if (domain && !isValidDomain(domain)) {
+                    markInputAsInvalid(targetsDomain[i], "Invalid domain format");
+                    hasErrors = true;
+                }
+                
+                if (port) {
+                    const portNum = Number(port);
+                    if (isNaN(portNum)) {
+                        markInputAsInvalid(targetsPort[i], "Port must be a number");
+                        hasErrors = true;
+                    } else if (portNum < 1 || portNum > 65535) {
+                        markInputAsInvalid(targetsPort[i], "Port must be between 1 and 65535");
+                        hasErrors = true;
+                    }
+                }
+                
+                if (hasErrors) continue;
+                targets.push({
+                    "protocol": protocol || null,
+                    "ip": ip || null,
+                    "domain": domain || null,
+                    "port": port ? Number(port) : null
+                });
+            }
+            
+            if (hasErrors) {
+                create_toast("Error", "Please correct the errors in the form", "error");
+                return;
+            }
+            
+            if (targets.length === 0) {
+                create_toast("Error", "No valid targets to add", "error");
+                return;
+            }
+            
+            const response = await axios.post(
+                `/api/v1/scope/${id}/targets`, 
+                {targets: targets}, 
+                {headers: {'Content-Type': 'application/json'}}
+            );
+            
+            if (response.status >= 200 && response.status < 300) {
+                document.getElementById('idButtonCancelModalEnterTargets').click();
+                getScopeTargets(id);
+                create_toast("Success", "Targets added successfully", "success");
+            } 
+        } catch (error) {
+            if (error.response?.status === 422) {
+                const errors = error.response.data.detail;
+                if (Array.isArray(errors)) {
+                    errors.forEach(err => {
+                        const input = document.querySelector(`[name="${err.loc[1]}"]`);
+                        if (input) markInputAsInvalid(input, err.msg);
+                    });
+                }
+                create_toast("Error", "Please check the correctness of the entered data", "error");
+            } else {
+                create_toast("Error", error.response?.data?.detail || "An error occurred", "error");
+            }
+        }
+    }
+
+    function isValidIP(ip) {
+        const ipv4WithCidrRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[1-2][0-9]|3[0-2])$/;
+        const ipv6WithCidrRegex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\/([0-9]|[1-9][0-9]|1[0-2][0-8])$/;
+        const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+        
+        return ipv4WithCidrRegex.test(ip) || 
+            ipv6WithCidrRegex.test(ip) || 
+            ipv4Regex.test(ip) || 
+            ipv6Regex.test(ip);
+    }
+
+    function isValidDomain(domain) {
+        const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i;
+        return domainRegex.test(domain);
+    }
+
+    function markInputAsInvalid(inputElement, errorMessage) {
+        inputElement.classList.add('is-invalid');
     }
 
     async function addTargetsOnFile(id) {

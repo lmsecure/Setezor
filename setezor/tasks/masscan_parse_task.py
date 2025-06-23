@@ -1,5 +1,4 @@
 from base64 import b64decode
-from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.tasks.base_job import BaseJob
 from setezor.modules.masscan.parser import BaseMasscanParser
 
@@ -7,13 +6,14 @@ from setezor.modules.masscan.parser import BaseMasscanParser
 
 class MasscanLogTask(BaseJob):
 
-    def __init__(self, uow: UnitOfWork, scheduler, name: str, 
+    def __init__(self, scheduler, name: str, 
+                 task_manager,
                  task_id: int, 
                  project_id: str, 
                  scan_id: str, 
                  agent_id: int, filename: str, file: str, interface_ip_id: int, ip: str, mac: str):
         super().__init__(scheduler=scheduler, name=name)
-        self.uow: UnitOfWork = uow
+        self.task_manager = task_manager
         self.task_id = task_id
         self.project_id = project_id
         self.scan_id = scan_id

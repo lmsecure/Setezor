@@ -5,15 +5,15 @@ import io
 
 import json
 from fastapi import HTTPException, UploadFile
-from setezor.api.acunetix.schemes.group import GroupForm, GroupMembershipSet
-from setezor.api.acunetix.schemes.report import ReportAddForm
-from setezor.api.acunetix.schemes.scan import GroupScanStart, TargetScanStart
-from setezor.api.acunetix.schemes.target import SyncPayload, TargetToSync
-from setezor.api.acunetix.schemes.target_config import ScanSpeedValues
+from setezor.schemas.acunetix.schemes.group import GroupForm, GroupMembershipSet
+from setezor.schemas.acunetix.schemes.report import ReportAddForm
+from setezor.schemas.acunetix.schemes.scan import GroupScanStart, TargetScanStart
+from setezor.schemas.acunetix.schemes.target import SyncPayload, TargetToSync
+from setezor.schemas.acunetix.schemes.target_config import ScanSpeedValues
 from setezor import managers as M
-from setezor.managers.websocket_manager import WS_MANAGER
+from setezor.tools.websocket_manager import WS_MANAGER
 from setezor.models import Acunetix
-from setezor.interfaces.service import IService
+from setezor.services.base_service import BaseService
 from setezor.models.d_software import Software
 from setezor.models.domain import Domain
 from setezor.models.ip import IP
@@ -27,7 +27,7 @@ from setezor.modules.acunetix.vulnerability import Vulnerability
 from setezor.modules.acunetix.acunetix import AcunetixApi
 from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.schemas.task import WebSocketMessage
-from setezor.services.data_structure_service import DataStructureService
+from setezor.data_writer.data_structure_service import DataStructureService
 from setezor.tasks.acunetix_scan_task import AcunetixScanTask
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.modules.acunetix.acunetix_config import Config
@@ -36,7 +36,7 @@ from setezor.models import Vulnerability as VulnerabilityModel
 from setezor.models.dns_a import DNS_A
 from setezor.tools.url_parser import parse_url
 
-class AcunetixService(IService):
+class AcunetixService:
     @classmethod
     async def get_project_apis(cls, uow: UnitOfWork, project_id: str) -> list[Acunetix]:
         async with uow:
@@ -218,7 +218,7 @@ class AcunetixService(IService):
     async def sync_targets_between_setezor_and_acunetix(cls, uow: UnitOfWork, sync_payload: SyncPayload, scan_id: str, project_id: str):
         ips = {}
         ports = {}
-        domains = {}
+        common_domains = {}
         result = []
         empty_domains = {}
         empty_dns = {}
@@ -252,8 +252,8 @@ class AcunetixService(IService):
                 api = AcunetixApi.from_config(config.model_dump())
 
                 if domain := data.get("domain"):
-                    if domain in domains:
-                        new_domain = domains[domain]
+                    if domain in common_domains:
+                        new_domain = common_domains[domain]
                         new_dns_a = found_dns[domain]
                     else:
                         try:
@@ -275,13 +275,20 @@ class AcunetixService(IService):
                             result.append(new_ip)
                             result.append(new_dns_a)
                         
-                        domains[domain] = new_domain
+                        common_domains[domain] = new_domain
                         found_dns[domain] = new_dns_a
                         result.append(new_domain)
 
                 if ip := data.get("ip"):
                     if ip in ips:
                         new_ip = ips[ip]
+                        if not (ip in empty_domains):
+                            new_domain = Domain()
+                            result.append(new_domain)
+                            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+                            result.append(new_dns_a)
+                            empty_domains[ip] = new_domain
+                            empty_dns[ip] = new_dns_a
                         new_domain = empty_domains[ip]
                         new_dns_a = empty_dns[ip]
                     else:
@@ -340,8 +347,8 @@ class AcunetixService(IService):
                 await WS_MANAGER.send_message(project_id=project_id, message=message)
 
 
-            ds = DataStructureService(uow=uow, result=result, project_id=project_id, scan_id=scan_id)
-            await ds.make_magic()
+            ds = DataStructureService(uow=uow)
+            await ds.make_magic(result=result, project_id=project_id, scan_id=scan_id)
 
     @classmethod
     async def add_targets(cls, uow: UnitOfWork, project_id: str, acunetix_id: int, payload: dict):
@@ -350,8 +357,8 @@ class AcunetixService(IService):
             api = AcunetixApi.from_config(config.model_dump())
             status, msg, result = await api.add_target(payload=payload)
             result = await cls.parse_targets(result)
-            ds = DataStructureService(uow=uow, result=result, scan_id=None, project_id=project_id)
-            await ds.make_magic()
+            ds = DataStructureService(uow=uow)
+            await ds.make_magic(result=result, project_id=project_id, scan_id=None)
             return status
     
     @classmethod
@@ -376,8 +383,8 @@ class AcunetixService(IService):
                 raw_payload[f"description{index+1}"] = addr
             status, msg, result = await api.add_target(payload=raw_payload)
             result = await cls.parse_targets(result)
-            ds = DataStructureService(uow=uow, result=result, scan_id=None, project_id=project_id)
-            await ds.make_magic()
+            ds = DataStructureService(uow=uow)
+            await ds.make_magic(result=result, scan_id=None, project_id=project_id)
             return 204 if status == 200 else 500
 
 

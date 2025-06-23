@@ -1,1 +1,1 @@
-from .project_manager import ProjectFolders
+from .files import ProjectFolders

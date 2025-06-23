@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Response
-from setezor.api.acunetix.schemes.scan import GroupScanStart, ScanWithInterval, TargetScanStart
-from setezor.dependencies.uow_dependency import UOWDep
+from setezor.schemas.acunetix.schemes.scan import GroupScanStart, ScanWithInterval, TargetScanStart
+from setezor.db.uow_dependency import UOWDep
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.services import AcunetixService
 from setezor.schemas.roles import Roles

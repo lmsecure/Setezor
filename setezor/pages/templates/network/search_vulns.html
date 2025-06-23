@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col-3">
             <div class="row">
-                <form onsubmit="saveToken(event)" id="tokenSaveFormSearchVulns" class="flex-column">
+                <form onsubmit="saveToken(event)" name="tokenSaveSearchVulnsFormName" id="tokenSaveFormSearchVulns" class="flex-column">
                     <label for="cpeNameInput" class="form-label" data-i18n="Token"></label>
                     <div class="mb-3 d-flex">
                         <input type="text" class="form-control me-2" name="token" required>
@@ -14,7 +14,7 @@
                 </form>
             </div>
             <div class="row">
-                <form onsubmit="findVulnerabilities(event)" id="tokenSearchFormSearchVulns">
+                <form onsubmit="findVulnerabilities(event)" name="tokenSearchSearchVulnsFormName" id="tokenSearchFormSearchVulns">
                     <div class="mb-3">
                         <label for="cpeNameInput" class="form-label" data-i18n="Query String"></label>
                         <input type="text" class="form-control" name="query" id="queryInput" required>

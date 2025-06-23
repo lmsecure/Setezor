@@ -10,7 +10,7 @@ from setezor.models.agent import Agent
 from setezor.models.base import generate_unique_id
 from setezor.models.object import Object
 
-from setezor.settings import DB_URI
+from setezor.settings import DB_URI, PostgresSettings
 from setezor.tools.password import PasswordTool
 from setezor.logger import logger
 from setezor.schemas.roles import Roles
@@ -29,8 +29,8 @@ async def init_db():
 async def fill_db(manual: bool = False):
     if not (os.environ.get("ENGINE", "sqlite") == "sqlite" or manual):
         return
-    from setezor.unit_of_work import UnitOfWork
-    uow = UnitOfWork()
+    from setezor.db.uow_dependency import get_uow
+    uow = get_uow()
     async with uow:
         for new_id, obj_type in [
             ('3d9cf6c43fd54aacb88878f5425f43c4','unknown') ,

@@ -4,7 +4,7 @@ from sqlmodel import Field, Relationship
 from .import TimeDependent, IDDependent
 
 class Agent(IDDependent, TimeDependent, table=True):
-    __tablename__ = "agent"
+    __tablename__ = "setezor_agent"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения информации об агенте"
     }
@@ -15,7 +15,7 @@ class Agent(IDDependent, TimeDependent, table=True):
     secret_key: Optional[str]    = Field(default="", sa_column_kwargs={"comment": "AES256 ключ агента"})
     user_id: Optional[str]       = Field(foreign_key="user.id", sa_column_kwargs={"comment": "Идентификатор владельца"})
     is_connected: bool           = Field(default=False, sa_column_kwargs={"comment": "Подключен ли агент"})
-    flag: bool                   = Field(default=False, sa_column_kwargs={"comment": "Флаг агента"})
+    flag: Optional[bool]                   = Field(default=False, sa_column_kwargs={"comment": "Флаг агента"})
 
-    user: "User" = Relationship(back_populates="agents")
-    projects: List["AgentInProject"] = Relationship(back_populates="agent")
+    user: "User" = Relationship(back_populates="agents") # type: ignore
+    projects: List["AgentInProject"] = Relationship(back_populates="agent") # type: ignore

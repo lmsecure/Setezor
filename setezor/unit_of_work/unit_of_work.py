@@ -1,5 +1,4 @@
 from setezor.db.database import async_session_maker
-from setezor.interfaces import IUnitOfWork
 from setezor.repositories import \
     TasksRepository, \
     MACRepository, \
@@ -42,7 +41,8 @@ from setezor.repositories import \
     AuthenticationCredentialsRepository, \
     NodeCommentRepository, \
     ScanRepository, \
-    L4SoftwareVulnerabilityScreenshotRepository
+    L4SoftwareVulnerabilityScreenshotRepository, \
+    NetworkSpeedTestRepository
 
 
 from setezor.repositories import SQLAlchemyRepository
@@ -51,10 +51,12 @@ from setezor.logger import logger
 from setezor.repositories.agent_in_project_repository import AgentInProjectRepository
 from setezor.repositories.agent_parent_agent_repository import AgentParentAgentRepository
 from setezor.repositories.setting_repository import SettingRepository
+from setezor.repositories.software_type_repository import SoftwareTypeRepository
+from setezor.repositories.software_version_repository import SoftwareVersionRepository
 
-class UnitOfWork(IUnitOfWork):
-    def __init__(self):
-        self.session_factory = async_session_maker
+class UnitOfWork:
+    def __init__(self, session_factory):
+        self.session_factory = session_factory
         self.__session: AsyncSession = None
 
     async def __aenter__(self):
@@ -67,7 +69,7 @@ class UnitOfWork(IUnitOfWork):
             logger.error(exc_value)
             await self.rollback()
         await self.__session.close()
-        return True
+        return False
 
     async def commit(self):
         await self.__session.commit()
@@ -164,6 +166,12 @@ class UnitOfWork(IUnitOfWork):
 
     @property
     def software(self) -> SoftwareRepository: return SoftwareRepository(self.__session)
+    
+    @property
+    def software_type(self) -> SoftwareTypeRepository: return SoftwareTypeRepository(self.__session)
+    
+    @property
+    def software_version(self) -> SoftwareVersionRepository: return SoftwareVersionRepository(self.__session)
 
     @property
     def vulnerability(self) -> VulnerabilityRepository: return VulnerabilityRepository(self.__session)
@@ -215,6 +223,9 @@ class UnitOfWork(IUnitOfWork):
     
     @property
     def agent_parent_agent(self) -> AgentParentAgentRepository: return AgentParentAgentRepository(self.__session)
+
+    @property
+    def network_speed_test(self) -> NetworkSpeedTestRepository: return NetworkSpeedTestRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():

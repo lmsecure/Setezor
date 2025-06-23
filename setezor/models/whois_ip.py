@@ -5,7 +5,7 @@ from sqlmodel import Field, Relationship
 
 
 class WhoIsIP(IDDependent, Base, table=True):
-    __tablename__ = "whois_ip"
+    __tablename__ = "software_web_whois_ip"
     __table_args__ = {
         "comment": "Таблица предназначена для информации о регистраторе веб-ресурса по ip"
     }
@@ -16,6 +16,6 @@ class WhoIsIP(IDDependent, Base, table=True):
     AS: str           = Field(sa_column_kwargs={"comment": "Автономная система"})
     range_ip: str     = Field(sa_column_kwargs={"comment": "Диапазон IP"})
     netmask: str      = Field(sa_column_kwargs={"comment": "Маска сети"})
-    ip_id: str    = Field(foreign_key="ip.id",sa_column_kwargs={"comment": "Идентификатор ip"})
+    ip_id: str    = Field(foreign_key="network_ip.id",sa_column_kwargs={"comment": "Идентификатор ip"})
 
-    ip: "IP" = Relationship(back_populates="whois")
+    ip: "IP" = Relationship(back_populates="whois") # type: ignore
