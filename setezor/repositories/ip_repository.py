@@ -1,8 +1,8 @@
+import ipaddress
 from sqlalchemy import Select
 from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_A, DNS_NS, Domain, AgentInProject
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select, func, or_
-
 
 class IPRepository(SQLAlchemyRepository[IP]):
     model = IP
@@ -19,10 +19,24 @@ class IPRepository(SQLAlchemyRepository[IP]):
                                                                     IP.scan_id==ip_obj.scan_id
                                                                     )
         else:
-            stmt = select(IP).join(MAC, IP.mac_id == MAC.id).filter(IP.ip == ip, 
-                                                                    MAC.mac == mac, 
+            if ipaddress.ip_address(ip).is_private:  # RFC1918
+                stmt = select(IP).filter(IP.ip == ip,
+                                         IP.project_id == ip_obj.project_id,
+                                         IP.scan_id == ip_obj.scan_id
+                                         )
+                result = await self._session.exec(stmt)
+                ip_from_db = result.first()
+                if ip_from_db and ip_from_db.mac_id:
+                    mac_stmt = select(MAC).where(MAC.id == ip_from_db.mac_id)
+                    result = await self._session.exec(mac_stmt)
+                    mac_from_db = result.first()
+                    if mac != '' and mac_from_db != mac:
+                        mac_from_db.mac = mac
+                return ip_from_db
+            stmt = select(IP).join(MAC, IP.mac_id == MAC.id).filter(IP.ip == ip,
+                                                                    MAC.mac == mac,
                                                                     IP.project_id == ip_obj.project_id,
-                                                                    IP.scan_id==ip_obj.scan_id
+                                                                    IP.scan_id == ip_obj.scan_id
                                                                     )
         result = await self._session.exec(stmt)
         return result.first()
@@ -31,11 +45,12 @@ class IPRepository(SQLAlchemyRepository[IP]):
     async def vis_nodes_and_interfaces(self, project_id: str, scans: list[str]):
         stmt_for_get_agents_for_interfaces = select(IP.id.label("ip_id"), AgentInProject.id.label("agent_id")).select_from(IP)\
             .join(MAC, IP.mac_id == MAC.id)\
-            .join(AgentInProject, MAC.object_id == AgentInProject.object_id)\
+            .join(Object, Object.id == MAC.object_id)\
+            .join(AgentInProject, Object.agent_id == AgentInProject.id)\
             .filter(IP.project_id == project_id)
-        addition = [IP.scan_id == scan_id for scan_id in scans]
-        addition.append(IP.scan_id == None)
-        stmt_for_get_agents_for_interfaces = stmt_for_get_agents_for_interfaces.filter(or_(*addition))
+        # addition = [IP.scan_id == scan_id for scan_id in scans]
+        # addition.append(IP.scan_id == None)
+        # stmt_for_get_agents_for_interfaces = stmt_for_get_agents_for_interfaces.filter(or_(*addition))
         stmt_for_get_nodes_from = select(RouteList.ip_id_from.label("ip_id"), Route.agent_id.label("agent_id")).select_from(RouteList)\
             .join(Route, RouteList.route_id == Route.id).filter(RouteList.project_id == project_id)
         stmt_for_get_nodes_to = select(RouteList.ip_id_to.label("ip_id"), Route.agent_id.label("agent_id")).select_from(RouteList)\
@@ -58,7 +73,14 @@ class IPRepository(SQLAlchemyRepository[IP]):
         addition = [IP.scan_id == scan_id for scan_id in scans]
         addition.append(IP.scan_id == None)
         stmt_for_get_nodes = stmt_for_get_nodes.filter(or_(*addition))
-        return (await self._session.exec(stmt_for_get_nodes)).all()
+        stmt_for_get_interfaces = select(IP.id, IP.ip, Network.start_ip, Network.mask, MAC.mac, ObjectType.name)\
+            .join(Network, IP.network_id == Network.id)\
+            .join(MAC, IP.mac_id == MAC.id)\
+            .join(Object, MAC.object_id == Object.id)\
+            .join(ObjectType, Object.object_type_id == ObjectType.id)\
+            .filter(IP.project_id == project_id, IP.ip != '', Object.agent_id != None)
+        stmt_for_all_nodes = stmt_for_get_nodes.union(stmt_for_get_interfaces)
+        return (await self._session.exec(stmt_for_all_nodes)).all()
 
 
     async def get_node_info(self, ip_id: str, project_id: str) -> dict:
@@ -104,6 +126,8 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
+                if (field == 'port'):
+                    value = int(value)
                 
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
@@ -175,6 +199,8 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
+                if (field == 'port'):
+                    value = int(value)
                 
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]

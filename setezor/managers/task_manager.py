@@ -225,6 +225,7 @@ class TaskManager:
 
     async def soft_stop_task(self, id: str, project_id: str) -> bool:
         task: Task = await self.__tasks_service.get(id=id, project_id=project_id)
+        await self.__tasks_service.set_status(id=id, status=TaskStatus.soft_stopped)
         agent_in_project = await self.__agent_in_project_service.get_agent_in_project(id=task.agent_id)
         agent = await self.__agent_service.get_by_id(id=agent_in_project.agent_id)
         agents_chain = await self.__agent_service.get_agents_chain(agent_id=agent_in_project.agent_id,
@@ -241,13 +242,27 @@ class TaskManager:
             if status == 200:
                 break
         return True
-
-    async def delete_task(self, id: str, project_id: str) -> bool:
+    
+    async def cancel_task(self, id: str, project_id: str) -> bool:
         task: Task = await self.__tasks_service.get(id=id, project_id=project_id)
-        if not task:
-            return False
-        await self.__tasks_service.set_status(id=id, status=TaskStatus.failed, traceback="User canceled the task")
+        await self.__tasks_service.set_status(id=id, status=TaskStatus.pre_canceled)
+        agent_in_project = await self.__agent_in_project_service.get_agent_in_project(id=task.agent_id)
+        agent = await self.__agent_service.get_by_id(id=agent_in_project.agent_id)
+        agents_chain = await self.__agent_service.get_agents_chain(agent_id=agent_in_project.agent_id,
+                                                                   user_id=agent.user_id)
+        data = {
+            "signal": "cancel_task",
+            "id": id,
+        }
+        for chain in agents_chain:
+            payload = self.__agent_manager.cipher_chain(
+                agents_chain=chain, data=data, close_connection=True)
+            next_agent_url = payload.pop("next_agent_url")
+            data, status = await HTTPManager.send_json(url=next_agent_url, data=payload)
+            if status == 200:
+                break
         return True
+
 
     # метод агента на создание шедулера
     def create_new_scheduler(self, job: BaseJob):
@@ -318,10 +333,14 @@ class TaskManager:
 
 
     async def decipher_data_from_project_agent(self, data: BackWardData):
+        agent: Agent = await self.__agent_service.get_by_id(id=data.sender)
+        if agent:
+            await self.__agent_service.set_last_time_seen(id=agent.id) # если при периодичном посыле
         agent_in_project = await self.__agent_in_project_service.get_agent_in_project(id=data.sender)
         if not agent_in_project:
             return
         agent: Agent = await self.__agent_service.get_by_id(id=agent_in_project.agent_id)
+        await self.__agent_service.set_last_time_seen(id=agent.id)
         ciphered_payload = data.data.encode()
         b64decoded = base64.b64decode(ciphered_payload)
         deciphered_payload = Cryptor.decrypt(data=b64decoded,
@@ -331,7 +350,6 @@ class TaskManager:
         await self.proceed_signal(dict_data=dict_data, project_id=project_id)
 
     async def proceed_signal(self, dict_data: dict, project_id: str):
-        from setezor.managers.task_manager import TaskManager
         copy_of_dict = copy.deepcopy(dict_data)
         signal = copy_of_dict.pop("signal", None)
         match signal:
@@ -380,6 +398,7 @@ class TaskManager:
         project_id = task.project_id
         scan_id = task.scan_id
         restructor = get_restructor_for_task(task.created_by)
+        data["agent_id"] = task.agent_id
         entities = await restructor.restruct(**data)
         await self.__data_structure_service.make_magic(project_id=project_id,
                                                        scan_id=scan_id,

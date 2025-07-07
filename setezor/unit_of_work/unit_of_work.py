@@ -50,6 +50,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from setezor.logger import logger
 from setezor.repositories.agent_in_project_repository import AgentInProjectRepository
 from setezor.repositories.agent_parent_agent_repository import AgentParentAgentRepository
+from setezor.repositories.screenshot_repository import ScreenshotRepository
 from setezor.repositories.setting_repository import SettingRepository
 from setezor.repositories.software_type_repository import SoftwareTypeRepository
 from setezor.repositories.software_version_repository import SoftwareVersionRepository
@@ -226,6 +227,9 @@ class UnitOfWork:
 
     @property
     def network_speed_test(self) -> NetworkSpeedTestRepository: return NetworkSpeedTestRepository(self.__session)
+    
+    @property
+    def screenshot(self) -> ScreenshotRepository: return ScreenshotRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():

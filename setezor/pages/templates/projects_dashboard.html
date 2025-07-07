@@ -6,16 +6,12 @@ Dashboard
 
 {% endblock %}
 {% block content %}
-<script src="/static/js/plotly-2.29.1.min.js.js"></script>
-<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
-<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
-<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
-<script src="/static/js/donut.js" type="text/javascript"></script>
-<!-- <link href="https://cdn.jsdelivr.net/gh/Alaev-Co/snowflakes/dist/snow.min.css" rel="stylesheet"> -->
-<!-- <script src="https://cdn.jsdelivr.net/gh/Alaev-Co/snowflakes/dist/Snow.min.js"></script> -->
-<!-- <script>
-    new Snow();
-</script> -->
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
+<link href="/static/css/src/dashboard.css" rel="stylesheet">
+<script src="/static/js/libs/plotly-2.29.1.min.js.js"></script>
+<script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/src/donut.js"></script>
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 </script>
@@ -218,116 +214,6 @@ Dashboard
     <div id="pivot_table" style="margin-top: 1.5rem; margin-bottom: 1rem;">
     </div>
 
-
-
-    <style>
-        .table_container {
-
-            border-collapse: separate;
-            border-spacing: 0;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        th {
-            background-color: #ffffff;
-            font-weight: bold;
-            font-size: 16px;
-            top: 0;
-        }
-
-        tr:nth-child(even) {
-            background-color: #ffffff;
-        }
-
-        tr:nth-child(odd) {
-            background-color: #ffffff;
-        }
-
-        tr:hover {
-            background-color: #ffffff;
-            transition: background-color 0.3s;
-        }
-
-        .tabulator {
-            border: 0px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding-right: 0px;
-            padding-left: 0px;
-            margin-left: 2rem;
-            width: calc(100% - 2rem);
-        }
-
-        .tabulator .tabulator-header {
-            background-color: #007bff;
-            font-weight: bold;
-        }
-
-        .tabulator .tabulator-row {
-            background-color: white;
-        }
-
-        .tabulator .tabulator-row:nth-child(odd) {
-            background-color: #f8f9fa;
-        }
-
-        .tabulator .tabulator-row:hover {
-            background-color: #e9ecef;
-        }
-
-        .tabulator .tabulator-cell {
-            padding: 12px;
-            text-align: center;
-            vertical-align: middle;
-            border-right: 1px solid #dee2e6;
-        }
-
-        /* Фиксируем размер модального окна */
-        #dontShowModal .modal-dialog {
-            max-width: 800px;
-            /* Фиксированная ширина */
-            width: 100%;
-        }
-
-        /* Фиксируем высоту модального окна */
-        #dontShowModal .modal-content {
-            height: 600px;
-            /* Фиксированная высота */
-        }
-
-        /* Обеспечиваем одинаковый размер изображений */
-        #dontShowModal .carousel-item img {
-            width: 100%;
-            height: 300px;
-            /* Фиксированная высота для всех изображений */
-            object-fit: contain;
-            /* Изображение не растягивается, сохраняет пропорции */
-            margin: 0 auto;
-            /* Центрирование изображения */
-        }
-
-        /* Убираем прыгание карусели */
-        #dontShowModal .carousel {
-            height: 100%;
-        }
-
-        #dontShowModal .carousel-inner {
-            height: 100%;
-        }
-
-        #dontShowModal .carousel-item {
-            height: 100%;
-        }
-
-        /* Центрируем текст и изображения */
-        #dontShowModal .carousel-item div {
-            text-align: center;
-        }
-    </style>
-
     <script>
 
         var headerMenu = function () {
@@ -367,21 +253,25 @@ Dashboard
             layout: "fitColumns",
             ajaxURL: "{{tab.base_url}}",
 
-            ajaxURLGenerator: function (url, config, params) {
-                //url - the url from the ajaxURL property or setData function
-                //config - the request config object from the ajaxConfig property
-                //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
-                //return request url
-                return url + "?params=" + encodeURI(JSON.stringify(params)); //encode parameters as a json object
-            },
-            selectable: false,
-            sortMode: "local",
-            filterMode: "local",
-            pagination: true,
-            paginationMode: "local",
-            paginationSize: 10,
-            paginationInitialPage: 1,
-            paginationSizeSelector: [5, 10, 25, 50, 100],
+        ajaxURLGenerator: function (url, config, params) {
+                        //url - the url from the ajaxURL property or setData function
+                        //config - the request config object from the ajaxConfig property
+                        //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+
+                        //return request url
+                        const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                        const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                        return url + "?page=" + params.page + "&size=" + params.size + "&sort=" + sort + "&filter=" + filter; //encode parameters as a json object
+                    },
+                    selectable: false,
+                    sortMode: "remote",
+                    filterMode: "remote",
+                    pagination: true,
+                    paginationMode: "remote",
+                    paginationSize: 10,
+                    paginationInitialPage: 1,
+                    paginationSizeSelector: [5, 10, 25, 50, 100],
+                    validationMode: 'highlight',
             columns: [
                 {% for col in tab.columns %}
         {{ '{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu},

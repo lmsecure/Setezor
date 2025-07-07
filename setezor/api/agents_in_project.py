@@ -6,6 +6,7 @@ from setezor.network_structures import InterfaceStruct
 from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.schemas.agent import AgentAddToProject, AgentColorChange, InterfaceOfAgent
 from setezor.schemas.roles import Roles
+from setezor.schemas.agent_in_project import AssignNodeAsInterfacePayload
 
 
 router = APIRouter(
@@ -93,3 +94,13 @@ async def update_color(
 ) -> str:
     new_color = await agent_in_project_service.update_agent_color(project_id=project_id, agent_id=agent_id, color=new_color.color)
     return new_color
+
+@router.patch("/assign_node_as_interface")
+async def assign_node_as_interface(
+    payload: AssignNodeAsInterfacePayload,
+    agent_in_project_service: Annotated[AgentInProjectService, Depends(AgentInProjectService.new_instance)],
+    user_id: str = Depends(get_user_id),
+    project_id: str = Depends(get_current_project)
+) -> None:
+    await agent_in_project_service.assign_node_as_interface(user_id=user_id, project_id=project_id, **payload.model_dump())
+    return

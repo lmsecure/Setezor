@@ -104,9 +104,14 @@ class ProjectManager:
             is_connected=True
         ), user_id=owner_id)
 
-        new_obj = await self.__object_service.create(Object(agent_id=new_synth_agent.id,
-                                                            project_id=new_project.id))
+        # new_obj = await self.__object_service.create(Object(agent_id=new_synth_agent.id,
+        #                                                     project_id=new_project.id))
 
+        synth_agent_id = generate_unique_id()
+        new_obj = await self.__object_service.create(Object(id=generate_unique_id(),
+                                                            agent_id=synth_agent_id,
+                                                            project_id=new_project.id))
+        
         synth_agent_in_project = await self.__agent_in_project_service.create(AgentInProject(
             object_id=new_obj.id,
             name="Synthetic",
@@ -129,10 +134,14 @@ class ProjectManager:
                                                           mask=24,
                                                           project_id=new_project.id,
                                                           asn_id=new_asn.id))
+        
+        new_obj_for_mac = await self.__object_service.create(Object(id=generate_unique_id(),
+                                                            agent_id=synth_agent_in_project.id,
+                                                            project_id=new_project.id))
 
         new_mac = await self.__mac_service.create(MAC(mac="",
                                                       name="Default",
-                                                      object_id=synth_agent_in_project.object_id,
+                                                      object_id=new_obj_for_mac.id,
                                                       project_id=new_project.id))
 
         new_ip = await self.__ip_service.create(IP(ip="127.0.0.1",

@@ -10,6 +10,10 @@ class TaskStatus:
     finished = "FINISHED"
     failed = "FAILED"
     created = "CREATED"
+    pre_canceled = "PRE_CANCELED"
+    soft_stopped = "SOFTSTOPPED"
+    canceled = "CANCELED"
+    registered = "REGISTERED"
 
 
 class TaskSchema(BaseModel):

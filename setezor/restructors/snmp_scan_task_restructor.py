@@ -11,7 +11,7 @@ from setezor.tools.ip_tools import get_network
 
 class SnmpTaskRestructor:
     @classmethod
-    async def restruct(cls, raw_result, target_ip: str, target_port: str):
+    async def restruct(cls, raw_result, target_ip: str, target_port: str, **kwargs):
         result = []
         if raw_result:
             start_ip, broadcast = get_network(ip=target_ip, mask=24)

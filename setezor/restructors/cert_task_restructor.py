@@ -11,7 +11,7 @@ from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructo
 
 class CertTaskRestructor:
     @classmethod
-    async def restruct(cls, raw_result, data: dict):
+    async def restruct(cls, raw_result, data: dict, **kwargs):
         cert_data = CertInfo.parse_cert(cert=raw_result)
         result = []
         data_for_cert_model: dict = {

@@ -3,7 +3,7 @@
 Scopes
 {% endblock title %}
 {% block scripts %}
-
+<link href="/static/css/src/scopes_page.css" rel="stylesheet">
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
@@ -62,18 +62,7 @@ Scopes
 <div id="idModalForWritingDataBaseTargets"> </div>
 <div id="deleteScopeModalContainer"></div>
 <div id="deleteTargetModalContainer"></div>
-<style>
-    .is-invalid {
-    border-color: #dc3545 !important;
-}
 
-.invalid-feedback {
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: 0.875em;
-    color: #dc3545;
-}
-</style>
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}');
 
@@ -81,6 +70,15 @@ Scopes
     let currentLimit = 10;
     let totalPages = 1;
     let currentScopeId = null;
+
+
+    let targetsWithErrors = new Set();
+    let fileTargetsCurrentPage = 1;
+    let fileTargetsPageSize = 10;
+    let fileTargetsTotalPages = 1;
+    let fileTargetsData = [];
+    let selectedTargets = new Set();
+    let fileTargetsIdCounter = 0;
 
     async function getScopes() {
         await axios.get("/api/v1/scope").then(response => {
@@ -896,55 +894,529 @@ Scopes
     }
 
     async function addTargetsOnFile(id) {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = false;
-    input.accept = '.csv';
-    input.onchange = async (e) => {
-        for (var file of e.target.files) {
-            var reader = new FileReader();
-            reader.onload = (function (file) {
-                return async function (e) {
-                    let content = e.target.result;
-                    content = content.split("base64,")[1];
-                    let decodedString = atob(content);
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = false;
+        input.accept = '.csv';
+        input.onchange = async (e) => {
+            for (var file of e.target.files) {
+                var reader = new FileReader();
+                reader.onload = (function (file) {
+                    return async function (e) {
+                        let content = e.target.result;
+                        content = content.split("base64,")[1];
+                        let decodedString = atob(content);
 
-                    let fileData = [];
-                    for (let line of decodedString.split("\n")) {
-                        if (line != "") {
-                            let splitted_line = line.split(",");
-                            fileData.push(splitted_line);
+                        fileTargetsData = [];
+                        selectedTargets.clear();
+                        fileTargetsIdCounter = 0;
+                        
+                        for (let line of decodedString.split("\n")) {
+                            if (line.trim() !== "") {
+                                let splitted_line = line.split(",");
+                                if (splitted_line.length >= 4) {
+                                    const targetId = generateUniqueId();
+                                    fileTargetsData.push({
+                                        id: targetId,
+                                        protocol: splitted_line[0]?.trim() || '',
+                                        ip: splitted_line[1]?.trim() || '',
+                                        domain: splitted_line[2]?.trim() || '',
+                                        port: splitted_line[3]?.trim() || '',
+                                        isEditing: false,
+                                        originalLine: line
+                                    });
+                                }
+                            }
                         }
-                    }
 
-                    await enterTargets(id);
-
-                    for (let data of fileData) {
-                        addNewTargetLine(); 
-
-                        let container = document.getElementById('ScopeTargetsContainer');
-                        let lastLine = container.lastElementChild;
-                        let protocolInput = lastLine.querySelector('[id^=input_target_protocol]');
-                        let ipInput = lastLine.querySelector('[id^=input_target_ip]');
-                        let domainInput = lastLine.querySelector('[id^=input_target_domain]');
-                        let portInput = lastLine.querySelector('[id^=input_target_port]');
-
-                        protocolInput.value = data[0] || '';
-                        ipInput.value = data[1] || '';
-                        domainInput.value = data[2] || '';
-                        portInput.value = data[3] || '';
-                    }
-                };
-            })(file);
-            reader.onerror = (function (file){
-                    return function (e){
+                        fileTargetsCurrentPage = 1;
+                        fileTargetsTotalPages = Math.ceil(fileTargetsData.length / fileTargetsPageSize);
+                        displayFileTargetsPage(id);
+                    };
+                })(file);
+                reader.onerror = (function (file) {
+                    return function (e) {
                         create_toast('Error', `Not enough permissions. Check file owner`, 'error')
                     }
                 })(file)
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    }
+
+
+    function updateSelectedTargetsAfterEdit(oldId, newId) {
+        if (selectedTargets.has(oldId)) {
+            selectedTargets.delete(oldId);
+            selectedTargets.add(newId);
         }
-    };
-    input.click();
-}
+    }
+    function generateUniqueId() {
+        return 'file-target-' + (++fileTargetsIdCounter) + '-' + Date.now();
+    }
+
+    let fileTargetsModal = null;
+
+    function displayFileTargetsPage(id) {
+        let modal_elem = document.getElementById("idModalForWritingTargets");
+        
+        modal_elem.innerHTML = '';
+        
+        let startIdx = (fileTargetsCurrentPage - 1) * fileTargetsPageSize;
+        let endIdx = startIdx + fileTargetsPageSize;
+        let pageData = fileTargetsData.slice(startIdx, endIdx);
+
+        modal_elem.innerHTML = `
+        <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${i18next.t('Targets from file')} (${fileTargetsData.length} ${i18next.t('targets')}, ${selectedTargets.size} ${i18next.t('selected')})</h5>
+                    </div>
+                    <div class="modal-body">
+                        
+                        ${targetsWithErrors.size > 0 ? `
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            ${i18next.t('some targets have validation errors and are highlighted in red')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="d-flex justify-content-between mb-3">
+                            <div class="page-size-selector">
+                                <label for="filePageSize">${i18next.t('Show rows')}:</label>
+                                <select id="filePageSize" onchange="changeFilePageSize(this.value, '${id}')" class="form-select form-select-sm">
+                                    <option value="10" ${fileTargetsPageSize === 10 ? 'selected' : ''}>10</option>
+                                    <option value="25" ${fileTargetsPageSize === 25 ? 'selected' : ''}>25</option>
+                                    <option value="50" ${fileTargetsPageSize === 50 ? 'selected' : ''}>50</option>
+                                    <option value="100" ${fileTargetsPageSize === 100 ? 'selected' : ''}>100</option>
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" id="selectAllCurrentPage" 
+                                        onchange="toggleSelectAllCurrentPage(this.checked, '${id}')"
+                                        ${pageData.every(t => selectedTargets.has(t.id)) ? 'checked' : ''}>
+                                    <label class="form-check-label" for="selectAllCurrentPage">
+                                        ${i18next.t('Select current page targets')}
+                                    </label>
+                                </div>
+                                <div class="pagination-info">
+                                    ${i18next.t('Showing')} ${startIdx + 1}-${Math.min(endIdx, fileTargetsData.length)} 
+                                    ${i18next.t('of')} ${fileTargetsData.length} ${i18next.t('targets')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><!-- Checkbox column --></th>
+                                        <th>${i18next.t('Protocol')}</th>
+                                        <th>${i18next.t('IP')}</th>
+                                        <th>${i18next.t('Domain')}</th>
+                                        <th>${i18next.t('Port')}</th>
+                                        <th>${i18next.t('Actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fileTargetsTableBody">
+                                    ${pageData.map(target => {
+                                        const hasError = targetsWithErrors.has(target.id);
+                                        return `
+                                        <tr id="${target.id}" ${hasError ? 'class="table-error-row"' : ''}>
+                                            <td>
+                                                <input type="checkbox" class="target-checkbox" 
+                                                    onchange="toggleTargetSelection('${target.id}', this.checked, '${id}')"
+                                                    ${selectedTargets.has(target.id) ? 'checked' : ''}>
+                                                ${hasError ? '<i class="fas fa-exclamation-triangle error-icon error-tooltip"></i>' : ''}
+                                            </td>
+                                            ${target.isEditing ? `
+                                                <td><input type="text" class="form-control form-control-sm ${hasError ? 'is-invalid' : ''}" value="${target.protocol}" data-field="protocol"></td>
+                                                <td><input type="text" class="form-control form-control-sm ${hasError ? 'is-invalid' : ''}" value="${target.ip}" data-field="ip"></td>
+                                                <td><input type="text" class="form-control form-control-sm ${hasError ? 'is-invalid' : ''}" value="${target.domain}" data-field="domain"></td>
+                                                <td><input type="text" class="form-control form-control-sm ${hasError ? 'is-invalid' : ''}" value="${target.port}" data-field="port"></td>
+                                                <td>
+                                                    <button class="btn btn-success btn-sm" onclick="saveFileTargetEdit('${target.id}', '${id}')">${i18next.t('Save')}</button>
+                                                    <button class="btn btn-secondary btn-sm" onclick="cancelFileTargetEdit('${target.id}', '${id}')">${i18next.t('Cancel')}</button>
+                                                </td>
+                                            ` : `
+                                                <td>${target.protocol}</td>
+                                                <td>${target.ip}</td>
+                                                <td>${target.domain}</td>
+                                                <td>${target.port}</td>
+                                                <td>
+                                                    <button class="btn btn-primary btn-sm" onclick="editFileTarget('${target.id}', '${id}')">${i18next.t('Edit')}</button>
+                                                    <button class="btn btn-danger btn-sm" onclick="removeFileTarget('${target.id}', '${id}')">${i18next.t('Remove')}</button>
+                                                </td>
+                                            `}
+                                        </tr>
+                                    `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        ${createFilePaginationHTML()}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" onclick="addSelectedFileTargets('${id}')" ${selectedTargets.size === 0 ? 'disabled' : ''}>
+                            ${i18next.t('Add selected targets')} (${selectedTargets.size})
+                        </button>
+                        <button class="btn btn-primary" onclick="addCurrentPageTargets('${id}')">
+                            ${i18next.t('Add current page targets')} (${pageData.length})
+                        </button>
+                        <button class="btn btn-info" onclick="addAllFileTargets('${id}')">
+                            ${i18next.t('Add all targets')} (${fileTargetsData.length})
+                        </button>
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Cancel')}</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        if (fileTargetsModal) {
+            fileTargetsModal.hide();
+        }
+        
+        fileTargetsModal = new bootstrap.Modal(modal_elem.children[0]);
+        fileTargetsModal.show();
+    }
+
+    function clearTargetError(targetId, id) {
+        targetsWithErrors.delete(targetId);
+        displayFileTargetsPage(id);
+    }
+
+    function clearAllErrors(id) {
+        targetsWithErrors.clear();
+        displayFileTargetsPage(id);
+    }
+
+
+    async function addAllFileTargets(id) {
+        try {
+            await processFileTargets(id, fileTargetsData);
+            selectedTargets.clear();
+        } catch (error) {
+            console.error('Error in addSelectedFileTargets:', error);
+        }
+    }
+
+    function toggleTargetSelection(targetId, isChecked, scopeId) {
+        if (isChecked) {
+            selectedTargets.add(targetId);
+        } else {
+            selectedTargets.delete(targetId);
+        }
+        const modalTitle = document.querySelector('#idModalForChoosingMethodAddingTargets2 .modal-title');
+        if (modalTitle) {
+            modalTitle.textContent = `${i18next.t('Targets from file')} (${fileTargetsData.length} ${i18next.t('targets')}, ${selectedTargets.size} ${i18next.t('selected')})`;
+        }
+        const addSelectedBtn = document.querySelector('#idModalForChoosingMethodAddingTargets2 .btn-success');
+        if (addSelectedBtn) {
+            addSelectedBtn.disabled = selectedTargets.size === 0;
+            addSelectedBtn.textContent = `${i18next.t('Add selected targets')} (${selectedTargets.size})`;
+        }
+        updateSelectAllCurrentPageCheckbox(scopeId);
+    }
+
+    async function addSelectedFileTargets(id) {
+        const selectedData = fileTargetsData.filter(target => selectedTargets.has(target.id));
+        try {
+            await processFileTargets(id, selectedData);
+            selectedTargets.clear();
+        } catch (error) {
+            console.error('Error in addSelectedFileTargets:', error);
+        }
+    }
+
+
+    function toggleSelectAllCurrentPage(isChecked, scopeId) {
+        const startIdx = (fileTargetsCurrentPage - 1) * fileTargetsPageSize;
+        const endIdx = startIdx + fileTargetsPageSize;
+        const pageData = fileTargetsData.slice(startIdx, endIdx);
+
+        pageData.forEach(target => {
+            if (isChecked) {
+                selectedTargets.add(target.id);
+            } else {
+                selectedTargets.delete(target.id);
+            }
+        });
+
+        displayFileTargetsPage(scopeId);
+    }
+
+    function updateSelectAllCurrentPageCheckbox(scopeId) {
+        const startIdx = (fileTargetsCurrentPage - 1) * fileTargetsPageSize;
+        const endIdx = startIdx + fileTargetsPageSize;
+        const pageData = fileTargetsData.slice(startIdx, endIdx);
+        const allSelected = pageData.length > 0 && pageData.every(t => selectedTargets.has(t.id));
+        
+        const selectAllCheckbox = document.getElementById('selectAllCurrentPage');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = allSelected;
+        }
+    }
+
+
+    function editFileTarget(targetId, scopeId) {
+        const targetIndex = fileTargetsData.findIndex(t => t.id === targetId);
+        if (targetIndex !== -1) {
+            const newId = generateUniqueId();
+            const editedTarget = {
+                ...fileTargetsData[targetIndex],
+                id: newId,
+                isEditing: true,
+                originalData: { ...fileTargetsData[targetIndex] }
+            };
+            
+            fileTargetsData[targetIndex] = editedTarget;
+            
+            updateSelectedTargetsAfterEdit(targetId, newId);
+            
+            displayFileTargetsPage(scopeId);
+        }
+    }
+
+    function cancelFileTargetEdit(targetId, scopeId) {
+        const targetIndex = fileTargetsData.findIndex(t => t.id === targetId);
+        if (targetIndex !== -1 && fileTargetsData[targetIndex].originalData) {
+            fileTargetsData[targetIndex] = {
+                ...fileTargetsData[targetIndex].originalData,
+                isEditing: false
+            };
+            
+            displayFileTargetsPage(scopeId);
+        }
+    }
+
+    function saveFileTargetEdit(targetId, scopeId) {
+        const targetIndex = fileTargetsData.findIndex(t => t.id === targetId);
+        if (targetIndex !== -1) {
+            const row = document.getElementById(targetId);
+            const inputs = row.querySelectorAll('input[data-field]');
+            
+            const newId = generateUniqueId();
+            const updatedTarget = {
+                ...fileTargetsData[targetIndex],
+                id: newId,
+                isEditing: false
+            };
+            
+            inputs.forEach(input => {
+                const field = input.getAttribute('data-field');
+                updatedTarget[field] = input.value.trim();
+            });
+            
+            fileTargetsData[targetIndex] = updatedTarget;
+            
+            updateSelectedTargetsAfterEdit(targetId, newId);
+            
+            displayFileTargetsPage(scopeId);
+        }
+    }
+
+    function removeFileTarget(targetId, scopeId) {
+        selectedTargets.delete(targetId);
+        
+        fileTargetsData = fileTargetsData.filter(t => t.id !== targetId);
+        fileTargetsTotalPages = Math.ceil(fileTargetsData.length / fileTargetsPageSize);
+        
+        if (fileTargetsCurrentPage > fileTargetsTotalPages && fileTargetsTotalPages > 0) {
+            fileTargetsCurrentPage = fileTargetsTotalPages;
+        }
+        
+        displayFileTargetsPage(scopeId);
+    }
+
+    function createFilePaginationHTML() {
+        if (fileTargetsTotalPages <= 1) return '';
+        
+        let paginationHTML = `
+            <nav aria-label="File targets pagination" class="mt-3">
+                <ul class="pagination justify-content-center flex-wrap">`;
+        
+        paginationHTML += `
+            <li class="page-item ${fileTargetsCurrentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="changeFilePage(${fileTargetsCurrentPage - 1})" ${fileTargetsCurrentPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i> ${i18next.t('Previous')}
+                </button>
+            </li>`;
+        
+        const startPage = Math.max(1, fileTargetsCurrentPage - 2);
+        const endPage = Math.min(fileTargetsTotalPages, fileTargetsCurrentPage + 2);
+        
+        if (startPage > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <button class="page-link" onclick="changeFilePage(1)">1</button>
+                </li>`;
+            if (startPage > 2) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <li class="page-item ${i === fileTargetsCurrentPage ? 'active' : ''}">
+                    <button class="page-link" onclick="changeFilePage(${i})">${i}</button>
+                </li>`;
+        }
+        
+        if (endPage < fileTargetsTotalPages) {
+            if (endPage < fileTargetsTotalPages - 1) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationHTML += `
+                <li class="page-item">
+                    <button class="page-link" onclick="changeFilePage(${fileTargetsTotalPages})">${fileTargetsTotalPages}</button>
+                </li>`;
+        }
+        
+        paginationHTML += `
+            <li class="page-item ${fileTargetsCurrentPage === fileTargetsTotalPages ? 'disabled' : ''}">
+                <button class="page-link" onclick="changeFilePage(${fileTargetsCurrentPage + 1})" ${fileTargetsCurrentPage === fileTargetsTotalPages ? 'disabled' : ''}>
+                    ${i18next.t('Next')} <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>`;
+        
+        paginationHTML += `
+                </ul>
+            </nav>`;
+        
+        return paginationHTML;
+    }
+
+    function changeFilePage(page) {
+        if (page >= 1 && page <= fileTargetsTotalPages && page !== fileTargetsCurrentPage) {
+            fileTargetsCurrentPage = page;
+            displayFileTargetsPage(currentScopeId);
+        }
+    }
+
+    function changeFilePageSize(size, id) {
+        fileTargetsPageSize = parseInt(size);
+        fileTargetsTotalPages = Math.ceil(fileTargetsData.length / fileTargetsPageSize);
+        fileTargetsCurrentPage = 1;
+        displayFileTargetsPage(id);
+    }
+
+    async function addCurrentPageTargets(id) {
+        const startIdx = (fileTargetsCurrentPage - 1) * fileTargetsPageSize;
+        const endIdx = startIdx + fileTargetsPageSize;
+        const pageData = fileTargetsData.slice(startIdx, endIdx);
+        await processFileTargets(id, pageData);
+    }
+
+
+    async function processFileTargets(id, targets) {
+        try {
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+            
+            let hasErrors = false;
+            const formattedTargets = [];
+            const currentErrorTargets = new Set();
+            
+            for (const target of targets) {
+            const protocol = target.protocol ? target.protocol.trim() : '';
+            const ip = target.ip ? target.ip.trim() : '';
+            const domain = target.domain ? target.domain.trim() : '';
+            const port = target.port ? target.port.toString().trim() : '';
+            
+            let targetHasError = false;
+            
+            if (!protocol && !ip && !domain && !port) {
+                continue;
+            }
+            
+            if (protocol && !/^[a-zA-Z]+$/.test(protocol)) {
+                hasErrors = true;
+                targetHasError = true;
+            }
+            
+            if (ip && !isValidIP(ip)) {
+                hasErrors = true;
+                targetHasError = true;
+            }
+            
+            if (domain && !isValidDomain(domain)) {
+                hasErrors = true;
+                targetHasError = true;
+            }
+            
+            if (port) {
+                const portNum = Number(port);
+                if (isNaN(portNum)) {
+                console.error(`Port must be a number: ${port}`);
+                hasErrors = true;
+                targetHasError = true;
+                } else if (portNum < 1 || portNum > 65535) {
+                console.error(`Port must be between 1 and 65535: ${port}`);
+                hasErrors = true;
+                targetHasError = true;
+                }
+            }
+            
+            if (targetHasError) {
+                currentErrorTargets.add(target.id);
+            } else {
+                formattedTargets.push({
+                protocol: protocol || null,
+                ip: ip || null,
+                domain: domain || null,
+                port: port ? Number(port) : null
+                });
+            }
+            }
+            
+            if (hasErrors) {
+            targetsWithErrors = new Set([...targetsWithErrors, ...currentErrorTargets]);
+            
+            displayFileTargetsPage(id);
+            
+            create_toast("Error", "Some targets have invalid format and were skipped", "error");
+            throw new Error("Invalid target format");
+            }
+            
+            if (formattedTargets.length === 0) {
+            create_toast("Error", "No valid targets to add", "error");
+            throw new Error("No valid targets");
+            }
+            
+            const response = await axios.post(
+            `/api/v1/scope/${id}/targets`,
+            {targets: formattedTargets},
+            {headers: {'Content-Type': 'application/json'}}
+            );
+            
+            if (response.status >= 200 && response.status < 300) {
+            targetsWithErrors.clear();
+            
+            document.querySelector('#idModalForWritingTargets .btn-secondary').click();
+            getScopeTargets(id);
+            create_toast("Success", `${formattedTargets.length} targets added successfully`, "success");
+            }
+            
+        } catch (error) {
+            console.error('Error adding targets:', error);
+            if (error.response?.status === 422) {
+            const errors = error.response.data.detail;
+            if (Array.isArray(errors)) {
+                errors.forEach(err => {
+                console.error(`Validation error: ${err.loc[1]} - ${err.msg}`);
+                });
+            }
+            create_toast("Error", "Please check the correctness of the entered data", "error");
+            } else {
+            create_toast("Error", error.response?.data?.detail || "An error occurred", "error");
+            }
+            throw error;
+        }
+    }
+
 </script>
 {% endblock content %}

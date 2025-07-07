@@ -1,7 +1,8 @@
+import datetime
 from random import randint
 from typing import List
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from setezor.services.base_service import BaseService
 from setezor.tools.websocket_manager import WS_MANAGER
 from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS_A, Domain
@@ -94,6 +95,9 @@ class AgentInProjectService(BaseService):
                         break
         return result
 
+    async def get_server_agent(self):
+        async with self._uow:
+            return await self._uow.agent.find_one(name="Server", secret_key="")
 
     async def get_agents_in_project(self, project_id: str) -> list:
         async with self._uow:
@@ -103,21 +107,27 @@ class AgentInProjectService(BaseService):
 
         result = []
         uniq_agents = set()
+        server_agent = await self.get_server_agent()
         for agent, agent_in_project, parent_agent, user in agents_for_table:
             if agent.id in uniq_agents:
                 continue
             uniq_agents.add(agent.id)
+            online = False
+            if agent.id == server_agent.id:
+                online = True
+            if agent.last_time_seen:
+                online = (datetime.datetime.now() - agent.last_time_seen) < datetime.timedelta(minutes=30)
             result.append({
                     "id": agent_in_project.id,
                     "name": agent.name,
                     "description": agent.description,
+                    "is_server": server_agent.id == agent.id,
                     "color": agent_in_project.color,
                     "rest_url": agent.rest_url,
                     "parent_agent_id": parent_agent.id if parent_agent else None,
                     "parent_agent_name": ', '.join([item.get("parent_agent_name") for item in parents.get(agent.id, [])]),
-                    "secret_key": agent.secret_key,
                     "user_name": user.login if user else '',
-                    "object_id": agent_in_project.object_id
+                    "online": online
             })
         return result
 
@@ -189,7 +199,7 @@ class AgentInProjectService(BaseService):
     async def get_interfaces(self, project_id: str, id: str):
         async with self._uow:
             agent = await self._uow.agent_in_project.find_one(id=id, project_id=project_id)
-            macs = await self._uow.mac.get_interfaces(object_id=agent.object_id)
+            macs = await self._uow.mac.get_interfaces(agent_id=agent.id)
             return macs
 
 
@@ -197,7 +207,7 @@ class AgentInProjectService(BaseService):
         async with self._uow:
             agent_in_project = await self._uow.agent_in_project.find_one(id=id, project_id=project_id)
             agent = await self._uow.agent.find_one(id=agent_in_project.agent_id)
-            macs = await self._uow.mac.get_interfaces(object_id=agent_in_project.object_id)
+            macs = await self._uow.mac.get_interfaces(agent_id=agent_in_project.id)
             hashMap = set()
             for mac in macs:
                 hashMap.add((mac.mac, mac.ip))
@@ -216,10 +226,13 @@ class AgentInProjectService(BaseService):
                                       asn_id=new_asn.id)
                 self._uow.network.add(new_network.model_dump())
 
+                new_object = Object(id=generate_unique_id(), agent_id=agent_in_project.id, project_id=project_id)
+                self._uow.object.add(new_object.model_dump())
+
                 new_mac = MAC(id=generate_unique_id(),
                               mac=interface.mac,
                               name=interface.name,
-                              object_id=agent_in_project.object_id,
+                              object_id=new_object.id,
                               project_id=project_id)
                 self._uow.mac.add(new_mac.model_dump())
 
@@ -253,3 +266,47 @@ class AgentInProjectService(BaseService):
             agent = await self._uow.agent_in_project.edit_one(id=agent_id, data={"color": color})
             await self._uow.commit()
             return color
+
+
+    async def assign_node_as_interface(self, user_id: str, project_id: str, agent_id: str, agent_name: str, agent_description: str, ip_id: str, interface_name: str):
+        async with self._uow:
+            ip_obj = await self._uow.ip.find_one(id=ip_id)
+        if not ip_obj:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect node id")
+        async with self._uow:
+            mac_obj = await self._uow.mac.find_one(id=ip_obj.mac_id)
+            node_obj = await self._uow.object.find_one(id=mac_obj.object_id)
+        if node_obj.agent_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Node is already an interface")
+
+        if agent_id:
+            async with self._uow:
+                agent_in_project = await self._uow.agent_in_project.find_one(id=agent_id)
+            if not agent_in_project:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect agent id")
+        else:
+            new_agent = Agent(id=generate_unique_id(),
+                            user_id=user_id,
+                            rest_url="",
+                            secret_key="",
+                            is_connected=False,
+                            name=agent_name,
+                            description=agent_description)
+            agent_in_project = AgentInProject(id=generate_unique_id(),
+                                                project_id=project_id,
+                                                color="#" + hex(randint(0, 16777215))[2:].zfill(6),
+                                                object_id=generate_unique_id(),
+                                                agent_id=new_agent.id)
+            new_object = Object(id=agent_in_project.object_id,
+                                project_id=project_id,
+                                object_type_id="3d9cf6c43fd54aacb88878f5425f43c4")
+            async with self._uow:
+                self._uow.agent.add(new_agent.model_dump())
+                self._uow.agent_in_project.add(agent_in_project.model_dump())
+                self._uow.object.add(new_object.model_dump())
+                await self._uow.commit()
+
+        async with self._uow:
+            await self._uow.mac.edit_one(id=mac_obj.id, data={"name": interface_name})
+            await self._uow.object.edit_one(id=node_obj.id, data={"agent_id": agent_in_project.id})
+            await self._uow.commit()

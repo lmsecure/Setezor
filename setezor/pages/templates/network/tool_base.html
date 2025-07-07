@@ -3,21 +3,20 @@
 Tools
 {% endblock title %}
 {% block scripts %}
-<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
-<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
-<script src="/static/js/vis-network.min.js"></script>
-<script src="/static/js/canvas2svg.js"></script>
-<script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
-
-
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
+<script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/libs/vis-network.min.js"></script>
+<script src="/static/js//libs/canvas2svg.js"></script>
+<script src="/static/js/libs/jquery.inputmask.js"></script>
 <script type="module">
-    import Tags from "/static/js/tags.js";
+    import Tags from "/static/js/libs/tags.js";
     Tags.init('select')
 </script>
 <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 </script>
 {% endblock scripts %}
+
 {% block content %}
 <div class="container-fluid d-flex justify-content-between h-100 bd-highlight mb-3">
     <div class="p-2 w-100">

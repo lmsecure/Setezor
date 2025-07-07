@@ -6,7 +6,7 @@ from setezor.models import Task
 from setezor.schemas.task import DNSTaskPayload, \
     MasscanScanTaskPayload, \
     NmapParseTaskPayload, \
-    ScapySniffTaskPayload, \
+    ScapySniffTaskPayload, TaskStatus, \
     WHOISTaskPayload, \
     DomainTaskPayload, \
     NmapScanTaskPayload, \
@@ -43,7 +43,7 @@ router = APIRouter(
 @router.get("")
 async def list_tasks(
     tasks_service: Annotated[TasksService, Depends(TasksService.new_instance)],
-    status: Literal["STARTED", "IN QUEUE", "FINISHED", "FAILED", "CREATED"],
+    status: Literal["STARTED", "REGISTERED", "IN QUEUE", "FINISHED", "FAILED", "CREATED", "CANCELED"],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> List[Task]:
@@ -60,15 +60,14 @@ async def soft_stop_task(
 ) -> bool:
     return await task_manager.soft_stop_task(id=id, project_id=project_id)
 
-
-@router.post("/{id}/deleteTask")
-async def delete_task(
+@router.post("/{id}/cancel")
+async def soft_stop_task(
     task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
-    id : str,
+    id: str,
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> bool:
-    return await task_manager.delete_task(id=id, project_id=project_id)
+    return await task_manager.cancel_task(id=id, project_id=project_id)
 
 
 @router.post("/dns_task", status_code=201)

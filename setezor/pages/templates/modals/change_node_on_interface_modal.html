@@ -1,0 +1,120 @@
+{% macro change_node_on_interface_modal() %}
+
+<div class="modal fade" id="id_changeNodeOnInterface_modal" tabindex="-1" aria-labelledby="id_changeNodeOnInterface" aria-hidden="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header flex-column align-items-start">
+                <div class="w-100 d-flex justify-content-between align-items-center">
+                    <h4 class="modal-title" id="id_changeNodeOnInterface" data-i18n="Assign node as interface"></h4>
+                    <button type="button" id="id_button_changeNodeOnInterface_modalClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="w-100 mt-2" id="id_select_variant"></div>
+            </div>
+            <div class="modal-body">
+                <form id="id_formChangeNodeOnInterface" name="AssignNodeAsInterface" onsubmit="change_node_on_interface(event)">
+                    <input type="hidden" id="id_ip_id" name="ip_id">
+                    <div id="modal_assign_node_as_interface_body"></div>
+                    <h5 data-i18n="New interface parameters"></h5>
+                    <div class="row mb-2">
+                        <div class="mb-2 d-flex justify-content-between align-items-center">
+                            <label for="id_interface_name" class="form-label" data-i18n="Name"></label>
+                            <div class="d-flex flex-row">
+                                <input class="form-control w-100" id="id_interface_name" name="interface_name" style="appearance: textfield;" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mb-2">
+                        <button type="submit" class="btn btn-primary" style="margin-right: 0.8rem;" id="id_button_changeNodeOnInterface" data-i18n="assign node as interface"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function change_variant(variant) {
+        let modal_assign_node_as_interface_body = document.getElementById("modal_assign_node_as_interface_body");
+        let context = ``;
+        if (variant == "0") {
+            context = `
+                    <div style="min-height: 10rem;">
+                        <h5> ${i18next.t('New agent parameters')} </h5>
+                        <div class="row mb-2">
+                            <div class="mb-2 d-flex justify-content-between align-items-center">
+                                <label for="id_agent_name" class="form-label"> ${i18next.t('Name')} </label>
+                                <div class="d-flex flex-row">
+                                    <input class="form-control w-100" id="id_agent_name" name="agent_name" style="appearance: textfield;" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="mb-2 d-flex justify-content-between align-items-center">
+                                <label for="id_agent_description" class="form-label"> ${i18next.t('Description')} </label>
+                                <div class="d-flex flex-row">
+                                    <input class="form-control w-100" id="id_agent_description" name="agent_description" style="appearance: textfield;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            `;
+        } else if (variant == "1") {
+        let agent_list = await axios.get("/api/v1/agents_in_project/settings").then(resp => { return resp.data })
+            context = `
+                    <div style="min-height: 10rem;">
+                        <h5> ${i18next.t('Select agent')} </h5>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="id_select_agent"> ${i18next.t('Agent')} </label>
+                            </div>
+                            <div class="col-6">
+                                <select class="form-select w-100" name="agent_id" id="id_select_agent">
+                                    ${agent_list.map((agent, index) => index === 0 ? '': `<option value="${agent.id}">${agent.name}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+            `;
+        }
+        modal_assign_node_as_interface_body.innerHTML = context;
+    }
+
+
+    async function create_change_node_on_interface_modal(ip_id) {
+        document.getElementById("id_ip_id").value = ip_id;
+        let MyModal = new bootstrap.Modal(document.getElementById("id_changeNodeOnInterface_modal"));
+
+        let select_variant = document.getElementById("id_select_variant");
+        let context_for_select_variant = `
+                    <div class="row">
+                        <div class="col-6">
+                            <select class="form-select w-100" name="variant" id="id_selector_select_variant" onchange="change_variant(this.value)">
+                                <option value="0"> ${i18next.t('create agent')} </option>
+                                <option value="1"> ${i18next.t('select agent')} </option>
+                            </select>
+                        </div>
+                    </div>
+        `;
+        select_variant.innerHTML = context_for_select_variant;
+        change_variant(0);
+
+        MyModal.show();
+    }
+
+    async function change_node_on_interface(event) {
+        event.preventDefault();
+        let formData = new FormData(event.target);
+        let params = Object.fromEntries(formData);
+        try {
+            await axios.patch('/api/v1/agents_in_project/assign_node_as_interface', JSON.stringify(params), {headers: { 'Content-Type': 'application/json' }});
+        }
+        catch (error) {
+            create_toast("Error", error.response.data.detail, "error");
+        }
+        event.target.reset();
+        document.getElementById("id_button_changeNodeOnInterface_modalClose").click();
+    }
+
+</script>
+
+{% endmacro %}

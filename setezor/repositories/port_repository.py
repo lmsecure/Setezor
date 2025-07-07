@@ -85,10 +85,10 @@ class PortRepository(SQLAlchemyRepository[Port]):
                 Port.port,
                 Domain.domain,
                 func.count(L4SoftwareVulnerability.id).label('cnt')).select_from(Port)\
-            .join(IP, IP.id == Port.ip_id)\
-            .join(L4Software, L4Software.l4_id == Port.id)\
-            .join(DNS_A, DNS_A.id == L4Software.dns_a_id)\
-            .join(Domain, Domain.id == DNS_A.target_domain_id)\
+            .join(IP, IP.id == Port.ip_id, isouter=True)\
+            .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
+            .join(DNS_A, DNS_A.id == L4Software.dns_a_id, isouter=True)\
+            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
             .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id, isouter=True)\
             .filter(Port.project_id == project_id, Port.scan_id == scan_id)\
             .group_by(Port.id, IP.ip, Port.port, Domain.domain)

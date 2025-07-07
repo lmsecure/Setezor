@@ -13,8 +13,9 @@
 {% import 'network/whois.html' as whois%}
 {{ whois.whois_script_modal_to_node() }}
 {% import 'network/domains.html' as domains%}
-{{domains.domains_script_modal_to_node()}}  
-        
+{{domains.domains_script_modal_to_node()}}
+{% import 'modals/change_node_on_interface_modal.html' as change_node_on_interface_modal %}
+{{change_node_on_interface_modal.change_node_on_interface_modal()}}
 
 
 <div class="d-flex flex-row">
@@ -173,6 +174,10 @@
                 </li>
             </ul>
         </li>
+        <li class="dropdown dropend">
+            <button class="dropdown-item" onclick="create_change_node_on_interface_modal(networkData.nodes.get(network.getSelectedNodes()[0]).id)" data-i18n="Assign interface">
+            </button>
+        </li>
         <!-- <li class="dropdown dropend">
             <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Node managment</a>
@@ -325,6 +330,7 @@
         </div>
     </div>
 </div>
+
 <script>
 
     // disable default context menu
@@ -1365,14 +1371,38 @@
                         <td></td>
                     </tr>`
         }
-        if (json.domain) {
+        html_text += `<tr">
+                            <td>${i18next.t('domain')}</td>
+                            <td>
+                                <form id="domainForm" onsubmit="event.preventDefault(); addDomain(params, nodeForComment);">
+                                    <input type="text" class="form-control" id="domainInput" placeholder="${i18next.t('Enter domain')}" required>
+                                </form>
+                            </td>
+                            <td>
+                            <button form="domainForm" class="btn btn-sm btn-success w-100" type="submit">
+                                    ${i18next.t('Add')}
+                            </button>
+                            </td>
+                        </tr>`
+        json.domain.forEach((domain, index) => {
+            if (domain.deleted_at == null) {
+
             html_text += `
-                    <tr>
-                        <td> ${i18next.t('domain')} </td>
-                        <td> ${json.domain} </td>
-                        <td>  </td>
-                    </tr>`
-        }
+                <tr data-domain-id="${domain.id}">
+                    <td></td>
+                   <td>${domain.domain}</td>
+                    <td style="white-space: nowrap;">
+                    <button class="btn btn-sm btn-primary me-1" type="button" 
+                                onclick="edit_domain('${domain.id}', nodeForComment)">
+                                ${i18next.t('Edit')}
+                            </button>
+                        <button class="btn btn-sm btn-danger" type="button" 
+                            onclick="delete_domain('${domain.id}', nodeForComment)">
+                            ${i18next.t('Delete')}
+                        </button>
+                    </td>
+                </tr>`;
+            }});
         if (json.mac) {
             html_text += `
                     <tr>
@@ -2013,6 +2043,47 @@ async function confirmCommentEdit(commentId) {
         })
     }
 
+    function addDomain(ip_id, node) {
+        let domainInput = document.getElementById('domainInput');
+        let domain = domainInput.value.trim();
+
+        let id = ip_id.ip_id;
+        
+        axios.post(`/api/v1/domain/${id}/add_domain`, {
+            domain: domain,
+        })
+        .then(response => {
+            create_toast('Success', 'Domain was added', 'success');
+            createNodeInformation(node);
+            domainInput.value = '';
+        })
+        .catch(error => {
+            const errorMsg = error.response?.data?.error || 'Failed to add domain';
+            create_toast('Error', errorMsg, 'error');
+        });
+    }
+    function delete_domain(id, node) {
+        axios.delete(`/api/v1/domain/${id}/delete_domain`)
+        .then(response => {
+            create_toast('Success', 'Domain was deleted', 'success');
+            createNodeInformation(node);
+        })
+        .catch(error => {
+            const errorMsg = error.response?.data?.error || 'Failed to delete domain';
+            create_toast('Error', errorMsg, 'error');
+        });
+    }
+    function delete_domain(id, node) {
+        axios.delete(`/api/v1/domain/${id}/delete_domain`)
+        .then(response => {
+            create_toast('Success', 'Domain was deleted', 'success');
+            createNodeInformation(node);
+        })
+        .catch(error => {
+            const errorMsg = error.response?.data?.error || 'Failed to delete domain';
+            create_toast('Error', errorMsg, 'error');
+        });
+    }
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -2083,6 +2154,69 @@ async function confirmCommentEdit(commentId) {
         })
     }
 
+
+    function edit_domain(domainId, nodeForComment) {
+    const domainRow = document.querySelector(`button[onclick="edit_domain('${domainId}', nodeForComment)"]`).closest('tr');
+    const domainCell = domainRow.querySelector('td:nth-child(2)');
+    const buttonsCell = domainRow.querySelector('td:last-child');
+    
+    const originalDomain = domainCell.textContent;
+    domainCell.setAttribute('data-original', originalDomain);
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control';
+    input.value = originalDomain;
+    domainCell.innerHTML = '';
+    domainCell.appendChild(input);
+    
+    const originalButtons = buttonsCell.innerHTML;
+    buttonsCell.setAttribute('data-original', originalButtons);
+    
+    buttonsCell.innerHTML = '';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-sm btn-secondary me-1';
+    cancelBtn.textContent = i18next.t('Cancel');
+    cancelBtn.onclick = () => cancelDomainEdit(domainId);
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn-sm btn-success';
+    confirmBtn.textContent = i18next.t('Save');
+    confirmBtn.onclick = () => confirmDomainEdit(domainId, nodeForComment);
+    
+    buttonsCell.appendChild(cancelBtn);
+    buttonsCell.appendChild(confirmBtn);
+    
+    input.focus();
+}
+
+function cancelDomainEdit(domainId) {
+    const domainRow = document.querySelector(`tr[data-domain-id="${domainId}"]`);
+    const domainCell = domainRow.querySelector('td:nth-child(2)');
+    const buttonsCell = domainRow.querySelector('td:last-child');
+    
+    const originalDomain = domainCell.getAttribute('data-original');
+    domainCell.innerHTML = originalDomain;
+    
+    const originalButtons = buttonsCell.getAttribute('data-original');
+    buttonsCell.innerHTML = originalButtons;
+}
+
+async function confirmDomainEdit(domainId, node) {
+    const domainRow = document.querySelector(`tr[data-domain-id="${domainId}"]`);
+    const domainCell = domainRow.querySelector('td:nth-child(2)');
+    const input = domainCell.querySelector('input');
+    const newDomain = input.value.trim();
+    
+    if (!newDomain) {
+        create_toast('Error', 'Please enter a domain', 'error')
+        input.focus();
+        return;
+    }
+    await axios.patch(`/api/v1/domain/${domainId}`, {domain: newDomain});
+    createNodeInformation(node);
+}
 </script>
 
 {% endmacro %}

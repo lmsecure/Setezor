@@ -9,7 +9,7 @@ from setezor.models import IP, Domain, DNS_A as DNS_A_Model, \
 
 class DNS_Scan_Task_Restructor:
     @classmethod
-    async def restruct(cls, raw_result, domain_name: str):
+    async def restruct(cls, raw_result, domain_name: str, **kwargs):
         objects = []
         domain = Domain(domain=domain_name)
         objects.append(domain)

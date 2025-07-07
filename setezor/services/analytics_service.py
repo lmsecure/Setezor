@@ -418,8 +418,6 @@ class AnalyticsService(BaseService):
                        {'field': 'type', 'title': 'TYPE'},
                        {'field': 'version', 'title': 'VERSION'},
                        {'field': 'build', 'title': 'BUILD'},
-                       {'field': 'patch', 'title': 'PATCH'},
-                       {'field': 'platform', 'title': 'PLATFORM'},
                        {'field': 'cpe23', 'title': 'CPE23'},
                        {'field': 'vulnerability_name', 'title': 'VULN_NAME'},
                        {'field': 'cve', 'title': 'CVE'},

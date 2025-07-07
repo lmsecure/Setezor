@@ -1,4 +1,4 @@
-from setezor.models import RouteList, Agent, IP, MAC, AgentInProject, AgentParentAgent
+from setezor.models import RouteList, Agent, IP, MAC, AgentInProject, AgentParentAgent, Object
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, or_, select
 from sqlalchemy.orm import aliased
@@ -22,8 +22,11 @@ class RouteListRepository(SQLAlchemyRepository[RouteList]):
 
     async def vis_edge_agent_to_interface(self, project_id: str):
         query = select(AgentInProject.id, IP.id)\
-        .join(MAC, IP.mac_id == MAC.id)\
-        .join(AgentInProject, AgentInProject.object_id == MAC.object_id).filter(IP.project_id==project_id)
+        .select_from(Object)\
+        .join(MAC, MAC.object_id == Object.id)\
+        .join(AgentInProject, Object.agent_id == AgentInProject.id)\
+        .join(IP, IP.mac_id == MAC.id)\
+        .filter(IP.project_id==project_id)
         return await self._session.exec(query)
 
     async def vis_edge_node_to_node(self, project_id: str, scans: list[str]):

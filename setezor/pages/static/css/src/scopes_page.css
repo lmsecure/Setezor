@@ -1,0 +1,40 @@
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.table-error-row {
+    background-color: #f8d7da !important;
+    border-color: #dc3545 !important;
+}
+.table-error-row td {
+    border-color: #dc3545 !important;
+}
+.error-icon {
+    color: #dc3545;
+    margin-left: 5px;
+}
+.error-tooltip {
+    position: relative;
+    cursor: help;
+}
+.error-tooltip:hover::after {
+    content: "This row contains validation errors";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #dc3545;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+}

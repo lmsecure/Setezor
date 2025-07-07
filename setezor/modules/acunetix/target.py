@@ -33,26 +33,26 @@ class Target:
             if not raw_targets:
                 break
             targets.extend(raw_targets)
-        for target in targets:
-            config = await send_request(base_url=credentials["url"],
-                                        token=credentials["token"],
-                                        url=f"{
-                                            cls.url}/{target['target_id']}/configuration",
-                                        method="GET")
-            if config["custom_cookies"]:
-                target["cookies"] = "\n".join(
-                    [f"{obj["url"]} | {obj["cookie"]}" for obj in config["custom_cookies"]])
-            else:
-                target["cookies"] = ""
-            target["headers"] = "\n".join(config["custom_headers"])
-            if config["proxy"]["enabled"]:
-                target["proxy"] = f"address: {config["proxy"]["address"]}:{
-                    config["proxy"]["port"]}\n"
-                if config["proxy"].get("username"):
-                    target["proxy"] += f"username: {
-                        config["proxy"]["username"]}"
-            else:
-                target["proxy"] = ""
+        # for target in targets:
+        #     config = await send_request(base_url=credentials["url"],
+        #                                 token=credentials["token"],
+        #                                 url=f"{
+        #                                     cls.url}/{target['target_id']}/configuration",
+        #                                 method="GET")
+        #     if config["custom_cookies"]:
+        #         target["cookies"] = "\n".join(
+        #             [f"{obj["url"]} | {obj["cookie"]}" for obj in config["custom_cookies"]])
+        #     else:
+        #         target["cookies"] = ""
+        #     target["headers"] = "\n".join(config["custom_headers"])
+        #     if config["proxy"]["enabled"]:
+        #         target["proxy"] = f"address: {config["proxy"]["address"]}:{
+        #             config["proxy"]["port"]}\n"
+        #         if config["proxy"].get("username"):
+        #             target["proxy"] += f"username: {
+        #                 config["proxy"]["username"]}"
+        #     else:
+        #         target["proxy"] = ""
         return targets
 
     @classmethod

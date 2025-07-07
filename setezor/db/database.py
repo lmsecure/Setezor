@@ -15,8 +15,12 @@ from setezor.tools.password import PasswordTool
 from setezor.logger import logger
 from setezor.schemas.roles import Roles
 from setezor.schemas.settings import Setting, SettingType
+from sqlalchemy.pool import NullPool
 
 engine = create_async_engine(DB_URI)
+if os.environ.get("PYTEST_VERSION") is not None and os.environ.get("ENGINE", "sqlite") != "sqlite":
+    engine = create_async_engine(DB_URI, poolclass=NullPool)
+    
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
 
 async def init_db():

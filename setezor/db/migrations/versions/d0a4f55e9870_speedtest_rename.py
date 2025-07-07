@@ -103,6 +103,7 @@ def upgrade():
     comment='Таблица предназначена для хранения замеренной пропускной способности между машинами (агентами)'
     )
     op.create_index(op.f('ix_network_speed_test_port'), 'network_speed_test', ['port'], unique=False)
+    op.create_index(op.f('ix_network_speed_test_protocol'), 'network_speed_test', ['protocol'], unique=False)
 
 
 

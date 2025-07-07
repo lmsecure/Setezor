@@ -4,11 +4,11 @@ Information
 {% endblock title %}
 {% block scripts %}
 
-<link href="/static/css/tabulator.min.css" rel="stylesheet" type="text/css" />
-<link href="/static/css/tabulator_bootstrap4.min.css" rel="stylesheet">
-<script src="/static/js/tabulator.min.js" type="text/javascript"></script>
-<script src="/static/js/luxon.min.js" type="text/javascript"></script>
-<script src="/static/js/jquery.inputmask.js" type="text/javascript"></script>
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/libs/luxon.min.js"></script>
+<script src="/static/js/libs/jquery.inputmask.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -113,51 +113,40 @@ Information
 
                 <div id="{{tab.name}}-table" ></div>
 
-                <style>
-                    .tabulator {
-                        border-radius: 8px;
-                        overflow: hidden;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    }
-                    
-                    
-                    .tabulator .tabulator-row {
-                        background-color: white;
-                    }
-                    
-                    .tabulator .tabulator-row:nth-child(odd) {
-                        background-color: #f8f9fa;
-                    }
-                    
-                    .tabulator .tabulator-row:hover {
-                        background-color: #e9ecef;
-                    }
-                    
-                    .tabulator .tabulator-cell {
-                        padding: 12px;
-                        text-align: center;
-                        vertical-align: middle;
-                        border-right: 1px solid #dee2e6;
-                    }
-                </style>
                 <script>
-                    function {{tab.name}}get_selected_rows()
-                    {
+                    function {{tab.name}}get_selected_rows() {
                         let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
-                        let t_rows = {{tab.name}}_table.getData()
-                        console.log(t_rows)
+                        let t_rows = {{tab.name}}_table.getData();
                         let selected_id = [];
-                        for (const [k, v] of {{tab.name}}_selected_row)
-                        {
+                        
+                        for (const [k, v] of {{tab.name}}_selected_row) {
                             if (v)
                                 selected_id.push(Number(k.split('-')[2]));
                         }
-                        let result = [];
-                        for (let i = 0; i < t_rows.length; i++)
-                        {
-                            if (selected_id.includes(t_rows[i].id))
-                                result.push(t_rows[i]);
+                        
+                        let grouped = {};
+                        for (let i = 0; i < t_rows.length; i++) {
+                            if (selected_id.includes(t_rows[i].id)) {
+                                let ip = t_rows[i].ipaddr;
+                                if (!grouped[ip]) {
+                                    grouped[ip] = {...t_rows[i]};
+                                    grouped[ip].port = [t_rows[i].port.toString()];
+                                } else {
+                                    grouped[ip].port.push(t_rows[i].port.toString());
+                                }
+                            }
                         }
+                        
+                        let result = [];
+                        for (let ip in grouped) {
+                            if (grouped.hasOwnProperty(ip)) {
+                                let item = {...grouped[ip]};
+                                item.port = item.port.join(',');
+                                result.push(item);
+                            }
+                        }
+                        
+                        console.log(result);
                         return result;
                     }
                     function {{tab.name}}open_modal_tools()
@@ -248,8 +237,10 @@ Information
                         return menu;
                     };
                     var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                        {% if  tab.name =='soft_vuln_link' or tab.name == 'auth_credentials' or tab.name == 'software' %}
+                        {% if tab.name == 'auth_credentials' or tab.name == 'software' %}
                             layout: "fitDataStretch",
+                        {% elif  tab.name =='soft_vuln_link'%}
+                            layout: "fitDataTable",
                         {% else %}
                             layout: "fitColumns",
                         {% endif %}

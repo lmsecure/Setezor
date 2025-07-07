@@ -222,7 +222,12 @@ class NmapParser:
                     vendor = service.get('vendor', "")
                     product = service.get('product', "")
                     version = service.get('version', "")
-                    if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+                    if version:
+                        version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version)
+                        if version:
+                            version = version.group(0)
+                        else:
+                            version = ""
 
                     if cpe:
                         if isinstance(service.get('cpe'), list):
@@ -319,11 +324,17 @@ class NmapParser:
         software_types = {}
         softwares_versions = {}
         empty_vendor = Vendor(name='')
+        macs = {}
         vendors[''] = empty_vendor
         result.append(empty_vendor)
         for i in range(len(data.addresses)):
-            mac_obj = MAC(mac=data.addresses[i].get('mac', ''), vendor=empty_vendor)
-            result.append(mac_obj)
+            mac = data.addresses[i].get('mac', '')
+            if mac in macs:
+                mac_obj = macs[mac]
+            else:
+                mac_obj = MAC(mac=mac, vendor=empty_vendor)
+                macs[mac] = mac_obj
+                result.append(mac_obj)
             start_ip, broadcast = get_network(ip=data.addresses[0].get('ip'), mask=24)
             network_obj = Network(start_ip=start_ip, mask=24)
             result.append(network_obj)

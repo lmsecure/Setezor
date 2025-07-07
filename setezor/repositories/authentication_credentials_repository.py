@@ -55,7 +55,9 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                
+                if (field == 'port' or field == 'permissions'):
+                    value = int(value)
+
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
                     

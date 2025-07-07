@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 from Crypto.Random import get_random_bytes
 from setezor.services.base_service import BaseService
@@ -39,6 +40,11 @@ class AgentService(BaseService):
             result = []
             for agent in res:
                 if not agent.id in already_in_list:
+                    online = False
+                    if agent.id == server_agent.id:
+                        online = True
+                    if agent.last_time_seen:
+                        online = (datetime.datetime.now() - agent.last_time_seen) < datetime.timedelta(minutes=30)
                     result.append({
                         "id": agent.id,
                         "name": agent.name,
@@ -46,7 +52,8 @@ class AgentService(BaseService):
                         "rest_url": agent.rest_url,
                         "is_connected": agent.is_connected,
                         "flag": agent.flag,
-                        "secret_key": agent.secret_key
+                        "secret_key": agent.secret_key,
+                        "online": online
                     })
                 already_in_list.add(agent.id)
             return result
@@ -121,4 +128,10 @@ class AgentService(BaseService):
     async def set_connected(self, id: str):
         async with self._uow:
             await self._uow.agent.edit_one(id=id, data={"is_connected": True})
+            await self._uow.commit()
+
+
+    async def set_last_time_seen(self, id: str):
+        async with self._uow:
+            await self._uow.agent.edit_one(id=id, data={"last_time_seen": datetime.datetime.now()})
             await self._uow.commit()

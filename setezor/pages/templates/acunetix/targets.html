@@ -108,39 +108,39 @@
             targets_table.dataLoader.reloadData();
         }
     }
-    var targets_table = new Tabulator('#targets_table', {
-        layout: "fitDataTable",
-        ajaxURL: "{{targets_tab.base_url}}",
-        selectable: false,
-        sortMode: "remote",
-        filterMode: "remote",
-        pagination: true,
-        paginationMode: "local",
-        paginationSize: 5,
-        paginationInitialPage: 1,
-        paginationSizeSelector: [5, 10, 25, 50, 100],
-        columns: [
-            {% for col in targets_tab.columns %}
-        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
-        {% if col.headerSort == False %}
-    headerSort: false,
-        {% endif %}
-    {% if col.field in ("proxy", "cookies", "headers") %}
-    headerSort: false,
-        formatter :target_{{ col.field }}_formatter,
-            {% endif %}
-            {% if col.width %}
-            width:{{col.width}},
-            {% endif %}
-    headerMenu: headerMenu},
-    {% endfor %}
-    { title: "Actions", formatter: target_buttons_formatter, headerSort: false }
-        ]
-}
-)
-targets_table.on("dataLoadError",function (error){
-        document.getElementById("acunetix_targets_pill").style.display = 'none';
-    })
+//     var targets_table = new Tabulator('#targets_table', {
+//         layout: "fitDataTable",
+//         ajaxURL: "{{targets_tab.base_url}}",
+//         selectable: false,
+//         sortMode: "remote",
+//         filterMode: "remote",
+//         pagination: true,
+//         paginationMode: "local",
+//         paginationSize: 5,
+//         paginationInitialPage: 1,
+//         paginationSizeSelector: [5, 10, 25, 50, 100],
+//         columns: [
+//             {% for col in targets_tab.columns %}
+//         {{ '{'}}title: "{{col.title}}", field: "{{col.field}}",
+//         {% if col.headerSort == False %}
+//     headerSort: false,
+//         {% endif %}
+//     {% if col.field in ("proxy", "cookies", "headers") %}
+//     headerSort: false,
+//         formatter :target_{{ col.field }}_formatter,
+//             {% endif %}
+//             {% if col.width %}
+//             width:{{col.width}},
+//             {% endif %}
+//     headerMenu: headerMenu},
+//     {% endfor %}
+//     { title: "Actions", formatter: target_buttons_formatter, headerSort: false }
+//         ]
+// }
+// )
+// targets_table.on("dataLoadError",function (error){
+//         document.getElementById("acunetix_targets_pill").style.display = 'none';
+//     })
 
 </script>
 {% endmacro %}

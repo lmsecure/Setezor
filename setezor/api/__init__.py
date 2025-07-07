@@ -17,6 +17,7 @@ from setezor.api.user import router as router_user
 from setezor.api.user_project import router as router_user_project
 from setezor.api.target import router as router_target
 from setezor.api.role import router as router_role
+from setezor.api.domain import router as router_domain
 from setezor.api.settings import router as settings_router
 
 
@@ -40,5 +41,6 @@ api_routers = [
     router_user_project,
     router_target,
     router_role,
+    router_domain,
     settings_router
 ]

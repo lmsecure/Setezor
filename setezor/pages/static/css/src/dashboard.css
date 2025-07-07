@@ -1,0 +1,81 @@
+.table_container {
+
+    border-collapse: separate;
+    border-spacing: 0;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+th {
+    background-color: #ffffff;
+    font-weight: bold;
+    font-size: 16px;
+    top: 0;
+}
+
+tr:nth-child(even) {
+    background-color: #ffffff;
+}
+
+tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+tr:hover {
+    background-color: #ffffff;
+    transition: background-color 0.3s;
+}
+
+.tabulator {
+    border: 0px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding-right: 0px;
+    padding-left: 0px;
+    margin-left: 2rem;
+    width: calc(100% - 2rem);
+}
+
+/* Фиксируем размер модального окна */
+#dontShowModal .modal-dialog {
+    max-width: 800px;
+    /* Фиксированная ширина */
+    width: 100%;
+}
+
+/* Фиксируем высоту модального окна */
+#dontShowModal .modal-content {
+    height: 600px;
+    /* Фиксированная высота */
+}
+
+/* Обеспечиваем одинаковый размер изображений */
+#dontShowModal .carousel-item img {
+    width: 100%;
+    height: 300px;
+    /* Фиксированная высота для всех изображений */
+    object-fit: contain;
+    /* Изображение не растягивается, сохраняет пропорции */
+    margin: 0 auto;
+    /* Центрирование изображения */
+}
+
+/* Убираем прыгание карусели */
+#dontShowModal .carousel {
+    height: 100%;
+}
+
+#dontShowModal .carousel-inner {
+    height: 100%;
+}
+
+#dontShowModal .carousel-item {
+    height: 100%;
+}
+
+/* Центрируем текст и изображения */
+#dontShowModal .carousel-item div {
+    text-align: center;
+}

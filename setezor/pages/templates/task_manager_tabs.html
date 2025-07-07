@@ -12,17 +12,26 @@
     let activeTab = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll('#tasks_created_pill, #tasks_started_pill, #tasks_finished_pill, #tasks_failed_pill').forEach(tab => {
+        document.querySelectorAll('#tasks_created_pill, #tasks_registered_pill, #tasks_started_pill, #tasks_finished_pill, #tasks_failed_pill, #tasks_pre_canceled_pill, #tasks_canceled_pill').forEach(tab => {
             tab.addEventListener('shown.bs.tab', async (event) => {
                 let status;
                 if (event.target.id === 'tasks_created_pill') {
                     status = 'CREATED';
-                } else if (event.target.id === 'tasks_started_pill') {
+                }
+                if (event.target.id === 'tasks_started_pill') {
                     status = 'STARTED';
-                } else if (event.target.id === 'tasks_finished_pill') {
+                }
+                if (event.target.id === 'tasks_registered_pill') {
+                    status = 'REGISTERED';
+                }
+                if (event.target.id === 'tasks_finished_pill') {
                     status = 'FINISHED';
-                } else if (event.target.id === 'tasks_failed_pill') {
+                }
+                if (event.target.id === 'tasks_failed_pill') {
                     status = 'FAILED';
+                }
+                if (event.target.id === 'tasks_canceled_pill') {
+                    status = 'CANCELED';
                 }
                 
                 if (activeTab !== status) {
@@ -42,6 +51,16 @@
     async function getTasks(status) {
         let resp = await fetch(`/api/v1/task?status=${status}`);
         let tasks = await resp.json();
+        let tasks_length = tasks.length;
+        let pillButton = document.querySelector(`#tasks_${status.toLowerCase()}_pill`);
+        let pillButtons = Array.from(document.querySelectorAll('[id^="tasks_"][id$="_pill"]'))
+                            .filter(el => /^tasks_.*_pill$/.test(el.id));
+        for (const pill of pillButtons){
+            pill.textContent = pill.textContent.split(' ')[0]
+        }
+        if (pillButton) {
+            pillButton.textContent = `${i18next.t(status)} (${tasks_length})`;
+        }
         let el = document.querySelector(`#v-pills-tasks-${status.toLowerCase()}`);
         let result = "";
 
@@ -60,6 +79,11 @@
             </svg>
             </button>` : ``}
             ${task.status == "CREATED" ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
+            </svg>
+            </button>` : ``}
+            ${task.status == "REGISTERED" ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
             </svg>
@@ -114,7 +138,7 @@
         let data = await resp.json()
     }
     async function deleteTask(id) {
-        let resp = await fetch(`/api/v1/task/${id}/deleteTask`,
+        let resp = await fetch(`/api/v1/task/${id}/cancel`,
             {
                 method: "POST",
                 headers: {

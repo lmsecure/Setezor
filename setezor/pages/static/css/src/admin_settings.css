@@ -1,0 +1,32 @@
+.tabulator {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-left: 2rem;
+    margin-right: 2rem;
+    width: calc(100% - 4rem);
+}
+
+.tabulator .tabulator-header {
+    background-color: #007bff;
+    font-weight: bold;
+}
+
+.tabulator .tabulator-row {
+    background-color: white;
+}
+
+.tabulator .tabulator-row:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.tabulator .tabulator-row:hover {
+    background-color: #e9ecef;
+}
+
+.tabulator .tabulator-cell {
+    padding: 12px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid #dee2e6;
+}

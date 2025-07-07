@@ -9,7 +9,7 @@ from setezor.tools import ip_tools
 
 class WhoisTaskRestructor:
     @classmethod
-    async def restruct(cls, raw_result, target: str):
+    async def restruct(cls, raw_result, target: str, **kwargs):
         data = dict()
         output = []
         data.update({'data': json.dumps(raw_result),

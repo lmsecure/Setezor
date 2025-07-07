@@ -7,11 +7,12 @@ class IP {
 }
 
 class Agent {
-    constructor(id, name, parent_agent_id, description, red, green, blue) {
+    constructor(id, name, parent_agent_id, description, is_server, red, green, blue) {
         this.id = id
         this.name = name
         this.parent_agent_id = parent_agent_id
         this.description = description
+        this.is_server = is_server
         this.red = red
         this.green = green
         this.blue = blue
@@ -56,6 +57,7 @@ async function getAgentData() {
                 element.name,
                 element.parent_agent_id,
                 element.description,
+                element.is_server,
                 hex_rgb.r,
                 hex_rgb.g,
                 hex_rgb.b
@@ -78,7 +80,7 @@ function fillAgentBar(barSelector) {
     const list = elem.querySelector("ul");
 
     const html = agentData.agents
-        .filter((agent) => agent.parent_agent_id != null)
+        .filter((agent) => !agent.is_server)
         .map((agent) => createAgentElement(agent.id, agent.name))
         .join("\n");
 

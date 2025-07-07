@@ -4,7 +4,7 @@ from setezor.models.domain import Domain
 
 class Sd_Scan_Task_Restructor:
     @classmethod
-    async def restruct(cls, raw_result):
+    async def restruct(cls, raw_result, **kwargs):
         result: List[Domain] = []
         for domain in raw_result:
             result.append(Domain(domain=domain))

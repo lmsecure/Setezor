@@ -1,13 +1,13 @@
 
+from typing import List
 from setezor.models import Base, IDDependent
-from sqlmodel import Field
-
+from sqlmodel import Field, Relationship
 
 class Screenshot(IDDependent, Base, table=True):
-    __tablename__ = "software_web_screenshot"
+    __tablename__ = "screenshot"
     __table_args__ = {
         "comment": "Таблица предназначена для хранения скриншотов на веб-ресурсе"
     }
-
-    path: str             = Field(sa_column_kwargs={"comment": "Путь до скриншота"})
-    resource_id: str   = Field(sa_column_kwargs={"comment": "Идентификатор ресурса"})
+    path: str  = Field(sa_column_kwargs={"comment": "Путь до скриншота"})
+    
+    l4_software_vulnerabilities: List["L4SoftwareVulnerabilityScreenshot"] = Relationship(back_populates="screenshot") # type: ignore

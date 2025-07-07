@@ -19,7 +19,6 @@ class NodeService(BaseService):
             nodes = await self._uow.ip.get_nodes(project_id=project_id, scans=scans)
             server_agent = await self._uow.agent.find_one(name="Server", secret_key="")
             server_agent_in_project = await self._uow.agent_in_project.find_one(agent_id=server_agent.id, project_id=project_id)
-
         agents_ips = {}
         for row in vis_nodes_and_interfaces:
             if not agents_ips.get(row.ip_id):
@@ -57,7 +56,7 @@ class NodeService(BaseService):
                 "group": f"{node.start_ip}/{node.mask}",
                 "value": 1,
                 "shape": "dot",
-                "label": node.ip
+                "label": node.ip,
             })
         return result
 
@@ -126,7 +125,7 @@ class NodeService(BaseService):
             ip_obj, mac_obj, network_obj = await self._uow.ip.get_node_info(project_id=project_id, ip_id=ip_id)
             domain_objs = await self._uow.domain.get_node_info(project_id=project_id, ip_id=ip_id)
             port_objs = await self._uow.port.get_node_info(project_id=project_id, ip_id=ip_id)
-        domain_list = [item.domain for item in domain_objs if item.domain]
+        # domain_list = [item.domain for item in domain_objs if item.domain]
         port_list = []
         for port, soft in port_objs:
             port_list.append({
@@ -140,7 +139,7 @@ class NodeService(BaseService):
             "ip": ip_obj.ip,
             "mac": mac_obj.mac,
             "network": f"{network_obj.start_ip}/{network_obj.mask}",
-            "domain": '; '.join(domain_list),
+            "domain": domain_objs,
             "ports": port_list
         }
         return result

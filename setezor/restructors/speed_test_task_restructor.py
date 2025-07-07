@@ -8,6 +8,6 @@ class SpeedTestClientTaskRestructor:
 
 class SpeedTestServerTaskRestructor:
     @classmethod
-    async def restruct(cls, ip_id_from: str, ip_id_to: str, speed: float, port: int, protocol: str) -> list:
+    async def restruct(cls, ip_id_from: str, ip_id_to: str, speed: float, port: int, protocol: str, **kwargs) -> list:
         result = SpeedTest.restruct_result(ip_id_from=ip_id_from, ip_id_to=ip_id_to, speed=speed, port=port, protocol=protocol)
         return result

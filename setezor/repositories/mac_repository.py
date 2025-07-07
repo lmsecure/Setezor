@@ -38,8 +38,11 @@ class MACRepository(SQLAlchemyRepository[MAC]):
         mac_count_result = result.one()
         return mac_count_result
     
-    async def get_interfaces(self, object_id: int):
-        stmt = select(MAC.id, MAC.name, MAC.mac, IP.id.label("ip_id"), IP.ip).join(IP, MAC.id == IP.mac_id).filter(MAC.object_id == object_id)
+    async def get_interfaces(self, agent_id: int):
+        stmt = select(MAC.id, MAC.name, MAC.mac, IP.id.label("ip_id"), IP.ip).select_from(Object)\
+            .join(MAC, MAC.object_id == Object.id)\
+                .join(IP, MAC.id == IP.mac_id)\
+                    .filter(Object.agent_id == agent_id)
         result = await self._session.exec(stmt)
         return result.all()
     
