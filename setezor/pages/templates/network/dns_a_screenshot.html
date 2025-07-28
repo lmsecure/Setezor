@@ -1,0 +1,223 @@
+{% macro main_dns_a_screenshot() %}
+<div class="d-flex flex-column">
+    <form id="DNSAScreenshotForm">
+        <div class="mb-3 d-flex align-items-end">
+            <div class="flex-grow-1 me-2">
+                <label for="inputURL" class="form-label" data-i18n="URL"></label>
+                <input type="url" class="form-control" id="inputURL" name="URL" placeholder="https://example.com" required>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="height: 38px;">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
+            <input class="btn btn-outline-secondary w-25" type="reset" data-i18n-value="Reset Params">
+            <button type="button" class="btn btn-outline-primary w-25" onclick="addNewDNSAScreenshotForm()" data-i18n="Add URL"></button>
+            <button type="button" class="btn btn-primary w-50" id="startDNSAScreenshotBtn" onclick="startDNSAScreenshotTasks()" data-i18n="Start"></button>
+        </div>
+    </form>
+</div>
+{% endmacro %}
+
+{% macro dns_a_screenshot_full_modal() %}
+<div id="dnsAScreenshotModalWindow" class="modal fade" tabindex="-1" aria-labelledby="dnsAScreenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dnsAScreenshotModalLabel">DNS A Screenshot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex mb-2" id="agent_interface_bar_dns_a_screenshot">
+                    <div data-agent-bar="agent_dns_a_screenshot"></div>
+                    <div id="scans_bar_dns_a_screenshot" class="ms-3"></div>
+                </div>
+                <div id="DNSAScreenshotInputContainer">
+                    {{ main_dns_a_screenshot() }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addNewDNSAScreenshotForm() {
+        const container = document.getElementById('DNSAScreenshotInputContainer');
+        const formCount = container.querySelectorAll('input[type="url"]').length;
+        const newForm = document.createElement('div');
+        newForm.id = `URLForDNSAScreenshot${formCount}`;
+        newForm.className = 'mb-3 d-flex align-items-end';
+        newForm.innerHTML = `
+            <div class="flex-grow-1 me-2">
+                <label for="inputURL${formCount}" class="form-label" data-i18n="URL"></label>
+                <input type="url" class="form-control" id="inputURL${formCount}" name="URL" placeholder="https://example.com" required>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="height: 38px;">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+        
+        const form = container.querySelector('#DNSAScreenshotForm');
+        const buttons = form.querySelector('.btn-group');
+        form.insertBefore(newForm, buttons);
+        
+        return newForm;
+    }
+
+    function startDNSAScreenshotTasks() {
+        const urls = [];
+        const inputs = document.querySelectorAll('#DNSAScreenshotInputContainer input[type="url"]');
+        const agent_id = getAgent();
+        if (!agent_id) {
+            create_toast('Error', 'Please select an agent', 'error');
+            return;
+        }
+        for (const input of inputs) {
+            if (input.value.trim()) {
+                urls.push(input.value.trim());
+            }
+        }
+        
+        if (urls.length === 0) {
+            create_toast('Error', 'Please enter at least one valid URL', 'error');
+            return;
+        }
+
+        for (const url of urls) {
+            let dnsAScreenshotParams = {
+                url: url,
+                agent_id: agent_id
+            }
+            
+            fetch('/api/v1/task/dns_a_screenshot_task', {
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dnsAScreenshotParams)
+            }).then(response => {
+                if (response.status !== 201) {
+                    response.json().then(data => {
+                        const errorMessage = data.detail?.[0]?.msg || 'Create task error';
+                        create_toast('Error', errorMessage, 'error');
+                    });
+                } else {
+                    create_toast('Success', `DNS A Screenshot task created for ${url}`, 'success');
+                }
+            }).catch(error => {
+                create_toast('Error', 'An error occurred while sending the request', 'error');
+                console.error('Error:', error);
+            });
+        }
+        
+        // Закрываем модалку
+        var myModal = bootstrap.Modal.getInstance(document.getElementById('dnsAScreenshotModalWindow'));
+        if (myModal) {
+            myModal.hide();
+        }
+    }
+
+    function dns_a_screenshot_full_modal_window() {
+        var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("dnsAScreenshotModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
+
+{% macro dns_a_screenshot_script_modal_to_node() %}
+<script>
+    function dns_a_screenshot_script_modal_to_node(domain) {
+        var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));
+        var inputURL = document.getElementById('inputURL')
+        inputURL.value = 'https://' + domain
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("dnsAScreenshotModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
+
+{% macro dns_a_screenshot_script_modal_to_info_tabs() %}
+<script>
+    async function dns_a_screenshot_script_modal_to_info_tabs(rows) {
+        var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));        
+        
+        // Очищаем контейнер и добавляем первую форму
+        const container = document.getElementById('DNSAScreenshotInputContainer');
+        container.innerHTML = '';
+        
+        if (rows.length > 0) {
+            addNewDNSAScreenshotForm();
+        }
+
+        let inputForms = document.querySelectorAll('[id^="URLForDNSAScreenshot"]');
+        
+        for (let row = 0; row < rows.length; row++) {
+            let currentForm = inputForms[row] || addNewDNSAScreenshotForm();
+            
+            let inputURL = currentForm.querySelector('input[type="url"]');
+            
+            if (inputURL && rows[row].domain) {
+                inputURL.value = 'https://' + rows[row].domain;
+            }
+            
+            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+                addNewDNSAScreenshotForm();
+                inputForms = document.querySelectorAll('[id^="URLForDNSAScreenshot"]');
+            }
+        }
+        
+        myModal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'), {
+            keyboard: false
+        });
+
+        document.querySelector(".btn-close").onclick = function () {
+            myModal.hide();
+        };
+
+        window.onclick = function (event) {
+            if (event.target === document.getElementById("dnsAScreenshotModalWindow")) {
+                myModal.hide();
+            }
+        };
+    });
+</script>
+{% endmacro %}
+
+{% macro show() %}
+{{ main_dns_a_screenshot() }}
+{% endmacro %} 

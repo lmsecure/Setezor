@@ -32,13 +32,42 @@ from setezor.tools.sender_manager import HTTPManager
 from setezor.logger import logger
 
 
+
+class TaskParams:
+    def __init__(self, kwargs: dict, job: BaseJob, tm: "TaskManager", project_id: str):
+        self.kwargs = copy.deepcopy(kwargs)
+        self.params = []
+        self.job = job
+        self.task_manager = tm
+        self.project_id = project_id
+
+        self.scope_id = self.kwargs.pop("scope_id", None)
+        self.agents_interfaces = self.kwargs.pop("agents_interfaces", None)
+
+    def __iter__(self):
+        return iter(self.params)
+
+    async def scope_proceeder(self):
+        if not self.scope_id:
+            self.params = [self.kwargs]
+            return
+        scope_targets = await self.task_manager.scope_service.get_targets(project_id=self.project_id,
+                                                                          id=self.scope_id)
+        self.params = self.job.generate_params_from_scope(targets=scope_targets, **self.kwargs)
+
+
+
 class TaskParamsPreparer:
     @classmethod
     def prepare(cls, func: Callable) -> Callable:
         async def inner(self, job: BaseJob, project_id: str,
                         scan_id: str, **kwargs):
-            params = await cls.get_params_for_task(tm=self, job=job,
-                                                   project_id=project_id, **kwargs)
+            params = TaskParams(kwargs=kwargs,
+                                job=job,
+                                tm=self,
+                                project_id=project_id)
+            await params.scope_proceeder()
+
             for param in params:
                 await func(self, job=job,
                            project_id=project_id,
@@ -46,53 +75,6 @@ class TaskParamsPreparer:
                            **param)
         return inner
 
-    @classmethod
-    async def get_params_for_task(cls, tm: "TaskManager", job: BaseJob,
-                                  project_id: str, **kwargs):
-        scope_id = kwargs.pop("scope_id", None)
-        if not scope_id:
-            return [kwargs]
-
-        scope_targets = await tm.scope_service.get_targets(project_id=project_id,
-                                                           id=scope_id)
-        return cls.generate_params(job=job,
-                                   targets=scope_targets,
-                                   **kwargs)
-
-    @classmethod
-    def generate_params(cls, job: BaseJob, targets: list[Target], **base_kwargs):
-        result_params = []
-        if job is NmapScanTask:
-            nmap_targets = dict()
-            for target in targets:
-                if not target.ip:
-                    continue
-                if not (target.ip in nmap_targets):
-                    nmap_targets[target.ip] = []
-                if target.port:
-                    nmap_targets[target.ip].append(target.port)
-            for ip, ports in nmap_targets.items():
-                if ports:  # если в скоупе указаны порты для таргета, то он их и подставит
-                    result_params.append({**base_kwargs} | {"targetIP": ip,
-                                                            "targetPorts": "-p " + ",".join(map(str, ports))})
-                    continue
-                result_params.append({**base_kwargs} | {"targetIP": ip})
-        if job is MasscanScanTask:
-            masscan_targets = dict()
-            for target in targets:
-                if not target.ip:
-                    continue
-                if not (target.ip in masscan_targets):
-                    masscan_targets[target.ip] = []
-                if target.port:
-                    masscan_targets[target.ip].append(target.port)
-            for ip, ports in masscan_targets.items():
-                if ports:  # если в скоупе указаны порты для таргета, то он их и подставит
-                    result_params.append({**base_kwargs} | {"target": ip,
-                                                            "ports": ",".join(map(str, ports))})
-                    continue
-                result_params.append({**base_kwargs} | {"target": ip})
-        return result_params
 
 
 class TaskManager:
@@ -119,6 +101,10 @@ class TaskManager:
     @property
     def scope_service(self):
         return self.__scope_service
+    
+    @property
+    def tasks_service(self):
+        return self.__tasks_service
 
     # метод сервера на создание локальной задачи
     async def create_local_job(self,
@@ -331,23 +317,45 @@ class TaskManager:
                               scan_id=task.scan_id,
                               **task_params)
 
-
     async def decipher_data_from_project_agent(self, data: BackWardData):
-        agent: Agent = await self.__agent_service.get_by_id(id=data.sender)
+        agent = await self.__agent_service.get_by_id(id=data.sender)
+
         if agent:
-            await self.__agent_service.set_last_time_seen(id=agent.id) # если при периодичном посыле
+            await self.__agent_service.set_last_time_seen(id=agent.id)
+            try:
+                dict_data = self._decipher_payload(
+                    data.data, key=agent.secret_key)
+            except ValueError:
+                return
+            await self.proceed_agent_signal(agent_id=agent.id, dict_data=dict_data)
+            return
+        
         agent_in_project = await self.__agent_in_project_service.get_agent_in_project(id=data.sender)
+        agent: Agent = await self.__agent_service.get_by_id(id=agent_in_project.agent_id)
+        
+        dict_data = self._decipher_payload(data.data, key=agent.secret_key)
+        await self.__agent_service.set_last_time_seen(id=agent.id)
+        
         if not agent_in_project:
             return
-        agent: Agent = await self.__agent_service.get_by_id(id=agent_in_project.agent_id)
-        await self.__agent_service.set_last_time_seen(id=agent.id)
-        ciphered_payload = data.data.encode()
+        
+        if agent_in_project:
+            await self.proceed_signal(dict_data=dict_data, project_id=agent_in_project.project_id)
+
+
+    def _decipher_payload(self, payload: str, key: str) -> dict:
+        ciphered_payload = payload.encode()
         b64decoded = base64.b64decode(ciphered_payload)
-        deciphered_payload = Cryptor.decrypt(data=b64decoded,
-                                             key=agent.secret_key)
-        dict_data = orjson.loads(deciphered_payload)
-        project_id = agent_in_project.project_id
-        await self.proceed_signal(dict_data=dict_data, project_id=project_id)
+        deciphered_payload = Cryptor.decrypt(data=b64decoded, key=key)
+        return orjson.loads(deciphered_payload)
+
+
+    async def proceed_agent_signal(self, agent_id: str, dict_data: dict):
+        copy_of_dict = copy.deepcopy(dict_data)
+        signal = copy_of_dict.pop("signal", None)
+        match signal:
+            case "information":
+                await self.__agent_service.set_info(id=agent_id, info=json.dumps(copy_of_dict))
 
     async def proceed_signal(self, dict_data: dict, project_id: str):
         copy_of_dict = copy.deepcopy(dict_data)
@@ -399,6 +407,8 @@ class TaskManager:
         scan_id = task.scan_id
         restructor = get_restructor_for_task(task.created_by)
         data["agent_id"] = task.agent_id
+        data["project_id"] = project_id
+        data["scan_id"] = scan_id
         entities = await restructor.restruct(**data)
         await self.__data_structure_service.make_magic(project_id=project_id,
                                                        scan_id=scan_id,

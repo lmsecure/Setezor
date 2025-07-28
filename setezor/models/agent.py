@@ -18,6 +18,7 @@ class Agent(IDDependent, TimeDependent, table=True):
     is_connected: bool           = Field(default=False, sa_column_kwargs={"comment": "Подключен ли агент"})
     flag: Optional[bool]                   = Field(default=False, sa_column_kwargs={"comment": "Флаг агента"})
     last_time_seen: Optional[datetime.datetime] = Field(default=None, nullable=True, sa_column_kwargs={"comment": "Последний раз агент выходил на связь"})
+    information: Optional[str] = Field(default="", nullable=True, sa_column_kwargs={"comment": "Запускаемые таски"})
 
     user: "User" = Relationship(back_populates="agents") # type: ignore
     projects: List["AgentInProject"] = Relationship(back_populates="agent") # type: ignore

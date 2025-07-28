@@ -229,3 +229,23 @@ async def get_products_and_service_name(
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> dict:
     return await aganytics_service.get_products_and_service_name(project_id=project_id)
+
+
+@router.get("/dns_a_screenshot")
+async def analytics_dns_a_screenshot(
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+        total, data = await analytics_service.get_dns_a_screenshot_tabulator_data_optimized(
+            project_id=project_id, 
+            page=page, 
+            size=size,
+            sort=sort,
+            filter=filter)
+        last_page = (total + size - 1) // size
+        return JSONResponse(content={"data": data, "last_page": last_page})

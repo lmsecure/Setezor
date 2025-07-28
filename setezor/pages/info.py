@@ -34,6 +34,7 @@ async def info_page(
     l4_software_columns = analytics_service.get_l4_software_columns_tabulator_data()
     ip_mac_port_columns = analytics_service.get_ip_mac_port_columns_tabulator_data()
     domain_ip_columns = analytics_service.get_domain_ip_columns_tabulator_data()
+    dns_a_screenshot_columns = analytics_service.get_dns_a_screenshot_columns_tabulator_data()
     soft_vuln_link_columns = analytics_service.get_soft_vuln_link_columns_tabulator_data()
     auth_credentials_columns = analytics_service.get_auth_credentials_tabulator_data()
     user = await users_service.get(user_id=user_id)
@@ -60,6 +61,11 @@ async def info_page(
                 'name': 'domain_ip',
                 'base_url': '/api/v1/analytics/domain_ip',
                 'columns': domain_ip_columns
+            },
+            {
+                'name': 'dns_a_screenshot',
+                'base_url': '/api/v1/analytics/dns_a_screenshot',
+                'columns': dns_a_screenshot_columns
             },
             {
                 'name': 'soft_vuln_link',

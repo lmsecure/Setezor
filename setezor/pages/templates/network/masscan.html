@@ -546,38 +546,38 @@
 {% macro masscan_scope() %}
 <div class="dropdown w-100 mt-2">
     <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
-     type="button" id="masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
+        type="button" id="masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
     </button>
     <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeMasscanData">
     </ul>
 </div>
 <script>
-let selectedScopeForMasscan = '';
-function get_masscan_scope_list(prefix) {
-    axios.get('/api/v1/scope').then(resp => {
-        const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeMasscanData');
-        const dropdownButton = document.getElementById(prefix + 'masscanScopeDropdown');
-        dropdownMenu.innerHTML = '';
+    let selectedScopeForMasscan = '';
+    function get_masscan_scope_list(prefix) {
+        axios.get('/api/v1/scope').then(resp => {
+            const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeMasscanData');
+            const dropdownButton = document.getElementById(prefix + 'masscanScopeDropdown');
+            dropdownMenu.innerHTML = '';
 
-        resp.data.forEach((item, index) => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.classList.add('dropdown-item');
-            a.href = '#';
-            a.textContent = `${item.name}`;
+            resp.data.forEach((item, index) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.classList.add('dropdown-item');
+                a.href = '#';
+                a.textContent = `${item.name}`;
 
-            a.addEventListener('click', () => {
-                dropdownButton.textContent = `${item.name}`;
-                selectedScopeForMasscan = item.id;
+                a.addEventListener('click', () => {
+                    dropdownButton.textContent = `${item.name}`;
+                    selectedScopeForMasscan = item.id;
+                });
+
+                li.appendChild(a);
+                dropdownMenu.appendChild(li);
             });
+        })
+    }
 
-            li.appendChild(a);
-            dropdownMenu.appendChild(li);
-        });
-    })
-}
-
-get_masscan_scope_list('')
+    get_masscan_scope_list('')
 </script>
 {% endmacro %}
 

@@ -9,9 +9,10 @@
                     aria-describedby="inputScreenshotURL-addon1" required name="url">
             </div>
             <div class="input-group">
-                <span class="input-group-text" id="inputScreenshotTimeout-addon1">Timeout(sec)</span>
-                <input type="number" class="form-control" id='inputScreenshotTimeout' value="5.0" min="5.0" max="60" step="0.1"
-                    aria-describedby="inputScreenshotTimeout-addon1" required name="timeout">
+                <span class="input-group-text" id="inputAgentId-addon1">Agent</span>
+                <select class="form-control" id='inputAgentId' required name="agent_id">
+                    <option value="">Select Agent</option>
+                </select>
             </div>
 
             <div class="btn-group d-flex my-2" role="group">
@@ -23,10 +24,57 @@
 </div>
 
 <script>
+    function populateAgentsDropdown() {
+        fetch('/api/v1/agents/in_project')
+            .then(response => response.json())
+            .then(agents => {
+                const agentSelect = document.getElementById('inputAgentId');
+                agentSelect.innerHTML = '<option value="">Select Agent</option>';
+                agents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent.id;
+                    option.textContent = agent.name;
+                    agentSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching agents:', error);
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', populateAgentsDropdown);
+
     async function createScreenshotTask(event){
         event.preventDefault()
         let data = new FormData(event.target)
-        await fetch('/api/task/screenshot', {method: 'POST', body: JSON.stringify(Object.fromEntries(data))})
+        const formData = Object.fromEntries(data);
+        
+        if (!formData.agent_id) {
+            alert('Please select an agent');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/task/dns_a_screenshot_task', {
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.status === 201) {
+                alert('Screenshot task created successfully!');
+                event.target.reset();
+            } else {
+                const errorData = await response.json();
+                const errorMessage = errorData.detail?.[0]?.msg || 'Failed to create screenshot task';
+                alert('Error: ' + errorMessage);
+            }
+        } catch (error) {
+            console.error('Error creating screenshot task:', error);
+            alert('An error occurred while creating the screenshot task');
+        }
     }
 </script>
 {% endmacro %}

@@ -18,7 +18,9 @@ from setezor.managers.project_manager.structure import Folders
 from setezor.restructors.nmap_scan_task_restructor import NmapScanTaskRestructor
 from setezor.restructors.masscan_scan_task_restructor import MasscanTaskRestructor
 from .speed_test_task import SpeedTestClientTask, SpeedTestServerTask
+from .dns_a_screenshot_task import DNS_A_ScreenshotTask
 from setezor.restructors.speed_test_task_restructor import SpeedTestClientTaskRestructor, SpeedTestServerTaskRestructor
+from setezor.restructors.dns_a_screenshot_restructor import DNSAScreenshotTaskRestructor
 
 FOLDERS = {
     NmapScanTask.__name__: Folders.nmap_logs_path.value,
@@ -26,6 +28,7 @@ FOLDERS = {
     ScapySniffTask.__name__: Folders.scapy_logs_path.value,
     CertTask.__name__: Folders.certificates_path.value,
     WhoisTask.__name__: Folders.whois_logs_path.value,
+    DNS_A_ScreenshotTask.__name__: Folders.screenshots_path.value,
 }
 
 RESTRUCTORS = {
@@ -38,7 +41,8 @@ RESTRUCTORS = {
     DNSTask.__name__: DNS_Scan_Task_Restructor,
     SdFindTask.__name__: Sd_Scan_Task_Restructor,
     SpeedTestClientTask.__name__: SpeedTestClientTaskRestructor,
-    SpeedTestServerTask.__name__: SpeedTestServerTaskRestructor
+    SpeedTestServerTask.__name__: SpeedTestServerTaskRestructor,
+    DNS_A_ScreenshotTask.__name__: DNSAScreenshotTaskRestructor
 }
 
 
@@ -64,4 +68,4 @@ def get_restructor_for_task(name: str):
     if model_class and issubclass(model_class, BaseJob):
         return RESTRUCTORS.get(model_class.__name__)
     else:
-        raise ValueError(f"Модель с именем {name} не найдена или не является SQLModel.")
+        return None  # Возвращаем None вместо исключения

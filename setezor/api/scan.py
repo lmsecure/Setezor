@@ -8,6 +8,8 @@ from setezor.schemas.scan import ScanCreateForm, ScanPickForm
 from setezor.services.scan_service import ScanService
 from setezor.schemas.roles import Roles
 
+
+
 router = APIRouter(
     prefix="/scan",
     tags=["Scan"],

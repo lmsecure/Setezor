@@ -14,6 +14,8 @@
 {{ whois.whois_script_modal_to_node() }}
 {% import 'network/domains.html' as domains%}
 {{domains.domains_script_modal_to_node()}}
+{% import 'network/dns_a_screenshot.html' as dns_a_screenshot%}
+{{dns_a_screenshot.dns_a_screenshot_script_modal_to_node()}}
 {% import 'modals/change_node_on_interface_modal.html' as change_node_on_interface_modal %}
 {{change_node_on_interface_modal.change_node_on_interface_modal()}}
 
@@ -158,6 +160,9 @@
                 </a></li>
                 <li><a a class="dropdown-item"  onclick="whois_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
                     Whois
+                </a></li>
+                <li><a a class="dropdown-item"  onclick="dns_a_screenshot_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
+                    DNS A Screenshot
                 </a></li>
                 <li>
                     <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();

@@ -44,6 +44,46 @@
         }
 </script>
 {% endmacro %}
+
+{% macro domains_scope() %}
+<div class="dropdown w-100 mt-2">
+    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
+        type="button" id="domainsScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
+    </button>
+    <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeDomainsData">
+    </ul>
+</div>
+<script>
+    let selectedScopeForDomains = '';
+    function get_domains_scope_list(prefix) {
+        axios.get('/api/v1/scope').then(resp => {
+            const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeDomainsData');
+            const dropdownButton = document.getElementById(prefix + 'domainsScopeDropdown');
+            dropdownMenu.innerHTML = '';
+
+            resp.data.forEach((item, index) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.classList.add('dropdown-item');
+                a.href = '#';
+                a.textContent = `${item.name}`;
+
+                a.addEventListener('click', () => {
+                    dropdownButton.textContent = `${item.name}`;
+                    selectedScopeForDomains = item.id;
+                });
+
+                li.appendChild(a);
+                dropdownMenu.appendChild(li);
+            });
+        })
+    }
+
+    get_domains_scope_list('')
+</script>
+{% endmacro %}
+
+
 {% macro domains_main() %}
 <div class="d-flex flex-column py-1">
     <div class="form-check form-switch  pe-2" id="traceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
@@ -72,36 +112,57 @@
     <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
     <button type="button" class="btn btn-primary w-50" id="startSdFind" onclick="
                     const requiredDomain = document.getElementById('DomainForm');
-
                     const params = {};
                     params['crt_sh'] = document.getElementById('crt.sh').checked;
                     params['dns_search'] = document.getElementById('dns_search').checked;
-                    const domains = [];
-                    for (const d of document.getElementById('DomainForm').getElementsByClassName('form-control')) {
-                        domains.push(d.value);
-                    }
-                    for (const domain of domains) {
-                        let domainParams = {
-                            ...params,
-                            domain: domain,
-                            agent_id: getAgent()
-                        };
-                        if (domainParams['dns_search']) {
-                        fetch('/api/v1/task/dns_task', {method: 'POST', 
-                        headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                        body: JSON.stringify(domainParams)});
+                    let simple_form = document.getElementById('domains-simple-mode');
+                    let scope_form = document.getElementById('domains-scope-mode');
+
+                    if (simple_form.classList.contains('show') && simple_form.classList.contains('active')) {
+                        const domains = [];
+                        for (const d of document.getElementById('DomainForm').getElementsByClassName('form-control')) {
+                            domains.push(d.value);
+                        }
+                        for (const domain of domains) {
+                            let domainParams = {
+                                ...params,
+                                domain: domain,
+                                agent_id: getAgent()
+                            };
+                            if (domainParams['dns_search']) {
+                                fetch('/api/v1/task/dns_task', {method: 'POST', 
+                                headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                body: JSON.stringify(domainParams)});
+                            }
+                            fetch('/api/v1/task/sd_find', {method: 'POST', 
+                            headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                            body: JSON.stringify(domainParams)});
+                        }
+                    } else if (scope_form.classList.contains('show') && scope_form.classList.contains('active')) {
+                        params['scope_id'] = selectedScopeForDomains;
+                        params['agent_id'] = getAgent();
+                        if (params['dns_search']) {
+                            fetch('/api/v1/task/dns_task', {method: 'POST', 
+                            headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                            body: JSON.stringify(params)});
                         }
                         fetch('/api/v1/task/sd_find', {method: 'POST', 
                         headers: {
                                     'Content-Type': 'application/json',
                                 },
-                        body: JSON.stringify(domainParams)});
-                    }var myModal = bootstrap.Modal.getInstance(document.getElementById('domainsModalWindow'));
-                                    if (myModal) {
-                                        myModal.hide();
-                                    }" data-i18n="Start"></button>
+                        body: JSON.stringify(params)});
+                    }
+
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('domainsModalWindow'));
+                                if (myModal) {
+                                    myModal.hide();
+                                }" data-i18n="Start"></button>
 
 </div>
 {% endmacro %}
@@ -122,14 +183,28 @@
                     <div data-interface-bar="interface_domains" class="ms-3"></div>
                     <div id="scans_bar_domains" class="ms-3"></div>
                 </div>
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa">
+
+
+                <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
+                    <div class="nav nav-tabs me-3 mb-3" id="domains-tab" role="tablist">
+                        <button class="nav-link active" id="domains-simple-tab" data-bs-toggle="tab" data-bs-target="#domains-simple-mode"
+                            type="button" role="tab" aria-controls="domains-simple-mode" aria-selected="true" data-i18n="Target"></button>
+                        <button class="nav-link" id="domains-scope-tab" data-bs-toggle="tab" data-bs-target="#domains-scope-mode"
+                            type="button" role="tab" aria-controls="domains-scope-mode" aria-selected="false" data-i18n="Scope"></button>
+                    </div>
+                    <div class="tab-pane fade show active" id="domains-simple-mode" role="tabpanel" aria-labelledby="domains-simple-tab">
                         <form id="DomainForm" name="DomainFormName" class="needs-validation" novalidate>
                             {{ domains_input() }}
-                            {{ domains_main() }}
-                        </form>
                     </div>
+                    <div class="tab-pane fade" id="domains-scope-mode" role="tabpanel" aria-labelledby="domains-scope-tab">
+                        <form id="DomainScopeForm" name="DomainScopeFormName" class="needs-validation" novalidate>
+                            {{ domains_scope() }}
+                    </div>
+                        {{ domains_main() }}
+                        </form>
                 </div>
+
+
             </div>
         </div>
     </div>
@@ -186,6 +261,7 @@
     });
 </script>
 {% endmacro %}
+
 {% macro domains_script_modal_to_info_tabs() %}
 <script>
     async function domains_script_modal_to_info_tabs(rows) {
@@ -235,9 +311,20 @@
 
 {% macro show() %}
 <div class="d-flex flex-column">
-    <div class="tab-content" id="dsa">
+    <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
+        <div class="nav nav-tabs me-3 mb-3" id="domains-tab" role="tablist">
+            <button class="nav-link active" id="domains-simple-tab" data-bs-toggle="tab" data-bs-target="#domains-simple-mode"
+                type="button" role="tab" aria-controls="domains-simple-mode" aria-selected="true" data-i18n="Target"></button>
+            <button class="nav-link" id="domains-scope-tab" data-bs-toggle="tab" data-bs-target="#domains-scope-mode"
+                type="button" role="tab" aria-controls="domains-scope-mode" aria-selected="false" data-i18n="Scope"></button>
+        </div>
         <form id="DomainForm" name="DomainFormName" class="needs-validation" novalidate>
-            {{ domains_input() }}
+            <div class="tab-pane fade show active" id="domains-simple-mode" role="tabpanel" aria-labelledby="domains-simple-tab">
+                {{ domains_input() }}
+            </div>
+            <div class="tab-pane fade" id="domains-scope-mode" role="tabpanel" aria-labelledby="domains-scope-tab">
+                {{ domains_scope() }}
+            </div>
             {{ domains_main() }}
         </form>
     </div>

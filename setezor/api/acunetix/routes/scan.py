@@ -1,5 +1,6 @@
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, Response
+from setezor.managers.task_manager import TaskManager
 from setezor.schemas.acunetix.schemes.scan import GroupScanStart, ScanWithInterval, TargetScanStart
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.services import AcunetixService
@@ -22,13 +23,14 @@ async def get_acunetix_scans(
 @router.post("")
 async def create_scan(
     acunetix_service: Annotated[AcunetixService, Depends(AcunetixService.new_instance)],
+    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
     scan_form: TargetScanStart | GroupScanStart, 
     acunetix_id: Optional[str] = None,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor]))
 ):
-    status = await acunetix_service.create_scan(project_id=project_id, acunetix_id=acunetix_id, scan_id=scan_id, form=scan_form)
+    status = await acunetix_service.create_scan(task_manager=task_manager, project_id=project_id, acunetix_id=acunetix_id, scan_id=scan_id, form=scan_form)
     return Response(status_code=201)  
 
 

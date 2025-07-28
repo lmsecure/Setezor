@@ -64,14 +64,12 @@ class WebSocketMessageForProject(WebSocketMessage):
 class TaskPayloadWithScopeID(BaseModel):
     scope_id: str | None = None
 
-class DNSTaskPayload(BaseModel):
+class DNSTaskPayload(TaskPayloadWithScopeID):
     domain: str | None = None
     agent_id: str
 
-class DomainTaskPayload(BaseModel):
-    domain: str | None = None
+class DomainTaskPayload(DNSTaskPayload):
     crt_sh: bool
-    agent_id: str
 
 class WHOISTaskPayload(BaseModel):
     target: str | None = None
@@ -154,3 +152,7 @@ class SpeedTestTaskPayload(BaseModel):
     duration: Optional[int] = 5
     packet_size: Optional[int] = 1400
     protocol: Optional[int] = 0
+
+class DNSAScreenshotTaskPayload(BaseModel):
+    agent_id: str
+    url: str

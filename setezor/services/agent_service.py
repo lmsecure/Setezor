@@ -135,3 +135,9 @@ class AgentService(BaseService):
         async with self._uow:
             await self._uow.agent.edit_one(id=id, data={"last_time_seen": datetime.datetime.now()})
             await self._uow.commit()
+
+
+    async def set_info(self, id: str, info: str):
+        async with self._uow:
+            await self._uow.agent.edit_one(id=id, data={"information": info})
+            await self._uow.commit()

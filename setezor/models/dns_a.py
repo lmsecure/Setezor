@@ -15,3 +15,4 @@ class DNS_A(IDDependent, Base, table=True):
     target_ip: Optional["IP"]           = Relationship(back_populates="dns_a_target") # type: ignore
     target_domain: Optional["Domain"]   = Relationship(back_populates="dns_a_target") # type: ignore
     softwares: List["L4Software"] = Relationship(back_populates="dns_a") # type: ignore
+    screenshots: List["DNS_A_Screenshot"] = Relationship(back_populates="dns_a") # type: ignore

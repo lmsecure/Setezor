@@ -13,6 +13,11 @@ class BaseJob(Job):
         self.name = name
         self.update_graph = update_graph
 
+    @classmethod
+    @abstractmethod
+    def generate_params_from_scope(cls, targets: list, **base_kwargs):
+        pass
+
     @abstractmethod
     async def run(self, *args, **kwargs):
         pass

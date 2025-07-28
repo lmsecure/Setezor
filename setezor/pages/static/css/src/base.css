@@ -81,6 +81,22 @@ header {
     text-decoration: none;
 }
 
+.sidebar-nav li a span {
+    white-space: normal;
+    line-height: 1.1;
+}
+
+.sidebar-nav li a span.menu-tight {
+    line-height: 1.2 !important;
+    word-break: break-word;
+    display: inline-block;
+}
+.sidebar-nav li.menu-tight-li {
+    line-height: 1.2 !important;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
 .tabulator {
     border-radius: 8px;
     overflow: hidden;

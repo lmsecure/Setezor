@@ -35,6 +35,8 @@
 	{{ whois.whois_full_modal() }}
 	{% import 'network/domains.html' as domains%}
 	{{domains.domains_full_modal()}}   
+	{% import 'network/dns_a_screenshot.html' as dns_a_screenshot%}
+	{{dns_a_screenshot.dns_a_screenshot_full_modal()}}   
 	{% import 'network/wappalyzer.html' as wappalyzer%}
 	{{wappalyzer.wappalyzer_full_script_modal()}}   
 	{% import 'network/snmp.html' as snmp%}
@@ -351,6 +353,7 @@
 								<li><a href="#" onclick="domains_full_modal_window()"><span style="color: #54B49C;">Domains</span></a></li>
 								<li><a href="#" onclick="cert_full_modal_window()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
 								<li><a href="#" onclick="whois_full_modal_window()"><span style="color: #54B49C;">WHOIS</span></a></li>
+								<li><a href="#" onclick="dns_a_screenshot_full_modal_window()"><span class="menu-tight" style="color: #54B49C;">DNS A SCREENSHOT</span></a></li>
 								<li><a href="#" onclick="wappalyzer_full_modal_window()"><span style="color: #54B49C;">WAPPALYZER</span></a></li>
 								<!-- <li><a href="#" onclick="screenshoter_full_modal_window()">SCREENSHOTER</a></li> -->
 							</ul>
@@ -602,6 +605,7 @@
 		createAgentBar("agent_wappalyzer");
 		createAgentBar("agent_cpeguess");
 		createAgentBar("agent_searchvulns");
+		createAgentBar("agent_dns_a_screenshot");
 
 
 		createInterfaceBar("interface_tools");
@@ -637,6 +641,7 @@
 			fillAgentBar("agent_wappalyzer");
 			fillAgentBar("agent_cpeguess");
 			fillAgentBar("agent_searchvulns");
+			fillAgentBar("agent_dns_a_screenshot");
 			getInterfaceData(agentData.default_agent).then((data) => {
 				interfaceData = data
 				fillInterfaceBar("interface_tools");
@@ -676,7 +681,8 @@
 						"scans_bar_wappalyzer",
 						"scans_bar_cpeguess",
 						"scans_bar_searchvulns",
-						"scans_bar_speed_test"
+						"scans_bar_speed_test",
+						"scans_bar_dns_a_screenshot"
 					]);
 			});
 		});
@@ -727,7 +733,8 @@
 								"scans_bar_wappalyzer",
 								"scans_bar_cpeguess",
 								"scans_bar_searchvulns",
-								"scans_bar_speed_test"
+								"scans_bar_speed_test",
+								"scans_bar_dns_a_screenshot"
 							])
 						let el = document.getElementById("closeAddScanModalButton")
 						el.click()

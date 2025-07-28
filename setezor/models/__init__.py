@@ -61,6 +61,8 @@ from .settings import Settings
 from .agent_in_project import AgentInProject
 from .agent_parent_agent import AgentParentAgent
 from .network_speed_test import NetworkSpeedTest
+from .dns_a_screenshot import DNS_A_Screenshot
+
 
 
 def get_model_by_name(model_name:str):

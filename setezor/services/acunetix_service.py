@@ -440,7 +440,7 @@ class AcunetixService(BaseService):
             return scans
         
 
-    async def create_scan(self, project_id: str, acunetix_id: int, scan_id: str, form: TargetScanStart | GroupScanStart):
+    async def create_scan(self, task_manager, project_id: str, acunetix_id: int, scan_id: str, form: TargetScanStart | GroupScanStart):
         async with self._uow:
             config = await self._uow.acunetix.find_one(project_id=project_id, id=acunetix_id)
             api = AcunetixApi.from_config(config.model_dump())
@@ -453,7 +453,7 @@ class AcunetixService(BaseService):
             target = await api.get_target_by_id(target_id=target_id)
             target_address = target.get("address")
             acunetix_scan_id = scan.get("scan_id")
-            task: Task = await M.TaskManager.create_local_job(
+            task: Task = await task_manager.create_local_job(
                 job=AcunetixScanTask,
                 agent_id = None,
                 uow=self._uow,

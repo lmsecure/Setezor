@@ -374,6 +374,41 @@ class AnalyticsService(BaseService):
             ]
             return tabulator_transform_dashboard_data
 
+    async def get_dns_a_screenshot_tabulator_data_optimized(
+        self, 
+        project_id: str, 
+        page: int, 
+        size: int, 
+        sort: str = "[]", 
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        sort_params = json.loads(sort)
+        filter_params = json.loads(filter)
+        
+        async with self._uow:
+            total, screenshots_data = await self._uow.dns_a_screenshot.get_screenshots_with_info_paginated(
+                project_id=project_id,
+                page=page,
+                size=size,
+                sort_params=sort_params,
+                filter_params=filter_params
+            )
+        
+        tabulator_transform_dashboard_data = []
+        for index, row in enumerate(screenshots_data, start=(page - 1) * size + 1):
+            dns_a_screenshot_id, created_at, domain, ip, screenshot_id, screenshot_path = row
+            
+            tabulator_transform_dashboard_data.append({
+                "id": index,
+                "domain": domain,
+                "ip": ip,
+                "screenshot_id": screenshot_id,
+                "screenshot_path": screenshot_path,
+                "created_at": created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else "",
+            })
+
+        return total, tabulator_transform_dashboard_data
+
 
 
     @classmethod
@@ -434,6 +469,16 @@ class AnalyticsService(BaseService):
                        {'field': 'password', 'title': 'PASSWORD'},
                        {'field': 'permissions', 'title': 'PERMISSIONS'},
                        {'field': 'parameters', 'title': 'PARAMETERS'}]
+    
+    @classmethod
+    def get_dns_a_screenshot_columns_tabulator_data(cls) -> list:
+        return [{'field': 'id', 'title': 'ID'},
+                {'field': 'domain', 'title': 'DOMAIN'},
+                {'field': 'ip', 'title': 'IP'},
+                {'field': 'screenshot_id', 'title': 'SCREENSHOT_ID'},
+                {'field': 'screenshot_path', 'title': 'SCREENSHOT_PATH'},
+                {'field': 'created_at', 'title': 'CREATED_AT'}]
+
     # @classmethod
     # def get_ip_columns_tabulator_data(cls) -> list:
     #     return [{'field': 'id', 'title': 'ID'},

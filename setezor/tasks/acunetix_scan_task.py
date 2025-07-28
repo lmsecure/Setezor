@@ -16,7 +16,9 @@ from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.tools.url_parser import parse_url
 
 class AcunetixScanTask(BaseJob):
-    def __init__(self, uow: UnitOfWork, 
+    def __init__(self, 
+                 task_manager,
+                 uow: UnitOfWork, 
                  scheduler, name: str, 
                  target_address: str,
                  scan_id:str,
@@ -33,6 +35,7 @@ class AcunetixScanTask(BaseJob):
         self.credentials = credentials
         self.task_id = task_id
         self.project_id = project_id
+        self.task_manager=task_manager
         self._coro = self.run()
 
     async def _task_func(self):
@@ -49,7 +52,7 @@ class AcunetixScanTask(BaseJob):
                     "target_vuln_id"), credentials=self.credentials)) for scan_vuln in scan_vulnerabilities]
                 vulnerabilities_detail = await asyncio.gather(*vilnerabilities_detail_tasks)
                 if status == "failed":
-                    await TasksService.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.failed)
+                    await self.task_manager.tasks_service.set_status(uow=self.uow, id=self.task_id, status=TaskStatus.failed)
                     raise Exception
                 break
             await asyncio.sleep(10)

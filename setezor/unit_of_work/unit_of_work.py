@@ -54,6 +54,7 @@ from setezor.repositories.screenshot_repository import ScreenshotRepository
 from setezor.repositories.setting_repository import SettingRepository
 from setezor.repositories.software_type_repository import SoftwareTypeRepository
 from setezor.repositories.software_version_repository import SoftwareVersionRepository
+from setezor.repositories.dns_a_screenshot_repository import DNS_A_ScreenshotRepository
 
 class UnitOfWork:
     def __init__(self, session_factory):
@@ -230,6 +231,9 @@ class UnitOfWork:
     
     @property
     def screenshot(self) -> ScreenshotRepository: return ScreenshotRepository(self.__session)
+    
+    @property
+    def dns_a_screenshot(self) -> DNS_A_ScreenshotRepository: return DNS_A_ScreenshotRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():
