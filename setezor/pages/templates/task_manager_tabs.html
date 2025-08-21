@@ -103,6 +103,7 @@
                 <th>${i18next.t('Params')}</th>
                 <th></th>
                 ${status == "CREATED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "REGISTERED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "FAILED" ? `<th class="text-center">${i18next.t('Error')}</th>` : ''}
             </tr>

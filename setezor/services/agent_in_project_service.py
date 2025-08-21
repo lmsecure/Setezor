@@ -254,7 +254,7 @@ class AgentInProjectService(BaseService):
             await self._uow.commit()
             message = WebSocketMessage(
                 title="Info", text=f"Saved interfaces for {agent.name}", type="info")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
         return True
 
 

@@ -4,8 +4,10 @@ import datetime
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, update
+from sqlalchemy import insert as alc_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine.result import ScalarResult
-from sqlmodel import SQLModel
+from setezor.settings import ENGINE
 
 T = TypeVar("T")
 
@@ -22,10 +24,22 @@ class SQLAlchemyRepository(Generic[T]):
         self._session.add(new_instance)
         return new_instance
 
+    async def add_with_exists(self, data: dict) -> T:
+        if ENGINE == 'sqlite':
+            stmt = alc_insert(self.model).values(**data).prefix_with('OR IGNORE')
+        elif ENGINE == 'postgresql':
+            stmt = pg_insert(self.model).values(**data).on_conflict_do_nothing()
+        await self._session.exec(stmt)
+
+    async def add_many(self, data_list: list):
+        for data in data_list:
+            await self.add_with_exists(data.model_dump())
+
     async def edit_one(self, id: int, data: dict):
         stmt = update(self.model).values(
             **data).filter_by(id=id).returning(self.model.id)
         res: ScalarResult = await self._session.exec(stmt)
+
         return res.one()
 
     async def delete(self, id: Any):
@@ -45,6 +59,13 @@ class SQLAlchemyRepository(Generic[T]):
 
     async def filter(self, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
+        res: ScalarResult = await self._session.exec(stmt)
+        return res.all()
+
+    async def filter_with_deleted_at(self, **filter_by):
+        stmt = select(self.model).filter_by(**filter_by)
+        if hasattr(self.model, 'deleted_at'):
+            stmt = stmt.filter(self.model.deleted_at == None)
         res: ScalarResult = await self._session.exec(stmt)
         return res.all()
 

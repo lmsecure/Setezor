@@ -7,7 +7,7 @@
 {% import 'network/nmap.html' as nmap %}
 {{ nmap.nmap_script_modal_to_node() }}
 {% import 'network/masscan.html' as masscan%}
-{{ masscan.masscan_script_modal_to_node() }}
+{{ masscan.masscan_script_modal_to_node('full_masscan') }}
 {% import 'network/cert.html' as cert%}
 {{ cert.cert_script_modal_to_node() }}
 {% import 'network/whois.html' as whois%}
@@ -64,7 +64,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-                        <button type="submit" class="btn btn-primary" data-i18n="Show"></button>
+                        <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
                     </div>
                 </form>
             </div>
@@ -84,7 +84,7 @@
             scan_html = `
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="scan_label_${scan.id}">
-                    <label class="form-check-label" for="scan_label_${scan.id}">
+                    <label class="form-check-label" style="word-break: break-all; white-space: normal" for="scan_label_${scan.id}">
                         ${scan.name} - ${scan.created_at}
                     </label>
                 </div>
@@ -149,7 +149,7 @@
                 <li><a a class="dropdown-item"  onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))">
                     Nmap
                 </a></li>
-                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))">
+                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]), 'full_masscan')">
                     Masscan
                 </a></li>
                 <li><a a class="dropdown-item"  onclick="domains_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
@@ -1395,7 +1395,7 @@
             html_text += `
                 <tr data-domain-id="${domain.id}">
                     <td></td>
-                   <td>${domain.domain}</td>
+                   <td style="word-break: break-all; white-space: normal; max-width: 150px;">${domain.domain}</td>
                     <td style="white-space: nowrap;">
                     <button class="btn btn-sm btn-primary me-1" type="button" 
                                 onclick="edit_domain('${domain.id}', nodeForComment)">
@@ -1439,7 +1439,7 @@
                         <td> ${i18next.t('network mask')} </td>
                         <td> ${json.network} </td>
                         <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">${i18next.t('Union')}</button>
-                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t('Division')}</button></td>
+                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t('Divide')}</button></td>
                     </tr>`
         }
         
@@ -1527,7 +1527,7 @@
                 if (comment.deleted_at == null) {
                 html_all_comments += `
                         <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
-                            <h5 style="margin-bottom: 0; word-break: break-all">${sanitize(comment.text)}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all;  white-space: pre-wrap;">${sanitize(comment.text)}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1555,7 +1555,7 @@
                             html_all_comments += `
                         <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
 
-                            <h5 style="margin-bottom: 0; word-break: break-all">${sanitize(comment.text)}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(comment.text)}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1583,7 +1583,7 @@
                             if (child.deleted_at == null) {
                             html_all_comments += `
                                 <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all">${sanitize(child.text)}</p>
+                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(child.text)}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1608,7 +1608,7 @@
                                 else {
                                     html_all_comments += `
                                 <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all">${sanitize(child.text)}</p>
+                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(child.text)}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
@@ -1828,12 +1828,15 @@
     const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
     const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
 
-    commentText.setAttribute('data-original', commentText.innerText);
+    const originalContent = commentText.innerHTML;
     
     const textarea = document.createElement('textarea');
     textarea.className = 'form-control';
-    textarea.value = commentText.innerText;
+    textarea.value = commentText.textContent;
     textarea.rows = 3;
+    textarea.setAttribute('data-original-content', originalContent);
+    textarea.setAttribute('data-original-tag', commentText.tagName.toLowerCase());
+    
     commentText.replaceWith(textarea);
     
     const buttonsContainer = document.createElement('div');
@@ -1864,16 +1867,17 @@
 function cancelCommentEdit(commentId) {
     const commentContainer = document.getElementById(`commentContainer-${commentId}`);
     const textarea = commentContainer.querySelector('textarea');
-    const originalText = textarea.getAttribute('data-original');
+    const originalContent = textarea.getAttribute('data-original-content');
+    const originalTag = textarea.getAttribute('data-original-tag');
     const buttonsContainer = textarea.nextElementSibling;
     
-    const isParentComment = commentContainer.querySelector('h5') !== null;
-    const textElement = document.createElement(isParentComment ? 'h5' : 'p');
+    const textElement = document.createElement(originalTag);
     textElement.style.marginBottom = '0';
     textElement.style.wordBreak = 'break-all';
-    textElement.textContent = originalText;
-    textarea.replaceWith(textElement);
+    textElement.style.whiteSpace = 'pre-wrap';
+    textElement.innerHTML = originalContent;
     
+    textarea.replaceWith(textElement);
     buttonsContainer.remove();
     
     const editBtn = document.getElementById(`reply-btn-${commentId}`);
@@ -1889,6 +1893,7 @@ async function confirmCommentEdit(commentId) {
     const commentContainer = document.getElementById(`commentContainer-${commentId}`);
     const textarea = commentContainer.querySelector('textarea');
     const newText = textarea.value;
+    const originalTag = textarea.getAttribute('data-original-tag');
     const buttonsContainer = textarea.nextElementSibling;
     
     try {
@@ -1900,13 +1905,13 @@ async function confirmCommentEdit(commentId) {
             }
         );
         
-        const isParentComment = commentContainer.querySelector('h5') !== null;
-        const textElement = document.createElement(isParentComment ? 'h5' : 'p');
+        const textElement = document.createElement(originalTag);
         textElement.style.marginBottom = '0';
         textElement.style.wordBreak = 'break-all';
+        textElement.style.whiteSpace = 'pre-wrap';
         textElement.textContent = newText;
-        textarea.replaceWith(textElement);
         
+        textarea.replaceWith(textElement);
         buttonsContainer.remove();
         
         const editBtn = document.getElementById(`reply-btn-${commentId}`);

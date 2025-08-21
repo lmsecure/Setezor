@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 from setezor.dependencies.project import get_current_project, role_required, get_current_scan_id
 from setezor.services import PortService
 from setezor.schemas.roles import Roles
@@ -15,9 +15,10 @@ router = APIRouter(
 async def list_resources(
     port_service: Annotated[PortService, Depends(PortService.new_instance)],
     project_id: str = Depends(get_current_project),
+    scans: list[str] = Query([]),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list[dict]:
-    return await port_service.get_resources(project_id=project_id)
+    return await port_service.get_resources(project_id=project_id, scans=scans)
 
 
 @router.get("/{l4_id}/vulnerabilities")

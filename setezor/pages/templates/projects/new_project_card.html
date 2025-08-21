@@ -55,13 +55,15 @@
                 </i>
             </div>
         </h6>
-        <div class="card-body d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+        <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height: 0 !important; margin-top: 20px">
             <h5 class="card-title" data-i18n="New Project"></h5>
             <div class="pb-2 w-100">
                 <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
                 data-i18n-placeholder="Project name" required onkeydown="preventEnter(event)">
             </div>
             <button class="btn btn-success w-100" id="createProjectButton" onclick="createProject()" data-i18n="Create"></button>
+            <button class="btn btn-success w-100" id="importProjectButton" onclick="importProject()" data-i18n="Import" style="margin: 5px 0 20px 0"></button>
+            <input type="file" id="projectFileInput" style="display: none" accept=".pkl">
         </div>
     </div>
     <div class="card h-50">
@@ -79,7 +81,7 @@
         <div class="card-body d-flex flex-column justify-content-center" style="height: 100%; padding-top: 0;">
             <div>
                 <h4 class="card-title">
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column align-items-center">
                         <h5 data-i18n="Enter By Token"></h5>
                     </div>
                 </h4>
@@ -139,6 +141,34 @@
                     window.location.href = '/projects_dashboard'
                 }
             })
+    }
+
+    function importProject() {
+        const fileInput = document.getElementById('projectFileInput')
+        const handler = (e) => {
+            
+            try {
+                const file = e.target.files[0]
+                let formData = new FormData()
+                formData.append('pickle_file', file)
+                fetch('/api/v1/project/import', {
+                  method: 'POST',
+                  body: formData
+                })
+                .then((response) => {
+                    if (response.ok) {create_toast("Info", "Import project has started, please wait a few minutes", "info")}
+                    if (response.status === 400) {return response.json()}
+                })
+                .then(data => {
+                    if (data) {window.alert(data.detail)}
+                })
+            } catch (err) {
+                console.error('Ошибка при отправке файла проекта', err)
+            }
+            fileInput.removeEventListener('change', handler);
+        }
+        fileInput.addEventListener('change', handler);
+        fileInput.click()
     }
 
     async function enterByToken() {

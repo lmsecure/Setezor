@@ -1,7 +1,10 @@
-
 from typing import Annotated
-from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, status, Response
-from setezor.dependencies.project import role_required
+from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, status, Response, \
+    UploadFile, File
+from fastapi.responses import Response
+
+from fastapi.responses import StreamingResponse
+from setezor.dependencies.project import role_required, check_role
 from setezor.managers import ProjectManager
 from setezor.managers.auth_manager import AuthManager
 from setezor.schemas.invite_link import InviteLinkCounter
@@ -13,7 +16,7 @@ from setezor.schemas.roles import Roles
 from setezor.services.invite_link_service import InviteLinkService
 from setezor.services.project_service import ProjectService
 from setezor.services.scan_service import ScanService
-
+from setezor.tools.websocket_manager import WS_USER_MANAGER
 
 router = APIRouter(
     prefix="/project",
@@ -80,6 +83,32 @@ async def set_current(
     return True
 
 
+@router.get("/{project_id}/export", status_code=200)
+async def export_project_by_id(
+    project_manager: Annotated[ProjectManager, Depends(ProjectManager.new_instance)],
+    project_id: str,
+    user_id: str = Depends(get_user_id),
+) -> StreamingResponse:
+    await check_role([Roles.owner], project_id, user_id)
+    project = await project_manager.export_project(project_id)
+    return StreamingResponse(
+        project.data,
+        media_type='application/octet-stream',
+        headers={'Content-Disposition': f'attachment; filename="project_{project.name}.pkl"'}
+    )
+
+
+imported_projects = set()
+@router.post("/import")
+async def import_project(
+    project_manager: Annotated[ProjectManager, Depends(ProjectManager.new_instance)],
+    pickle_file: UploadFile = File(...),
+    user_id: str = Depends(get_user_id)
+):
+    await project_manager.import_project(user_id, pickle_file, imported_projects)
+    return Response(status_code=201)
+
+
 @router.delete("/{project_id}", status_code=204)
 async def delete_project_by_id(
     project_service: Annotated[ProjectService, Depends(ProjectService.new_instance)],
@@ -95,12 +124,25 @@ async def websocket_handler(
     websocket: WebSocket,
     project_id: str = Depends(get_current_project_for_ws)
 ):
-    await WS_MANAGER.connect(project_id=project_id, websocket=websocket)
+    await WS_MANAGER.connect(entity_id=project_id, websocket=websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        WS_MANAGER.disconnect(project_id=project_id, websocket=websocket)
+        WS_MANAGER.disconnect(entity_id=project_id, websocket=websocket)
+
+
+@router.websocket("/ws/users/{user_id}")
+async def websocket_user_handler(
+    websocket: WebSocket,
+    user_id: str
+):
+    await WS_USER_MANAGER.connect(entity_id=user_id, websocket=websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        WS_USER_MANAGER.disconnect(entity_id=user_id, websocket=websocket)
 
 
 @router.put("/search_vulns_token")

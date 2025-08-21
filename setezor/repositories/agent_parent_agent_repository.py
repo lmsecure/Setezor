@@ -1,4 +1,4 @@
-from setezor.models import AgentParentAgent, Agent, User
+from setezor.models import AgentParentAgent, Agent, User, AgentInProject
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, select
 from sqlalchemy.engine.result import ScalarResult
@@ -33,4 +33,12 @@ class AgentParentAgentRepository(SQLAlchemyRepository[AgentParentAgent]):
                     Agent.id == agent_id, 
                     AgentParentAgent.deleted_at == None)
         res = await self._session.exec(stmt)
+        return res.all()
+
+    async def get_parent_agents_by_project(self, project_id: str):
+        query = select(AgentParentAgent)\
+                .join(AgentInProject, AgentParentAgent.agent_id == AgentInProject.agent_id)\
+                .filter(AgentInProject.project_id == project_id)
+
+        res = await self._session.exec(query)
         return res.all()

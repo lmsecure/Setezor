@@ -39,14 +39,14 @@ async def get_scan_id(access_token: str, project_id: str):
     if not scan_id:
         message = WebSocketMessage(title="Info", text=f"Create scan or pick it",
                                    type="info", user_id=user_id, command="notify_user")
-        await WS_MANAGER.send_message(project_id=project_id, message=message)
+        await WS_MANAGER.send_message(entity_id=project_id, message=message)
         raise RequiresScanException(status_code=404, detail="No scan picked")
     uow = get_uow()
     async with uow:
         if not await uow.scan.find_one(id=scan_id, project_id=project_id):
             message = WebSocketMessage(
                 title="Error", text=f"Scan with id={scan_id} does not exist", type="error", user_id=user_id, command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
             raise RequiresScanException(
                 status_code=404, detail="Scan not found")
     return scan_id
@@ -90,18 +90,20 @@ async def get_user_id(access_token: str = Depends(access_token_getter)):
     raise RequiresLoginException(status_code=403, detail="Token is expired")
 
 
+async def check_role(required_roles: list[str], project_id: str, user_id: str):
+    uow = get_uow()
+    async with uow:
+        user_project = await uow.user_project.find_one(user_id=user_id, project_id=project_id)
+        user_role_in_project = await uow.role.find_one(id=user_project.role_id)
+    if not (user_role_in_project.name in required_roles):
+        raise HTTPException(
+            status_code=403, detail="Недостаточно прав для выполнения данного действия")
+
+
 def role_required(required_roles: list[str]):
     async def role_checker(user_id: str = Depends(get_user_id),
                            project_id: str = Depends(get_current_project)):
-        uow = get_uow()
-        async with uow:
-            user_project = await uow.user_project.find_one(user_id=user_id, project_id=project_id)
-            user_role_in_project = await uow.role.find_one(id=user_project.role_id)
-        if not (user_role_in_project.name in required_roles):
-            # message = WebSocketMessage(title="Error", text=f"Not enough permissions",type="error")
-            # await WS_MANAGER.send_message(project_id=project_id, message=message)
-            raise HTTPException(
-                status_code=403, detail="Недостаточно прав для выполнения данного действия")
+        await check_role(required_roles, project_id, user_id)
         return True
     return role_checker
 

@@ -1,12 +1,10 @@
-
-from sqlalchemy.orm import aliased
-from requests import session
-from sqlalchemy import Select, desc, text
-from sqlmodel import select, func, or_, and_
-from setezor.models import SoftwareVersion, Software, SoftwareType, Port, Vendor
+from typing import List
+from sqlalchemy import Select, desc
+from sqlmodel import select, func, or_
+from setezor.models import SoftwareVersion, Software, Port, Vendor
 from setezor.models.l4_software import L4Software
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import SQLModel
+
 
 class SoftwareRepository(SQLAlchemyRepository[Software]):
     model = Software
@@ -20,7 +18,6 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         res = await self._session.exec(stmt)
         return res.all()
 
-
     async def exists(self, software_obj: Software):
         dct = software_obj.model_dump()
         filtered_keys = {k:v for k, v in dct.items() if v is not None}
@@ -29,8 +26,7 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         res = await self._session.exec(stmt)
         return res.first()
 
-
-    async def get_software_version_cpe(self, project_id: str, last_scan_id: str):
+    async def get_software_version_cpe(self, project_id: str, scans: List[str]):
 
         """Считает количество сток"""
         query = (
@@ -41,16 +37,16 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
             func.count(SoftwareVersion.cpe23).label('qty')
         ).join(SoftwareVersion, Software.id == SoftwareVersion.software_id)\
         .join(L4Software, L4Software.software_version_id == SoftwareVersion.id)\
-        .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id)\
+        .filter(L4Software.project_id == project_id)\
         .filter(SoftwareVersion.cpe23.is_not(None))\
         .group_by(SoftwareVersion.cpe23, Software.product, SoftwareVersion.version)\
         .order_by(func.count(SoftwareVersion.cpe23).desc())\
         )
 
-        result = await self._session.exec(query)
-        software_version_cpe = result.fetchall()
-
-        return software_version_cpe
+        addition = [L4Software.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        software_version_cpe = await self._session.exec(query)
+        return software_version_cpe.fetchall()
 
     async def get_top_products(self, project_id: str, last_scan_id: str):
         top_products: Select = select(
@@ -85,3 +81,30 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
             .filter(*addition)
         l4_soft_with_cpe23 = await self._session.exec(stmt_l4)
         return l4_soft_with_cpe23.all()
+
+    async def get_software_vendors(self, project_id: str):
+        query = select(
+            Vendor
+            ).join_from(L4Software, SoftwareVersion)\
+            .join(Software)\
+            .join(Vendor)\
+            .filter(L4Software.project_id == project_id)
+        res = await self._session.exec(query)
+        return res.all()
+
+    async def get_software_by_project(self, project_id: str):
+        query = select(
+            Software
+            ).join_from(L4Software, SoftwareVersion)\
+            .join(Software)\
+            .filter(L4Software.project_id == project_id)
+        res = await self._session.exec(query)
+        return res.all()
+
+    async def get_software_versions(self, project_id: str):
+        query = select(
+            SoftwareVersion
+            ).join_from(L4Software, SoftwareVersion)\
+            .filter(L4Software.project_id == project_id)
+        res = await self._session.exec(query)
+        return res.all()

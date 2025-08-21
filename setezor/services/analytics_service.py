@@ -37,10 +37,11 @@ class AnalyticsService(BaseService):
             return context
 
 
-    async def get_device_types(self, project_id: str) -> Dict:
+    async def get_device_types(self, scans: list[str], project_id: str) -> Dict:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            result = await self._uow.object.get_most_frequent_values_device_type(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            result = await self._uow.object.get_most_frequent_values_device_type(project_id=project_id, scans=scans)
             device_types = [{"labels": row[0], "data": row[1]} for row in result]
             return {
                 "data": [item["data"] for item in device_types],
@@ -48,33 +49,38 @@ class AnalyticsService(BaseService):
             }
 
 
-    async def get_object_count(self, project_id: str) -> int:
+    async def get_object_count(self, scans: list[str], project_id: str) -> int:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.object.get_object_count(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            return await self._uow.object.get_object_count(project_id=project_id, scans=scans)
 
 
-    async def get_ip_count(self, project_id: str) -> int:
+    async def get_ip_count(self, scans: list[str], project_id: str) -> int:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.ip.get_ip_count(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            return await self._uow.ip.get_ip_count(project_id=project_id, scans=scans)
 
 
-    async def get_mac_count(self, project_id: str) -> int:
+    async def get_mac_count(self, scans: list[str], project_id: str) -> int:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.mac.get_mac_count(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            return await self._uow.mac.get_mac_count(project_id=project_id, scans=scans)
 
 
-    async def get_port_count(self, project_id: str) -> int:
+    async def get_port_count(self, scans: list[str], project_id: str) -> int:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.port.get_port_count(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            return await self._uow.port.get_port_count(project_id=project_id, scans=scans)
 
-    async def get_software_version_cpe(self, project_id: str) -> Dict:
+    async def get_software_version_cpe(self, scans: list[str], project_id: str) -> Dict:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            result = await self._uow.software.get_software_version_cpe(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            result = await self._uow.software.get_software_version_cpe(project_id=project_id, scans=scans)
             return {
                 'product': [i[0] for i in result],
                 'version': [i[1] for i in result],
@@ -97,10 +103,11 @@ class AnalyticsService(BaseService):
             last_scan_id = await self.get_last_scan_id(project_id=project_id)
             return await self._uow.port.get_top_protocols(project_id=project_id, last_scan_id=last_scan_id)
 
-    async def get_vulnerabilities(self, project_id: str) -> Dict:
+    async def get_vulnerabilities(self, scans: list[str], project_id: str) -> Dict:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            result = await self._uow.vulnerability.get_vulnerabilities(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            result = await self._uow.vulnerability.get_vulnerabilities(project_id=project_id, scans=scans)
             return {
                 'name': [i[0] for i in result],
                 'cve': [i[1] for i in result],
@@ -108,10 +115,11 @@ class AnalyticsService(BaseService):
                 'cvss_score': [i[3] for i in result]
             }
 
-    async def get_ports_and_protocols(self, project_id: str) -> Dict:
+    async def get_ports_and_protocols(self, scans: list[str], project_id: str) -> Dict:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            result = await self._uow.l4_software.get_ports_and_protocols(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            result = await self._uow.l4_software.get_ports_and_protocols(project_id=project_id, scans=scans)
             labels = []
             parents = []
             graph_values = []
@@ -125,10 +133,11 @@ class AnalyticsService(BaseService):
                 "graph_values": graph_values
             }
 
-    async def get_products_and_service_name(self, project_id: str) -> Dict:
+    async def get_products_and_service_name(self,  scans: list[str], project_id: str) -> Dict:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            result = await self._uow.l4_software.get_product_service_name_info_from_sunburts(project_id=project_id, last_scan_id=last_scan_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            result = await self._uow.l4_software.get_product_service_name_info_from_sunburts(project_id=project_id, scans=scans)
             labels = []
             parents = []
             graph_values = []
@@ -148,7 +157,8 @@ class AnalyticsService(BaseService):
     async def get_l4_software_tabulator_data(
         self, 
         project_id: str, 
-        page: int, 
+        scans: list[str],
+        page: int,
         size: int, 
         sort: str = "[]", 
         filter: str = "[]"
@@ -160,10 +170,11 @@ class AnalyticsService(BaseService):
             sort_params = []
             filter_params = []
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, rows = await self._uow.l4_software.get_l4_software_tabulator_data(
                 project_id=project_id,
-                last_scan_id=last_scan_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params or [],
@@ -195,7 +206,8 @@ class AnalyticsService(BaseService):
 
     async def get_ip_mac_port_tabulator_data(
         self, 
-        project_id: str, 
+        project_id: str,
+        scans: list[str], 
         page: int, 
         size: int, 
         sort: str = "[]", 
@@ -208,10 +220,11 @@ class AnalyticsService(BaseService):
             sort_params = []
             filter_params = []
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, tabulator_dashboard_data = await self._uow.ip.get_ip_mac_port_data(
                 project_id=project_id,
-                last_scan_id=last_scan_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params or [],
@@ -228,7 +241,8 @@ class AnalyticsService(BaseService):
 
     async def get_domain_ip_tabulator_data(
         self, 
-        project_id: str, 
+        project_id: str,
+        scans: list[str], 
         page: int, 
         size: int, 
         sort: str = "[]", 
@@ -241,10 +255,11 @@ class AnalyticsService(BaseService):
             sort_params = []
             filter_params = []
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, tabulator_dashboard_data = await self._uow.ip.get_domain_ip_data(
                 project_id=project_id,
-                last_scan_id=last_scan_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params or [],
@@ -263,6 +278,7 @@ class AnalyticsService(BaseService):
     async def get_l4_soft_vuln_link_tabulator_data(
         self, 
         project_id: str, 
+        scans: list[str],
         page: int, 
         size: int, 
         sort: str = "[]", 
@@ -275,10 +291,11 @@ class AnalyticsService(BaseService):
             sort_params = []
             filter_params = []
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, rows = await self._uow.l4_software.get_soft_vuln_link_data(
                 project_id=project_id,
-                last_scan_id=last_scan_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params or [],
@@ -292,6 +309,7 @@ class AnalyticsService(BaseService):
     async def get_auth_credentials(
         self, 
         project_id: str, 
+        scans: list[str],
         page: int, 
         size: int, 
         sort: str = "[]", 
@@ -305,10 +323,11 @@ class AnalyticsService(BaseService):
             filter_params = []
         result = []
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, data = await self._uow.authentication_credentials.get_data_for_tabulator(
                 project_id=project_id,
-                last_scan_id=last_scan_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params or [],
@@ -327,56 +346,57 @@ class AnalyticsService(BaseService):
                     "parameters" : auth.parameters })
         return total, result
 
-    async def get_ip_tabulator_data(self, project_id: str) -> list:
-        async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            tabulator_dashboard_data = await self._uow.ip.get_ip_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "id",
-            "ipaddr", 
-            "mac", 
-            ]
+    # async def get_ip_tabulator_data(self, project_id: str) -> list:
+    #     async with self._uow:
+    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
+    #         tabulator_dashboard_data = await self._uow.ip.get_ip_data(project_id=project_id, last_scan_id=last_scan_id)
+    #         keys = [
+    #         "id",
+    #         "ipaddr", 
+    #         "mac", 
+    #         ]
 
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
+    #         tabulator_transform_dashboard_data = [
+    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
+    #         ]
+    #         return tabulator_transform_dashboard_data
 
-    async def get_mac_tabulator_data(self, project_id: str) -> list:
-        async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            tabulator_dashboard_data = await self._uow.mac.get_mac_tabulator_data(project_id=project_id, last_scan_id=last_scan_id)
-            keys = [
-            "id",
-            "object", 
-            "mac", 
-            "vendor", 
-            ]
+    # async def get_mac_tabulator_data(self, project_id: str) -> list:
+    #     async with self._uow:
+    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
+    #         tabulator_dashboard_data = await self._uow.mac.get_mac_tabulator_data(project_id=project_id, last_scan_id=last_scan_id)
+    #         keys = [
+    #         "id",
+    #         "object", 
+    #         "mac", 
+    #         "vendor", 
+    #         ]
 
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
+    #         tabulator_transform_dashboard_data = [
+    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
+    #         ]
+    #         return tabulator_transform_dashboard_data
 
-    async def get_port_tabulator_data(self, project_id: str) -> list:
-        async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            tabulator_dashboard_data = await self._uow.port.get_port_tabulator_data(project_id=project_id, last_scan_id = last_scan_id)
-            keys = [
-            "id",
-            "ipaddr", 
-            "port",
-            "protocol",
-            "service_name",
-            ]
-            tabulator_transform_dashboard_data = [
-                dict(zip(keys, row)) for row in tabulator_dashboard_data
-            ]
-            return tabulator_transform_dashboard_data
+    # async def get_port_tabulator_data(self, project_id: str) -> list:
+    #     async with self._uow:
+    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
+    #         tabulator_dashboard_data = await self._uow.port.get_port_tabulator_data(project_id=project_id, last_scan_id = last_scan_id)
+    #         keys = [
+    #         "id",
+    #         "ipaddr", 
+    #         "port",
+    #         "protocol",
+    #         "service_name",
+    #         ]
+    #         tabulator_transform_dashboard_data = [
+    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
+    #         ]
+    #         return tabulator_transform_dashboard_data
 
     async def get_dns_a_screenshot_tabulator_data_optimized(
         self, 
-        project_id: str, 
+        project_id: str,
+        scans: list[str], 
         page: int, 
         size: int, 
         sort: str = "[]", 
@@ -386,8 +406,11 @@ class AnalyticsService(BaseService):
         filter_params = json.loads(filter)
         
         async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
             total, screenshots_data = await self._uow.dns_a_screenshot.get_screenshots_with_info_paginated(
                 project_id=project_id,
+                scans=scans,
                 page=page,
                 size=size,
                 sort_params=sort_params,

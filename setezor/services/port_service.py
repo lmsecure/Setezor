@@ -24,10 +24,11 @@ class PortService(BaseService):
             port = await self._uow.port.find_one(id=id)
             return port
         
-    async def get_resources(self, project_id: str) -> List:
+    async def get_resources(self, project_id: str, scans: List[str]) -> List:
         async with self._uow:
-            last_scan = await self._uow.scan.last(project_id=project_id)
-            resources = await self._uow.port.resource_list(project_id=project_id, scan_id=last_scan.id)
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            resources = await self._uow.port.resource_list(project_id=project_id, scans=scans)
         result = []
         for res in resources:
             result.append({

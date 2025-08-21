@@ -1,5 +1,6 @@
 import datetime
 import os
+import sys
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +11,12 @@ class PostgresSettings(BaseSettings):
     postgres_db: str
 
 
-BASE_PATH = '/'.join(__file__.split('/')[:-1])
+if hasattr(sys, '_MEIPASS'):            # Nuitka/PyInstaller onefile
+    BASE_PATH = sys._MEIPASS
+elif getattr(sys, 'frozen', False):     # Nuitka standalone (no onefile)
+    BASE_PATH = os.path.dirname(sys.executable)
+else:
+    BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 PATH_PREFIX = os.path.join(os.path.expanduser('~'), '.local/share/setezor')
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev")
 ALGORITHM = "HS256"  # Алгоритм для подписи

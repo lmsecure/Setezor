@@ -15,9 +15,10 @@
 <script src="/static/js/libs/particles.min.js"></script>
 <script src="/static/js/libs/jquery-3.3.1.min.js"></script>
 <script src="/static/js/libs/i18next.min.js"></script>
-<script src="/static/js/src/translate_i18n.js"></script>
-<script src="/static/js/src/donut.js"></script>
-<script src="/static/js/src/toasts.js"></script>
+<script src="../../static/js/src/translate_i18n.js"></script>
+<script src="../../static/js/src/donut.js"></script>
+<script src="../../static/js/src/scripts.js"></script>
+<script src="../../static/js/src/toasts.js"></script>
 </head>
 <body>
 <header id="myHeader">
@@ -169,6 +170,15 @@
 <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
   <div id="toast_holder"></div>
 </div>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
+aria-labelledby="offcanvasNotificationsLabel">
+<div class="offcanvas-header">
+  <h5 class="offcanvas-title" id="offcanvasNotificationsLabel" data-i18n="Notifications"></h5>
+  <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body" id="notifications_body">
+</div>
+</div>
 <div class="container">
     <h4 class="form-label" data-i18n="Choose project"></h4>
 
@@ -255,6 +265,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script defer src="/static/js/src/particles.js"></script>
 <script defer src="static/js/src/update_language.js"></script>
+<script>
+  var message_sock = create_websocket(`/api/v1/project/ws/users/` + '{{user_id}}', '{{ user_id }}')
+</script>
 </body>
 </html>
 {% endblock content %}

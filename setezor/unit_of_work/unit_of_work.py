@@ -1,4 +1,5 @@
-from setezor.db.database import async_session_maker
+from typing import Optional
+
 from setezor.repositories import \
     TasksRepository, \
     MACRepository, \
@@ -25,7 +26,6 @@ from setezor.repositories import \
     WhoisDomainRepository, \
     WhoisIPRepository, \
     AgentRepository, \
-    AgentInProjectRepository, \
     VendorRepository, \
     SoftwareRepository, \
     ASN_Repository, \
@@ -50,6 +50,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from setezor.logger import logger
 from setezor.repositories.agent_in_project_repository import AgentInProjectRepository
 from setezor.repositories.agent_parent_agent_repository import AgentParentAgentRepository
+from setezor.repositories.employee_email_repository import EmployeeEmailRepository
+from setezor.repositories.employee_phone_repository import EmployeePhoneRepository
+from setezor.repositories.employee_repository import EmployeeRepository
+from setezor.repositories.network_port_software_vuln_comment_repository import \
+    NetworkPortSoftwareVulnCommentRepository
+from setezor.repositories.object_employee_repository import ObjectEmployeeRepository
+from setezor.repositories.organization_department_repository import OrganizationDepartmentRepository
+from setezor.repositories.organization_email_repository import OrganizationEmailRepository
+from setezor.repositories.organization_phone_repository import OrganizationPhoneRepository
+from setezor.repositories.organization_repository import OrganizationRepository
 from setezor.repositories.screenshot_repository import ScreenshotRepository
 from setezor.repositories.setting_repository import SettingRepository
 from setezor.repositories.software_type_repository import SoftwareTypeRepository
@@ -182,9 +192,6 @@ class UnitOfWork:
     def asn(self) -> ASN_Repository: return ASN_Repository(self.__session)
 
     @property
-    def vulnerability(self) -> VulnerabilityRepository: return VulnerabilityRepository(self.__session)
-
-    @property
     def scope(self) -> ScopeRepository: return ScopeRepository(self.__session)
 
     @property
@@ -235,7 +242,37 @@ class UnitOfWork:
     @property
     def dns_a_screenshot(self) -> DNS_A_ScreenshotRepository: return DNS_A_ScreenshotRepository(self.__session)
 
-    def get_repo_by_model(self, model) -> SQLAlchemyRepository:
+    @property
+    def employee_email(self) -> EmployeeEmailRepository: return EmployeeEmailRepository(self.__session)
+
+    @property
+    def employee(self) -> EmployeeRepository: return EmployeeRepository(self.__session)
+
+    @property
+    def object_employee(self) -> ObjectEmployeeRepository: return ObjectEmployeeRepository(self.__session)
+
+    @property
+    def employee_phone(self) -> EmployeePhoneRepository: return EmployeePhoneRepository(self.__session)
+
+    @property
+    def network_port_software_vuln_comment(self) -> NetworkPortSoftwareVulnCommentRepository: return NetworkPortSoftwareVulnCommentRepository(self.__session)
+
+    @property
+    def organization_email(self) -> OrganizationEmailRepository: return OrganizationEmailRepository(self.__session)
+
+    @property
+    def organization(self) -> OrganizationRepository: return OrganizationRepository(self.__session)
+
+    @property
+    def organization_phone(self) -> OrganizationPhoneRepository: return OrganizationPhoneRepository(self.__session)
+
+    @property
+    def organization_department(self) -> OrganizationDepartmentRepository: return OrganizationDepartmentRepository(self.__session)
+
+    def get_repo_by_model(self, model) -> Optional[SQLAlchemyRepository]:
         for repository in SQLAlchemyRepository.__subclasses__():
             if repository.model is model:
+                return repository(self.__session)
+            repo = getattr(repository, 'model', None)
+            if repo and repository.model.__name__ == type(model).__name__:
                 return repository(self.__session)

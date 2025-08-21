@@ -17,7 +17,7 @@ Project settings
     <div class="d-flex flex-row">
         <h2 class="p-2" style="margin-left: 2rem;" data-i18n="All Agents"></h2>
         <div style="margin-top: 0.69rem;">
-            <a href="https://help.setezor.net/Settings.html?utm_source=public" target="_blank">
+            <a href="https://help.setezor.net/online/Агент%20и%20Сервер.html#id2" target="_blank">
             <i class="bi bi-question-circle fs-3" style="font-family: 'Times New Roman', Times, serif"></i>
             </a>
         </div>
@@ -178,8 +178,6 @@ Project settings
             });
         });
 
-    /* ip mask */
-    var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-ip'))
     /* Agent create callback */
     async function fillPossibleAgents() {
         let resp = await fetch("/api/v1/agents_in_project/settings/possible_agents")
@@ -479,6 +477,9 @@ Project settings
         if (cell.getRow().getData().parent_agent_name == ""){
             return ''
         }
+        if (cell.getRow().getData().nat){
+            return `<button class="btn btn-sm btn-success" onclick="requestAgentInterfaces('${agent_id}', '${cell.getRow().getData().object_id}')">  ${i18next.t('Request interfaces')}</button>`
+        }
         if (cell.getRow().getData().rest_url == ""){
             return ''
         }
@@ -502,6 +503,11 @@ Project settings
                 $('#editAgentInterfaces').modal('show');
             }
         }
+    }
+    async function requestAgentInterfaces(agent_id, object_id) {
+        let resp = await fetch(`/api/v1/task/interfaces_task`, { method: 'POST', body: JSON.stringify({ agent_id: agent_id }), headers: {
+                    'Content-Type': 'application/json',
+                }, })
     }
     async function connectAgent(id) {
         resp = await fetch(`/api/v1/agents/${id}/connect`, {method:"POST"})

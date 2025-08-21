@@ -12,7 +12,26 @@ Vulnerabilities
 {% import './modals/vulnerabilities_modal.html' as modals %}
 {{ modals.create_vulnerabilities_add_modal() }}
 <div class="container-fluid">
-    <div class="row p-3">
+    <button class="btn btn-primary mt-2 mb-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
+    <div class="modal fade" id="{{tab.name}}_scansPickModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 data-i18n="Pick scans"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form name="showVulnerabilitiesForScansFormName" onsubmit="showVulnerabilitiesForScans(event)">
+                    <div class="modal-body" id="{{tab.name}}_scansContainer">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                        <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="row">
         <div class="col">
             <div id="area_table_l4">
                 <div id="table-l4_resources"></div>
@@ -80,6 +99,43 @@ Vulnerabilities
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
     let currentResourceID = 0
     let currentResourceVulnerabilityID = ""
+    let selectedScans = []
+
+    async function getScans(){
+        let resp = await fetch("/api/v1/scan");
+        let scans = await resp.json();
+        return scans;
+    }
+
+    getScans().then(data => {
+        let el = document.getElementById("{{tab.name}}_scansContainer");
+        let result = "";
+        for (const scan of data){
+            let scan_html = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="{{tab.name}}_scan_label_${scan.id}">
+                    <label class="form-check-label" for="{{tab.name}}_scan_label_${scan.id}">
+                        ${scan.name} - ${scan.created_at}
+                    </label>
+                </div>
+            `;
+            result += scan_html;
+        }
+        el.innerHTML = result;
+    });
+
+    async function showVulnerabilitiesForScans(event){
+        event.preventDefault();
+        let formData = new FormData(event.target);
+        selectedScans = [];
+        for (const [_, scan_id] of formData) {
+            selectedScans.push(scan_id);
+        }
+
+        l4_resources_table.setData(l4_resources_table.getAjaxUrl(), {}, "GET");
+    }
+
+
     var headerMenu = function () {
         var menu = [];
         var columns = this.getColumns();
@@ -117,14 +173,13 @@ Vulnerabilities
     var {{ tab.name }}_table = new Tabulator('#table-{{ tab.name }}', {
                             layout: "fitColumns",
                             ajaxURL: "/api/v1/{{ tab.base_url }}",
-
+                            ajaxParams: { scans: selectedScans },
                             ajaxURLGenerator: function (url, config, params) {
-                                //url - the url from the ajaxURL property or setData function
-                                //config - the request config object from the ajaxConfig property
-                                //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
-
-                                //return request url
-                                return url
+                                const scansParam = (selectedScans || [])
+                                .map(scan => `scans=${encodeURIComponent(scan)}`)
+                                .join("&");
+                                const finalUrl = `${url}?${scansParam ? `${scansParam}` : ""  }`
+                                return finalUrl;
                             },
                             selectable: false,
                             sortMode: "local",

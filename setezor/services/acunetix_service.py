@@ -331,7 +331,7 @@ class AcunetixService(BaseService):
                     result.append(l4_software_vuln)
 
                 message = WebSocketMessage(title="Import", text=f"{index + 1} / {len(sync_payload.targets)}",type="info")
-                await WS_MANAGER.send_message(project_id=project_id, message=message)
+                await WS_MANAGER.send_message(entity_id=project_id, message=message)
 
 
             ds = DataStructureService(uow=self._uow)

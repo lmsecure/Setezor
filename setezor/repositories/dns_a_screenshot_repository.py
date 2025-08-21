@@ -136,18 +136,19 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
     async def get_screenshots_with_info_paginated(
         self,
         project_id: str,
+        scans: List[str],
         page: int,
         size: int,
         sort_params: Optional[List[dict]] = None,
         filter_params: Optional[List[dict]] = None,
     ):
         """Получить скриншоты с пагинацией, фильтрацией и сортировкой"""
-        stmt = self._build_base_query().where(DNS_A_Screenshot.project_id == project_id)
+        stmt = self._build_base_query().filter(DNS_A_Screenshot.project_id == project_id, DNS_A_Screenshot.scan_id.in_(scans))
         stmt = self._apply_filters(stmt, filter_params)
         stmt = self._apply_sorting(stmt, sort_params)
         stmt = stmt.offset((page - 1) * size).limit(size)
 
-        count_stmt = self._build_count_query().where(DNS_A_Screenshot.project_id == project_id)
+        count_stmt = self._build_count_query().where(DNS_A_Screenshot.project_id == project_id, DNS_A_Screenshot.scan_id.in_(scans))
         count_stmt = self._apply_filters(count_stmt, filter_params)
 
         total = await self._session.scalar(count_stmt)

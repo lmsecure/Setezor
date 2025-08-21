@@ -22,6 +22,15 @@
   <div class="position-fixed top-0 end-0" id="toastHolderParent" style="margin-top: 5px;">
     <div id="toast_holder"></div>
   </div>
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
+  aria-labelledby="offcanvasNotificationsLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasNotificationsLabel" data-i18n="Notifications"></h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body" id="notifications_body">
+  </div>
+  </div>
   <form onsubmit="auth(event)" name="AuthorizationFormName">
     <div class="wrapper">
       <h2 style="margin-bottom: 2rem;" data-i18n="Authorization"></h2>

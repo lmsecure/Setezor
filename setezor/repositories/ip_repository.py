@@ -1,4 +1,5 @@
 import ipaddress
+from typing import List
 from sqlalchemy import Select
 from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_A, DNS_NS, Domain, AgentInProject
 from setezor.repositories import SQLAlchemyRepository
@@ -93,18 +94,19 @@ class IPRepository(SQLAlchemyRepository[IP]):
         return result.first()
 
 
-    async def get_ip_count(self, project_id: str, last_scan_id: str):
-        """Считает количество сток"""
-        ip_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
-        result = await self._session.exec(ip_count)
-        ip_count_result = result.one()
-        return ip_count_result
+    async def get_ip_count(self, project_id: str, scans: list[str]):
+        query = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id)
+        
+        addition = [self.model.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        result = await self._session.exec(query)
+        return result.one()
 
 
     async def get_ip_mac_port_data(
         self,
         project_id: str,
-        last_scan_id: str,
+        scans: List[str], 
         page: int,
         size: int,
         sort_params: list = None,
@@ -119,7 +121,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
         stmt = select(IP.ip, Port.port, MAC.mac).select_from(IP)\
             .join(Port, IP.id == Port.ip_id, isouter=True)\
             .join(MAC, IP.mac_id == MAC.id, isouter=True)\
-            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, IP.ip != None)
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans), IP.ip != None)
         
         if filter_params:
             for filter_item in filter_params:
@@ -176,7 +178,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
     async def get_domain_ip_data(
         self,
         project_id: str,
-        last_scan_id: str,
+        scans: List[str], 
         page: int,
         size: int,
         sort_params: list = None,
@@ -192,7 +194,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
             .join(Port, IP.id == Port.ip_id, isouter=True)\
             .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
             .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
-            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id, Domain.domain != "")
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans), Domain.domain != "")
         
         if filter_params:
             for filter_item in filter_params:

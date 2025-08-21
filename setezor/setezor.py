@@ -22,8 +22,9 @@ from setezor.db.alembic import AlembicManager
 
 @asynccontextmanager
 async def startup_event(app: FastAPI):
-    from setezor.db.database import init_db, fill_db
+    from setezor.db.database import init_db, fill_db, init_triggers
     await init_db()
+    await init_triggers()
     await fill_db()
     yield
 
@@ -173,6 +174,11 @@ def stamp(revision: str):
 @click.argument('revision')
 def upgrade(revision: str):
     AlembicManager.upgrade(revision)
+
+@alembic.command()
+@click.argument('revision')
+def downgrade(revision: str):
+    AlembicManager.downgrade(revision)
 
 
 if __name__ == "__main__":

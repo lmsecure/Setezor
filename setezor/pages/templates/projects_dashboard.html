@@ -92,7 +92,7 @@ Dashboard
     </div>
 </div> -->
 
-<script>
+<!-- <script>
     document.addEventListener("DOMContentLoaded", function () {
         if (!localStorage.getItem('dontShowModal') || localStorage.getItem('dontShowModal') === 'false') {
             let myModal = new bootstrap.Modal(document.getElementById('dontShowModal'));
@@ -107,13 +107,32 @@ Dashboard
             }
         });
     });
-</script>
+</script> -->
 <div class="row mt-3 w-100">
 
     <div class="col-1">
-        <div class="d-flex flex-wrap w-100 h-100" style="margin-top: 0.3rem; margin-left: 1rem; ">
-
-            <div class="card mb-3 w-100" style="height: 23%;">
+        <div class="d-flex flex-wrap w-100 h-100 justify-content-center align-items-center" 
+        style="margin-top: 0.3rem; margin-left: 1rem;">
+            <button class="btn btn-primary mb-3" style="width: 10rem; height: 4rem;" data-bs-toggle="modal" data-bs-target="#scansPickModal" data-i18n="Pick scans"></button>
+            <div class="modal fade" id="scansPickModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 data-i18n="Pick scans"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form name="showDashboardForScansFormName" onsubmit="showDashboardForScans(event)">
+                            <div class="modal-body" id="scansContainer">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                                <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-3 w-100" style="height: 20.1%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
                     <h5 class="card-title" data-i18n="Objects" style="text-align: center;"></h5>
                     <p id="object-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
@@ -122,7 +141,7 @@ Dashboard
                 </div>
             </div>
 
-            <div class="card mb-3 w-100" style="height: 23.1%;">
+            <div class="card mb-3 w-100" style="height: 20.1%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
                     <h5 class="card-title" data-i18n="IPs" style="text-align: center;"></h5>
                     <p id="ip-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
@@ -131,7 +150,7 @@ Dashboard
                 </div>
             </div>
 
-            <div class="card mb-3 w-100" style="height: 23%;">
+            <div class="card mb-3 w-100" style="height: 20.1%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
                     <h5 class="card-title" data-i18n="Macs" style="text-align: center;"></h5>
                     <p id="mac-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
@@ -140,7 +159,7 @@ Dashboard
                 </div>
             </div>
 
-            <div class="card mb-3 w-100" style="height: 23.1%;">
+            <div class="card mb-3 w-100" style="height: 20.2%;">
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
                     <h5 class="card-title" data-i18n="Ports" style="text-align: center;"></h5>
                     <p id="port-count" class="card-text" style="text-align: center; color: #0055ff; font-size: 2rem;">
@@ -215,7 +234,47 @@ Dashboard
     </div>
 
     <script>
+    let selectedScans = []
+    async function getScans(){
+        let resp = await fetch("/api/v1/scan")
+        let scans = await resp.json()
+        return scans
+    }
+    getScans().then(data=>{
+        let el = document.getElementById("scansContainer")
+        let result = ""
+        for (const scan of data){
+            scan_html = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="scan_label_${scan.id}">
+                    <label class="form-check-label" style="word-break: break-all; white-space: normal" for="scan_label_${scan.id}">
+                        ${scan.name} - ${scan.created_at}
+                    </label>
+                </div>
+            `
+            result += scan_html
+        }
+        el.innerHTML = result
+    })
+    async function showDashboardForScans(event){
+        event.preventDefault()
+        let formData = new FormData(event.target)
+        selectedScans = [];
+        for (const [k, scan_id] of formData) {
+            selectedScans.push(scan_id);
+        }
+        await get_device_types(selectedScans);
+        await get_object_count(selectedScans);
+        await get_ip_count(selectedScans)
+        await get_mac_count(selectedScans)
+        await get_port_count(selectedScans)
+        await get_software_version_cpe(selectedScans)
+        await get_vulnerabilities(selectedScans)
+        await get_ports_and_protocols(selectedScans)
+        await get_products_and_service_name(selectedScans)
 
+        pivot_table.setData(pivot_table.getAjaxUrl(), {scans: selectedScans}, "GET");
+    }
         var headerMenu = function () {
             var menu = [];
             var columns = this.getColumns();
@@ -248,83 +307,89 @@ Dashboard
             }
             return menu;
         }
-
         var pivot_table = new Tabulator('#pivot_table', {
             layout: "fitColumns",
             ajaxURL: "{{tab.base_url}}",
+            ajaxParams: { scans: selectedScans },
 
-        ajaxURLGenerator: function (url, config, params) {
-                        //url - the url from the ajaxURL property or setData function
-                        //config - the request config object from the ajaxConfig property
-                        //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+            ajaxURLGenerator: function (url, config, params) {
+                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
 
-                        //return request url
-                        const sort = encodeURIComponent(JSON.stringify(params.sort || []));
-                        const filter = encodeURIComponent(JSON.stringify(params.filter || []));
-                        return url + "?page=" + params.page + "&size=" + params.size + "&sort=" + sort + "&filter=" + filter; //encode parameters as a json object
-                    },
-                    selectable: false,
-                    sortMode: "remote",
-                    filterMode: "remote",
-                    pagination: true,
-                    paginationMode: "remote",
-                    paginationSize: 10,
-                    paginationInitialPage: 1,
-                    paginationSizeSelector: [5, 10, 25, 50, 100],
-                    validationMode: 'highlight',
+                const scansParam = (selectedScans || [])
+                    .map(scan => `scans=${encodeURIComponent(scan)}`)
+                    .join("&");
+
+                return `${url}?page=${params.page}&size=${params.size}&sort=${sort}&filter=${filter}${
+                        scansParam ? `&${scansParam}` : ""  }`;
+            },
+
+            selectable: false,
+            sortMode: "remote",
+            filterMode: "remote",
+            pagination: true,
+            paginationMode: "remote",
+            paginationSize: 10,
+            paginationInitialPage: 1,
+            paginationSizeSelector: [5, 10, 25, 50, 100],
+            validationMode: 'highlight',
             columns: [
                 {% for col in tab.columns %}
-        {{ '{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu},
-        {% endfor %}
-        ]
-}
-)
+                { title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu },
+                {% endfor %}
+            ]
+        });
     </script>
     <script>
 
-        async function get_object_count() {
-        try {
-            const response = await axios.get("/api/v1/analytics/get_object_count");
-            const objectCountElement = document.getElementById('object-count');
-            objectCountElement.textContent = response.data;
-        } catch (error) {
-            console.error('Load data error:', error);
-        }
-    }
-
-        async function get_ip_count() {
-        try {
-            const response = await axios.get("/api/v1/analytics/get_ip_count");
-            const ipCountElement = document.getElementById('ip-count');
-            ipCountElement.textContent = response.data;
-        } catch (error) {
-            console.error('Load data error:', error);
-        }
-    }
-
-        async function get_mac_count() {
-        try {
-            const response = await axios.get("/api/v1/analytics/get_mac_count");
-            const macCountElement = document.getElementById('mac-count');
-            macCountElement.textContent = response.data;
-        } catch (error) {
-            console.error('Load data error:', error);
-        }
-    }
-
-        async function get_port_count() {
-        try {
-            const response = await axios.get("/api/v1/analytics/get_port_count");
-            const portCountElement = document.getElementById('port-count');
-            portCountElement.textContent = response.data;
-        } catch (error) {
-            console.error('Load data error:', error);
-        }
-    }
-
-        async function get_software_version_cpe() {
+        async function get_object_count(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
             try {
-                const response = await axios.get("/api/v1/analytics/get_software_version_cpe");
+                const response = await axios.get(`/api/v1/analytics/get_object_count?${params}`);
+                const objectCountElement = document.getElementById('object-count');
+                objectCountElement.textContent = response.data;
+            } catch (error) {
+                console.error('Load data error:', error);
+            }
+        }
+
+        async function get_ip_count(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            try {
+                const response = await axios.get(`/api/v1/analytics/get_ip_count?${params}`);
+                const ipCountElement = document.getElementById('ip-count');
+                ipCountElement.textContent = response.data;
+            } catch (error) {
+                console.error('Load data error:', error);
+            }
+        }
+
+        async function get_mac_count(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            try {
+                const response = await axios.get(`/api/v1/analytics/get_mac_count?${params}`);
+                const macCountElement = document.getElementById('mac-count');
+                macCountElement.textContent = response.data;
+            } catch (error) {
+                console.error('Load data error:', error);
+            }
+        }
+
+        async function get_port_count(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            try {
+                const response = await axios.get(`/api/v1/analytics/get_port_count?${params}`);
+                const portCountElement = document.getElementById('port-count');
+                portCountElement.textContent = response.data;
+            } catch (error) {
+                console.error('Load data error:', error);
+            }
+        }
+
+        async function get_software_version_cpe(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            try {
+                const response = await axios.get(`/api/v1/analytics/get_software_version_cpe?${params}`);
                 const analytics = response.data;
 
 
@@ -350,34 +415,36 @@ Dashboard
             }
         }
         
-        async function get_vulnerabilities() {
-                try {
-                    const response = await axios.get("/api/v1/analytics/get_vulnerabilities");
-                    const analytics = response.data;
-                    const name  = analytics.name;
-                    const cve  = analytics.cve;
-                    const description  = analytics.description;
-                    const cvss_score  = analytics.cvss_score;
-                    const tableBody = document.querySelector("#vulnerabilitiesTable tbody");
-                    tableBody.innerHTML = "";
+        async function get_vulnerabilities(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            try {
+                const response = await axios.get(`/api/v1/analytics/get_vulnerabilities?${params}`);
+                const analytics = response.data;
+                const name  = analytics.name;
+                const cve  = analytics.cve;
+                const description  = analytics.description;
+                const cvss_score  = analytics.cvss_score;
+                const tableBody = document.querySelector("#vulnerabilitiesTable tbody");
+                tableBody.innerHTML = "";
 
-                    for (let i = 0; i < name.length; i++) {
-                        const row = document.createElement("tr");
-                        row.innerHTML = `
-                <td style="text-align: center; word-wrap: break-word; white-space: normal;">${name[i]}</td>
-                <td style="word-wrap: break-word; white-space: normal;">${cve[i]}</td>
-                <td style="word-wrap: break-word; white-space: normal;">${description[i]}</td>
-                <td style="text-align: center; word-wrap: break-word; white-space: normal;">${cvss_score[i]}</td>
-            `;
-                        tableBody.appendChild(row);
-                    }
-                } catch (error) {
-                    console.error("Error fetching vulnerabilities:", error);
+                for (let i = 0; i < name.length; i++) {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+            <td style="text-align: center; word-wrap: break-word; white-space: normal;">${name[i]}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${cve[i]}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${description[i]}</td>
+            <td style="text-align: center; word-wrap: break-word; white-space: normal;">${cvss_score[i]}</td>
+        `;
+                    tableBody.appendChild(row);
                 }
+            } catch (error) {
+                console.error("Error fetching vulnerabilities:", error);
             }
+        }
 
-    async function get_device_types() {
-            const response = await axios.get("/api/v1/analytics/get_device_types");
+        async function get_device_types(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            const response = await axios.get(`/api/v1/analytics/get_device_types?${params}`);
             const data = response.data;
             
             createGraphDeviceType(
@@ -389,8 +456,9 @@ Dashboard
             );
         }
 
-        async function get_ports_and_protocols() {
-            const response = await axios.get('/api/v1/analytics/get_ports_and_protocols');
+        async function get_ports_and_protocols(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            const response = await axios.get(`/api/v1/analytics/get_ports_and_protocols?${params}`);
             const data = response.data;
             labels = JSON.parse(data.labels)
             parents = JSON.parse(data.parents)
@@ -405,8 +473,9 @@ Dashboard
             );
         }
 
-        async function get_products_and_service_name() {
-            const response = await axios.get('/api/v1/analytics/get_products_and_service_name');
+        async function get_products_and_service_name(scans=[]) {
+            const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
+            const response = await axios.get(`/api/v1/analytics/get_products_and_service_name?${params}`); 
             const data = response.data;
             labels = JSON.parse(data.labels)
             parents = JSON.parse(data.parents)
@@ -420,14 +489,14 @@ Dashboard
                 250
             );
         }
-        get_device_types();
-        get_object_count()
-        get_ip_count()
-        get_mac_count()
-        get_port_count()
-        get_software_version_cpe()
-        get_vulnerabilities()
-        get_ports_and_protocols()
-        get_products_and_service_name()
+        get_device_types(scans=[]);
+        get_object_count(scans=[])
+        get_ip_count(scans=[])
+        get_mac_count(scans=[])
+        get_port_count(scans=[])
+        get_software_version_cpe(scans=[])
+        get_vulnerabilities(scans=[])
+        get_ports_and_protocols(scans=[])
+        get_products_and_service_name(scans=[])
     </script>
     {% endblock content %}

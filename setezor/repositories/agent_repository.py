@@ -11,8 +11,8 @@ class AgentRepository(SQLAlchemyRepository[Agent]):
     async def exists(self, dns_obj: SQLModel):
         return False
 
-    async def list(self, project_id: str):
-        stmt = select(Agent).filter(self.model.project_id == project_id)
+    async def list(self, user_id: str):
+        stmt = select(Agent).filter(self.model.user_id == user_id)
         res: ScalarResult = await self._session.exec(stmt)
         return res.all()
 

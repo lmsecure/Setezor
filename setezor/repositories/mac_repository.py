@@ -1,14 +1,12 @@
-
-
 from sqlalchemy import Select
-from setezor.models import MAC, IP, ObjectType, Object, Vendor 
+
+from setezor.models import MAC, IP, ObjectType, Object, Vendor
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import select, func
+from sqlmodel import or_, select, func
 
 
 class MACRepository(SQLAlchemyRepository[MAC]):
     model = MAC
-
 
     async def exists(self, mac_obj: MAC):
         if not mac_obj.mac:
@@ -28,15 +26,13 @@ class MACRepository(SQLAlchemyRepository[MAC]):
         result = await self._session.exec(stmt)
         return result.first()
     
-    async def get_mac_count(self, project_id: str, last_scan_id: str):
+    async def get_mac_count(self, project_id: str, scans: list[str]):
+        query = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id)
         
-        """Считает количество сток"""
-        
-        mac_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
-
-        result = await self._session.exec(mac_count)
-        mac_count_result = result.one()
-        return mac_count_result
+        addition = [self.model.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        result = await self._session.exec(query)
+        return result.one()
     
     async def get_interfaces(self, agent_id: int):
         stmt = select(MAC.id, MAC.name, MAC.mac, IP.id.label("ip_id"), IP.ip).select_from(Object)\
@@ -72,3 +68,9 @@ class MACRepository(SQLAlchemyRepository[MAC]):
 
         result = await self._session.exec(tabulator_dashboard_data)
         return result.all()
+
+    async def get_mac_vendors(self, project_id: str):
+        query = select(Vendor).join(MAC).where(MAC.project_id == project_id)
+        result = await self._session.exec(query)
+        return result.all()
+

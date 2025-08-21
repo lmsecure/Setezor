@@ -2,8 +2,9 @@
 
 from sqlalchemy import text
 from setezor.models import Object
+from setezor.models.d_object_type import ObjectType
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import SQLModel, select, func
+from sqlmodel import SQLModel, desc, or_, select, func
 from sqlmodel.sql._expression_select_cls import Select
 
 class ObjectRepository(SQLAlchemyRepository[Object]):
@@ -18,28 +19,29 @@ class ObjectRepository(SQLAlchemyRepository[Object]):
             return result.first()
         return False
     
-    async def get_object_count(self, project_id: str, last_scan_id: str):
-        object_count: Select = select(func.count(self.model.id).label('qty')).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
+    async def get_object_count(self, project_id: str, scans: list[str]):
+        query = select(func.count(self.model.id).label('qty')).filter(self.model.project_id == project_id)
 
-        result = await self._session.exec(object_count)
-        object_count_result = result.one()
-
-        return object_count_result
+        addition = [self.model.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        result = await self._session.exec(query)
+        return result.one()
     
-    async def get_most_frequent_values_device_type(self, project_id: str, last_scan_id: str, limit: int | None = None):
+    async def get_most_frequent_values_device_type(self, project_id: str, scans: list[str], limit: int | None = None):
         """Запрос на получение самых распространенных значений в колонке.
         
         Возвращает (значение, количество)
         """
-        device_types_query = text("""
-            SELECT setezor_d_object_type.name, COUNT(setezor_d_object_type.name) AS count
-            FROM object
-            JOIN setezor_d_object_type ON object.object_type_id = setezor_d_object_type.id
-            WHERE object.project_id = :project_id
-            AND object.scan_id = :last_scan_id
-            GROUP BY setezor_d_object_type.name
-            ORDER BY count DESC
-        """)
-
-        result = await self._session.exec(device_types_query, params={'project_id': project_id, 'last_scan_id': last_scan_id})
-        return result.fetchall()
+        query = (
+        select(
+            ObjectType.name,
+            func.count(ObjectType.name).label("count")
+        ).join(Object, Object.object_type_id == ObjectType.id)\
+        .filter(Object.project_id == project_id)\
+        .group_by(ObjectType.name)\
+        .order_by(desc("count"))\
+        )
+        
+        addition = [Object.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        return await self._session.exec(query)

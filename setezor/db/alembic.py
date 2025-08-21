@@ -24,3 +24,8 @@ class AlembicManager:
     def upgrade(cls, revision: str):
         config = Config(ALEMBIC_INI_PATH)
         command.upgrade(config, revision)
+
+    @classmethod
+    def downgrade(cls, revision: str):
+        config = Config(ALEMBIC_INI_PATH)
+        command.downgrade(config, revision)

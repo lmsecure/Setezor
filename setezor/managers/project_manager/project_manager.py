@@ -1,8 +1,12 @@
+from io import BytesIO
 import os
 from random import randint
 from typing import Annotated
+import pickle
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, UploadFile
+
+from setezor.managers.hash_manager import UploadFileHashManager
 from setezor.managers.project_manager.files import FilesStructure, ProjectFolders
 from setezor.models import Project, UserProject, Object, Agent, AgentInProject, Domain, DNS_A
 from setezor.models.agent_parent_agent import AgentParentAgent
@@ -11,7 +15,7 @@ from setezor.models.ip import IP
 from setezor.models.mac import MAC
 from setezor.models.network import Network
 from setezor.models.scan import Scan
-from setezor.schemas.project import EnterTokenForm, ProjectCreateForm
+from setezor.schemas.project import EnterTokenForm, ProjectCreateForm, ProjectDTO
 from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_parent_agent_service import AgentParentAgentService
 from setezor.services.agent_service import AgentService
@@ -27,9 +31,7 @@ from setezor.services.project_service import ProjectService
 from setezor.services.role_service import RoleService
 from setezor.services.scan_service import ScanService
 from setezor.services.user_project_service import UserProjectService
-from setezor.tools.ip_tools import get_network
 from setezor.tools.jwt import JWT_Tool
-from setezor.unit_of_work import UnitOfWork
 
 from setezor.models.base import generate_unique_id
 from setezor.schemas.roles import Roles
@@ -52,7 +54,8 @@ class ProjectManager:
             domain_service: DomainsService,
             dns_a_service: DNS_A_Service,
             scan_service: ScanService,
-            invite_link_service: InviteLinkService
+            invite_link_service: InviteLinkService,
+            hash_manager: UploadFileHashManager,
     ):
         self.__project_service: ProjectService = project_service
         self.__user_project_service: UserProjectService = user_project_service
@@ -66,6 +69,8 @@ class ProjectManager:
         self.__network_service: NetworkService = network_service
         self.__mac_service: MacService = mac_service
         self.__ip_service: IPService = ip_service
+
+        self.__hash_manager: UploadFileHashManager = hash_manager
 
         self.__domain_service: DomainsService = domain_service
         self.__dns_a_service: DNS_A_Service = dns_a_service
@@ -201,6 +206,39 @@ class ProjectManager:
             return project_id
         raise HTTPException(status_code=400, detail="Invalid register token")
 
+    async def export_project(self, project_id: str) -> ProjectDTO:
+        project = await self.__project_service.export_project(project_id)
+        project.data = BytesIO(pickle.dumps(project.data))
+        return project
+
+    async def import_project(self, user_id: str, pickle_file: UploadFile, imported_projects: set[str]):
+        hashed_data = await self.__hash_manager.get_hashed_data(pickle_file)
+
+        if hashed_data in imported_projects:
+            raise HTTPException(status_code=400, detail="Project already importing")
+
+        if not pickle_file:
+            raise HTTPException(status_code=400, detail="No file uploaded")
+
+        if not pickle_file.filename.endswith('.pkl'):
+            raise HTTPException(status_code=400, detail="Invalid file extension, must be *.pkl")
+
+        imported_projects.add(hashed_data)
+        try:
+            await pickle_file.seek(0)
+            data = await pickle_file.read()
+            objects = pickle.loads(data)
+            await self.__project_service.import_project(user_id, objects, imported_projects, hashed_data)
+        except HTTPException as ex:
+            if hashed_data in imported_projects:
+                imported_projects.remove(hashed_data)
+            raise ex
+        except Exception as ex:
+            if hashed_data in imported_projects:
+                imported_projects.remove(hashed_data)
+            raise ex
+
+
     @classmethod
     async def new_instance(
         cls,
@@ -218,7 +256,8 @@ class ProjectManager:
         domain_service:  Annotated[DomainsService, Depends(DomainsService.new_instance)],
         dns_a_service:  Annotated[DNS_A_Service, Depends(DNS_A_Service.new_instance)],
         scan_service:  Annotated[ScanService, Depends(ScanService.new_instance)],
-        invite_link_service:  Annotated[InviteLinkService, Depends(InviteLinkService.new_instance)]
+        invite_link_service:  Annotated[InviteLinkService, Depends(InviteLinkService.new_instance)],
+        hash_manager: Annotated[UploadFileHashManager, Depends(UploadFileHashManager.new_instance)],
     ):
         
         return cls(
@@ -236,5 +275,6 @@ class ProjectManager:
             domain_service=domain_service,
             dns_a_service=dns_a_service,
             scan_service=scan_service,
-            invite_link_service=invite_link_service
+            invite_link_service=invite_link_service,
+            hash_manager=hash_manager
         )

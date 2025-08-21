@@ -1,4 +1,5 @@
 
+from typing import List
 from sqlalchemy import case, func, literal, text
 from setezor.models import L4Software, Port, IP, SoftwareVersion, Software, SoftwareType, Vendor, Vulnerability, L4SoftwareVulnerability, DNS_A, Domain, VulnerabilityLink
 from setezor.repositories import SQLAlchemyRepository
@@ -20,7 +21,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
     async def get_l4_software_tabulator_data(
         self, 
         project_id: str, 
-        last_scan_id: str, 
+        scans: List[str], 
         page: int, 
         size: int,
         sort_params: list = None,
@@ -71,7 +72,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(Software, SoftwareVersion.software_id == Software.id, isouter=True)
             .join(SoftwareType, Software.type_id == SoftwareType.id, isouter=True)
             .join(Vendor, Software.vendor_id == Vendor.id, isouter=True)
-            .filter(IP.project_id == project_id, IP.scan_id == last_scan_id)
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
             .group_by(
                 Port.port,
                 Port.protocol,
@@ -147,7 +148,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
     async def get_soft_vuln_link_data(
         self,
         project_id: str,
-        last_scan_id: str,
+        scans: List[str], 
         page: int,
         size: int,
         sort_params: list = None,
@@ -185,9 +186,8 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(Software, SoftwareVersion.software_id == Software.id)\
             .join(SoftwareType, Software.type_id == SoftwareType.id)\
             .join(Vendor, Vendor.id == Software.vendor_id)\
-            .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id)
+            .filter(L4Software.project_id == project_id, L4Software.scan_id.in_(scans))
         
-        # Применяем фильтры
         if filter_params:
             for filter_item in filter_params:
                 field = filter_item.get("field")
@@ -212,7 +212,6 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                     elif type_op == "like":
                         stmt = stmt.filter(column.ilike(f"%{value}%"))
         
-        # Применяем сортировку
         if sort_params:
             order_clauses = []
             for sort_item in sort_params:
@@ -238,55 +237,96 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
 
 
 
-    async def get_ports_and_protocols(self, project_id: str, last_scan_id: str):
-        stmt = select(
-            case(
-                (Port.protocol.is_(None), "unknown"),
-                (Port.protocol == "", "unknown"),
-                else_=Port.protocol).label("labels"),
-            literal("").label("parents"),
-            func.count(Port.protocol).label("graph_values")).filter(Port.project_id == project_id, Port.scan_id == last_scan_id).group_by(Port.protocol)\
-        .union(
+    async def get_ports_and_protocols(self, project_id: str, scans: List[str]):
+        
+        filters = [
+            Port.project_id == project_id,
+            Port.scan_id.in_(scans)
+        ]
+
+        stmt1 = (
+            select(
+                case(
+                    (Port.protocol.is_(None), "unknown"),
+                    (Port.protocol == "", "unknown"),
+                    else_=Port.protocol
+                ).label("labels"),
+                literal("").label("parents"),
+                func.count(Port.protocol).label("graph_values")
+            )
+            .filter(*filters)
+            .group_by(Port.protocol)
+        )
+
+        stmt2 = (
             select(
                 cast(Port.port.label("labels"), String),
                 case(
                     (Port.protocol.is_(None), "unknown"),
                     (Port.protocol == "", "unknown"),
-                    else_=Port.protocol).label("parents"),
-                func.count(Port.port).label("graph_values")).filter(Port.project_id == project_id, Port.scan_id == last_scan_id).group_by(Port.port, Port.protocol)
+                    else_=Port.protocol
+                ).label("parents"),
+                func.count(Port.port).label("graph_values")
+            )
+            .filter(*filters)
+            .group_by(Port.port, Port.protocol)
         )
+
+        stmt = stmt1.union(stmt2)
+
         result = await self._session.exec(stmt)
         return result.all()
 
-    async def get_product_service_name_info_from_sunburts(self, project_id: str, last_scan_id: str):
-        stmt1 = select(
-                case(
-                    (Port.service_name.is_(None), "unknown"),
-                    (Port.service_name == "", "unknown"),
-                    else_=Port.service_name).label("labels"),
+
+    async def get_product_service_name_info_from_sunburts(self, project_id: str, scans: List[str]):
+        filters = [
+            Port.project_id == project_id,
+            Port.scan_id.in_(scans)
+        ]
+
+        base_case_service = case(
+            (Port.service_name.is_(None), "unknown"),
+            (Port.service_name == "", "unknown"),
+            else_=Port.service_name
+        )
+
+        stmt1 = (
+            select(
+                base_case_service.label("labels"),
                 literal("").label("parent"),
-                func.count(Port.service_name).label("value"))\
-            .join(L4Software, L4Software.l4_id == Port.id)\
-            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
-            .join(Software, SoftwareVersion.software_id == Software.id)\
-            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
+                func.count(Port.service_name).label("value")
+            )
+            .join(L4Software, L4Software.l4_id == Port.id)
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)
+            .join(Software, SoftwareVersion.software_id == Software.id)
+            .filter(*filters)
             .group_by(Port.service_name)
+        )
 
-        stmt2 = select(
+        stmt2 = (
+            select(
                 Software.product.label("labels"),
-                case(
-                    (Port.service_name.is_(None), "unknown"),
-                    (Port.service_name == "", "unknown"),
-                    else_=Port.service_name).label("parent"),
-                func.count(Software.product).label("value"))\
-            .join(L4Software, L4Software.l4_id == Port.id)\
-            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
-            .join(Software, SoftwareVersion.software_id == Software.id)\
-            .filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
+                base_case_service.label("parent"),
+                func.count(Software.product).label("value")
+            )
+            .join(L4Software, L4Software.l4_id == Port.id)
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)
+            .join(Software, SoftwareVersion.software_id == Software.id)
+            .filter(*filters)
             .group_by(Software.product, Port.service_name)
+        )
 
-        stmt = stmt1.union(stmt2)
-        stmt = select(text("labels"), text("parent"), func.sum(text("value")).label("value"))\
-            .select_from(stmt).group_by(text("labels"), text("parent"))
-        result = await self._session.exec(stmt)
+        union_stmt = stmt1.union(stmt2)
+
+        final_stmt = (
+            select(
+                text("labels"),
+                text("parent"),
+                func.sum(text("value")).label("value")
+            )
+            .select_from(union_stmt)
+            .group_by(text("labels"), text("parent"))
+        )
+
+        result = await self._session.exec(final_stmt)
         return result.all()

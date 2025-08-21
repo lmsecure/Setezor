@@ -1,8 +1,8 @@
 from setezor.models import AgentInProject, Agent, User, AgentParentAgent
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, select
-from sqlalchemy.engine.result import ScalarResult
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, selectinload
+
 
 class AgentInProjectRepository(SQLAlchemyRepository[AgentInProject]):
     model = AgentInProject
@@ -54,4 +54,11 @@ class AgentInProjectRepository(SQLAlchemyRepository[AgentInProject]):
             .join(AgentInProject, AgentInProject.agent_id == Agent.id)\
             .filter(AgentInProject.project_id == project_id)
         res = await self._session.exec(stmt)
+        return res.all()
+
+    async def get_project_agents(self, project_id: str):
+        query = select(AgentInProject).where(AgentInProject.project_id == project_id, AgentInProject.deleted_at == None).options(
+            selectinload(AgentInProject.agent)
+        )
+        res = await self._session.exec(query)
         return res.all()

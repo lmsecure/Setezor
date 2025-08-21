@@ -68,7 +68,9 @@ function fillInterfaceBar(barSelector) {
         const defaultInterface = interfaceData.interfaces.find(
             (iface) => iface.id === interfaceData.default_interface.id
         );
-        button.innerHTML = `${defaultInterface.name} - ${defaultInterface.ip}`;
+        let name = defaultInterface.name
+        const limitedName = name.length > 10 ? name.slice(0, 10) + "..." : name
+        button.innerHTML = `${limitedName} - ${defaultInterface.ip}`;
     }
     list.innerHTML = html;
 }
@@ -80,7 +82,7 @@ function createInterfaceBar(barSelector) {
     const html = `
         <div class="dropdown">
             <button 
-                class="btn btn-secondary dropdown-toggle" 
+                class="btn btn-secondary dropdown-toggle btn-limit" 
                 type="button" 
                 data-bs-toggle="dropdown" 
                 aria-expanded="false">

@@ -130,7 +130,7 @@ class TaskManager:
 
         message = WebSocketMessage(
             title="Task status", text=f"Task {task.id} {TaskStatus.created}", type="info")
-        await WS_MANAGER.send_message(project_id=project_id, message=message)
+        await WS_MANAGER.send_message(entity_id=project_id, message=message)
         logger.debug(f"CREATED TASK {job.__qualname__}. {safe_params}")
         scheduler = self.create_new_scheduler(job)
         new_job: BaseJob = job(
@@ -160,7 +160,7 @@ class TaskManager:
             message = WebSocketMessage(title="Error",
                                        text=f"Agent {agent.name} is synthetic",
                                        type="error")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
             raise HTTPException(status_code=403,
                                 detail=f"Agent {agent.name} is synthetic")
         if not agent.secret_key:
@@ -168,7 +168,7 @@ class TaskManager:
                                        text=f"Agent {
                                            agent.name} has no secret key",
                                        type="error")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
             raise HTTPException(status_code=403,
                                 detail=f"Agent {agent.name} has no secret key")
 
@@ -184,7 +184,7 @@ class TaskManager:
                                    text=f"Task {task.id} {TaskStatus.created}",
                                    type="info")
         logger.debug(f"CREATED TASK {job.__qualname__}. {kwargs}")
-        await WS_MANAGER.send_message(project_id=project_id, message=message)
+        await WS_MANAGER.send_message(entity_id=project_id, message=message)
 
         task_in_agent_chain = TaskPayload(
             task_id=task.id,
@@ -278,7 +278,7 @@ class TaskManager:
             text=f"Task with {task_id=} {TaskStatus.finished}",
             type="info"
         )
-        await WS_MANAGER.send_message(project_id=project_id,
+        await WS_MANAGER.send_message(entity_id=project_id,
                                       message=payload)
         self.delete_task(task_id=task_id)
 
@@ -363,7 +363,7 @@ class TaskManager:
         match signal:
             case "notify":
                 payload = WebSocketMessage(**copy_of_dict)
-                await WS_MANAGER.send_message(project_id=project_id,
+                await WS_MANAGER.send_message(entity_id=project_id,
                                               message=payload)
             case "task_status":
                 await self.__tasks_service.set_status(id=copy_of_dict["task_id"],
@@ -375,7 +375,7 @@ class TaskManager:
                         copy_of_dict["status"]}. {copy_of_dict["traceback"]}",
                     type=copy_of_dict["type"]
                 )
-                await WS_MANAGER.send_message(project_id=project_id,
+                await WS_MANAGER.send_message(entity_id=project_id,
                                               message=payload)
                 ##################################
                 if copy_of_dict["status"] == TaskStatus.started:
@@ -398,7 +398,7 @@ class TaskManager:
                     text=f"Task with {task_id=} {TaskStatus.finished}",
                     type="info"
                 )
-                await WS_MANAGER.send_message(project_id=project_id,
+                await WS_MANAGER.send_message(entity_id=project_id,
                                               message=payload)
 
     async def write_result(self, task_id: str, data: dict):

@@ -9,13 +9,13 @@
 	<link href="/static/css/vendor/bootstrap-icons.css" rel="stylesheet">
 	<link href="/static/css/src/base.css" rel="stylesheet">
 	<link href="/static/css/src/particles.css" rel="stylesheet">
-	<script src="/static/js/src/toasts.js"></script>
 	<script src="/static/js/libs/jquery-3.3.1.min.js"></script>
 	<script src="/static/js/libs/bootstrap.bundle.min.js"></script>
 	<script src="/static/js/libs/i18next.min.js"></script>
 	<script src="/static/js/libs/axios.min.js"></script>
 	<script src="/static/js/src/translate_i18n.js"></script>
 	<script src="/static/js/src/scripts.js"></script>
+	<script src="/static/js/src/toasts.js"></script>
 	<script src="/static/js/src/agents.js"></script>
 	<script src="/static/js/src/interfaces.js"></script>
 
@@ -28,7 +28,7 @@
 	{% import 'network/scapy.html' as scapy %}
 	{{ scapy.scapy_full_script_modal() }}
 	{% import 'network/masscan.html' as masscan%}
-	{{ masscan.masscan_full_modal() }}
+	{{ masscan.masscan_full_modal('full_masscan') }}
 	{% import 'network/cert.html' as cert%}
 	{{ cert.cert_full_modal() }}
 	{% import 'network/whois.html' as whois%}
@@ -335,7 +335,7 @@
 							</a>
 							<ul class="collapse" id="tool-category-1">
 								<li><a href="#" onclick="nmap_full_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
-								<li><a href="#" onclick="masscan_full_modal_window()"><span style="color: #54B49C;">MASSCAN</span></a></li>
+								<li><a href="#" onclick="masscan_full_modal_window('full_masscan')"><span style="color: #54B49C;">MASSCAN</span></a></li>
 								<li><a href="#" onclick="scapy_full_modal_window()"><span style="color: #54B49C;">SCAPY</span></a></li>
 								<li><a href="#" onclick="snmp_full_modal_window()"><span style="color: #54B49C;">SNMP</span></a></li>
 								<li><a href="#" onclick="speed_test_modal_window()"><span style="color: #54B49C;">Speed Test</span></a></li>
@@ -698,9 +698,8 @@
             `
 				} else {
 					scan_id = currentScan.id
-					result += `<button type="button" class="btn btn-success" disabled id="currentPickedScan">${currentScan.name}</button>`
+					result += `<button type="button" class="btn btn-success btn-limit" disabled id="currentPickedScan">${currentScan.name}</button>`
 				}
-				result += "</div>"
 				el.innerHTML = result
 			}
 		}

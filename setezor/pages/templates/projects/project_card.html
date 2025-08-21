@@ -53,6 +53,15 @@
                     data-bs-toggle="dropdown" aria-expanded="false">
                 </i>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ project.id }}">
+                  <li>
+                    <a class="dropdown-item" href="#">
+                      <button type="button"
+                              class="btn btn-success flex-fill w-100"
+                              onclick="exportProject('{{ project.id }}')"
+                              data-i18n="Export">
+                      </button>
+                    </a>
+                  </li>
                     <li>
                         <a class="dropdown-item" href="#">
                             <button type="button" class="btn btn-danger flex-fill w-100"
@@ -209,6 +218,22 @@ function chooseProject(projectId) {
     .catch(error => console.error('Error:', error));
 }
 
+async function exportProject(projectId) {
+    const url = '/api/v1/project/' + projectId + '/export'
+    const resp = await fetch(url)
+    const blob = await resp.blob()
+    const link = document.createElement('a')
+    const disp = resp.headers.get('Content-Disposition')
+    const filename = disp.split('filename=')[1].replace(/"/g, "")
+
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(link.href)
+}
+
 function deleteProject(projectId, projectName) {
     const modalContent = `
         <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
@@ -237,10 +262,6 @@ function deleteProject(projectId, projectName) {
 function confirmDeleteProject(projectId) {
     fetch('/api/v1/project/'+projectId, {
         method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(Object.fromEntries(formData))
     })
     .then(response => {
         if (response.ok) {

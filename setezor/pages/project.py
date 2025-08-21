@@ -36,9 +36,9 @@ async def projects_page(
             "top_ports": await analytics_service.get_top_ports(project_obj.id),
             "top_protocols": await analytics_service.get_top_protocols(project_obj.id),
             "top_products": await analytics_service.get_top_products(project_obj.id),
-            "device_types": await analytics_service.get_device_types(project_obj.id),
-            "ip_count" : await analytics_service.get_ip_count(project_obj.id),
-            "port_count" : await analytics_service.get_port_count(project_obj.id)
+            "device_types": await analytics_service.get_device_types([], project_obj.id),
+            "ip_count" : await analytics_service.get_ip_count([], project_obj.id),
+            "port_count" : await analytics_service.get_port_count([], project_obj.id)
         }
 
         analytics['top_ports'] = {
@@ -64,6 +64,7 @@ async def projects_page(
         name="projects/base_project.html",
         context={
             "request": request,
+            "user_id": user.id,
             "is_superuser": user.is_superuser,
             "projects": result
         }

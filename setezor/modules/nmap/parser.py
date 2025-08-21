@@ -340,7 +340,11 @@ class NmapParser:
             result.append(network_obj)
             ip_obj = IP(ip=data.addresses[i].get('ip'), mac=mac_obj, network=network_obj)
             result.append(ip_obj)
-            domain_obj = Domain()
+            domain_name = data.addresses[0].get('domain_name')
+            if domain_name:
+                domain_obj = Domain(domain=domain_name)
+            else:
+                domain_obj = Domain()
             result.append(domain_obj)
             dns_a_obj = DNS_A(target_ip=ip_obj, target_domain=domain_obj)
             result.append(dns_a_obj)

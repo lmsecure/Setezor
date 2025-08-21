@@ -58,7 +58,7 @@ class AgentManager:
                                        type="error",
                                        user_id=user_id,
                                        command="notify_user")
-            await WS_MANAGER.send_message(project_id=project_id, message=message)
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
             raise HTTPException(status_code=404)
         agents_chain: List = await self.__agent_service.get_agents_chain(agent_id=agent.id,
                                                                          user_id=agent.user_id)

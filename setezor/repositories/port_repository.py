@@ -1,9 +1,10 @@
 
 
+from typing import List
 from sqlalchemy import Select, case, desc
 from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, SoftwareVersion, Software, SoftwareType, Vendor, DNS_A, Domain
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import SQLModel, select, func
+from sqlmodel import SQLModel, or_, select, func
 
 class PortRepository(SQLAlchemyRepository[Port]):
     model = Port
@@ -63,12 +64,13 @@ class PortRepository(SQLAlchemyRepository[Port]):
         return result.all()
 
 
-    async def get_port_count(self, project_id: str, last_scan_id: str):
-        """Считает количество сток"""
-        port_count: Select = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
-        result = await self._session.exec(port_count)
-        port_count_result = result.one()
-        return port_count_result
+    async def get_port_count(self, project_id: str, scans: list[str]):
+        query = select(func.count()).select_from(self.model).filter(self.model.project_id == project_id)
+
+        addition = [self.model.scan_id == scan_id for scan_id in scans]
+        query = query.filter(or_(*addition))
+        result = await self._session.exec(query)
+        return result.one()
 
 
     async def get_top_ports(self, project_id: str, last_scan_id: str):
@@ -78,7 +80,7 @@ class PortRepository(SQLAlchemyRepository[Port]):
         return top_ports_result
 
 
-    async def resource_list(self, project_id: str, scan_id: str):
+    async def resource_list(self, project_id: str, scans: List[str]):
         stmt = select(
                 Port.id,
                 IP.ip,
@@ -90,7 +92,7 @@ class PortRepository(SQLAlchemyRepository[Port]):
             .join(DNS_A, DNS_A.id == L4Software.dns_a_id, isouter=True)\
             .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
             .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id, isouter=True)\
-            .filter(Port.project_id == project_id, Port.scan_id == scan_id)\
+            .filter(Port.project_id == project_id, Port.scan_id.in_(scans))\
             .group_by(Port.id, IP.ip, Port.port, Domain.domain)
         result = await self._session.exec(stmt)
         return result.all()

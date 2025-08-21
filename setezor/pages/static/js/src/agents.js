@@ -99,7 +99,7 @@ function createAgentBar(barSelector) {
     const html = `
         <div class="dropdown">
             <button 
-                class="btn btn-secondary dropdown-toggle" 
+                class="btn btn-secondary dropdown-toggle btn-limit" 
                 type="button" 
                 data-bs-toggle="dropdown" 
                 aria-expanded="false">
