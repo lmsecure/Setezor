@@ -63,7 +63,7 @@
             </div>
             <button class="btn btn-success w-100" id="createProjectButton" onclick="createProject()" data-i18n="Create"></button>
             <button class="btn btn-success w-100" id="importProjectButton" onclick="importProject()" data-i18n="Import" style="margin: 5px 0 20px 0"></button>
-            <input type="file" id="projectFileInput" style="display: none" accept=".pkl">
+            <input type="file" id="projectFileInput" style="display: none" accept=".zip">
         </div>
     </div>
     <div class="card h-50">
@@ -150,7 +150,7 @@
             try {
                 const file = e.target.files[0]
                 let formData = new FormData()
-                formData.append('pickle_file', file)
+                formData.append('zip_file', file)
                 fetch('/api/v1/project/import', {
                   method: 'POST',
                   body: formData

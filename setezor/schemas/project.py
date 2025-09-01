@@ -1,3 +1,4 @@
+from datetime import datetime
 from dataclasses import dataclass
 from io import BytesIO
 
@@ -50,4 +51,4 @@ class ProjectDTO:
             else:
                 result_name += char
 
-        self.name = result_name
+        self.name = f'project_{result_name}_' + datetime.now().strftime('%d-%m-%Y_%H-%M')

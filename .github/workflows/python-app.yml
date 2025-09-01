@@ -29,10 +29,11 @@ jobs:
         pip install -r setezor/requirements.txt
     - name: Test run
       run: |
+        export SERVER_REST_URL=https://0.0.0.0:16661
         python setezor/setezor.py & setezor_pid=$?
         echo "Pid is $setezor_pid"
         sleep 5
-        
+
         curl --insecure -s -o /dev/null -w "%{http_code}" https://0.0.0.0:16661/login
         status_code=$?
         if [[ $status_code="200" ]];

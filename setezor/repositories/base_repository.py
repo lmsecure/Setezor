@@ -69,6 +69,11 @@ class SQLAlchemyRepository(Generic[T]):
         res: ScalarResult = await self._session.exec(stmt)
         return res.all()
 
+    async def set_deleted_at(self, id_set: set[str], deleted_at: datetime = None):
+        if hasattr(self.model, 'deleted_at'):
+            stmt = update(self.model).where(self.model.id.in_(id_set)).values(deleted_at=deleted_at)
+            await self._session.exec(stmt)
+
     async def last(self, **filter_by):
         stmt = select(self.model).filter_by(**filter_by).order_by(self.model.created_at.desc())
         res: ScalarResult = await self._session.exec(stmt)

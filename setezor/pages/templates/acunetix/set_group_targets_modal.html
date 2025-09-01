@@ -72,7 +72,6 @@
 
         let currentTargets = await currentTargetsResp.json();
         let allTargets = await allTargetsResp.json();
-        console.log(currentTargets)
         for (let target of currentTargets) {
             currentGroupTargetsMap.set(target.target_id, target);
         }

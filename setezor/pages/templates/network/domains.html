@@ -165,6 +165,35 @@
                                 }" data-i18n="Start"></button>
 
 </div>
+<script>
+    function resetDomainsModal() {
+        const domainForm = document.getElementById('DomainForm');
+        if (domainForm) domainForm.reset();
+
+        const scopeForm = document.getElementById('DomainScopeForm');
+        if (scopeForm) scopeForm.reset();
+
+        const container = document.getElementById('DomainsInputContainer');
+        if (container) container.innerHTML = '';
+
+        const originalInput = document.getElementById('inputDOMAIN');
+        if (originalInput) originalInput.value = '';
+
+        const dropdownButton = document.getElementById('domainsScopeDropdown');
+        if (dropdownButton) dropdownButton.textContent = '';
+        window.selectedScopeForDomains = '';
+
+        document.getElementById('crt.sh').checked = false;
+        document.getElementById('dns_search').checked = false;
+
+        document.getElementById('domains-simple-tab').classList.add('active');
+        document.getElementById('domains-simple-mode').classList.add('show', 'active');
+
+        document.getElementById('domains-scope-tab').classList.remove('active');
+        document.getElementById('domains-scope-mode').classList.remove('show', 'active');
+    }
+
+</script>
 {% endmacro %}
 {% macro domains_full_modal() %}
 <div id="domainsModalWindow" class="modal fade" tabindex="-1" aria-labelledby="domainsModalLabel" aria-hidden="true">
@@ -212,6 +241,7 @@
 <script>
     function domains_full_modal_window() {
         var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
+        resetDomainsModal();
         myModal.show();
     }
 
@@ -237,13 +267,14 @@
 <script>
     function domains_script_modal_to_node(ip) {
         var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));
+        resetDomainsModal();
+
         var inputIP = document.getElementById('inputDOMAIN')
-        inputIP.value = ip
+        if (inputIP) inputIP.value = ip;
 
         myModal.show();
     }
 
-    // Код для закрытия модалки
     document.addEventListener('DOMContentLoaded', function () {
         const myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'), {
             keyboard: false
@@ -266,7 +297,9 @@
 <script>
     async function domains_script_modal_to_info_tabs(rows) {
         var myModal = new bootstrap.Modal(document.getElementById('domainsModalWindow'));        
-        if (rows.length > 0) {
+        resetDomainsModal();
+
+        if (rows.length > 1) {
             addNewDomainsForm();
         }
 
@@ -276,8 +309,6 @@
             let currentForm = inputForms[row] || addNewDomainsForm();
             
             let inputIP = currentForm.querySelector('[id^="inputDOMAIN"]');
-            
-
             if (inputIP && rows[row].domain){
                 inputIP.value = rows[row].domain;
             }

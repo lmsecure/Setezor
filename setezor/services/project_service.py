@@ -161,11 +161,16 @@ class ProjectService(BaseService):
                     if current_software_type.name == from_file_software_type.name:
                         software_id_mapper[from_file_software_type.id] = current_software_type.id
 
-            for objects_name, models_list in objects.items():
+            await self._uow.commit()
+
+        for objects_name, models_list in objects.items():
+            async with self._uow:
                 if not models_list:
                     continue
 
+                id_set = set()
                 for model in models_list:
+                    id_set.add(model.id)
                     if 'user_id' in model.model_fields:
                         model.user_id = user_id
                     if 'role_id' in model.model_fields:
@@ -189,7 +194,8 @@ class ProjectService(BaseService):
                 repo = self._uow.get_repo_by_model(models_list[0])
 
                 await repo.add_many(models_list)
-
+                await self._uow.commit()
+                await repo.set_deleted_at(id_set)
                 await self._uow.commit()
 
         if hashed_data in imported_projects:

@@ -328,7 +328,6 @@
                                     console.error('Error:', error);
                                 });
                             } for (let ips of onlyIp) {
-                                    console.log('params:', params)
                                     let IpParams = {
                                         ...params,
                                         targetIP: ips.ip
@@ -389,29 +388,125 @@
                         }
                     " data-i18n="Start scan"></button>
 </div>
-
 <script>
-    $('#portSwitch').on('change.bootstrapSwitch', function (e, data) {
-        document.getElementById('portsSelector').disabled = !e.target.checked;
-        document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    })
-    function initializeNmapScripts() {
-        $('#' + 'ipTarget').on('change', function (e, data) {
-            if ($('#' + 'inputIP').inputmask('isComplete')) {
-                document.getElementById('startScanSimpleBtn').disabled = false;
-            } else {
-                document.getElementById('startScanSimpleBtn').disabled = true;
-            }
+     $(document).ready(function () {
+        const defaultPlaceholder = '--ping';
+        const $selector = $('#portsSelector');
+        const $switch = $('#portsScan');
+        function updatePlaceholders(newPlaceholder) {
+            $("input.form-control.port[id^='inputPortNmap']").each(function () {
+                $(this).attr('placeholder', newPlaceholder);
+            });
+        }
+        $selector.on('input', function () {
+            const newPlaceholder = $(this).val().trim() || defaultPlaceholder;
+            updatePlaceholders(newPlaceholder);
         });
-
-        $('#' + 'portSwitch').on('change.bootstrapSwitch', function (e, data) {
-            document.getElementById('portsSelector').disabled = !e.target.checked;
-            document.getElementById('portsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked;
+        $switch.on('change', function () {
+            const isChecked = $(this).is(':checked');
+            $selector.prop('disabled', !isChecked);
+            const newPlaceholder = isChecked
+                ? ($selector.val().trim() || defaultPlaceholder)
+                : defaultPlaceholder;
+            updatePlaceholders(newPlaceholder);
         });
+    });
+let nmapModal = null;
+function initNmapModal() {
+    nmapModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'), {
+        keyboard: false,
+        // backdrop: 'static'
+    });
 
+    $('#nmapModalWindow').on('hidden.bs.modal', function () {
+        resetNmapModal();
+    });
+
+    document.querySelector('#nmapModalWindow .btn-close').onclick = function () {
+        nmapModal.hide();
+    };
+
+}
+function portSwitcherForNmap() {
+    const portSwitch = document.querySelector('#portsScan');
+    const portsSelector = document.querySelector('#portsSelector');
+    
+    if (portSwitch && portsSelector) {
+        const handleSwitchChange = function(event) {
+            portsSelector.disabled = !event.target.checked;
+        };
+
+        portSwitch.removeEventListener('change', handleSwitchChange);
+        portSwitch.addEventListener('change', handleSwitchChange);
+        
+        portsSelector.disabled = !portSwitch.checked;
     }
+}
+function resetNmapModal() {
+    const modal = document.getElementById('nmapModalWindow');
+    
+    modal.querySelectorAll('form').forEach(form => form.reset());
+    
+    document.getElementById('NmapInputContainer').innerHTML = '';
+    
+    const inputIP = document.getElementById('inputIP');
+    const inputPortNmap = document.getElementById('inputPortNmap');
+    if (inputIP) inputIP.value = '';
+    if (inputPortNmap) {
+        inputPortNmap.value = '';
+        inputPortNmap.placeholder = '--ping';
+    }
+    const portsSelector = document.getElementById('portsSelector');
+    if (portsSelector) {
+        portsSelector.value = '';
+        portsSelector.disabled = true;
+    }
+       
+    const portSwitch = document.getElementById('portsScan');
+    if (portSwitch) portSwitch.checked = false;
+    
+    const traceSwitch = document.getElementById('trace');
+    if (traceSwitch) traceSwitch.checked = true; // По умолчанию включено
+    
+    const serviceSwitch = document.getElementById('service');
+    if (serviceSwitch) serviceSwitch.checked = false;
+    
+    const stealthSwitch = document.getElementById('stealth');
+    if (stealthSwitch) stealthSwitch.checked = false;
+    
+    const pnSwitch = document.getElementById('pn');
+    if (pnSwitch) pnSwitch.checked = false;
+    
+    modal.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.checked = false;
+    });
+    
+    const scopeButton = document.getElementById('nmapScopeDropdown');
+    if (scopeButton) {
+        scopeButton.textContent = scopeButton.getAttribute('data-i18n') || 'Select scope';
+    }
+    selectedScopeForNmap = '';
+    
+    const targetTab = document.getElementById('nmap-simple-tab');
+    const scopeTab = document.getElementById('nmap-scope-tab');
+    const targetPane = document.getElementById('nmap-simple-mode');
+    const scopePane = document.getElementById('nmap-scope-mode');
+    
+    if (targetTab && scopeTab && targetPane && scopePane) {
+        targetTab.classList.add('active');
+        scopeTab.classList.remove('active');
+        targetPane.classList.add('show', 'active');
+        scopePane.classList.remove('show', 'active');
+    }
+    
+    portSwitcherForNmap();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    initNmapModal();
+});
 </script>
 {% endmacro %}
+
 
 {% macro nmap_xml() %}
 <button class="btn btn-primary w-100" id="nmap-dropdownMenuButton2" onclick="
@@ -451,8 +546,8 @@
 </button>
 {% endmacro %}
 
-{% macro nmap_full_script_modal() %}
 
+{% macro nmap_full_script_modal() %}
 <div id="nmapModalWindow" class="modal fade" tabindex="-1" aria-labelledby="nmapModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -497,148 +592,97 @@
     </div>
 </div>
 <script>
-    function nmap_full_modal_window() {
-        var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
-        $('#nmapModalWindow').on('hidden.bs.modal', function () {
-                $(this).find('form').trigger('reset');
-                $(this).find('#NmapInputContainer').html('');
-            });
-            let portsSelector = document.getElementById('portsSelector');
-            portsSelector.value = ''
-            document.getElementById('portsScan').checked = false
-            portsSelector.setAttribute('disabled', 'disabled')
-        myModal.show();
+function nmap_full_modal_window() {
+    resetNmapModal();
+    if (nmapModal) {
+        nmapModal.show();
     }
+}
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'), {
-            keyboard: false
-        });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("nmapModalWindow")) {
-                myModal.hide();
-            }
-        };
-    });
 </script>
-
 {% endmacro %}
+
 
 {% macro nmap_script_modal_to_node() %}
 <script>
     async function nmap_script_modal_to_node(node) {
-        var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
-
-        let inputIP = document.getElementById('inputIP')
-        params = { ip_id: node.id }
-        ip = node.label
-        inputIP.value = ip
-        url_address = '/api/v1/vis/node_info/' + node.id
-        resp = await fetch(url_address, { method: 'GET' })
-        json = await resp.json()
-        let portsSelector = document.getElementById('portsSelector');
-        if (json.ports.length) {
-            document.getElementById('portsScan').checked = true
-            portsSelector.removeAttribute('disabled')
-            portsSelector.value = Array.from(new Set(json.ports.map(item => item.port))).join(',');
-        } else {
-            portsSelector.value = ''
-            document.getElementById('portsScan').checked = false
-            portsSelector.setAttribute('disabled', 'disabled')
-        };
-        myModal.show();
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'), {
-            keyboard: false
-        });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("nmapModalWindow")) {
-                myModal.hide();
+        resetNmapModal();
+        
+        const inputIP = document.getElementById('inputIP');
+        if (inputIP) {
+            inputIP.value = node.label;
+        }
+        
+        try {
+            const url_address = '/api/v1/vis/node_info/' + node.id;
+            const resp = await fetch(url_address, { method: 'GET' });
+            const json = await resp.json();
+            
+            const portsSelector = document.getElementById('inputPortNmap');
+            
+            if (json.ports && json.ports.length > 0) {
+                if (portsSelector) {
+                    portsSelector.value = Array.from(new Set(json.ports.map(item => item.port))).join(',');
+                }
             }
-        };
-    });
+        } catch (error) {
+            console.error('Error fetching node info:', error);
+        }
+        
+        if (nmapModal) {
+            nmapModal.show();
+        }
+    }
 </script>
-
 {% endmacro %}
+
 
 {% macro nmap_script_modal_to_info_tabs() %}
-
 <script>
-
-    async function nmap_script_modal_to_info_tabs(rows) {
-        var myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'));
-        let portsSelector = document.getElementById('portsSelector');
-
-        $('#nmapModalWindow').on('hidden.bs.modal', function () {
-            $(this).find('form').trigger('reset');
-            $(this).find('#NmapInputContainer').html('');
-        });
+async function nmap_script_modal_to_info_tabs(rows) {
+    resetNmapModal();
+    
+    if (!rows || rows.length === 0) {
+        if (nmapModal) {
+            nmapModal.show();
+        }
+        return;
+    }
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
         
-        if (rows.length > 0) {
+        if (i > 0) {
             addNewNmapForm();
         }
-
-        let inputForms = document.querySelectorAll('[id^="ipTarget"]');
         
-        for (let row = 0; row < rows.length; row++) {
-            let currentForm = inputForms[row] || addNewNmapForm();
+        const inputForms = document.querySelectorAll('[id^="ipTarget"]');
+        const currentForm = inputForms[i];
+        
+        if (currentForm) {
+            const inputIP = currentForm.querySelector('[id^="inputIP"]');
+            const inputPort = currentForm.querySelector('[id^="inputPortNmap"]');
             
-            let inputIP = currentForm.querySelector('[id^="inputIP"]');
-            let inputPort = currentForm.querySelector('[id^="inputPortNmap"]');
-            
-            if (inputIP && rows[row].ipaddr) {
-                inputIP.value = rows[row].ipaddr;
+            if (inputIP && row.ipaddr) {
+                inputIP.value = row.ipaddr;
             }
             
-            if (inputPort && rows[row].port) {
-                inputPort.value = rows[row].port;
+            if (inputPort && row.port) {
+                const uniquePorts = [...new Set(
+                        row.port.split(',').map(p => p.trim()).filter(p => p)
+                    )];
+                    inputPort.value = uniquePorts.join(',');
             }
-            
-            if (row < rows.length - 1 && row >= inputForms.length - 1) {
-                addNewNmapForm();
-                inputForms = document.querySelectorAll('[id^="ipTarget"]');
-            }
-                // if (rows[row].port || rows[row].port != null){
-                //     document.getElementById('portsScan').checked = true
-                //     portsSelector.removeAttribute('disabled')
-                //     portsSelector.value = Array.from(new Set(rows.map(row => row.port))).join(',');
-                // }
-
         }
-        
-        myModal.show();
     }
+    
+    if (nmapModal) {
+        nmapModal.show();
+    }
+}
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'), {
-            keyboard: false
-        });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("nmapModalWindow")) {
-                myModal.hide();
-            }
-        };
-    });
 </script>
 {% endmacro %}
-
 
 
 {% macro show() %}

@@ -1,6 +1,7 @@
 
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl, field_validator
+from urllib.parse import urlparse
 from pydantic.networks import IPv4Address, IPv4Network
 
 class TaskStatus:
@@ -156,3 +157,15 @@ class SpeedTestTaskPayload(BaseModel):
 class DNSAScreenshotTaskPayload(BaseModel):
     agent_id: str
     url: str
+    timeout: Optional[float] = 20.0
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v):
+        """Валидация URL"""
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        parsed = urlparse(v)
+        if not parsed.netloc:
+            raise ValueError("URL must have a valid domain")
+        return v

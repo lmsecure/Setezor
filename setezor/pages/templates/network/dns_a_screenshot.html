@@ -1,18 +1,29 @@
 {% macro main_dns_a_screenshot() %}
 <div class="d-flex flex-column">
     <form id="DNSAScreenshotForm">
-        <div class="mb-3 d-flex align-items-end">
-            <div class="flex-grow-1 me-2">
-                <label for="inputURL" class="form-label" data-i18n="URL"></label>
-                <input type="url" class="form-control" id="inputURL" name="URL" placeholder="https://example.com" required>
+        <div id="DNSAScreenshotInputContainer"></div>
+        <div class="input-group mb-3" style="padding-top: 7px;" id="urlTarget">
+            <span class="input-group-text" id="basic-addon1" data-i18n="URL"></span>
+            <input type="url" class="form-control" id='inputURL' placeholder="https://example.com" aria-label="URL" aria-describedby="basic-addon1" required name="URL">
+            <button id="add_new_url_form" onclick="addNewDNSAScreenshotForm()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+        </div>
+        <div class="row mb-3">
+            <div class="col-4">
+                <div class="d-flex flex-row">
+                    <label for="id_slider_timeout" data-i18n="Timeout"> </label>
+                    <span id="id_slider_timeout_value" style="margin-left: 5px;">20</span>
+                </div>
             </div>
-            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="height: 38px;">
-                <i class="bi bi-trash"></i>
-            </button>
+            <div class="col-8">
+                <div class="d-flex flex-row">
+                    <span id="id_slider_timeout_min" class="me-2">20</span>
+                    <input type="range" class="form-range w-100" id="id_slider_timeout" name="duration" min="10" max="100" step="5" value="20" oninput="document.getElementById('id_slider_timeout_value').textContent = value;">
+                    <span id="id_slider_timeout_max" class="me-2">100</span>
+                </div>
+            </div>
         </div>
         <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
-            <input class="btn btn-outline-secondary w-25" type="reset" data-i18n-value="Reset Params">
-            <button type="button" class="btn btn-outline-primary w-25" onclick="addNewDNSAScreenshotForm()" data-i18n="Add URL"></button>
+            <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
             <button type="button" class="btn btn-primary w-50" id="startDNSAScreenshotBtn" onclick="startDNSAScreenshotTasks()" data-i18n="Start"></button>
         </div>
     </form>
@@ -32,9 +43,7 @@
                     <div data-agent-bar="agent_dns_a_screenshot"></div>
                     <div id="scans_bar_dns_a_screenshot" class="ms-3"></div>
                 </div>
-                <div id="DNSAScreenshotInputContainer">
-                    {{ main_dns_a_screenshot() }}
-                </div>
+                {{ main_dns_a_screenshot() }}
             </div>
         </div>
     </div>
@@ -42,31 +51,41 @@
 
 <script>
     function addNewDNSAScreenshotForm() {
-        const container = document.getElementById('DNSAScreenshotInputContainer');
-        const formCount = container.querySelectorAll('input[type="url"]').length;
-        const newForm = document.createElement('div');
-        newForm.id = `URLForDNSAScreenshot${formCount}`;
-        newForm.className = 'mb-3 d-flex align-items-end';
-        newForm.innerHTML = `
-            <div class="flex-grow-1 me-2">
-                <label for="inputURL${formCount}" class="form-label" data-i18n="URL"></label>
-                <input type="url" class="form-control" id="inputURL${formCount}" name="URL" placeholder="https://example.com" required>
-            </div>
-            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="height: 38px;">
-                <i class="bi bi-trash"></i>
-            </button>
-        `;
-        
-        const form = container.querySelector('#DNSAScreenshotForm');
-        const buttons = form.querySelector('.btn-group');
-        form.insertBefore(newForm, buttons);
-        
-        return newForm;
+        const original = document.getElementById('urlTarget');
+        const clone = original.cloneNode(true);
+        const newInputTarget = clone.querySelector('[id^="inputURL"]');
+        newInputTarget.id = 'inputURL_' + Date.now();
+        const originalInputTarget = document.getElementById('inputURL');
+        newInputTarget.value = originalInputTarget.value;
+        originalInputTarget.value = ''
+
+        let existingMinusButton = clone.querySelector('.btn-danger');
+        if (existingMinusButton) {
+            existingMinusButton.remove();
+        }
+    
+        let removeButton = document.createElement('button');
+        removeButton.textContent = '-';
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-danger';
+        removeButton.style.width = '3rem';
+        removeButton.onclick = () => {
+            clone.remove();
+        };
+    
+        clone.appendChild(removeButton);
+    
+        let addButton = clone.querySelector('#add_new_url_form');
+        if (addButton) {
+            addButton.remove();
+        }
+    
+        document.getElementById('DNSAScreenshotInputContainer').appendChild(clone);
     }
 
     function startDNSAScreenshotTasks() {
         const urls = [];
-        const inputs = document.querySelectorAll('#DNSAScreenshotInputContainer input[type="url"]');
+        const inputs = document.querySelectorAll('#DNSAScreenshotForm input[type="url"]');
         const agent_id = getAgent();
         if (!agent_id) {
             create_toast('Error', 'Please select an agent', 'error');
@@ -83,10 +102,13 @@
             return;
         }
 
+        let timeout = document.getElementById('id_slider_timeout_value').textContent;
+
         for (const url of urls) {
             let dnsAScreenshotParams = {
                 url: url,
-                agent_id: agent_id
+                agent_id: agent_id,
+                timeout: timeout
             }
             
             fetch('/api/v1/task/dns_a_screenshot_task', {
@@ -119,7 +141,19 @@
 
     function dns_a_screenshot_full_modal_window() {
         var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));
+        resetDNSAScreenshotModal();
         myModal.show();
+    }
+
+    function resetDNSAScreenshotModal() {
+        const form = document.getElementById('DNSAScreenshotForm');
+        if (form) form.reset();
+
+        const container = document.getElementById('DNSAScreenshotInputContainer');
+        if (container) container.innerHTML = '';
+
+        const originalInput = document.getElementById('inputURL');
+        if (originalInput) originalInput.value = '';
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -144,9 +178,21 @@
 <script>
     function dns_a_screenshot_script_modal_to_node(domain) {
         var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));
+        resetDNSAScreenshotModal();
         var inputURL = document.getElementById('inputURL')
-        inputURL.value = 'https://' + domain
+        if (inputURL) inputURL.value = 'https://' + domain
         myModal.show();
+    }
+
+    function resetDNSAScreenshotModal() {
+        const form = document.getElementById('DNSAScreenshotForm');
+        if (form) form.reset();
+
+        const container = document.getElementById('DNSAScreenshotInputContainer');
+        if (container) container.innerHTML = '';
+
+        const originalInput = document.getElementById('inputURL');
+        if (originalInput) originalInput.value = '';
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -171,33 +217,34 @@
 <script>
     async function dns_a_screenshot_script_modal_to_info_tabs(rows) {
         var myModal = new bootstrap.Modal(document.getElementById('dnsAScreenshotModalWindow'));        
-        
-        // Очищаем контейнер и добавляем первую форму
-        const container = document.getElementById('DNSAScreenshotInputContainer');
-        container.innerHTML = '';
-        
-        if (rows.length > 0) {
-            addNewDNSAScreenshotForm();
-        }
+        resetDNSAScreenshotModal();
 
-        let inputForms = document.querySelectorAll('[id^="URLForDNSAScreenshot"]');
-        
         for (let row = 0; row < rows.length; row++) {
-            let currentForm = inputForms[row] || addNewDNSAScreenshotForm();
+            let inputForms = document.querySelectorAll('[id^="urlTarget"]');
+            let currentForm = inputForms[row];
             
-            let inputURL = currentForm.querySelector('input[type="url"]');
-            
+            let inputURL = currentForm.querySelector('[id^="inputURL"]');
             if (inputURL && rows[row].domain) {
                 inputURL.value = 'https://' + rows[row].domain;
             }
-            
-            if (row < rows.length - 1 && row >= inputForms.length - 1) {
+
+            if (rows.length > 1 && row < rows.length - 1) {
                 addNewDNSAScreenshotForm();
-                inputForms = document.querySelectorAll('[id^="URLForDNSAScreenshot"]');
+                inputForms = document.querySelectorAll('[id^="urlTarget"]');
             }
         }
-        
         myModal.show();
+    }
+
+    function resetDNSAScreenshotModal() {
+        const form = document.getElementById('DNSAScreenshotForm');
+        if (form) form.reset();
+
+        const container = document.getElementById('DNSAScreenshotInputContainer');
+        if (container) container.innerHTML = '';
+
+        const originalInput = document.getElementById('inputURL');
+        if (originalInput) originalInput.value = '';
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -219,5 +266,18 @@
 {% endmacro %}
 
 {% macro show() %}
-{{ main_dns_a_screenshot() }}
-{% endmacro %} 
+<div class="d-flex flex-column">
+    <form id="DNSAScreenshotForm">
+        <div id="DNSAScreenshotInputContainer"></div>
+        <div class="input-group mb-3" style="padding-top: 7px;" id="urlTarget">
+            <span class="input-group-text" id="basic-addon1" data-i18n="URL"></span>
+            <input type="url" class="form-control" id='inputURL' placeholder="https://example.com" aria-label="URL" aria-describedby="basic-addon1" required name="URL">
+            <button id="add_new_url_form" onclick="addNewDNSAScreenshotForm()" type="button" class="btn btn-success" style="width: 3rem">+</button>
+        </div>
+        <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
+            <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
+            <button type="button" class="btn btn-primary w-50" id="startDNSAScreenshotBtn" onclick="startDNSAScreenshotTasks()" data-i18n="Start"></button>
+        </div>
+    </form>
+</div>
+{% endmacro %}

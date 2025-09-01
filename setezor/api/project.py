@@ -94,7 +94,7 @@ async def export_project_by_id(
     return StreamingResponse(
         project.data,
         media_type='application/octet-stream',
-        headers={'Content-Disposition': f'attachment; filename="project_{project.name}.pkl"'}
+        headers={'Content-Disposition': f'attachment; filename="{project.name}.zip"'}
     )
 
 
@@ -102,10 +102,10 @@ imported_projects = set()
 @router.post("/import")
 async def import_project(
     project_manager: Annotated[ProjectManager, Depends(ProjectManager.new_instance)],
-    pickle_file: UploadFile = File(...),
+    zip_file: UploadFile = File(...),
     user_id: str = Depends(get_user_id)
 ):
-    await project_manager.import_project(user_id, pickle_file, imported_projects)
+    await project_manager.import_project(user_id, zip_file, imported_projects)
     return Response(status_code=201)
 
 

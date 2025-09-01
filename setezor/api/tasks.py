@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends
 
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.models import Task
-from setezor.schemas.dns_a_screenshot import DNSAScreenshotTaskPayloadValidated
 from setezor.schemas.task import DNSTaskPayload, \
     MasscanScanTaskPayload, \
     NmapParseTaskPayload, \
@@ -16,7 +15,8 @@ from setezor.schemas.task import DNSTaskPayload, \
     ScapyParseTaskPayload, \
     MasscanLogTaskPayload, \
     SnmpBruteCommunityStringPayload, \
-    SpeedTestTaskPayload
+    SpeedTestTaskPayload, \
+    DNSAScreenshotTaskPayload
 from setezor.services import TasksService
 from setezor.managers import TaskManager
 from setezor.services.project_service import ProjectService
@@ -300,7 +300,7 @@ async def create_speed_test_task(
 @router.post("/dns_a_screenshot_task", status_code=201)
 async def create_dns_a_screenshot_task(
     task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
-    dns_a_screenshot_task_payload: DNSAScreenshotTaskPayloadValidated,
+    dns_a_screenshot_task_payload: DNSAScreenshotTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor]))

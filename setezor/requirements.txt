@@ -6,7 +6,7 @@ aiojobs==1.3.0
 pydantic-extra-types==2.9.0
 pydantic==2.9.1
 dnspython==2.6.1
-cpeguess @ git+https://github.com/lmsecure/CPEGuess@38506e0f96d57b6d0cbc6a3ab4ed83a22ec2a99c
+cpeguess @ git+https://github.com/lmsecure/CPEGuess
 passlib==1.7.4
 sqlmodel==0.0.22
 PyJWT==2.10.0

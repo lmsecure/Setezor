@@ -1,9 +1,10 @@
-from io import BytesIO
 import os
+from io import BytesIO
 from random import randint
 from typing import Annotated
 import pickle
 
+import aiofiles
 from fastapi import Depends, HTTPException, UploadFile
 
 from setezor.managers.hash_manager import UploadFileHashManager
@@ -31,10 +32,13 @@ from setezor.services.project_service import ProjectService
 from setezor.services.role_service import RoleService
 from setezor.services.scan_service import ScanService
 from setezor.services.user_project_service import UserProjectService
+from setezor.settings import PROJECTS_DIR_PATH
+from setezor.tools.file_manager import FileManager
 from setezor.tools.jwt import JWT_Tool
 
 from setezor.models.base import generate_unique_id
 from setezor.schemas.roles import Roles
+from setezor.tools.zip_files_manager import ZipFileManager
 
 
 class ProjectManager:
@@ -56,6 +60,8 @@ class ProjectManager:
             scan_service: ScanService,
             invite_link_service: InviteLinkService,
             hash_manager: UploadFileHashManager,
+            file_manager: FileManager,
+            zip_file_manager: ZipFileManager,
     ):
         self.__project_service: ProjectService = project_service
         self.__user_project_service: UserProjectService = user_project_service
@@ -71,6 +77,8 @@ class ProjectManager:
         self.__ip_service: IPService = ip_service
 
         self.__hash_manager: UploadFileHashManager = hash_manager
+        self.__file_manager: FileManager = file_manager
+        self.__zip_file_manager: ZipFileManager = zip_file_manager
 
         self.__domain_service: DomainsService = domain_service
         self.__dns_a_service: DNS_A_Service = dns_a_service
@@ -208,26 +216,43 @@ class ProjectManager:
 
     async def export_project(self, project_id: str) -> ProjectDTO:
         project = await self.__project_service.export_project(project_id)
-        project.data = BytesIO(pickle.dumps(project.data))
+        project_path = os.path.join(PROJECTS_DIR_PATH, str(project_id))
+
+        zip_file = self.__zip_file_manager.pack_folder_to_bytes(project_path)
+        zip_file = self.__zip_file_manager.add_file(zip_file, 'project.pkl', pickle.dumps(project.data))
+        project.data = zip_file
         return project
 
-    async def import_project(self, user_id: str, pickle_file: UploadFile, imported_projects: set[str]):
-        hashed_data = await self.__hash_manager.get_hashed_data(pickle_file)
+    async def import_project(self, user_id: str, zip_file: UploadFile, imported_projects: set[str]):
 
-        if hashed_data in imported_projects:
-            raise HTTPException(status_code=400, detail="Project already importing")
+        file_bytes = await zip_file.read()
+        zip_bytes = BytesIO(file_bytes)
+        self.__zip_file_manager.unpack_files(PROJECTS_DIR_PATH, zip_bytes)
+        project_path = PROJECTS_DIR_PATH + f'/{zip_file.filename.replace(".zip", "")}'
+        pickle_file = os.path.join(project_path, 'project.pkl')
+        hashed_data = await self.__hash_manager.get_hashed_data(open(pickle_file, 'rb'))
 
-        if not pickle_file:
-            raise HTTPException(status_code=400, detail="No file uploaded")
-
-        if not pickle_file.filename.endswith('.pkl'):
-            raise HTTPException(status_code=400, detail="Invalid file extension, must be *.pkl")
-
-        imported_projects.add(hashed_data)
         try:
-            await pickle_file.seek(0)
-            data = await pickle_file.read()
-            objects = pickle.loads(data)
+            if hashed_data in imported_projects:
+                raise HTTPException(status_code=400, detail="Project already importing")
+
+            if not zip_file:
+                raise HTTPException(status_code=400, detail="No file uploaded")
+
+            if not zip_file.filename.endswith('.zip'):
+                raise HTTPException(status_code=400, detail="Invalid file extension, must be *.zip")
+
+            imported_projects.add(hashed_data)
+
+            async with aiofiles.open(pickle_file, 'rb') as f:
+                data_bytes = await f.read()
+                objects = pickle.loads(data_bytes)
+
+            project_id = objects['Project'][0].id
+
+            self.__file_manager.merge_dirs(project_path, PROJECTS_DIR_PATH + '/' + project_id)
+            self.__file_manager.remove_dir(project_path)
+
             await self.__project_service.import_project(user_id, objects, imported_projects, hashed_data)
         except HTTPException as ex:
             if hashed_data in imported_projects:
@@ -237,7 +262,6 @@ class ProjectManager:
             if hashed_data in imported_projects:
                 imported_projects.remove(hashed_data)
             raise ex
-
 
     @classmethod
     async def new_instance(
@@ -258,6 +282,8 @@ class ProjectManager:
         scan_service:  Annotated[ScanService, Depends(ScanService.new_instance)],
         invite_link_service:  Annotated[InviteLinkService, Depends(InviteLinkService.new_instance)],
         hash_manager: Annotated[UploadFileHashManager, Depends(UploadFileHashManager.new_instance)],
+        zip_file_manager: Annotated[ZipFileManager, Depends(ZipFileManager.new_instance)],
+        file_manager: Annotated[FileManager, Depends(FileManager.new_instance)]
     ):
         
         return cls(
@@ -276,5 +302,7 @@ class ProjectManager:
             dns_a_service=dns_a_service,
             scan_service=scan_service,
             invite_link_service=invite_link_service,
-            hash_manager=hash_manager
+            hash_manager=hash_manager,
+            zip_file_manager=zip_file_manager,
+            file_manager=file_manager
         )

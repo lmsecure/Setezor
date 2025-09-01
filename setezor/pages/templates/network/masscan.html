@@ -51,15 +51,6 @@
         document.getElementById(prefix + 'MasscanInputContainer').appendChild(clone);
     }
 </script>
-<script>
-    $('#{{ prefix }}masscanIpTarget').on('change', function (e, data) {
-        if ($('#{{ prefix }}masscanInputIP').inputmask('isComplete')) {
-            document.getElementById('{{ prefix }}startMasscanScanBtn').disabled = false
-        } else {
-            document.getElementById('{{ prefix }}startMasscanScanBtn').disabled = true
-        }
-    })
-</script>
 {% endmacro %}
 {% macro masscan_main(prefix) %}
 
@@ -76,7 +67,7 @@
             <option value="25,465,587,110,143,993,995" data-i18n="email ports"></option>
             <option value="0-65535" data-i18n="All"></option>
         </datalist>
-        <input type="text" list="masscanPortsSelectorList" id="{{ prefix }}masscanPortsSelector" name="ports" class="form-control"
+        <input type="text" list="{{ prefix }}masscanPortsSelectorList" id="{{ prefix }}masscanPortsSelector" name="ports" class="form-control"
         data-i18n-placeholder="Ports" disabled />
     </div>
 </div>
@@ -325,18 +316,127 @@
 " data-i18n="Start scan"></button>
 </div>
 <script>
-    $('#{{ prefix }}masscanPortSwitch').on('change.bootstrapSwitch', function (e, data) {
-        document.getElementById('{{ prefix }}masscanPortsSelector').disabled = !e.target.checked;
-        document.getElementById('{{ prefix }}masscanPortsSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    })
-    $('#{{ prefix }}sourcePortSwitch').on('change.bootstrapSwitch', function (e, data) {
-        document.getElementById('{{ prefix }}masscanSourcePortSelector').disabled = !e.target.checked;
-        document.getElementById('{{ prefix }}masscanSourcePortSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    })
-    $('#{{ prefix }}maxRateSwitch').on('change.bootstrapSwitch', function (e, data) {
-        document.getElementById('{{ prefix }}masscanMaxRateSelector').disabled = !e.target.checked;
-        document.getElementById('{{ prefix }}masscanMaxRateSelectorDiv').firstElementChild.firstElementChild.lastElementChild.disabled = !e.target.checked
-    })
+function resetMasscanModal(prefix) {
+    const modal = document.getElementById(prefix + 'masscanModalWindow');
+    
+    modal.querySelectorAll('form').forEach(form => form.reset());
+    
+    const container = document.getElementById(prefix + 'MasscanInputContainer');
+    if (container) container.innerHTML = '';
+    
+    const inputIP = document.getElementById(prefix + 'masscanInputIP');
+    const inputPort = document.getElementById(prefix + 'inputPortMasscan');
+    if (inputIP) inputIP.value = '';
+    if (inputPort) {
+        inputPort.value = '';
+        inputPort.placeholder = '--ping';
+    }
+
+    const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
+    if (portsSelector) {
+        portsSelector.value = '';
+        portsSelector.disabled = true;
+    }
+    const portsSwitch = document.getElementById(prefix + 'masscanPortsScan');
+    if (portsSwitch) portsSwitch.checked = false;
+
+    const sourcePortInput = document.getElementById(prefix + 'masscanSourcePortSelector');
+    if (sourcePortInput) {
+        sourcePortInput.value = '';
+        sourcePortInput.disabled = true;
+    }
+    const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
+    if (sourcePortSwitch) sourcePortSwitch.checked = false;
+    
+    const maxRateInput = document.getElementById(prefix + 'masscanMaxRateSelector');
+    if (maxRateInput) {
+        maxRateInput.value = '';
+        maxRateInput.disabled = true;
+    }
+    const maxRateSwitch = document.getElementById(prefix + 'maxRate');
+    if (maxRateSwitch) maxRateSwitch.checked = false;
+    
+    const udpCheckbox = document.getElementById(prefix + 'searchUdpPortInput');
+    if (udpCheckbox) udpCheckbox.checked = false;
+    
+    const olRadio = document.getElementById(prefix + 'ol');
+    const oxRadio = document.getElementById(prefix + 'ox');
+    const ojRadio = document.getElementById(prefix + 'oj');
+    if (olRadio) olRadio.checked = false;
+    if (oxRadio) oxRadio.checked = false;
+    if (ojRadio) ojRadio.checked = true;
+    
+    const waitSlider = document.getElementById(prefix + 'masscanWaitRange');
+    if (waitSlider) waitSlider.value = '10';
+    
+    const scopeButton = document.getElementById(prefix + 'masscanScopeDropdown');
+    if (scopeButton) {
+        scopeButton.textContent = scopeButton.getAttribute('data-i18n') || 'Select scope';
+    }
+    if (typeof selectedScopeForMasscan !== 'undefined') {
+        selectedScopeForMasscan = '';
+    }
+    
+    const targetTab = document.getElementById(prefix + 'masscan-simple-tab');
+    const scopeTab = document.getElementById(prefix + 'masscan-scope-tab');
+    const targetPane = document.getElementById(prefix + 'masscan-simple-mode');
+    const scopePane = document.getElementById(prefix + 'masscan-scope-mode');
+    
+    if (targetTab && scopeTab && targetPane && scopePane) {
+        targetTab.classList.add('active');
+        scopeTab.classList.remove('active');
+        targetPane.classList.add('show', 'active');
+        scopePane.classList.remove('show', 'active');
+    }
+    
+    document.querySelectorAll("input.form-control.port[id^='" + prefix + "']").forEach(function (input) {
+        input.placeholder = '--ping';
+    });
+}
+
+function setupMasscanSwitchers(prefix) {
+    const portSwitch = document.getElementById(prefix + 'masscanPortsScan');
+    const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
+    
+    if (portSwitch && portsSelector) {
+        const handlePortSwitchChange = function(event) {
+            portsSelector.disabled = !event.target.checked;
+        };
+        
+        portSwitch.removeEventListener('change', handlePortSwitchChange);
+        portSwitch.addEventListener('change', handlePortSwitchChange);
+        
+        portsSelector.disabled = !portSwitch.checked;
+    }
+    
+    const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
+    const sourcePortSelector = document.getElementById(prefix + 'masscanSourcePortSelector');
+    
+    if (sourcePortSwitch && sourcePortSelector) {
+        const handleSourcePortSwitchChange = function(event) {
+            sourcePortSelector.disabled = !event.target.checked;
+        };
+        
+        sourcePortSwitch.removeEventListener('change', handleSourcePortSwitchChange);
+        sourcePortSwitch.addEventListener('change', handleSourcePortSwitchChange);
+        
+        sourcePortSelector.disabled = !sourcePortSwitch.checked;
+    }
+    
+    const maxRateSwitch = document.getElementById(prefix + 'maxRate');
+    const maxRateSelector = document.getElementById(prefix + 'masscanMaxRateSelector');
+    
+    if (maxRateSwitch && maxRateSelector) {
+        const handleMaxRateSwitchChange = function(event) {
+            maxRateSelector.disabled = !event.target.checked;
+        };
+        
+        maxRateSwitch.removeEventListener('change', handleMaxRateSwitchChange);
+        maxRateSwitch.addEventListener('change', handleMaxRateSwitchChange);
+        
+        maxRateSelector.disabled = !maxRateSwitch.checked;
+    }
+}
 
 </script>
 {% endmacro %}
@@ -383,96 +483,43 @@
 {% macro masscan_modal_to_info_tabs(prefix) %}
 <script>
 async function masscan_script_modal_to_info_tabs(rows, prefix) {
+    resetMasscanModal(prefix);
+    setupMasscanSwitchers(prefix);
+    
     const modalEl = document.getElementById(prefix + 'masscanModalWindow');
     const myModal = new bootstrap.Modal(modalEl);
 
-    document.getElementById(prefix + 'masscanInputIP').value = '';
-    document.getElementById(prefix + 'inputPortMasscan').value = '';
-    document.getElementById(prefix + 'inputPortMasscan').placeholder = '--ping';
-
-    const container = document.getElementById(prefix + 'MasscanInputContainer');
-    if (container) container.innerHTML = '';
-
-    const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
-    if (portsSelector) {
-        portsSelector.value = '';
-        portsSelector.setAttribute('disabled', 'disabled');
-    }
-    const portsSwitch = document.getElementById(prefix + 'masscanPortsScan');
-    if (portsSwitch) portsSwitch.checked = false;
-
-    const sourcePortInput = document.getElementById(prefix + 'masscanSourcePortSelector');
-    if (sourcePortInput) {
-        sourcePortInput.value = '';
-        sourcePortInput.setAttribute('disabled', 'disabled');
-    }
-    const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
-    if (sourcePortSwitch) sourcePortSwitch.checked = false;
-
-    const maxRateInput = document.getElementById(prefix + 'masscanMaxRateSelector');
-    if (maxRateInput) {
-        maxRateInput.value = '';
-        maxRateInput.setAttribute('disabled', 'disabled');
-    }
-    const maxRateSwitch = document.getElementById(prefix + 'maxRate');
-    if (maxRateSwitch) maxRateSwitch.checked = false;
-
-    const udpCheckbox = document.getElementById(prefix + 'searchUdpPortInput');
-    if (udpCheckbox) udpCheckbox.checked = false;
-
-    const olRadio = document.getElementById(prefix + 'ol');
-    const oxRadio = document.getElementById(prefix + 'ox');
-    const ojRadio = document.getElementById(prefix + 'oj');
-    if (olRadio) olRadio.checked = false;
-    if (oxRadio) oxRadio.checked = false;
-    if (ojRadio) ojRadio.checked = true;
-
-    const waitSlider = document.getElementById(prefix + 'masscanWaitRange');
-    if (waitSlider) waitSlider.value = '10';
-
-    if (rows.length > 0) {
-        const inputForms = document.querySelectorAll('[id^="' + prefix + 'masscanIpTarget"]');
-        const firstForm = inputForms[0];
-        const inputIP = firstForm.querySelector('[id^="' + prefix + 'masscanInputIP"]');
-        const inputPort = firstForm.querySelector('[id^="' + prefix + 'inputPortMasscan"]');
-        if (inputIP && rows[0].ipaddr) inputIP.value = rows[0].ipaddr;
-        if (inputPort && rows[0].port) inputPort.value = rows[0].port;
-
-        for (let row = 1; row < rows.length; row++) {
-            addNewMasscanForm(prefix);
+    if (rows && rows.length > 0) {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            
+            if (i > 0) {
+                addNewMasscanForm(prefix);
+            }
+            
             const inputForms = document.querySelectorAll('[id^="' + prefix + 'masscanIpTarget"]');
-            const currentForm = inputForms[inputForms.length - 1];
-            const inputIP = currentForm.querySelector('[id^="' + prefix + 'masscanInputIP"]');
-            const inputPort = currentForm.querySelector('[id^="' + prefix + 'inputPortMasscan"]');
-            if (inputIP && rows[row].ipaddr) inputIP.value = rows[row].ipaddr;
-            if (inputPort && rows[row].port) inputPort.value = rows[row].port;
+            const currentForm = inputForms[i];
+            
+            if (currentForm) {
+                const inputIP = currentForm.querySelector('[id^="' + prefix + 'masscanInputIP"]');
+                const inputPort = currentForm.querySelector('[id^="' + prefix + 'inputPortMasscan"]');
+                
+                if (inputIP && row.ipaddr) {
+                    inputIP.value = row.ipaddr;
+                }
+                
+                if (inputPort && row.port) {
+                    const uniquePorts = [...new Set(
+                        row.port.split(',').map(p => p.trim()).filter(p => p)
+                    )];
+                    inputPort.value = uniquePorts.join(',');
+                }
+            }
         }
     }
 
     myModal.show();
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-    const modalEl = document.getElementById('{{ prefix }}masscanModalWindow');
-    const myModal = new bootstrap.Modal(modalEl, { keyboard: false });
-
-    document.querySelector("#{{ prefix }}masscanModalWindow .btn-close").onclick = function () {
-        myModal.hide();
-    };
-
-    window.onclick = function (event) {
-        if (event.target === modalEl) {
-            myModal.hide();
-        }
-    };
-
-    $('#{{ prefix }}masscanModalWindow').off('hidden.bs.modal').on('hidden.bs.modal', function () {
-        document.getElementById('{{ prefix }}masscanInputIP').value = '';
-        document.getElementById('{{ prefix }}inputPortMasscan').value = '';
-        const container = document.getElementById('{{ prefix }}MasscanInputContainer');
-        if (container) container.innerHTML = '';
-    });
-});
 </script>
 {% endmacro %}
 
@@ -520,180 +567,55 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <script>
-    function masscan_full_modal_window(prefix) {
-        const modalId = prefix + 'masscanModalWindow';
-        const modalEl = document.getElementById(modalId);
-        const myModal = new bootstrap.Modal(modalEl);
+   function masscan_full_modal_window(prefix) {
+    resetMasscanModal(prefix);
+    setupMasscanSwitchers(prefix);
+    
+    const modalId = prefix + 'masscanModalWindow';
+    const modalEl = document.getElementById(modalId);
+    const myModal = new bootstrap.Modal(modalEl);
+    
+    myModal.show();
+}
 
-        document.querySelectorAll("input.form-control.port[id^='" + prefix + "']").forEach(function (input) {
-            input.value = '';
-            input.placeholder = '--ping';
-        });
-
-        const container = document.getElementById(prefix + 'MasscanInputContainer');
-        if (container) container.innerHTML = '';
-
-        const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
-        if (portsSelector) {
-            portsSelector.value = '';
-            portsSelector.setAttribute('disabled', 'disabled');
-            portsSelector.setAttribute('placeholder', 'Ports');
-        }
-
-        const portsSwitch = document.getElementById(prefix + 'masscanPortsScan');
-        if (portsSwitch) portsSwitch.checked = false;
-
-        const sourcePortInput = document.getElementById(prefix + 'masscanSourcePortSelector');
-        if (sourcePortInput) {
-            sourcePortInput.value = '';
-            sourcePortInput.setAttribute('disabled', 'disabled');
-        }
-
-        const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
-        if (sourcePortSwitch) sourcePortSwitch.checked = false;
-
-        const maxRateInput = document.getElementById(prefix + 'masscanMaxRateSelector');
-        if (maxRateInput) {
-            maxRateInput.value = '';
-            maxRateInput.setAttribute('disabled', 'disabled');
-        }
-
-        const maxRateSwitch = document.getElementById(prefix + 'maxRate');
-        if (maxRateSwitch) maxRateSwitch.checked = false;
-
-        const udpCheckbox = document.getElementById(prefix + 'searchUdpPortInput');
-        if (udpCheckbox) udpCheckbox.checked = false;
-
-        const olRadio = document.getElementById(prefix + 'ol');
-        const oxRadio = document.getElementById(prefix + 'ox');
-        const ojRadio = document.getElementById(prefix + 'oj');
-        if (olRadio) olRadio.checked = false;
-        if (oxRadio) oxRadio.checked = false;
-        if (ojRadio) ojRadio.checked = true;
-
-        const waitSlider = document.getElementById(prefix + 'masscanWaitRange');
-        if (waitSlider) waitSlider.value = '10';
-
-        // TODO: сначала нужно повесить нормальный эвент на автоматическую активацию при вводе IP
-        // const startBtn = document.getElementById(prefix + 'startMasscanScanBtn');
-        // if (startBtn) startBtn.disabled = true;
-
-        myModal.show();
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalEl = document.getElementById('{{ prefix }}masscanModalWindow');
-        const myModal = new bootstrap.Modal(modalEl, {
-            keyboard: false
-        });
-        document.querySelector("#{{ prefix }}masscanModalWindow .btn-close").onclick = function () {
-            myModal.hide();
-        };
-        window.onclick = function (event) {
-            if (event.target === modalEl) {
-                myModal.hide();
-            }
-        };
-    });
 </script>
 {% endmacro %}
 
 {% macro masscan_script_modal_to_node(prefix) %}
 <script>
-    async function masscan_script_modal_to_node(node, prefix) {
-        const modalId = prefix + 'masscanModalWindow';
-        const modalEl = document.getElementById(modalId);
-        const myModal = new bootstrap.Modal(modalEl);
+async function masscan_script_modal_to_node(node, prefix) {
+    resetMasscanModal(prefix);
+    setupMasscanSwitchers(prefix);
+    
+    const modalId = prefix + 'masscanModalWindow';
+    const modalEl = document.getElementById(modalId);
+    const myModal = new bootstrap.Modal(modalEl);
 
-        document.querySelectorAll("input.form-control.port[id^='" + prefix + "']").forEach(function (input) {
-            input.value = '';
-            input.placeholder = '--ping';
-        });
+    const inputIP = document.getElementById(prefix + 'masscanInputIP');
+    const portField = document.getElementById(prefix + 'inputPortMasscan');
+    const ip = node.label;
+    
+    if (inputIP) inputIP.value = ip;
 
-        const container = document.getElementById(prefix + 'MasscanInputContainer');
-        if (container) container.innerHTML = '';
+    try {
+        const url = '/api/v1/vis/node_info/' + node.id;
+        const resp = await fetch(url, { method: 'GET' });
+        const json = await resp.json();
 
-        const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
-        if (portsSelector) {
-            portsSelector.value = '';
-            portsSelector.setAttribute('disabled', 'disabled');
-            portsSelector.setAttribute('placeholder', 'Ports');
+        if (json.ports && json.ports.length && portField) {
+            const ports = [...new Set(json.ports.map(p => p.port))].join(',');
+            portField.value = ports;
+        } else {
+            if (portField) portField.value = '';
         }
-
-        const portsSwitch = document.getElementById(prefix + 'masscanPortsScan');
-        if (portsSwitch) portsSwitch.checked = false;
-
-        const sourcePortInput = document.getElementById(prefix + 'masscanSourcePortSelector');
-        if (sourcePortInput) {
-            sourcePortInput.value = '';
-            sourcePortInput.setAttribute('disabled', 'disabled');
-        }
-
-        const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
-        if (sourcePortSwitch) sourcePortSwitch.checked = false;
-
-        const maxRateInput = document.getElementById(prefix + 'masscanMaxRateSelector');
-        if (maxRateInput) {
-            maxRateInput.value = '';
-            maxRateInput.setAttribute('disabled', 'disabled');
-        }
-
-        const maxRateSwitch = document.getElementById(prefix + 'maxRate');
-        if (maxRateSwitch) maxRateSwitch.checked = false;
-
-        const udpCheckbox = document.getElementById(prefix + 'searchUdpPortInput');
-        if (udpCheckbox) udpCheckbox.checked = false;
-
-        const olRadio = document.getElementById(prefix + 'ol');
-        const oxRadio = document.getElementById(prefix + 'ox');
-        const ojRadio = document.getElementById(prefix + 'oj');
-        if (olRadio) olRadio.checked = false;
-        if (oxRadio) oxRadio.checked = false;
-        if (ojRadio) ojRadio.checked = true;
-
-        const waitSlider = document.getElementById(prefix + 'masscanWaitRange');
-        if (waitSlider) waitSlider.value = '10';
-
-        const inputPort = document.getElementById(prefix + 'inputPortMasscan');
-        if (inputPort) inputPort.placeholder = '--ping';
-
-        const inputIP = document.getElementById(prefix + 'masscanInputIP');
-        const portField = document.getElementById(prefix + 'inputPortMasscan');
-        const ip = node.label;
-        if (inputIP) inputIP.value = ip;
-
-        try {
-            const url = '/api/v1/vis/node_info/' + node.id;
-            const resp = await fetch(url, { method: 'GET' });
-            const json = await resp.json();
-
-            if (json.ports.length && portField) {
-                const ports = [...new Set(json.ports.map(p => p.port))].join(',');
-                portField.value = ports;
-            } else {
-                if (portField) portField.value = '';
-            }
-        } catch (err) {
-            console.error('Ошибка при получении портов узла:', err);
-        }
-
-        myModal.show();
+    } catch (err) {
+        console.error('Ошибка при получении портов узла:', err);
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalEl = document.getElementById('{{ prefix }}masscanModalWindow');
-        const myModal = new bootstrap.Modal(modalEl, { keyboard: false });
+    myModal.show();
+}
 
-        document.querySelector("#{{ prefix }}masscanModalWindow .btn-close").onclick = function () {
-            myModal.hide();
-        };
 
-        window.onclick = function (event) {
-            if (event.target === modalEl) {
-                myModal.hide();
-            }
-        };
-    });
 </script>
 {% endmacro %}
 

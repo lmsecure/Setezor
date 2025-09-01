@@ -51,7 +51,22 @@
             document.getElementById('TLSInputContainer').appendChild(clone);
         }
 </script>
-
+<script>
+    function resetCertModal() {
+        const certForm = document.getElementById('CertForm');
+        if (certForm) certForm.reset();
+        
+        const container = document.getElementById('TLSInputContainer');
+        if (container) container.innerHTML = '';
+        
+        const originalInput = document.getElementById('inputTargetTLS');
+        if (originalInput) originalInput.value = '';
+        
+        const originalInputPort = document.getElementById('inputPort');
+        if (originalInputPort) originalInputPort.value = '443';
+        
+        }
+</script>
 {% endmacro %}
 {% macro cert_start() %}
 <div class="btn-group d-flex my-2" role="group">
@@ -98,8 +113,9 @@
 
 <script>
      async function cert_script_modal_to_info_tabs(rows) {
-        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));        
-        if (rows.length > 0) {
+        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
+        resetCertModal();
+        if (rows.length > 1) {
             addNewCertForm();
         }
 
@@ -193,6 +209,7 @@
 
     function cert_full_modal_window() {
         var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
+        resetCertModal();
         myModal.show();
     }
 
@@ -221,6 +238,7 @@
 
     function cert_script_modal_to_node(ip) {
         var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
+        resetCertModal();
         var inputIP = document.getElementById('inputTargetTLS')
         inputIP.value = ip
         myModal.show();
