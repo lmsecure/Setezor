@@ -1,7 +1,7 @@
 # Навигация
 1. [What is Setezor?](#what-is-setezor)
 2. [Installation and launch](#installation-and-launch)
-3. [Installation and launch of the agent on the server](#installation-and-launch-of-the-agent-on-the-server)
+3. [Installing and running an agent on the server](#installing-and-running-an-agent-on-the-server)
 4. [Support](#support)
 5. [Donations](#donations)
 
@@ -79,7 +79,7 @@ Create a working folder. It will be needed to store logs and user data:
 mkdir ~/setezor && cd $_
 ```
 
-Create a file ".env" and write in it variables:
+Create a file ".env" and write in it variables (nano .env):  
 
 ```
 SECRET_KEY=abcdef
@@ -118,7 +118,7 @@ Launch of the agent:
 docker run --network=host --cap-add=NET_ADMIN -d lmsecure/setezor.agent:latest
 ```
 
-## Функционал CLI
+## CLI functionality
 
 - View all available options on the server:
 
