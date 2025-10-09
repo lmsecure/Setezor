@@ -22,11 +22,12 @@ async def get_all_targets(
 @router.get("/sync")
 async def get_all_targets_for_sync(
     acunetix_service: Annotated[AcunetixService, Depends(AcunetixService.new_instance)],
+    scope_id: str,
     acunetix_id: Optional[str] = None,
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor]))
 ):
-    return await acunetix_service.get_targets_for_sync(acunetix_id=acunetix_id, project_id=project_id)
+    return await acunetix_service.get_targets_for_sync(acunetix_id=acunetix_id, project_id=project_id, scope_id=scope_id)
 
 @router.post("/sync")
 async def sync_targets_between_setezor_and_acunetix(
@@ -37,7 +38,7 @@ async def sync_targets_between_setezor_and_acunetix(
     scan_id: str = Depends(get_current_scan_id),
     _: bool = Depends(role_required([Roles.owner, Roles.executor])),
 ):
-    background_tasks.add_task(acunetix_service.sync_targets_between_setezor_and_acunetix, sync_payload=sync_payload, scan_id=scan_id, project_id=project_id)
+    background_tasks.add_task(acunetix_service.sync_targets_between_setezor_and_acunetix, sync_payload=sync_payload, scope_id=sync_payload.scope_id, scan_id=scan_id, project_id=project_id)
     return None
 
 

@@ -3,7 +3,7 @@ from typing import List
 from Crypto.Random import get_random_bytes
 from setezor.services.base_service import BaseService
 from setezor.tools.websocket_manager import WS_MANAGER
-from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS_A, Domain
+from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS, Domain
 from setezor.models.agent_parent_agent import AgentParentAgent
 from setezor.models.base import generate_unique_id
 from setezor.schemas.task import WebSocketMessage

@@ -125,12 +125,14 @@
     async function getAcunetixTargetsData(event, acunetix_id){
         let targets = []
         let scope_id = event.target.value
+        let el = document.getElementById("scopesPickAcunetix")
+        el.value = scope_id;
         let modalBody = document.getElementById('acunetixTargetsWhenScopeIsPicked')
         modalBody.innerHTML = `<div class="spinner-border" role="status">
                     <span class="visually-hidden">${i18next.t('Loading...')}</span>
                     </div>`
         if (scope_id != ""){
-            await axios.get(`/api/v1/acunetix/targets/sync?acunetix_id=${acunetix_id}`).then(resp =>{
+            await axios.get(`/api/v1/acunetix/targets/sync?acunetix_id=${acunetix_id}&scope_id=${scope_id}`).then(resp =>{
                 targets = resp.data
             })
         }
@@ -194,7 +196,6 @@
                     if (_el.localName == "input" && _el.checked == true && _el.attributes.target != undefined){
                         let attrs = _el.attributes
                         let in_acunetix_id = attrs.id.value
-                        let scope_id = attrs.scope_id.value
                         let address = attrs.address.value
                         let acunetix_id = attrs.acunetix_id.value
                         let in_setezor_id = attrs.in_setezor_id.value
@@ -202,7 +203,6 @@
                             in_setezor_id = null
                         }
                         targetsToSync.push({
-                            scope_id:scope_id,
                             in_acunetix_id: in_acunetix_id,
                             in_setezor_id: in_setezor_id,
                             acunetix_id: acunetix_id,
@@ -214,11 +214,13 @@
         }
         let date_from = document.getElementById("date_from_acunetix_sync").value
         let date_to = document.getElementById("date_to_acunetix_sync").value
+        let scope_id = document.getElementById("scopesPickAcunetix").value
 
         let payload = {
             targets: targetsToSync,
             dt_from:date_from,
             dt_to:date_to,
+            scope_id:scope_id
         }
         await axios.post("/api/v1/acunetix/targets/sync", payload, {headers: {'Content-Type': 'application/json'}}).then(resp =>{
             if (resp.status == 200){

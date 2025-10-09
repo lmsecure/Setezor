@@ -1,6 +1,8 @@
+import datetime
 from base64 import b64decode
 from setezor.tasks.base_job import BaseJob
 from setezor.modules.nmap.parser import NmapParser
+from setezor.settings import PROJECTS_DIR_PATH
 
 
 
@@ -27,6 +29,9 @@ class NmapParseTask(BaseJob):
 
     async def _task_func(self):
         data = b64decode(self.file.split(',')[1])
+        filename = f"{str(datetime.datetime.now())}_{self.__class__.__name__}_{self.task_id}.{self.filename.split('.')[-1]}"
+        await self.task_manager.file_manager.save_file(file_path = [PROJECTS_DIR_PATH, self.project_id, self.scan_id,
+                                                                              "nmap_logs", filename], data=data)
         data = NmapParser.parse_xml(data)
         parse_result, traceroute = NmapParser().parse_hosts(scan = data.get('nmaprun'), agent_id=self.agent_id, self_address={'ip': self.ip, 'mac': self.mac})
         result = NmapParser.restruct_result(data=parse_result, interface_ip_id=self.interface_ip_id, traceroute=traceroute)

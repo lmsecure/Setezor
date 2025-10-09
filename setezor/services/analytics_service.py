@@ -271,6 +271,11 @@ class AnalyticsService(BaseService):
                 "ipaddr": row[0],
                 "port": row[1],
                 "domain": row[2],
+                "DNS": row[3],
+                "value": row[4],
+                "extra_data": row[5],
+                "ip_id": row[6],
+                "comments_count": row[7],
             })
 
         return total, tabulator_transform_dashboard_data
@@ -346,53 +351,6 @@ class AnalyticsService(BaseService):
                     "parameters" : auth.parameters })
         return total, result
 
-    # async def get_ip_tabulator_data(self, project_id: str) -> list:
-    #     async with self._uow:
-    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
-    #         tabulator_dashboard_data = await self._uow.ip.get_ip_data(project_id=project_id, last_scan_id=last_scan_id)
-    #         keys = [
-    #         "id",
-    #         "ipaddr", 
-    #         "mac", 
-    #         ]
-
-    #         tabulator_transform_dashboard_data = [
-    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
-    #         ]
-    #         return tabulator_transform_dashboard_data
-
-    # async def get_mac_tabulator_data(self, project_id: str) -> list:
-    #     async with self._uow:
-    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
-    #         tabulator_dashboard_data = await self._uow.mac.get_mac_tabulator_data(project_id=project_id, last_scan_id=last_scan_id)
-    #         keys = [
-    #         "id",
-    #         "object", 
-    #         "mac", 
-    #         "vendor", 
-    #         ]
-
-    #         tabulator_transform_dashboard_data = [
-    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
-    #         ]
-    #         return tabulator_transform_dashboard_data
-
-    # async def get_port_tabulator_data(self, project_id: str) -> list:
-    #     async with self._uow:
-    #         last_scan_id = await self.get_last_scan_id(project_id=project_id)
-    #         tabulator_dashboard_data = await self._uow.port.get_port_tabulator_data(project_id=project_id, last_scan_id = last_scan_id)
-    #         keys = [
-    #         "id",
-    #         "ipaddr", 
-    #         "port",
-    #         "protocol",
-    #         "service_name",
-    #         ]
-    #         tabulator_transform_dashboard_data = [
-    #             dict(zip(keys, row)) for row in tabulator_dashboard_data
-    #         ]
-    #         return tabulator_transform_dashboard_data
-
     async def get_dns_a_screenshot_tabulator_data_optimized(
         self, 
         project_id: str,
@@ -419,21 +377,148 @@ class AnalyticsService(BaseService):
         
         tabulator_transform_dashboard_data = []
         for index, row in enumerate(screenshots_data, start=(page - 1) * size + 1):
-            dns_a_screenshot_id, created_at, domain, ip, screenshot_id, screenshot_path = row
+            dns_a_screenshot_id, created_at, domain, ip, screenshot_path = row
             
             tabulator_transform_dashboard_data.append({
                 "id": index,
                 "domain": domain,
                 "ip": ip,
-                "screenshot_id": screenshot_id,
                 "screenshot_path": screenshot_path,
                 "created_at": created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else "",
             })
 
         return total, tabulator_transform_dashboard_data
+    
+    async def get_whois_tabulator_data(
+        self,
+        project_id: str,
+        scans: list[str],
+        page: int,
+        size: int,
+        sort: str = "[]",
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        sort_params = json.loads(sort)
+        filter_params = json.loads(filter)
+        
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+                
+            total, whois_data = await self._uow.dns.get_all_whois_data_independent(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params,
+                filter_params=filter_params
+            )
+            tabulator_transform_whois_data = []
+            for index, row_data in enumerate(whois_data, start=(page - 1) * size + 1):
+                tabulator_transform_whois_data.append({
+                    "id": index,
+                    "ipaddr": row_data.get("ipaddr"),
+                    "domain": row_data.get("domain"),
+                    "AS": row_data.get("AS"),
+                    "org-name": row_data.get("org_name"),
+                    "data": row_data.get("data"),
+                    "range_ip": row_data.get("range_ip"),
+                    "source": row_data.get("source"),
+                })
+            
+            return total, tabulator_transform_whois_data
+        
+    async def get_cve_tabulator_data(
+        self, 
+        project_id: str, 
+        scans: list[str],
+        page: int, 
+        size: int, 
+        sort: str = "[]", 
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        try:
+            sort_params = json.loads(sort) if sort != "[]" else []
+            filter_params = json.loads(filter) if filter != "[]" else []
+        except json.JSONDecodeError:
+            sort_params = []
+            filter_params = []
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            total, rows = await self._uow.l4_software.get_cve_data(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params or [],
+                filter_params=filter_params or [])
+        keys = ["id", "ipaddr", "product", "version", "cve", "cvss3", "cvss3_score", "link"]
+        tabulator_transform_cve_data = [
+            dict(zip(keys, [i] + list(row))) for i, row in enumerate(rows, 1)
+        ]
+        return total, tabulator_transform_cve_data
+    
+    async def get_web_tabulator_data(
+        self,
+        project_id: str,
+        scans: list[str],
+        page: int,
+        size: int,
+        sort: str = "[]",
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        try:
+            sort_params = json.loads(sort) if sort != "[]" else []
+            filter_params = json.loads(filter) if filter != "[]" else []
+        except json.JSONDecodeError:
+            sort_params = []
+            filter_params = []
+        
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            
+            total, rows = await self._uow.l4_software.get_web_data(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params or [],
+                filter_params=filter_params or []
+            )
+            
+            port_ids = [row[5] for row in rows]
+            all_links = await self._uow.vulnerability_link.get_by_port_ids(
+                project_id=project_id,
+                scans=scans,
+                port_ids=port_ids
+            )
+            
+            tabulator_transform_web_data = []
 
+            for index, row in enumerate(rows, start=(page - 1) * size + 1):
+                port_id = row[5]
+                port_links = all_links.get(port_id, [])
+                links_str = ", ".join(port_links) if port_links else ""
 
+                row_data = {
+                    "id": index,
+                    "ipaddr": row[0],
+                    "domain": row[1],
+                    "port": row[2],
+                    "product": row[3],
+                    "ip_id": row[4],
+                    "port_id": row[5],
+                    "link": links_str,
+                    "comments_count": row[6]
+                }
 
+                tabulator_transform_web_data.append(row_data)
+
+            return total, tabulator_transform_web_data
+
+        
     @classmethod
     def get_l4_software_columns_tabulator_data(cls) -> list:
         return [{'field': 'id', 'title': 'ID'},
@@ -446,11 +531,8 @@ class AnalyticsService(BaseService):
                     {'field': 'vendor', 'title': 'VENDOR'},
                     {'field': 'product', 'title': 'PRODUCT'},
                     {'field': 'version', 'title': 'VERSION'},
-                #  {'field': 'type', 'title': 'TYPE'},
-                #  {'field': 'build', 'title': 'BUILD'},
-                #  {'field': 'patch', 'title': 'PATCH'},
-                #  {'field': 'platform', 'title': 'PLATFORM'},
-                #  {'field': 'cpe23', 'title': 'CPE23'}
+                    {'field': 'os', 'title': 'OS'},
+                    {'field': 'is_secured', 'title': 'is_secured'},
                 ]
 
     @classmethod
@@ -466,6 +548,10 @@ class AnalyticsService(BaseService):
                 {'field': 'ipaddr', 'title': 'IP'},
                 {'field': 'port', 'title': 'PORT'},
                 {'field': 'domain', 'title': 'DOMAIN'},
+                {'field': 'DNS', 'title': 'DNS'},
+                {'field': 'value', 'title': 'VALUE'},
+                {'field': 'extra_data', 'title': 'EXTRA DATA'},
+                {'field': 'comments', 'title': 'Comments'},
                 ]
 
 
@@ -498,31 +584,66 @@ class AnalyticsService(BaseService):
         return [{'field': 'id', 'title': 'ID'},
                 {'field': 'domain', 'title': 'DOMAIN'},
                 {'field': 'ip', 'title': 'IP'},
-                {'field': 'screenshot_id', 'title': 'SCREENSHOT_ID'},
                 {'field': 'screenshot_path', 'title': 'SCREENSHOT_PATH'},
                 {'field': 'created_at', 'title': 'CREATED_AT'}]
+    
 
-    # @classmethod
-    # def get_ip_columns_tabulator_data(cls) -> list:
-    #     return [{'field': 'id', 'title': 'ID'},
-    #                    {'field': 'mac','title': 'MAC',},
-    #                    {'field': 'ipaddr','title': 'IP',}]
+    # Пинтестеры
 
+    @classmethod
+    def get_whois_columns_tabulator_data(cls) -> list:
+        return [
+                {'field': 'id', 'title': 'ID'},
+                {'field': 'ipaddr','title': 'WHOIS IP'},
+                {'field': 'domain', 'title': 'WHOIS Domain'},
+                {'field': 'range_ip', 'title': 'Range IP'},
+                {'field': 'AS', 'title': 'AS'},
+                {'field': 'org-name', 'title': 'Org-name'},
+                {'field': 'data', 'title': 'Data'},
+                ]
+    
+    @classmethod
+    def get_web_columns_tabulator_data(cls) -> list:
+        return [
+                {'field': 'id', 'title': 'ID'},
+                {'field': 'ipaddr','title': 'IP'},
+                {'field': 'domain', 'title': 'Domain'},
+                {'field': 'port', 'title': 'Ports'},
+                {'field': 'code', 'title': 'Code'},
+                {'field': 'product', 'title': 'Software'},
+                {'field': 'waf', 'title': 'WAF'},
+                {'field': 'is_vuln_scanned', 'title': 'Is vuln scanned'},
+                {'field': 'link', 'title': 'Vuln and exploits'},
+                {'field': 'comments', 'title': 'Comments'},
+                ]
+    
+    @classmethod
+    def get_api_columns_tabulator_data(cls) -> list:
+        return [
+                {'field': 'id', 'title': 'ID'},
+                {'field': 'ipaddr','title': 'IP'},
+                {'field': 'domain', 'title': 'Domain'},
+                {'field': 'api_dir', 'title': 'API Dir'},
+                {'field': 'api_endpoint', 'title': 'API Endpoint'},
+                {'field': 'http_method', 'title': 'HTTP Method'},
+                {'field': 'body', 'title': 'body'},
+                {'field': 'comments', 'title': 'Comments'},
+                ]
+    
+    @classmethod
+    def get_cve_columns_tabulator_data(cls) -> list:
+        return [
+                {'field': 'id', 'title': 'ID'},
+                {'field': 'ipaddr','title': 'IP'},
+                {'field': 'product', 'title': 'Software'},
+                {'field': 'version', 'title': 'Version'},
+                {'field': 'cve', 'title': 'CVE'},
+                {'field': 'cvss3', 'title': 'CVSS'},
+                {'field': 'cvss3_score', 'title': 'CVSS rating'},
+                {'field': 'link', 'title': 'Exploit/POC URL'},
+                {'field': 'cve_url', 'title': 'CVE URL'},
+                {'field': 'vulnerability_type', 'title': 'Vulnerability type'},
+                ]
 
-    # @classmethod
-    # def get_mac_columns_tabulator_data(cls) -> list:
-    #     return [{'field': 'id', 'title': 'ID'},
-    #                    {'field': 'object', 'title': 'Object',},
-    #                    {'field': 'mac', 'title': 'MAC',},
-    #                    {'field': 'vendor', 'title': 'Vendor',}]
-
-
-    # @classmethod
-    # def get_port_columns_tabulator_data(cls) -> list:
-    #     return [{'field': 'id', 'title': 'ID'},
-    #                    {'field': 'ipaddr','title': 'IP',},
-    #                    {'field': 'port','title': 'Port',},
-    #                    {'field': 'protocol','title': 'Protocol',},
-    #                    {'field': 'service_name','title': 'Service name'}]
 
 

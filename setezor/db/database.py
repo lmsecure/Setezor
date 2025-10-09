@@ -9,7 +9,7 @@ from sqlmodel import SQLModel
 from setezor.models import ObjectType, Network_Type, User, Role
 from setezor.models.agent import Agent
 from setezor.models.base import generate_unique_id
-from setezor.models.object import Object
+from setezor.models.d_dns_type import DNS_Type
 
 from setezor.settings import DB_URI, BASE_PATH, ENGINE
 from setezor.tools.password import PasswordTool
@@ -17,6 +17,7 @@ from setezor.logger import logger
 from setezor.schemas.roles import Roles
 from setezor.schemas.settings import Setting, SettingType
 from sqlalchemy.pool import NullPool
+from .entities import ObjectTypes, NetworkTypes, DNSTypes
 
 engine = create_async_engine(DB_URI)
 if os.environ.get("PYTEST_VERSION") is not None and os.environ.get("ENGINE", "sqlite") != "sqlite":
@@ -114,6 +115,15 @@ async def init_triggers():
                     EXECUTE FUNCTION soft_delete_project_cascade();
                 """)
             )
+            await conn.execute(
+                text(f"""
+                    CREATE OR REPLACE TRIGGER trg_soft_delete_project_scope_cascade
+                    BEFORE UPDATE ON project_scope
+                    FOR EACH ROW
+                    WHEN (OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL)
+                    EXECUTE FUNCTION soft_delete_project_cascade();
+                """)
+            )
         if ENGINE == 'sqlite':
             for table in await get_tables_for_triggers():
                 await conn.execute(
@@ -134,6 +144,24 @@ async def init_triggers():
                         END;
                     """)
                 )
+            await conn.execute(
+                text(f"""
+                    DROP TRIGGER IF EXISTS trg_soft_delete_for_project_scope;
+                """)
+            )
+            await conn.execute(
+                text(f"""
+                    CREATE TRIGGER trg_soft_delete_for_project_scope
+                    AFTER UPDATE OF deleted_at ON project_scope
+                    FOR EACH ROW
+                    WHEN NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL
+                    BEGIN
+                      UPDATE project_scope_targets
+                      SET deleted_at = CURRENT_TIMESTAMP
+                      WHERE project_id = NEW.project_id AND deleted_at IS NULL;
+                    END;
+                """)
+            )
         await conn.commit()
 
 
@@ -143,36 +171,26 @@ async def fill_db(manual: bool = False):
     from setezor.db.uow_dependency import get_uow
     uow = get_uow()
     async with uow:
-        for new_id, obj_type in [
-            ('3d9cf6c43fd54aacb88878f5425f43c4','unknown') ,
-            ('0f53be90b5534091844969585a109ccc','router') ,
-            ('5a3edb2b46dd43a38a62d15263204512','switch') ,
-            ('50eabecb80f345709c55fea37106ff4c','win_server') ,
-            ('9931d00b80264046a2a2729c190110a8','linux_server') ,
-            ('0391e3dd460241eea140dd0bf2786c84','firewall') ,
-            ('5794843deda7454dbad181a012f8f914','win_pc') ,
-            ('73b6106cc1fa4f129683548f3f2d3184','linux_pc') ,
-            ('4681b1c682a0445b8242a0cfa3888b86','nas') ,
-            ('2a2713215d624cb7a74c6918e37e2ecf','ip_phone') ,
-            ('f3cc1e8288ef46a6a0355061fb1272f3','printer') ,
-            ('0a295b4782384fa895effe7f89fc0fc8','tv') ,
-            ('2489848fd5a342fdb75881c6e2c7b30f','android_device'),
-            ]:  
-            obj = ObjectType(id=new_id, name=obj_type)
+        for obj_type in ObjectTypes:
+            obj = ObjectType(id=obj_type.value, name=obj_type.name)
             if not await uow.object_type.exists(obj):
                 uow.object_type.add(obj.model_dump())
                 logger.debug(f"CREATED object {obj.__class__.__name__} {obj.model_dump_json()}")
         await uow.commit()
 
     async with uow:
-        for ID, network_type in [
-            ('b271a925283445c5ab60782a42466bfc',"external"), 
-            ('08d6fdf488004017b707d42c2cc551b7',"internal"), 
-            ('6fa8cc94fce744fb815057c6376666a9',"perimeter")
-            ]:
-            obj = Network_Type(id=ID, name=network_type)
+        for network_type in NetworkTypes:
+            obj = Network_Type(id=network_type.value, name=network_type.name)
             if not await uow.network_type.exists(obj):
                 uow.network_type.add(obj.model_dump())
+                logger.debug(f"CREATED object {obj.__class__.__name__} {obj.model_dump_json()}")
+        await uow.commit()
+
+    async with uow:
+        for dns_type in DNSTypes:
+            obj = DNS_Type(id=dns_type.value, name=dns_type.name)
+            if not await uow.dns_type.exists(obj):
+                uow.dns_type.add(obj.model_dump())
                 logger.debug(f"CREATED object {obj.__class__.__name__} {obj.model_dump_json()}")
         await uow.commit()
 

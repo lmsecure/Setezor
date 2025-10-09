@@ -37,6 +37,14 @@ async def info_page(
     dns_a_screenshot_columns = analytics_service.get_dns_a_screenshot_columns_tabulator_data()
     soft_vuln_link_columns = analytics_service.get_soft_vuln_link_columns_tabulator_data()
     auth_credentials_columns = analytics_service.get_auth_credentials_tabulator_data()
+
+    # Таблицы для пинтестеров
+
+    whois_columns = analytics_service.get_whois_columns_tabulator_data()
+    web_columns = analytics_service.get_web_columns_tabulator_data()
+    api_columns = analytics_service.get_api_columns_tabulator_data()
+    cve_columns = analytics_service.get_cve_columns_tabulator_data()
+
     user = await users_service.get(user_id=user_id)
     context =  {"request": request,
                 "analytics": analytics,
@@ -76,6 +84,26 @@ async def info_page(
                 'name': 'auth_credentials',
                 'base_url': '/api/v1/analytics/auth_credentials',
                 'columns': auth_credentials_columns
+            },
+            {
+                'name': 'whois',
+                'base_url': '/api/v1/analytics/whois_data',
+                'columns': whois_columns
+            },
+            {
+                'name': 'web',
+                'base_url': '/api/v1/analytics/web_tabulator',
+                'columns': web_columns
+            },
+            # {
+            #     'name': 'api',
+            #     'base_url': '/api/v1/analytics/domain_ip',
+            #     'columns': api_columns
+            # },
+            {
+                'name': 'cve',
+                'base_url': '/api/v1/analytics/cve_tabulator',
+                'columns': cve_columns
             },
          ]}
     return TEMPLATES_DIR.TemplateResponse(

@@ -117,6 +117,7 @@ def run_app(port: int, host: str):
                     ssl_keyfile=key_path,
                     ssl_certfile=cert_path)
 
+
 @run_app.command()
 def list_users():
     """Display all users in database"""
@@ -130,6 +131,7 @@ def list_users():
     )
     users = asyncio.run(um.list_users())
     print(users)
+
 
 @run_app.command()
 @click.option('-l', '--login', default=False, type=str, help="User's login")
@@ -146,34 +148,48 @@ def reset_password(login: str):
     result = asyncio.run(um.reset_user_password(login=login))
     print(result)
 
+
 @run_app.command()
 def initial_fill():
     import asyncio
     from setezor.db.database import fill_db
     asyncio.run(fill_db(manual=True))
 
+
 @run_app.group()
 def alembic():
     pass
     """Resets user's password"""
-    
+
+
 @alembic.command()
 def history():
     AlembicManager.history()
-    
+
+
 @alembic.command()
 def current():
     AlembicManager.current()
+
+
+@alembic.command()
+@click.option('--autogenerate', is_flag=True)
+@click.option('-m', '--message')
+def revision(autogenerate, message):
+    AlembicManager.revision(autogenerate, message)
+
 
 @alembic.command()
 @click.argument('revision')
 def stamp(revision: str):
     AlembicManager.stamp(revision)
 
+
 @alembic.command()
 @click.argument('revision')
 def upgrade(revision: str):
     AlembicManager.upgrade(revision)
+
 
 @alembic.command()
 @click.argument('revision')

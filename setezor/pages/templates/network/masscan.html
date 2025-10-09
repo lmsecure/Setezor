@@ -118,9 +118,25 @@
     </div>
 </div>
 <div class="invalid-feedback" data-i18n="Please select a valid tag."></div>
-<div class="form-check form-switch" id="{{ prefix }}searchUdpPort">
-    <input class="form-check-input" type="checkbox" id="{{ prefix }}searchUdpPortInput">
-    <label class="form-check-label" for="searchUdpPortInput" data-i18n="Search Udp ports"></label>
+<div class="mb-3" id="{{ prefix }}protocolGroup">
+  <label class="form-label d-block" data-i18n="Protocol"></label>
+
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="radio"
+           name="{{ prefix }}protocol"
+           id="{{ prefix }}protocolTcp"
+           value="tcp"
+           checked>
+    <label class="form-check-label" for="{{ prefix }}protocolTcp">TCP</label>
+  </div>
+
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="radio"
+           name="{{ prefix }}protocol"
+           id="{{ prefix }}protocolUdp"
+           value="udp">
+    <label class="form-check-label" for="{{ prefix }}protocolUdp">UDP</label>
+  </div>
 </div>
 <div class="my-2">
     <div class="d-flex justify-content-between" id="{{ prefix }}masscanOutputGroup">
@@ -143,7 +159,7 @@
 <div class="my-2">
     <div class="d-flex justify-content-between">
         <label for="masscanWaitRange" class="form-label" data-i18n="Wait after scan"></label>
-        <input type="range" class="form-range" name="wait" min="0" max="20" step="0.5" id="{{ prefix }}masscanWaitRange">
+        <input type="range" class="form-range" name="wait" min="0" max="20" step="1" id="{{ prefix }}masscanWaitRange">
     </div>
 </div>
 <div class="btn-group d-flex my-2" role="group">
@@ -151,15 +167,10 @@
     <button type="button" class="btn btn-primary w-50" id="{{ prefix }}startMasscanScanBtn" onclick="
     const isTargetTabActive = document.getElementById('{{ prefix }}masscan-simple-tab').classList.contains('active');
     var params = Object.fromEntries(new FormData(document.getElementById('{{ prefix }}masscanScanForm')).entries());
-    const UDPcheckbox = document.getElementById('{{ prefix }}searchUdpPortInput');
-    let ping;
-    let search_udp_port;
+    const protocol = document.querySelector(`input[name='{{ prefix }}protocol']:checked`)?.value;
 
-    if (UDPcheckbox.checked) {
-        search_udp_port = true;
-    } else {
-        search_udp_port = false;
-    }
+    let ping;
+    let search_udp_port = (protocol === 'udp');
 
     const {
         ports = null,
@@ -356,8 +367,11 @@ function resetMasscanModal(prefix) {
     const maxRateSwitch = document.getElementById(prefix + 'maxRate');
     if (maxRateSwitch) maxRateSwitch.checked = false;
     
-    const udpCheckbox = document.getElementById(prefix + 'searchUdpPortInput');
-    if (udpCheckbox) udpCheckbox.checked = false;
+    const tcpRadio = document.getElementById(prefix + 'protocolTcp');
+    const udpRadio = document.getElementById(prefix + 'protocolUdp');
+
+    if (tcpRadio) tcpRadio.checked = true;
+    if (udpRadio) udpRadio.checked = false;
     
     const olRadio = document.getElementById(prefix + 'ol');
     const oxRadio = document.getElementById(prefix + 'ox');

@@ -1,7 +1,9 @@
 
 from typing import List
 from sqlalchemy import case, func, literal, text
-from setezor.models import L4Software, Port, IP, SoftwareVersion, Software, SoftwareType, Vendor, Vulnerability, L4SoftwareVulnerability, DNS_A, Domain, VulnerabilityLink
+from sqlalchemy.sql.functions import coalesce
+from setezor.models import L4Software, Port, IP, SoftwareVersion, Software, SoftwareType, Vendor, Vulnerability, L4SoftwareVulnerability, DNS, Domain, VulnerabilityLink
+from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import select, cast, String
 
@@ -65,8 +67,8 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 func.count(Port.service_name).label("service_name_count"),
             ).select_from(Port)
             .join(IP, Port.ip_id == IP.id)
-            .join(DNS_A, DNS_A.target_ip_id == IP.id)
-            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)
+            .join(DNS, DNS.target_ip_id == IP.id)
+            .join(Domain, Domain.id == DNS.target_domain_id, isouter=True)
             .join(L4Software, Port.id == L4Software.l4_id, isouter=True)
             .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id, isouter=True)
             .join(Software, SoftwareVersion.software_id == Software.id, isouter=True)
@@ -330,3 +332,201 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
 
         result = await self._session.exec(final_stmt)
         return result.all()
+    
+
+    async def get_cve_data(
+        self,
+        project_id: str,
+        scans: List[str], 
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):
+        cvss_score = coalesce(
+            Vulnerability.cvss3_score,
+            Vulnerability.cvss2_score,
+            Vulnerability.cvss4_score
+        ).label("cvss_score")
+        
+        cvss_vector = coalesce(
+            Vulnerability.cvss3,
+            Vulnerability.cvss2,
+            Vulnerability.cvss4
+        ).label("cvss_vector")
+        
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "product": Software.product,
+            "version": SoftwareVersion.version,
+            "cve": Vulnerability.cve,
+            "cvss": cvss_vector,
+            "cvss_score": cvss_score,
+            "link": VulnerabilityLink.link,
+        }
+        
+        stmt = select(
+            IP.ip,
+            Software.product,
+            SoftwareVersion.version,
+            Vulnerability.cve,
+            cvss_vector,
+            cvss_score,
+            VulnerabilityLink.link
+        ).select_from(IP)\
+            .join(Port, Port.ip_id == IP.id)\
+            .join(L4Software, L4Software.l4_id == Port.id)\
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
+            .join(Software, SoftwareVersion.software_id == Software.id)\
+            .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id)\
+            .join(Vulnerability, L4SoftwareVulnerability.vulnerability_id == Vulnerability.id)\
+            .join(VulnerabilityLink, VulnerabilityLink.vulnerability_id == Vulnerability.id)\
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
+        
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+                    
+                    if type_op == "=":
+                        stmt = stmt.filter(column == value)
+                    elif type_op == "!=":
+                        stmt = stmt.filter(column != value)
+                    elif type_op == ">":
+                        stmt = stmt.filter(column > value)
+                    elif type_op == ">=":
+                        stmt = stmt.filter(column >= value)
+                    elif type_op == "<":
+                        stmt = stmt.filter(column < value)
+                    elif type_op == "<=":
+                        stmt = stmt.filter(column <= value)
+                    elif type_op == "like":
+                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+        
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                
+                if field in field_mapping:
+                    if field == "cvss":
+                        column = cvss_vector
+                    elif field == "cvss_score":
+                        column = cvss_score
+                    else:
+                        column = field_mapping[field]
+                    
+                    if direction == "desc":
+                        order_clauses.append(column.desc())
+                    else:
+                        order_clauses.append(column.asc())
+            
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        
+        count_query = select(func.count()).select_from(stmt.alias())
+        total = await self._session.scalar(count_query)
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()
+    
+    async def get_web_data(
+        self,
+        project_id: str,
+        scans: List[str], 
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):  
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "domain": Domain.domain,
+            "port": Port.port,
+            "product": Software.product,
+            "ip_id": IP.id,
+            "Port_id": Port.id,
+        }
+        
+        stmt = select(
+            IP.ip,
+            Domain.domain,
+            Port.port,
+            Software.product,
+            IP.id,
+            Port.id,
+            func.count(
+                case((NodeComment.deleted_at == None, NodeComment.id))
+            ).label("comments_count")
+        ).select_from(IP)\
+            .join(DNS, DNS.target_ip_id == IP.id)\
+            .join(Domain, Domain.id == DNS.target_domain_id)\
+            .join(Port, Port.ip_id == IP.id)\
+            .join(L4Software, L4Software.l4_id == Port.id)\
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
+            .join(Software, SoftwareVersion.software_id == Software.id)\
+            .join(NodeComment, NodeComment.ip_id == IP.id, isouter=True)\
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))\
+            .group_by(
+                IP.ip,
+                Domain.domain,
+                Port.port,
+                Software.product,
+                IP.id,
+                Port.id,
+                L4Software.id
+            )
+                
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+                    
+                    if type_op == "=":
+                        stmt = stmt.filter(column == value)
+                    elif type_op == "!=":
+                        stmt = stmt.filter(column != value)
+                    elif type_op == ">":
+                        stmt = stmt.filter(column > value)
+                    elif type_op == ">=":
+                        stmt = stmt.filter(column >= value)
+                    elif type_op == "<":
+                        stmt = stmt.filter(column < value)
+                    elif type_op == "<=":
+                        stmt = stmt.filter(column <= value)
+                    elif type_op == "like":
+                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+        
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                
+                if field in field_mapping:
+                    column = field_mapping[field]
+                    
+                    if direction == "desc":
+                        order_clauses.append(column.desc())
+                    else:
+                        order_clauses.append(column.asc())
+            
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        
+        count_query = select(func.count()).select_from(stmt.alias())
+        total = await self._session.scalar(count_query)
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()

@@ -1,6 +1,6 @@
 {% macro main_dns_a_screenshot() %}
 <div class="d-flex flex-column">
-    <form id="DNSAScreenshotForm">
+    <form id="DNSAScreenshotForm" onsubmit="startDNSAScreenshotTasks(event)">
         <div id="DNSAScreenshotInputContainer"></div>
         <div class="input-group mb-3" style="padding-top: 7px;" id="urlTarget">
             <span class="input-group-text" id="basic-addon1" data-i18n="URL"></span>
@@ -16,7 +16,7 @@
             </div>
             <div class="col-8">
                 <div class="d-flex flex-row">
-                    <span id="id_slider_timeout_min" class="me-2">20</span>
+                    <span id="id_slider_timeout_min" class="me-2">10</span>
                     <input type="range" class="form-range w-100" id="id_slider_timeout" name="duration" min="10" max="100" step="5" value="20" oninput="document.getElementById('id_slider_timeout_value').textContent = value;">
                     <span id="id_slider_timeout_max" class="me-2">100</span>
                 </div>
@@ -24,7 +24,7 @@
         </div>
         <div class="btn-group d-flex my-2" style="margin-top: 1rem;" role="group">
             <input class="btn btn-outline-secondary w-50" type="reset" data-i18n-value="Reset Params">
-            <button type="button" class="btn btn-primary w-50" id="startDNSAScreenshotBtn" onclick="startDNSAScreenshotTasks()" data-i18n="Start"></button>
+            <button type="submit" class="btn btn-primary w-50" id="startDNSAScreenshotBtn" data-i18n="Start"></button>
         </div>
     </form>
 </div>
@@ -83,14 +83,18 @@
         document.getElementById('DNSAScreenshotInputContainer').appendChild(clone);
     }
 
-    function startDNSAScreenshotTasks() {
+    function startDNSAScreenshotTasks(event) {
+        event.preventDefault();
+        
         const urls = [];
         const inputs = document.querySelectorAll('#DNSAScreenshotForm input[type="url"]');
         const agent_id = getAgent();
+        
         if (!agent_id) {
             create_toast('Error', 'Please select an agent', 'error');
             return;
         }
+        
         for (const input of inputs) {
             if (input.value.trim()) {
                 urls.push(input.value.trim());
@@ -132,7 +136,6 @@
             });
         }
         
-        // Закрываем модалку
         var myModal = bootstrap.Modal.getInstance(document.getElementById('dnsAScreenshotModalWindow'));
         if (myModal) {
             myModal.hide();
@@ -154,6 +157,12 @@
 
         const originalInput = document.getElementById('inputURL');
         if (originalInput) originalInput.value = '';
+
+        const slider = document.getElementById('id_slider_timeout');
+        const label = document.getElementById('id_slider_timeout_value');
+        if (slider && label) {
+            label.textContent = slider.value;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -193,6 +202,13 @@
 
         const originalInput = document.getElementById('inputURL');
         if (originalInput) originalInput.value = '';
+
+
+        const slider = document.getElementById('id_slider_timeout');
+        const label = document.getElementById('id_slider_timeout_value');
+        if (slider && label) {
+            label.textContent = slider.value;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -245,6 +261,12 @@
 
         const originalInput = document.getElementById('inputURL');
         if (originalInput) originalInput.value = '';
+
+        const slider = document.getElementById('id_slider_timeout');
+        const label = document.getElementById('id_slider_timeout_value');
+        if (slider && label) {
+            label.textContent = slider.value;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {

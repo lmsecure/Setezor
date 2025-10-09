@@ -11,16 +11,17 @@ class SearchVulns:
         params = {"query": query_string}
         async with aiohttp.ClientSession() as ses:
             async with ses.get(f"{API}/api/search-vulns", headers=headers, params=params) as resp:
-                return  await resp.json()
+                return await resp.json()
 
     @classmethod
     async def check_token(cls, token: str):
         headers = {'Content-Type': 'application/json'}
+        data = json.dumps({"key": token})
         async with aiohttp.ClientSession() as ses:
-            async with ses.post("{API}/api/check-key-status",
-                                data=json.dumps({"key": token}),
-                                headers=headers) as resp:
-                result = await resp.json()
-                if result.get("status") == "valid":
+            async with ses.post(f"{API}/api/check-key-status", data=data, headers=headers) as resp:
+                if resp.status >= 500:
                     return True
-                return False
+                result = await resp.json()
+        if result.get("status") == "valid":
+            return True
+        return False

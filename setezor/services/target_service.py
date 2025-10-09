@@ -2,8 +2,10 @@
 from setezor.services.base_service import BaseService
 from setezor.models import Target
 from setezor.schemas.target import TargetCreate, TargetCreateForm
-from setezor.unit_of_work.unit_of_work import UnitOfWork
+from setezor.unit_of_work import UnitOfWork
 from typing import List, Dict
+from setezor.repositories.ip_repository import IPRepository
+import json
 
 
 class TargetService(BaseService):
@@ -35,3 +37,37 @@ class TargetService(BaseService):
         async with self._uow:
             await self._uow.target.edit_one(id=target_id, data=updated_data.model_dump())
             await self._uow.commit()
+    
+    async def get_l4_data_for_target_wrapper(
+        self,
+        project_id: str,
+        scans: List[str],
+        page: int,
+        size: int,
+        sort: str = "[]",
+        filter: str = "[]"
+    ):
+        try:
+            sort_params = json.loads(sort) if sort != "[]" else []
+            filter_params = json.loads(filter) if filter != "[]" else []
+        except json.JSONDecodeError:
+            sort_params = []
+            filter_params = []
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+
+            total, rows = await self._uow.ip.get_l4_data_for_target(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params,
+                filter_params=filter_params
+            )
+
+            keys = ["ipaddr", "domain", "port", "protocol"]
+            tabulator_transform_dashboard_data = [dict(zip(keys, row)) for row in rows]
+
+            return total, tabulator_transform_dashboard_data
+ 

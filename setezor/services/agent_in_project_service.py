@@ -5,7 +5,7 @@ from typing import List
 from fastapi import HTTPException, status
 from setezor.services.base_service import BaseService
 from setezor.tools.websocket_manager import WS_MANAGER
-from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS_A, Domain
+from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS, Domain
 from setezor.models.agent_in_project import AgentInProject
 from setezor.models.base import generate_unique_id
 from setezor.schemas.task import WebSocketMessage
@@ -13,6 +13,7 @@ from setezor.tools.graph import find_all_paths
 from setezor.unit_of_work import UnitOfWork
 from setezor.schemas.agent import AgentAdd, AgentAddToProject, InterfaceOfAgent
 from setezor.tools.ip_tools import get_network
+from setezor.db.entities import DNSTypes
 
 
 class AgentInProjectService(BaseService):
@@ -247,9 +248,11 @@ class AgentInProjectService(BaseService):
                                     project_id=project_id)
                 self._uow.domain.add(new_domain.model_dump())
 
-                new_dns_a = DNS_A(target_domain_id=new_domain.id,
-                                  target_ip_id=new_ip.id, project_id=project_id)
-                self._uow.dns_a.add(new_dns_a.model_dump())
+                new_dns = DNS(project_id=project_id,
+                              target_domain_id=new_domain.id,
+                              target_ip_id=new_ip.id,
+                              dns_type_id=DNSTypes.A.value)
+                self._uow.dns.add(new_dns.model_dump())
 
             await self._uow.commit()
             message = WebSocketMessage(

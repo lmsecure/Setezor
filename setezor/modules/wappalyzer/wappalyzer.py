@@ -1,6 +1,6 @@
 import re
 from cpeguess.cpeguess import CPEGuess
-from setezor.models import IP, Port, DNS_A, Domain, Software, Vendor, L4Software
+from setezor.models import IP, Port, DNS, Domain, Software, Vendor, L4Software
 from setezor.models.d_software_type import SoftwareType
 from setezor.models.d_software_version import SoftwareVersion
 from setezor.network_structures import SoftwareStruct
@@ -8,6 +8,7 @@ from setezor.network_structures import SoftwareStruct
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.tools.url_parser import parse_url
+from setezor.db.entities import DNSTypes
 
 
 class WappalyzerParser:
@@ -118,16 +119,16 @@ class WappalyzerParser:
         ip = data.get("ip")
 
         new_ip = None
-        dns_a_obj = None
+        dns_obj = None
         if domain:
             new_domain = Domain(domain=domain)
             try:
                 responses = [await DNSModule.resolve_domain(domain, "A")]
                 domains = DNSModule.proceed_records(responses)
-                new_domain, new_ip, *dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
-                if dns_a:
-                    dns_a_obj = dns_a[0]
-                result.extend([new_domain, new_ip, *dns_a])
+                new_domain, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                if dns:
+                    dns_obj = dns[0]
+                result.extend([new_domain, new_ip, *dns])
             except:
                 result.append(new_domain)
         else:
@@ -140,10 +141,10 @@ class WappalyzerParser:
             else:
                 new_ip = IP(ip="")
                 result.append(new_ip)
-            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
-            if not dns_a_obj:
-                dns_a_obj = new_dns_a
-            result.append(new_dns_a)
+            new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A)
+            if not dns_obj:
+                dns_obj = new_dns
+            result.append(new_dns)
         new_port = Port(port=port, ip=new_ip)
         result.append(new_port)
 
@@ -190,7 +191,7 @@ class WappalyzerParser:
                                                     cpe23=cpe23)
                 softwares_versions[soft_version_hash_string] = soft_version_obj
                 result.append(soft_version_obj)
-            L4Software_obj = L4Software(l4=new_port, software_version=soft_version_obj, dns_a=dns_a_obj)
+            L4Software_obj = L4Software(l4=new_port, software_version=soft_version_obj, dns=dns_obj)
             result.append(L4Software_obj)
         return result
 

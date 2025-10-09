@@ -4,7 +4,8 @@ import xmltodict
 import re
 
 from setezor.tools.ip_tools import get_network
-from setezor.models import IP, Port, MAC, Network, DNS_A, Domain
+from setezor.models import IP, Port, MAC, Network, DNS, Domain
+from setezor.db.entities import DNSTypes
 
 
 class BaseMasscanParser:
@@ -35,9 +36,9 @@ class BaseMasscanParser:
                 network_obj = Network(start_ip=start_ip, mask=24)
                 ip_obj = IP(ip=ip_target, network=network_obj)
                 domain_obj = Domain()
-                dns_a_obj = DNS_A(target_domain=domain_obj, target_ip=ip_obj)
+                dns_obj = DNS(target_domain=domain_obj, target_ip=ip_obj, dns_type_id=DNSTypes.A.value)
                 ips_objs.update({ip_target : ip_obj})
-                result.extend([network_obj, ip_obj, domain_obj, dns_a_obj])
+                result.extend([network_obj, ip_obj, domain_obj, dns_obj])
                 for port in ports_target:
                     port_obj = Port(ip=ip_obj, **port)
                     result.append(port_obj)

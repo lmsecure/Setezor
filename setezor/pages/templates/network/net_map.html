@@ -72,6 +72,7 @@
     </div>
 </div>
 <script>
+    let currentScans = [];
     async function getScans(){
         let resp = await fetch("/api/v1/scan")
         let scans = await resp.json()
@@ -100,7 +101,9 @@
         for (const [k,scan_id] of formData){
             arr.push(scan_id)
         }
+        currentScans = arr;
         await get_nodes_and_edges(arr)
+        await addTableNodesWithComments()
     }
 </script>
 
@@ -1703,7 +1706,8 @@
                 const commentsTab = document.getElementById('comments-tab');
                 const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
                 tabInstance.show();
-                
+
+                addTableNodesWithComments();
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -1920,6 +1924,8 @@ async function confirmCommentEdit(commentId) {
         if (editBtn) editBtn.style.display = 'inline-block';
         if (deleteBtn) deleteBtn.style.display = 'inline-block';
         if (replyBtn) replyBtn.style.display = 'inline-block';
+
+        addTableNodesWithComments();
         
     } catch (error) {
         console.error('Error updating comment:', error);
@@ -1933,6 +1939,8 @@ async function confirmCommentEdit(commentId) {
             const commentsTab = document.getElementById('comments-tab');
             const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
             tabInstance.show();
+
+            addTableNodesWithComments();
             };
 
     function replyToComment(commentId) {
@@ -2226,6 +2234,55 @@ async function confirmDomainEdit(domainId, node) {
     await axios.patch(`/api/v1/domain/${domainId}`, {domain: newDomain});
     createNodeInformation(node);
 }
+
+
+async function addTableNodesWithComments() {
+    const scans = currentScans;
+    const params = scans.map(id => `scans=${encodeURIComponent(id)}`).join('&');
+    const url = `/api/v1/vis/comments_for_all_nodes${params ? '?' + params : ''}`;
+    axios.get(url).then(response => {
+        const nodes_with_comments_info = response.data;
+        const source_table = document.getElementById('node_with_comments');
+
+        if (nodes_with_comments_info.length > 0) {
+
+            const rowsCount = nodes_with_comments_info.length;
+
+            const scrollStyle = rowsCount > 10 ? 'max-height: 400px; overflow-y: auto;' : '';
+
+            html_text = `<div>
+                <h5>${i18next.t('Nodes with comment')}</h5>
+                <div class="tab-content" id="edge-info-tabs-content">
+                    <div class="tab-pane fade show active" id="edge-info" role="tabpanel" style="${scrollStyle}">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>${i18next.t('ip')}</th>
+                                    <th>${i18next.t('Comment')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                            for (let row of nodes_with_comments_info) {
+                                let truncatedText = row.text.length > 17 ? row.text.slice(0, 17) + '…' : row.text;
+
+                                html_text += `<tr>
+                                    <td><button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${row.ip_id}')">${row.ip}</button></td>
+                                    <td>${truncatedText}</td>
+                                </tr>`}
+
+                                html_text += `</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+        source_table.innerHTML = html_text;
+        }
+        else source_table.innerHTML = '';
+    });
+}
+addTableNodesWithComments()
+
 </script>
 
 {% endmacro %}

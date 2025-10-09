@@ -8,6 +8,7 @@ class Folders(enum.Enum):
     whois_logs_path = "whois_logs_path"
     certificates_path = "certificates"
     screenshots_path = "screenshots"
+    wappalyzer_path = "wappalyzer_logs"
 
 class Schedulers(enum.Enum):
     scapy = "scapy"

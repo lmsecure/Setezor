@@ -4,12 +4,11 @@ from random import randint
 from typing import Annotated
 import pickle
 
-import aiofiles
 from fastapi import Depends, HTTPException, UploadFile
 
 from setezor.managers.hash_manager import UploadFileHashManager
 from setezor.managers.project_manager.files import FilesStructure, ProjectFolders
-from setezor.models import Project, UserProject, Object, Agent, AgentInProject, Domain, DNS_A
+from setezor.models import Project, UserProject, Object, Agent, AgentInProject, Domain, DNS
 from setezor.models.agent_parent_agent import AgentParentAgent
 from setezor.models.asn import ASN
 from setezor.models.ip import IP
@@ -21,7 +20,7 @@ from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_parent_agent_service import AgentParentAgentService
 from setezor.services.agent_service import AgentService
 from setezor.services.asn_service import AsnService
-from setezor.services.dns_a_service import DNS_A_Service
+from setezor.services.dns_service import DNS_Service
 from setezor.services.domain_service import DomainsService
 from setezor.services.invite_link_service import InviteLinkService
 from setezor.services.ip_service import IPService
@@ -56,7 +55,7 @@ class ProjectManager:
             mac_service: MacService,
             ip_service: IPService,
             domain_service: DomainsService,
-            dns_a_service: DNS_A_Service,
+            dns_service: DNS_Service,
             scan_service: ScanService,
             invite_link_service: InviteLinkService,
             hash_manager: UploadFileHashManager,
@@ -81,7 +80,7 @@ class ProjectManager:
         self.__zip_file_manager: ZipFileManager = zip_file_manager
 
         self.__domain_service: DomainsService = domain_service
-        self.__dns_a_service: DNS_A_Service = dns_a_service
+        self.__dns_service: DNS_Service = dns_service
         self.__scan_service: ScanService = scan_service
 
     async def create_project(self, new_project_form: ProjectCreateForm, owner_id: str):
@@ -164,9 +163,9 @@ class ProjectManager:
 
         new_domain = await self.__domain_service.create(Domain(project_id=new_project.id))
 
-        new_dns_a = await self.__dns_a_service.create(DNS_A(target_domain_id=new_domain.id,
-                                                            target_ip_id=new_ip.id,
-                                                            project_id=new_project.id))
+        new_dns = await self.__dns_service.create(DNS(target_domain_id=new_domain.id,
+                                                      target_ip_id=new_ip.id,
+                                                      project_id=new_project.id))
 
         new_scan = await self.__scan_service.create(
             project_id=new_project.id,
@@ -227,10 +226,9 @@ class ProjectManager:
 
         file_bytes = await zip_file.read()
         zip_bytes = BytesIO(file_bytes)
-        self.__zip_file_manager.unpack_files(PROJECTS_DIR_PATH, zip_bytes)
-        project_path = PROJECTS_DIR_PATH + f'/{zip_file.filename.replace(".zip", "")}'
-        pickle_file = os.path.join(project_path, 'project.pkl')
-        hashed_data = await self.__hash_manager.get_hashed_data(open(pickle_file, 'rb'))
+
+        pickle_file = self.__zip_file_manager.get_file_by_name(zip_bytes, 'project.pkl')
+        hashed_data = await self.__hash_manager.get_hashed_data(pickle_file)
 
         try:
             if hashed_data in imported_projects:
@@ -244,15 +242,10 @@ class ProjectManager:
 
             imported_projects.add(hashed_data)
 
-            async with aiofiles.open(pickle_file, 'rb') as f:
-                data_bytes = await f.read()
-                objects = pickle.loads(data_bytes)
-
+            pickle_file.seek(0)
+            objects = pickle.load(pickle_file)
             project_id = objects['Project'][0].id
-
-            self.__file_manager.merge_dirs(project_path, PROJECTS_DIR_PATH + '/' + project_id)
-            self.__file_manager.remove_dir(project_path)
-
+            self.__zip_file_manager.unpack_files(PROJECTS_DIR_PATH + f'/{project_id}', zip_bytes)
             await self.__project_service.import_project(user_id, objects, imported_projects, hashed_data)
         except HTTPException as ex:
             if hashed_data in imported_projects:
@@ -278,7 +271,7 @@ class ProjectManager:
         mac_service:  Annotated[MacService, Depends(MacService.new_instance)],
         ip_service:  Annotated[IPService, Depends(IPService.new_instance)],
         domain_service:  Annotated[DomainsService, Depends(DomainsService.new_instance)],
-        dns_a_service:  Annotated[DNS_A_Service, Depends(DNS_A_Service.new_instance)],
+        dns_service:  Annotated[DNS_Service, Depends(DNS_Service.new_instance)],
         scan_service:  Annotated[ScanService, Depends(ScanService.new_instance)],
         invite_link_service:  Annotated[InviteLinkService, Depends(InviteLinkService.new_instance)],
         hash_manager: Annotated[UploadFileHashManager, Depends(UploadFileHashManager.new_instance)],
@@ -299,7 +292,7 @@ class ProjectManager:
             mac_service=mac_service,
             ip_service=ip_service,
             domain_service=domain_service,
-            dns_a_service=dns_a_service,
+            dns_service=dns_service,
             scan_service=scan_service,
             invite_link_service=invite_link_service,
             hash_manager=hash_manager,

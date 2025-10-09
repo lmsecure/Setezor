@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from sqlmodel import desc, func, select
 
-from setezor.models import DNS_A, IP, DNS_A_Screenshot, Domain, Screenshot
+from setezor.models import DNS, IP, DNS_A_Screenshot, Domain, Screenshot
 from setezor.repositories import SQLAlchemyRepository
 
 
@@ -13,7 +13,7 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
         "domain": Domain.domain,
         "ip": IP.ip,
         "screenshot_id": Screenshot.id,
-        "screenshot_path": Screenshot.path,
+        "screenshot_path": Screenshot.id,
         "created_at": DNS_A_Screenshot.created_at,
     }
 
@@ -25,22 +25,21 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
                 DNS_A_Screenshot.created_at,
                 Domain.domain,
                 IP.ip,
-                Screenshot.id.label("screenshot_id"),
-                Screenshot.path.label("screenshot_path"),
+                Screenshot.id.label("screenshot_path")
             )
             .join(Screenshot, DNS_A_Screenshot.screenshot_id == Screenshot.id)
-            .join(DNS_A, DNS_A_Screenshot.dns_a_id == DNS_A.id)
-            .join(Domain, DNS_A.target_domain_id == Domain.id)
-            .join(IP, DNS_A.target_ip_id == IP.id)
+            .join(DNS, DNS_A_Screenshot.dns_id == DNS.id)
+            .join(Domain, DNS.target_domain_id == Domain.id)
+            .join(IP, DNS.target_ip_id == IP.id)
         )
 
     def _build_count_query(self):
         """Создает упрощенный COUNT запрос"""
         return (
             select(func.count(DNS_A_Screenshot.id))
-            .join(DNS_A, DNS_A_Screenshot.dns_a_id == DNS_A.id)
-            .join(Domain, DNS_A.target_domain_id == Domain.id)
-            .join(IP, DNS_A.target_ip_id == IP.id)
+            .join(DNS, DNS_A_Screenshot.dns_id == DNS.id)
+            .join(Domain, DNS.target_domain_id == Domain.id)
+            .join(IP, DNS.target_ip_id == IP.id)
         )
 
     def _apply_filters(self, stmt, filter_params):
@@ -90,11 +89,11 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
 
     async def exists(self, dns_a_screenshot_obj: DNS_A_Screenshot):
         """Проверяет, существует ли уже связь между DNS A записью и скриншотом"""
-        if dns_a_screenshot_obj.dns_a_id and dns_a_screenshot_obj.screenshot_id:
+        if dns_a_screenshot_obj.dns_id and dns_a_screenshot_obj.screenshot_id:
             stmt = (
                 select(DNS_A_Screenshot.id)
                 .where(
-                    DNS_A_Screenshot.dns_a_id == dns_a_screenshot_obj.dns_a_id,
+                    DNS_A_Screenshot.dns_id == dns_a_screenshot_obj.dns_id,
                     DNS_A_Screenshot.screenshot_id == dns_a_screenshot_obj.screenshot_id,
                 )
                 .limit(1)
@@ -103,35 +102,6 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
             return result is not None
         return False
 
-    async def get_screenshots_with_info(self, project_id: str):
-        """Получить все скриншоты с информацией о доменах и IP для проекта"""
-        stmt = (
-            self._build_base_query()
-            .where(DNS_A_Screenshot.project_id == project_id)
-            .order_by(DNS_A_Screenshot.created_at.desc())
-        )
-        result = await self._session.exec(stmt)
-        return result.all()
-
-    async def get_screenshots_by_domain(self, domain: str, project_id: str):
-        """Получить скриншоты для конкретного домена"""
-        stmt = (
-            self._build_base_query()
-            .where(DNS_A_Screenshot.project_id == project_id, Domain.domain == domain)
-            .order_by(DNS_A_Screenshot.created_at.desc())
-        )
-        result = await self._session.exec(stmt)
-        return result.all()
-
-    async def get_screenshots_by_ip(self, ip: str, project_id: str):
-        """Получить скриншоты для конкретного IP"""
-        stmt = (
-            self._build_base_query()
-            .where(DNS_A_Screenshot.project_id == project_id, IP.ip == ip)
-            .order_by(DNS_A_Screenshot.created_at.desc())
-        )
-        result = await self._session.exec(stmt)
-        return result.all()
 
     async def get_screenshots_with_info_paginated(
         self,

@@ -23,18 +23,18 @@ class TargetForm(BaseModel):
     targets: list[TargetFormBase]
 
 
-
 class TargetToSync(BaseModel):
     acunetix_id: str
     in_acunetix_id: str
     in_setezor_id: Optional[str]
-    scope_id: str
     address: str
+
 
 class SyncPayload(BaseModel):
     dt_from: datetime.date
     dt_to: datetime.date
     targets: list[TargetToSync]
+    scope_id: str
 
 
 class TargetBase(BaseModel):

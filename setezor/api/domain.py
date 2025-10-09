@@ -5,7 +5,7 @@ from setezor.dependencies.project import get_current_project, role_required
 from setezor.models.role import Role
 from setezor.schemas.roles import Roles
 from setezor.services.domain_service import DomainsService
-from setezor.services.dns_a_service import DNS_A_Service
+from setezor.services.dns_service import DNS_Service
 from setezor.services.role_service import RoleService
 
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/domain", tags=["Domain"])
 @router.post("/{id}/add_domain")
 async def add_domain(
     domain_service: Annotated[DomainsService, Depends(DomainsService.new_instance)],
-    dns_a_service: Annotated[DNS_A_Service, Depends(DNS_A_Service.new_instance)],
+    dns_a_service: Annotated[DNS_Service, Depends(DNS_Service.new_instance)],
     id: str,
     data: dict,
     project_id: str = Depends(get_current_project),
@@ -39,7 +39,7 @@ async def add_domain(
 @router.delete("/{id}/delete_domain")
 async def delete_domain(
     domain_service: Annotated[DomainsService, Depends(DomainsService.new_instance)],
-    dns_a_service: Annotated[DNS_A_Service, Depends(DNS_A_Service.new_instance)],
+    dns_a_service: Annotated[DNS_Service, Depends(DNS_Service.new_instance)],
     id: str,
     _: bool = Depends(role_required([Roles.owner, Roles.executor]))
 ):

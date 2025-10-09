@@ -2,7 +2,7 @@
 
 from typing import List
 from sqlalchemy import Select, case, desc
-from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, SoftwareVersion, Software, SoftwareType, Vendor, DNS_A, Domain
+from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, SoftwareVersion, Software, SoftwareType, Vendor, DNS, Domain
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, or_, select, func
 
@@ -89,8 +89,8 @@ class PortRepository(SQLAlchemyRepository[Port]):
                 func.count(L4SoftwareVulnerability.id).label('cnt')).select_from(Port)\
             .join(IP, IP.id == Port.ip_id, isouter=True)\
             .join(L4Software, L4Software.l4_id == Port.id, isouter=True)\
-            .join(DNS_A, DNS_A.id == L4Software.dns_a_id, isouter=True)\
-            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
+            .join(DNS, DNS.id == L4Software.dns_id, isouter=True)\
+            .join(Domain, Domain.id == DNS.target_domain_id, isouter=True)\
             .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id, isouter=True)\
             .filter(Port.project_id == project_id, Port.scan_id.in_(scans))\
             .group_by(Port.id, IP.ip, Port.port, Domain.domain)

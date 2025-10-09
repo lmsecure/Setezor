@@ -76,6 +76,19 @@ class NodeService(BaseService):
             if comment.parent_comment_id:
                 comments[comment.parent_comment_id]["child_comments"].append({**comment.model_dump(), "login": user_login})
         return comments.values()
+    
+    async def get_comments_for_all_nodes(self,
+                           project_id: str, scans: List[str]) -> List[dict]:
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            raw_comments = await self._uow.node_comment.list_nodes_with_comment(project_id=project_id, scans=scans)
+        raw_comments = list(raw_comments)
+        result = []
+        for ip, ip_id, text in raw_comments:
+            result.append({"ip":ip, "ip_id":ip_id, "text": text})
+
+        return result
 
     async def add_comment(self,
                           project_id: str,

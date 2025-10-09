@@ -2,7 +2,7 @@ import asyncio
 import datetime
 from setezor.models import Vulnerability as VulnerabilityModel, \
     Software, \
-    Domain, IP, Port, DNS_A
+    Domain, IP, Port, DNS
 from setezor.models.l4_software import L4Software
 from setezor.models.l4_software_vulnerability import L4SoftwareVulnerability
 from setezor.modules.acunetix.scan import Scan
@@ -14,6 +14,7 @@ from setezor.tasks.base_job import BaseJob
 from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.tools.url_parser import parse_url
+from setezor.db.entities import DNSTypes
 
 class AcunetixScanTask(BaseJob):
     def __init__(self, 
@@ -65,15 +66,15 @@ class AcunetixScanTask(BaseJob):
             try:
                 responses = [await DNSModule.resolve_domain(domain, "A")]
                 domains = DNSModule.proceed_records(responses)
-                new_domain, new_ip, *new_dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
+                new_domain, new_ip, *new_dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
                 result.append(new_ip)
-                result.extend(new_dns_a)
+                result.extend(new_dns)
             except:
                 new_domain = Domain(domain=domain)
                 new_ip = IP()
-                new_dns_a = [DNS_A(target_ip=new_ip, target_domain=new_domain)]
+                new_dns = [DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)]
                 result.append(new_ip)
-                result.extend(new_dns_a)
+                result.extend(new_dns)
             result.append(new_domain)
 
         if ip := data.get("ip"):
@@ -81,8 +82,8 @@ class AcunetixScanTask(BaseJob):
             result.append(new_ip)
             new_domain = Domain()
             result.append(new_domain)
-            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
-            result.append(new_dns_a)
+            new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)
+            result.append(new_dns)
 
         new_port = Port(port=data.get("port"), ip=new_ip)
         result.append(new_port)
@@ -90,7 +91,7 @@ class AcunetixScanTask(BaseJob):
         new_software = Software()
         result.append(new_software)
 
-        new_l4_software = L4Software(l4=new_port, dns_a=new_dns_a, software=new_software)
+        new_l4_software = L4Software(l4=new_port, dns=new_dns, software=new_software)
         result.append(new_l4_software)        
 
         scan_result_statistic = await Scan.get_statistics(scan_id=self.acunetix_scan_id, result_id=result_id, credentials=self.credentials)

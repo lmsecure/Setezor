@@ -70,7 +70,7 @@ class ProjectService(BaseService):
                 self._uow.mac,  # network_mac
                 self._uow.ip,  # network_ip
                 self._uow.domain,  # network_domain
-                self._uow.dns_a,  # network_dns_a
+                self._uow.dns,  # network_dns
                 self._uow.screenshot,  # screenshot
                 self._uow.dns_a_screenshot,  # network_dns_a_screenshot
                 self._uow.port,  # network_port
@@ -79,9 +79,6 @@ class ProjectService(BaseService):
                 self._uow.l4_software,  # network_port_software
                 self._uow.l4_software_vulnerability,  # network_port_software_vulnerability
                 self._uow.l4_software_vulnerability_screenshot,  # network_port_software_vulnerability_screenshot
-                self._uow.dns_soa,  # network_dns_soa
-                self._uow.dns_ns,  # network_dns_ns
-                self._uow.dns_mx,  # network_dns_mx
                 self._uow.organization,  # organization
                 self._uow.organization_email,  # organization_email,
                 self._uow.organization_phone,  # organization_phone
@@ -94,8 +91,6 @@ class ProjectService(BaseService):
                 self._uow.task,  # project_task
                 self._uow.whois_domain,  # software_web_whois_domain
                 self._uow.authentication_credentials,  # software_authentication_credentials
-                self._uow.dns_cname,  # network_dns_cname
-                self._uow.dns_txt,  # network_dns_txt
                 self._uow.network_speed_test,  # network_speed_test
                 self._uow.cert,  # network_cert
                 self._uow.whois_ip,  # software_web_whois_ip,

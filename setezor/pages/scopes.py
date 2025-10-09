@@ -37,5 +37,11 @@ async def scopes_page(
         "user_id": user_id,
         'current_project': project.name,
         'current_project_id': project.id,
+        'tabs': [
+            {
+                'name': 'software',
+                'base_url': '/api/v1/analytics/software',
+            }
+        ]
     }
     return TEMPLATES_DIR.TemplateResponse(name="scopes.html", context=context)

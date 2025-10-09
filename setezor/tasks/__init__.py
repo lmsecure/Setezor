@@ -19,6 +19,7 @@ from setezor.restructors.nmap_scan_task_restructor import NmapScanTaskRestructor
 from setezor.restructors.masscan_scan_task_restructor import MasscanTaskRestructor
 from .speed_test_task import SpeedTestClientTask, SpeedTestServerTask
 from .dns_a_screenshot_task import DNS_A_ScreenshotTask
+from .wappalyzer_logs_task import WappalyzerLogsTask
 from setezor.restructors.speed_test_task_restructor import SpeedTestClientTaskRestructor, SpeedTestServerTaskRestructor
 from setezor.restructors.dns_a_screenshot_restructor import DNSAScreenshotTaskRestructor
 
@@ -29,6 +30,7 @@ FOLDERS = {
     CertTask.__name__: Folders.certificates_path.value,
     WhoisTask.__name__: Folders.whois_logs_path.value,
     DNS_A_ScreenshotTask.__name__: Folders.screenshots_path.value,
+    WappalyzerLogsTask.__name__: Folders.wappalyzer_path.value
 }
 
 RESTRUCTORS = {

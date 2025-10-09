@@ -3,14 +3,14 @@ import copy
 import datetime
 import json
 import os
-from typing import Annotated, Callable
-import aiofiles
-from fastapi import Depends, HTTPException
 import orjson
-from setezor.managers.project_manager.files import ProjectFolders
+import aiofiles
+from typing import Annotated, Callable
+from fastapi import Depends, HTTPException
 from setezor.models.agent import Agent
 from setezor.schemas.agent import BackWardData
 from setezor.tools.cipher_manager import Cryptor
+from setezor.tools.file_manager import FileManager
 from setezor.tools.scheduler_manager import SchedulerManager
 from setezor.tools.websocket_manager import WS_MANAGER
 from setezor.models.target import Target
@@ -25,12 +25,10 @@ from setezor.models import Task
 from setezor.services import TasksService
 from setezor.schemas.task import TaskPayload, \
     TaskStatus, WebSocketMessage
-from setezor.tasks.masscan_scan_task import MasscanScanTask
-from setezor.tasks.nmap_scan_task import NmapScanTask
 from setezor.managers.agent_manager import AgentManager
 from setezor.tools.sender_manager import HTTPManager
 from setezor.logger import logger
-
+from setezor.settings import PROJECTS_DIR_PATH
 
 
 class TaskParams:
@@ -90,6 +88,7 @@ class TaskManager:
         data_structure_service: DataStructureService,
         scope_service: ScopeService,
         agent_manager: AgentManager,
+        file_manager: FileManager
     ):
         self.__tasks_service: TasksService = tasks_service
         self.__agent_in_project_service: AgentInProjectService = agent_in_project_service
@@ -97,6 +96,7 @@ class TaskManager:
         self.__data_structure_service: DataStructureService = data_structure_service
         self.__scope_service: ScopeService = scope_service
         self.__agent_manager: AgentManager = agent_manager
+        self.__file_manager: FileManager = file_manager
 
     @property
     def scope_service(self):
@@ -105,6 +105,10 @@ class TaskManager:
     @property
     def tasks_service(self):
         return self.__tasks_service
+    
+    @property
+    def file_manager(self):
+        return self.__file_manager
 
     # метод сервера на создание локальной задачи
     async def create_local_job(self,
@@ -129,7 +133,7 @@ class TaskManager:
                                                        created_by=job.__name__)
 
         message = WebSocketMessage(
-            title="Task status", text=f"Task {task.id} {TaskStatus.created}", type="info")
+            title="Task status", text=f"Task {task.id = } {TaskStatus.created}", type="info")
         await WS_MANAGER.send_message(entity_id=project_id, message=message)
         logger.debug(f"CREATED TASK {job.__qualname__}. {safe_params}")
         scheduler = self.create_new_scheduler(job)
@@ -275,7 +279,7 @@ class TaskManager:
                                               status=TaskStatus.finished)
         payload = WebSocketMessage(
             title="Task status",
-            text=f"Task with {task_id=} {TaskStatus.finished}",
+            text=f"Task with {task_id = } {TaskStatus.finished}",
             type="info"
         )
         await WS_MANAGER.send_message(entity_id=project_id,
@@ -295,6 +299,7 @@ class TaskManager:
         data_structure_service: Annotated[DataStructureService, Depends(DataStructureService.new_instance)],
         scope_service: Annotated[ScopeService, Depends(ScopeService.new_instance)],
         agent_manager: Annotated[AgentManager, Depends(AgentManager.new_instance)],
+        file_manager: Annotated[FileManager, Depends(FileManager.new_instance)]
     ):
         return cls(
             tasks_service=tasks_service,
@@ -303,6 +308,7 @@ class TaskManager:
             data_structure_service=data_structure_service,
             scope_service=scope_service,
             agent_manager=agent_manager,
+            file_manager=file_manager
         )
 
 
@@ -372,7 +378,7 @@ class TaskManager:
                 payload = WebSocketMessage(
                     title="Task status",
                     text=f"Task with task_id = {copy_of_dict["task_id"]} {
-                        copy_of_dict["status"]}. {copy_of_dict["traceback"]}",
+                        copy_of_dict["status"]} {copy_of_dict["traceback"]}",
                     type=copy_of_dict["type"]
                 )
                 await WS_MANAGER.send_message(entity_id=project_id,
@@ -395,7 +401,7 @@ class TaskManager:
                                                       status=TaskStatus.finished)
                 payload = WebSocketMessage(
                     title="Task status",
-                    text=f"Task with {task_id=} {TaskStatus.finished}",
+                    text=f"Task with {task_id = } {TaskStatus.finished}",
                     type="info"
                 )
                 await WS_MANAGER.send_message(entity_id=project_id,
@@ -422,23 +428,9 @@ class TaskManager:
                                data: str,
                                extension: str):
         task: Task = await self.__tasks_service.get_by_id(id=task_id)
-        project_id = task.project_id
-        scan_id = task.scan_id
-        created_by = task.created_by
-        project_path = ProjectFolders.get_path_for_project(project_id)
-        scan_project_path = os.path.join(project_path, scan_id)
-        if not os.path.exists(scan_project_path):
-            os.makedirs(scan_project_path, exist_ok=True)
         restructor = get_restructor_for_task(task.created_by)
         data = restructor.get_raw_result(data)
-        module_folder = get_folder_for_task(created_by)
-        filename = f"{str(datetime.datetime.now())}_{created_by}_{task_id}"
-        module_folder_path = os.path.join(project_path,
-                                          scan_project_path,
-                                          module_folder)
-        if not os.path.exists(module_folder_path):
-            os.makedirs(module_folder_path, exist_ok=True)
-        file_path = os.path.join(module_folder_path,
-                                 filename) + f".{extension}"
-        async with aiofiles.open(file_path, 'wb') as file:
-            await file.write(data)
+        module_folder = get_folder_for_task(task.created_by)
+        filename = f"{str(datetime.datetime.now())}_{task.created_by}_{task_id}"
+        await self.__file_manager.save_file(file_path=[PROJECTS_DIR_PATH, task.project_id, task.scan_id,
+                                                               module_folder, f"{filename}.{extension}"], data=data)

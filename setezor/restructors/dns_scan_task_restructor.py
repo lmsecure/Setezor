@@ -1,79 +1,114 @@
-
+import json
+import ipaddress
 
 from setezor.models.domain import Domain
 from setezor.models.ip import IP
-from setezor.models import IP, Domain, DNS_A as DNS_A_Model, \
-    DNS_MX as DNS_MX_Model, DNS_NS as DNS_NS_Model,\
-    DNS_CNAME as DNS_CNAME_Model, DNS_TXT as DNS_TXT_Model, \
-    DNS_SOA as DNS_SOA_Model
+from setezor.models import IP, Domain, DNS as DNS_Model
+from setezor.db.entities import DNSTypes
+
+
 
 class DNS_Scan_Task_Restructor:
     @classmethod
-    async def restruct(cls, raw_result, domain_name: str, **kwargs):
+    async def restruct(cls, raw_result: list[dict], domain_name: str, **kwargs):
         objects = []
-        domain = Domain(domain=domain_name)
-        objects.append(domain)
+        target_domain_obj = Domain(domain=domain_name)
+        objects.append(target_domain_obj)
         for item in raw_result:
-            record_type = item["record_type"]
-            record_value = item["record_value"]
+            record_type = item.get("record_type")
+            record_value = item.get("record_value")
             models_for_this_dns = cls.get_models(record_type=record_type,
-                                     record_value=record_value,
-                                     target_domain=domain)
+                                                 record_value=record_value,
+                                                 target_domain_obj=target_domain_obj)
             objects.extend(models_for_this_dns)
         return objects
-    
+
 
     @classmethod
-    def get_models(cls, record_type:str, record_value: str, target_domain: Domain):
-        ip = IP()
+    def get_models(cls, record_type: str, record_value: str, target_domain_obj: Domain):
+        if record_type not in DNSTypes.__members__:
+            return []
+        result = []
+        dns_obj = DNS_Model(
+            dns_type_id=DNSTypes[record_type]
+            )
         match record_type:
-            case "A":
-                ip.ip = record_value
-                return [ip, DNS_A_Model(target_ip=ip,
-                                        target_domain=target_domain)]
-            case "MX":
-                priority_str, domain_str = record_value.split(" ")
-                priority = int(priority_str)
-                domain_value = ".".join(sub for sub in domain_str.split(".") if sub)
-                domain = Domain(domain=domain_value)
-                return [ip, domain, DNS_MX_Model(
-                    target_ip=ip,
-                    target_domain=target_domain,
-                    value_domain=domain,
-                    priority=priority
-                )]
-            case "CNAME":
-                return DNS_CNAME_Model
-            case "NS":
-                domain_value = ".".join(sub for sub in record_value.split(".") if sub)
-                domain = Domain(domain=domain_value)
-                return [ip, domain, DNS_NS_Model(
-                    target_ip=ip,
-                    target_domain=target_domain,
-                    value_domain=domain
-                )]
-            case "TXT":
-                return [ip, DNS_TXT_Model(target_ip=ip,
-                                          target_domain=target_domain,
-                                          record_value=record_value)]
-            case "SOA":
-                NNAME_str, RNAME_str, SERIAL, REFRESH_str, RETRY_str, EXPIRE_str, TTL_str = record_value.split(" ")
-                NNAME = ".".join(sub for sub in NNAME_str.split(".") if sub)
-                RNAME = ".".join(sub for sub in RNAME_str.split(".") if sub)
-                REFRESH = int(REFRESH_str)
-                RETRY = int(RETRY_str)
-                EXPIRE = int(EXPIRE_str)
-                TTL = int(TTL_str)
-                domain_nname = Domain(domain=NNAME)
-                domain_rname = Domain(domain=RNAME)
-                return [ip, domain_nname, domain_rname, DNS_SOA_Model(target_ip=ip,
-                                          target_domain=target_domain,
-                                          domain_nname=domain_nname,
-                                          domain_rname=domain_rname,
-                                          serial=SERIAL,
-                                          refresh=REFRESH,
-                                          retry=RETRY,
-                                          expire=EXPIRE,
-                                          ttl=TTL)]
+            case DNSTypes.A.name:
+                dns_obj.target_domain = target_domain_obj
+                ip_obj = IP(ip=record_value)
+                result.append(ip_obj)
+                dns_obj.target_ip = ip_obj
+            case DNSTypes.NS.name:
+                dns_obj.target_domain = target_domain_obj
+                new_domain = record_value.rstrip('.')
+                new_domain_obj = Domain(domain=new_domain)
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+            case DNSTypes.MX.name:
+                dns_obj.target_domain = target_domain_obj
+                priority, domain_str = record_value.split()
+                new_domain = ".".join(sub for sub in domain_str.split(".") if sub)
+                new_domain_obj = Domain(domain=new_domain)
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+                dns_obj.extra_data = json.dumps({"priority" : int(priority)})
+            case DNSTypes.CNAME.name:
+                dns_obj.target_domain = target_domain_obj
+                new_domain = record_value.rstrip('.')
+                new_domain_obj = Domain(domain=new_domain)
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+            case DNSTypes.SOA.name:
+                dns_obj.target_domain = target_domain_obj
+                _nname, _rname, _serial, _refresh, _retry, _expire, _ttl = record_value.split(" ")
+                new_domain_obj = Domain(domain=_nname.rstrip('.'))
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+                dns_obj.ttl = int(_ttl)
+                dns_obj.extra_data = json.dumps(
+                    {
+                        "rname"   : _rname.rstrip('.'),
+                        "serial"  : int(_serial),
+                        "refresh" : int(_refresh),
+                        "retry"   : int(_retry),
+                        "expire"  : int(_expire)
+                    }
+                )
+            case DNSTypes.TXT.name:
+                dns_obj.target_domain = target_domain_obj
+                dns_obj.extra_data = record_value
+            case DNSTypes.SRV.name:
+                dns_obj.target_domain = target_domain_obj
+                _priority, _weight, _port, _target = record_value.split()
+                new_domain_obj = Domain(domain=_target.rstrip('.'))
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+                dns_obj.extra_data = json.dumps(
+                    {
+                        "priority" : int(_priority),
+                        "weight" : int(_weight),
+                        "port" : int(_port)
+                    }
+                )
+            case DNSTypes.PTR.name:
+                dns_obj.target_domain = target_domain_obj
+                ip, value_domain = record_value.split()
+                ip_obj = IP(ip=ip)
+                result.append(ip_obj)
+                dns_obj.target_ip = ip_obj
+                new_domain_obj = Domain(domain=value_domain.rstrip('.'))
+                result.append(new_domain_obj)
+                dns_obj.value_domain = new_domain_obj
+            case DNSTypes.AAAA.name:
+                # TODO: на данный момент отсутствует работа с IPv6
+                # нужно сначала расширить валидацию для ip
+                # затем доработать (если требуется) инструменты под IPv6
+
+                # ip_obj = IP(ip=record_value)
+                # result.append(ip_obj)
+                # dns_obj.target_ip=ip_obj
+                ...
             case _:
                 return []
+        result.append(dns_obj)
+        return result

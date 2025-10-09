@@ -41,10 +41,10 @@ async def vulnerabilities_page(
             {'name' : 'l4_resources',
              'base_url': 'l4',
              'columns': [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ip', 'title': 'IP'},
-                {'field': 'port', 'title': 'PORT'},
-                {'field': 'domain', 'title': 'DOMAIN'}]
+                {'field': 'id', 'title': 'ID', "headerFilter": "input", "headerFilterPlaceholder": "Search ID..."},
+                {'field': 'ip', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+                {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+                {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search DOMAIN..."}]
             },
         'current_project': project_name, 
         'current_project_id': project_id,

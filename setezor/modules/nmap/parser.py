@@ -7,6 +7,7 @@ import xmltodict
 from setezor.models.d_software_type import SoftwareType
 from setezor.models.d_software_version import SoftwareVersion
 from setezor.tools.ip_tools import get_network
+from setezor.db.entities import DNSTypes
 
 try:
     # from exceptions.loggers import get_logger
@@ -17,7 +18,7 @@ except ImportError:
 
 from cpeguess.cpeguess import CPEGuess
 
-from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS_A, Domain
+from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS, Domain
 
 # logger = get_logger(__package__, handlers=[])
 
@@ -346,8 +347,8 @@ class NmapParser:
             else:
                 domain_obj = Domain()
             result.append(domain_obj)
-            dns_a_obj = DNS_A(target_ip=ip_obj, target_domain=domain_obj)
-            result.append(dns_a_obj)
+            dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.A.value)
+            result.append(dns_obj)
             address_in_traceses[ip_obj.ip] = ip_obj
             ports = data.ports.get(data.addresses[i].get('ip'), [])
             softs = data.softwares.get(data.addresses[i].get('ip'), [])
@@ -399,7 +400,7 @@ class NmapParser:
                                                        cpe23=cpe23)
                     softwares_versions[soft_version_hash_string] = soft_version_obj
                     result.append(soft_version_obj)
-                L4Software_obj = L4Software(l4=l4_obj, software_version=soft_version_obj, dns_a=dns_a_obj)
+                L4Software_obj = L4Software(l4=l4_obj, software_version=soft_version_obj, dns=dns_obj)
                 result.append(L4Software_obj)
 
         if traceroute:
@@ -414,8 +415,8 @@ class NmapParser:
                         result.append(ip_obj_in_trace)
                         domain_obj = Domain()
                         result.append(domain_obj)
-                        dns_a_obj = DNS_A(target_ip=ip_obj_in_trace, target_domain=domain_obj)
-                        result.append(dns_a_obj)
+                        dns_obj = DNS(target_ip=ip_obj_in_trace, target_domain=domain_obj, dns_type_id=DNSTypes.A.value)
+                        result.append(dns_obj)
                         froms_tos.append(str(r.address))
                         address_in_traceses.update({str(r.address) : ip_obj_in_trace})
                     else:

@@ -2,9 +2,10 @@ import base64
 import socket
 from uuid import uuid4
 
-from setezor.models import DNS_A, IP, DNS_A_Screenshot, Domain, Screenshot
+from setezor.models import DNS, IP, DNS_A_Screenshot, Domain, Screenshot
 from setezor.tools.screenshot import save_screenshot_file
 from urllib.parse import urlparse
+from setezor.db.entities import DNSTypes
 
 
 
@@ -24,8 +25,10 @@ class DNSAScreenshotProcessedData:
         domain = urlparse(url).netloc
         ip = cls._resolve_ip(domain)
         import hashlib
-        filename = f"{uuid4().hex}.png"
+        id = uuid4().hex
+        filename = f"{id}.png"
         return {
+            "id": id,
             "url": url,
             "domain": domain,
             "ip": ip,
@@ -50,13 +53,13 @@ class DNSAScreenshotTaskRestructor:
             project_id, processed_data.get("screenshot_bytes"), processed_data.get("filename"), scan_id
         )
 
-        screenshot = Screenshot(path=file_path)
+        screenshot = Screenshot(id=processed_data.get("id") ,path=file_path)
         domain = Domain(domain=processed_data.get("domain"))
         ip_obj = IP(ip=processed_data.get("ip"))
-        dns_a = DNS_A(target_ip=ip_obj, target_domain=domain)
-        dns_a_screenshot = DNS_A_Screenshot(dns_a=dns_a, screenshot=screenshot)
+        dns_obj = DNS(target_ip=ip_obj, target_domain=domain, dns_type_id=DNSTypes.A.value)
+        dns_a_screenshot = DNS_A_Screenshot(dns=dns_obj, screenshot=screenshot)
 
-        return [screenshot, domain, ip_obj, dns_a, dns_a_screenshot]
+        return [screenshot, domain, ip_obj, dns_obj, dns_a_screenshot]
 
     @classmethod
     def get_raw_result(cls, data: str) -> bytes:

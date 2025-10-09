@@ -1,6 +1,6 @@
-from sqlmodel import select, distinct
+from sqlmodel import select, distinct, or_
 
-from setezor.models import NodeComment, User
+from setezor.models import NodeComment, User, IP
 from setezor.repositories import SQLAlchemyRepository
 
 class NodeCommentRepository(SQLAlchemyRepository[NodeComment]):
@@ -14,7 +14,10 @@ class NodeCommentRepository(SQLAlchemyRepository[NodeComment]):
         result = await self._session.exec(stmt)
         return result
     
-    async def list_nodes_with_comment(self, project_id: str):
-        stmt = select(distinct(NodeComment.ip_id)).filter(NodeComment.project_id == project_id)
+    async def list_nodes_with_comment(self, project_id: str, scans: list[str]):
+        stmt = select(IP.ip, NodeComment.ip_id, NodeComment.text) \
+        .join(IP, IP.id == NodeComment.ip_id)\
+        .filter(NodeComment.project_id == project_id, NodeComment.deleted_at == None, IP.scan_id.in_(scans))\
+        .group_by(IP.ip, NodeComment.ip_id, NodeComment.text)
         result = await self._session.exec(stmt)
         return result

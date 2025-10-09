@@ -1,18 +1,17 @@
-# Navigation
+# Навигация
 1. [What is Setezor?](#what-is-setezor)
-2. [What are the features?](#what-are-the-features)
-3. [Installation and launch](#installation-and-launch)
-4. [Installation and launch of the agent on the server](#installation-and-launch-of-the-agent-on-the-server)
-5. [Support](#support)
-6. [Donations](#donations)
+2. [Installation and launch](#installation-and-launch)
+3. [Installation and launch of the agent on the server](#installation-and-launch-of-the-agent-on-the-server)
+4. [Support](#support)
+5. [Donations](#donations)
 
-![Network Map](docs/Eng/4.png)
+![карта_сети](docs/Eng/4.png)
 
-![Graphs](docs/Eng/5.png)
+![графики](docs/Eng/5.png)
 
-![Vulnerabilities](docs/Eng/7.png)
+![уязвимости](docs/Eng/7.png)
 
-![Tables](docs/Eng/8.png)
+![таблицы](docs/Eng/8.png)
 
 # What is Setezor?
  **Setezor** (formerly LMS.NetMap) is an analytical tool designed to monitor, analyze and optimize network operations. It collects and analyzes data from various sources on the network. Opens new horizons for information security, networking and system administration specialists.
@@ -41,13 +40,13 @@ Here are the key benefits that make it indispensable in the work:
 - Getting a list of vulnerabilities for a specific SearchVuls software tool.
 - Search for a string by Brute-force SNMP community string.
  
-## Installation and launch
+# Installation and launch
 We divided the Setezor into two separate applications - the server and agents. The server part has a shell in the form of a web interface, it creates tasks. The agency part has no shell and contains only tools.
 
 At the first start, Setezor fills the database and with it the password for the administrator "Admin password". It needs **to be preserved** and **remembered.**
 
 ## Server
-####  DEB
+###  DEB
 Download deb-package from the repository [https://github.com/lmsecure/Setezor/releases]( https://github.com/lmsecure/Setezor/releases). When installing, make sure that you are located in the directory with a DEB packet, otherwise write a full path:
 
 ```bash
@@ -67,7 +66,7 @@ Run the server:
 setezor
 ```
 
-#### Docker
+### Docker
 Download server image from repository: [https://hub.docker.com/r/lmsecure/setezor](https://hub.docker.com/r/lmsecure/setezor)
 
 ```bash
@@ -93,7 +92,7 @@ docker run -p 16661:16661 --env-file .env --network=host -v ~/setezor:/root/.loc
 ```
 
 ## Agent
-####  DEB
+###  DEB
 Download deb-package from repository  [https://github.com/lmsecure/Setezor.Agent/releases](https://github.com/lmsecure/Setezor.Agent/releases) and set by the team:
 
 ```bash
@@ -101,12 +100,12 @@ sudo apt install ./setezoragent_<версия>.deb
 ```
 
 Launch of the agent:
-
+## CLI functionality
 ```bash
 setezoragent -p <порт>
 ```
 
-#### Docker
+### Docker
 Download the image of the agent from the repository: [https://hub.docker.com/r/lmsecure/setezor.agent/tags](https://hub.docker.com/r/lmsecure/setezor.agent/tags).
 
 ```bash
@@ -119,7 +118,7 @@ Launch of the agent:
 docker run --network=host --cap-add=NET_ADMIN -d lmsecure/setezor.agent:latest
 ```
 
-## CLI functionality
+## Функционал CLI
 
 - View all available options on the server:
 
@@ -146,7 +145,7 @@ setezor reset-password -l <username>
 ```
 
 
-# Installation and launch of the agent on the server
+# Installing and running an agent on the server
 The agent acts as the performer of tasks coming from the server, as well as in the role of an intermediary, sending data to the next agent, who may be the performer. It scans the network by interacting with the Setsor tools. It is able to connect not only through the server, but also through another agent. A connected agent can be tied to all projects.
 
 Starting page **"Projects",** through the cap of the web page, go **"Admini Settings"** and **add** an agent.
@@ -157,10 +156,10 @@ Starting page **"Projects",** through the cap of the web page, go **"Admini Sett
 
 In the table, the added agent **configure the interface** and save the changes.
 
-More information can be found in the Setezor [документации](https://help.setezor.net).
+More information can be found in the Setezor [documentation](https://help.setezor.net).
 
 # Support
-If you have any difficulties or questions about using Setezor, we invite [https://t.me/netmap_chat](https://t.me/netmap_chat  ). our tg-chat. Also visit the Telegram channel [https://t.me/setezor](https://t.me/setezor) and the project site [https://setezor.ru](https://setezor.ru).
+If you have any difficulties or questions about using Setezor, we invite [https://t.me/netmap_chat](https://t.me/netmap_chat  ) our tg-chat. Also visit the Telegram channel [https://t.me/setezor](https://t.me/setezor) and the project site [https://setezor.ru](https://setezor.ru).
 
 # Donations
 - Bitcoin: bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz

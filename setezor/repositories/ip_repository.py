@@ -1,9 +1,13 @@
 import ipaddress
 from typing import List
 from sqlalchemy import Select
-from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS_A, DNS_NS, Domain, AgentInProject
+from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type
+from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import select, func, or_
+from sqlmodel import case, select, func, or_
+from sqlalchemy.orm import aliased
+
+
 
 class IPRepository(SQLAlchemyRepository[IP]):
     model = IP
@@ -40,7 +44,8 @@ class IPRepository(SQLAlchemyRepository[IP]):
                                                                     IP.scan_id == ip_obj.scan_id
                                                                     )
         result = await self._session.exec(stmt)
-        return result.first()
+        result_obj = result.first()
+        return result_obj
 
 
     async def vis_nodes_and_interfaces(self, project_id: str, scans: list[str]):
@@ -173,8 +178,6 @@ class IPRepository(SQLAlchemyRepository[IP]):
         result = await self._session.exec(paginated_query)
         return total, result.all()
 
-
-
     async def get_domain_ip_data(
         self,
         project_id: str,
@@ -184,17 +187,43 @@ class IPRepository(SQLAlchemyRepository[IP]):
         sort_params: list = None,
         filter_params: list = None
     ):
+        TargetDomain = aliased(Domain)
+        ValueDomain = aliased(Domain)
         field_mapping = {
             "ipaddr": IP.ip,
             "port": Port.port,
-            "domain": Domain.domain,
+            "domain": TargetDomain.domain,
+            "DNS": DNS_Type.name,
+            "value": ValueDomain.domain
         }
-        
-        stmt = select(IP.ip, Port.port, Domain.domain).select_from(IP)\
-            .join(Port, IP.id == Port.ip_id, isouter=True)\
-            .join(DNS_A, DNS_A.target_ip_id == IP.id, isouter=True)\
-            .join(Domain, Domain.id == DNS_A.target_domain_id, isouter=True)\
-            .filter(IP.project_id == project_id, IP.scan_id.in_(scans), Domain.domain != "")
+        stmt = select(IP.ip,
+                      Port.port,
+                      TargetDomain.domain,
+                      DNS_Type.name,
+                      ValueDomain.domain,
+                      DNS.extra_data,
+                      IP.id,
+                      func.count(
+                        case((NodeComment.deleted_at == None, NodeComment.id))
+                        ).label("comments_count")
+                      ).select_from(DNS)\
+            .join(DNS_Type, DNS_Type.id == DNS.dns_type_id)\
+            .outerjoin(IP, IP.id == DNS.target_ip_id)\
+            .outerjoin(Port, Port.ip_id == IP.id)\
+            .join(TargetDomain, TargetDomain.id == DNS.target_domain_id)\
+            .outerjoin(ValueDomain, ValueDomain.id == DNS.value_domain_id)\
+            .outerjoin(NodeComment, NodeComment.ip_id == IP.id)\
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))\
+            .group_by(
+                IP.ip,
+                Port.port,
+                TargetDomain.domain,
+                DNS_Type.name,
+                ValueDomain.domain,
+                DNS.extra_data,
+                IP.id,
+                Port.id
+            )
         
         if filter_params:
             for filter_item in filter_params:
@@ -274,3 +303,90 @@ class IPRepository(SQLAlchemyRepository[IP]):
         stmt = select(IP.ip, Port.port).select_from(Port).join(IP, Port.ip_id == IP.id).filter(Port.project_id == project_id, IP.scan_id != None)
         result = await self._session.exec(stmt)
         return result.all()
+    
+
+    async def get_l4_data_for_target(
+        self,
+        project_id: str,
+        scans: List[str],
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "domain": Domain.domain,
+            "port": Port.port,
+            "protocol": Port.protocol
+        }
+
+        tabulator_dashboard_data = (
+            select(
+                IP.ip,
+                Domain.domain,
+                Port.port,
+                Port.protocol,
+                func.count(Port.port).label("port_count")
+            )
+            .select_from(Port)
+            .join(IP, Port.ip_id == IP.id)
+            .join(DNS, DNS.target_ip_id == IP.id)
+            .join(Domain, Domain.id == DNS.target_domain_id, isouter=True)
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
+            .group_by(IP.ip, Domain.domain, Port.port, Port.protocol)
+        )
+
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                if (field == 'port'):
+                    value = int(value)
+
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+
+                    if type_op == "=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column == value)
+                    elif type_op == "!=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column != value)
+                    elif type_op == ">":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column > value)
+                    elif type_op == ">=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column >= value)
+                    elif type_op == "<":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column < value)
+                    elif type_op == "<=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column <= value)
+                    elif type_op == "like":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(
+                            column.ilike(f"%{value}%")
+                        )
+
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+
+                if field in field_mapping:
+                    column = field_mapping[field]
+                    if direction == "desc":
+                        order_clauses.append(column.desc())
+                    else:
+                        order_clauses.append(column.asc())
+
+            if order_clauses:
+                tabulator_dashboard_data = tabulator_dashboard_data.order_by(*order_clauses)
+            else:
+                tabulator_dashboard_data = tabulator_dashboard_data.order_by(func.count(IP.ip).desc())
+
+        count_query = select(func.count()).select_from(tabulator_dashboard_data.alias())
+        offset = (page - 1) * size
+        paginated_query = tabulator_dashboard_data.offset(offset).limit(size)
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+
+        return total, result.all()

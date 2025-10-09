@@ -20,6 +20,9 @@ document.querySelectorAll('.language-option').forEach(option => {
             if (window.location.pathname === '/scopes'){
                 getScopes()
             }
+            if (window.location.pathname === '/network-map'){
+                addTableNodesWithComments()
+            }
         });
     });
 });

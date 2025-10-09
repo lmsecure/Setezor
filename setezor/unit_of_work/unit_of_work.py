@@ -4,12 +4,8 @@ from setezor.repositories import \
     TasksRepository, \
     MACRepository, \
     IPRepository, \
-    DNS_A_Repository, \
-    DNS_CNAME_Repository, \
-    DNS_NS_Repository, \
-    DNS_MX_Repository, \
-    DNS_SOA_Repository, \
-    DNS_TXT_Repository, \
+    DNSRepository, \
+    DNS_Type_Repository, \
     DomainRepository, \
     ObjectRepository, \
     RouteRepository, \
@@ -117,22 +113,10 @@ class UnitOfWork:
     def ip(self) -> IPRepository: return IPRepository(self.__session)
 
     @property
-    def dns_a(self) -> DNS_A_Repository: return DNS_A_Repository(self.__session)
+    def dns(self) -> DNSRepository: return DNSRepository(self.__session)
 
     @property
-    def dns_mx(self) -> DNS_MX_Repository: return DNS_MX_Repository(self.__session)
-
-    @property
-    def dns_txt(self) -> DNS_TXT_Repository: return DNS_TXT_Repository(self.__session)
-
-    @property
-    def dns_ns(self) -> DNS_NS_Repository: return DNS_NS_Repository(self.__session)
-
-    @property
-    def dns_cname(self) -> DNS_CNAME_Repository: return DNS_CNAME_Repository(self.__session)
-
-    @property
-    def dns_soa(self) -> DNS_SOA_Repository: return DNS_SOA_Repository(self.__session)
+    def dns_type(self) -> DNS_Type_Repository: return DNS_Type_Repository(self.__session)
 
     @property
     def domain(self) -> DomainRepository: return DomainRepository(self.__session)

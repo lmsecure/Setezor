@@ -70,19 +70,21 @@
         for (const [key, value] of data) {
             params.set(key, value)
         }
+        const queryValue = params.get('query')
         resp = await fetch("/api/v1/vulnerability/search_vulns?" + params)
-        data = await resp.json()
-
         if (resp.status == 500) {
-            create_toast('Error', data.error, 'error')
+            create_toast('Error', 'Indvalid token', 'error')
             return
         }
+        data = await resp.json()
+
         el.innerHTML = `<div class="spinner-border" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>`
         if (resp.status == 200) {
             let result = ""
-            for (let [key, value] of Object.entries(data)) {
+            dict_data = {[queryValue] : data}
+            for (let [key, value] of Object.entries(dict_data)) {
                 document.getElementById("softName").innerHTML = `${key}. Latest version: ${value.version_status.latest}`
                 for (let [k, v] of Object.entries(value.vulns)) {
                     result += `

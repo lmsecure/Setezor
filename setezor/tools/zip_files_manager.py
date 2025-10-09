@@ -1,5 +1,6 @@
 import os
 from io import BytesIO
+from typing import Optional
 
 from zipfile import ZipFile, ZipInfo
 
@@ -37,6 +38,12 @@ class ZipFileManager:
         os.makedirs(path, exist_ok=True)
         with ZipFile(zip_buffer, 'r') as zipf:
             zipf.extractall(path=path)
+
+    def get_file_by_name(self, zip_bytes, file_name: str) -> Optional[BytesIO]:
+        with ZipFile(zip_bytes, 'r') as zipf:
+            for file_name_in_zip in zipf.namelist():
+                if file_name_in_zip == file_name:
+                    return BytesIO(zipf.read(file_name))
 
     @classmethod
     def new_instance(cls):

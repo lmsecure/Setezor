@@ -4,6 +4,10 @@ Scopes
 {% endblock title %}
 {% block scripts %}
 <link href="/static/css/src/scopes_page.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet" />
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet" />
+<script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/src/filterPanel.js"></script>
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
@@ -79,6 +83,10 @@ Scopes
     let fileTargetsData = [];
     let selectedTargets = new Set();
     let fileTargetsIdCounter = 0;
+
+    let selectedRowsState = {};
+    let targetTable;
+    let selectedScans = [];
 
     async function getScopes() {
         await axios.get("/api/v1/scope").then(response => {
@@ -583,6 +591,7 @@ Scopes
     }
     async function enterTargetsFromDataBase(id) {
         let modal_elem = document.getElementById("idModalForWritingDataBaseTargets");
+        selectedRowsState = {};
         modal_elem.innerHTML = `
         <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -590,140 +599,167 @@ Scopes
                     <div class="modal-header">
                         <h5 class="modal-title"> ${i18next.t('Enter targets for adding on scope')} </h5>
                     </div>
+
+                    <div class="d-flex flex-row justify-content-between">
+                        <div id="filter-panel-container" style="margin-left: 1rem;"></div>
+                    </div>
                     <div class="modal-body justify-content-center">
                         <div class="w-100">
-                            <div class="container">
-                                <div class="btn-group row row-cols-3 g-2 p-1 w-100" id="IpsDomainsDropdown">
-                                    <button type="button" class="btn btn-outline-primary dropdown-toggle" style="flex: none" data-bs-toggle="dropdown" aria-expanded="false">
-                                        ${i18next.t('Select targets')}
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" data-value="IP">${i18next.t('IP')}</a></li>
-                                        <li><a class="dropdown-item" href="#" data-value="IP:Port">${i18next.t('IP-Port')}</a></li>
-                                        <li><a class="dropdown-item" href="#" data-value="Domains">${i18next.t('Domains')}</a></li>
-                                    </ul>
-                                    <div class="form-check ms-3" >
-                                        <input class="form-check-input" type="checkbox" id="selectAllTargets">
-                                        <label class="form-check-label" for="selectAllTargets">
-                                            ${i18next.t('Select All')}
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="DataBaseTargetsContainer" class="row row-cols-3 g-2 p-1" style="max-height: 400px; overflow-y: auto;"> </div>
+                            <div id="DataBaseTargetsTable"></div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="processSelectedItems('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); ">  ${i18next.t('Add targets')} </button>
                         <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> ${i18next.t('Cancel')} </button>
                     </div>
-                <div>
+                </div>
             </div>
-        </div>`
-        document.getElementById("idButtonCancelModalEnterTargets").onclick = function () { modal_elem.innerHTML = ``; };
-        const selectAllCheckbox = document.getElementById('selectAllTargets');
-        selectAllCheckbox.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('#DataBaseTargetsContainer input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-            });
-        });
+        </div>`;
+
+        document.getElementById("idButtonCancelModalEnterTargets").onclick = function () { 
+            modal_elem.innerHTML = ``; 
+        };
+
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show();
-        getDataBaseTargets();
+        initTabulatorTargetTable();
     }
 
+    function initTabulatorTargetTable() {
+        const container = document.getElementById("DataBaseTargetsTable");
 
-    function getDataBaseTargets() {
-            let dropdown = document.getElementById('IpsDomainsDropdown');
-            let dropdownItems = dropdown.querySelectorAll('.dropdown-item');
-            let dropdownButton = dropdown.querySelector('.dropdown-toggle');
-            let resultContainer = document.getElementById('DataBaseTargetsContainer');
+        const columns = [
+            {
+                title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>",
+                field: "selected",
+                formatter: "rowSelection",
+                titleFormatter: "rowSelection",
+                hozAlign: "center",
+                headerHozAlign: "center",
+                headerSort: false,
+                width: 50,
+                formatterParams: { selectAll: false }
+            },
+            {
+                title: "IP Address",
+                field: "ipaddr",
+                headerFilter: "input",
+                headerFilterPlaceholder: "Search IP..."
+            },
+            {
+                title: "Domain",
+                field: "domain",
+                headerFilter: "input",
+                headerFilterPlaceholder: "Search domain..."
+            },
+            {
+                title: "Port",
+                field: "port",
+                headerFilter: "number",
+                headerFilterPlaceholder: "Search port...",
+                headerFilterFunc: "like"
+            },
+            {
+                title: "Protocol",
+                field: "protocol",
+                headerFilter: "input",
+                headerFilterPlaceholder: "Search protocol..."
+            }
+        ];
 
-            dropdownItems.forEach(item => {
-                item.addEventListener('click', async function(e) {
-                    e.preventDefault();
 
-                    let selectedValue = this.getAttribute('data-value')
-                    dropdownButton.textContent = selectedValue
+        
 
-                    if (selectedValue === 'IP'){
-                        await axios.get(`/api/v1/target/get_ips`).then(response => {
-                            resultContainer.innerHTML = ``
-                            response.data.forEach(ip => {
-                                resultContainer.innerHTML += ` <div class="col md-1">
-                                                                <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" value="" id="${ip}">
-                                                                    <label class="form-check-label" for="${ip}">
-                                                                        ${ip}
-                                                                    </label>
-                                                                </div>
-                                                                </div>`
-                            })
-                        });
-                    } else if (selectedValue === 'Domains'){
-                        resultContainer.innerHTML = ``
-                        await axios.get(`/api/v1/target/get_domains`).then(response => {
-                            response.data.forEach(domain => {
-                                resultContainer.innerHTML += `<div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" value="" id="${domain}">
-                                                                <label class="form-check-label" for="${domain}">
-                                                                    ${domain}
-                                                                </label>
-                                                                </div>`
-                            })
-                        })
-                    }   else if (selectedValue === 'IP:Port'){
-                        resultContainer.innerHTML = ``
-                        await axios.get(`/api/v1/target/get_ips_ports`).then(response => {
-                            response.data.forEach(ip_port => {
-                                resultContainer.innerHTML += `<div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" value="" id="${ip_port.ip}_${ip_port.port}">
-                                                                <label class="form-check-label" for="${ip_port.ip}_${ip_port.port}">
-                                                                    ${ip_port.ip}:${ip_port.port}
-                                                                </label>
-                                                                </div>`
-                            })
-                        })
-                    }
-            })
-            })
-        }
+        targetTable = new Tabulator(container, {
+            layout: "fitColumns",
+            ajaxURL: "/api/v1/target/get_all_data",
+            ajaxParams: {
+                scans: selectedScans,
+            },
+
+            ajaxURLGenerator: function (url, config, params) {
+                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                const page = params.page || 1;
+                const size = params.size || 10;
+                const scansParam = (selectedScans || [])
+                    .map(scan => `scans=${encodeURIComponent(scan)}`)
+                    .join("&");
+                return `${url}?page=${page}&size=${size}&sort=${sort}&filter=${filter}${scansParam ? `&${scansParam}` : ""}`;
+            },
+            selectable: true, 
+            sortMode: "remote",
+            filterMode: "remote",
+            pagination: true,
+            paginationMode: "remote",
+            paginationSize: 10,
+            paginationInitialPage: 1,
+            paginationSizeSelector: [5, 10, 25, 50, 100],
+            validationMode: 'highlight',
+            columns: columns,
+            dataLoaded: function (data) {
+                selectedRowsState = {};
+            },
+            ajaxResponse: function (url, params, response) {
+                setTimeout(() => {
+                    targetTable.getRows().forEach(row => {
+                        const data = row.getData();
+                        const uniqueKey = `${data.ipaddr}:${data.port}:${data.domain}:${data.protocol}`;
+                        if (selectedRowsState[uniqueKey]) {
+                            row.select();
+                        } else {
+                            row.deselect();
+                        }
+                    });
+                }, 0);
+
+                return response;
+            }
+        });
+
+        targetTable.on("rowSelectionChanged", function(data, rows){
+            rows.forEach(row => {
+                const rowData = row.getData();
+                const uniqueKey = `${rowData.ipaddr}:${rowData.port}:${rowData.domain}:${rowData.protocol}`;
+                if (row.isSelected()) {
+                    selectedRowsState[uniqueKey] = rowData;
+                } else {
+                    delete selectedRowsState[uniqueKey];
+                }
+            });
+        });
+
+        createFilterPanel({ 
+            tableId: 'DataBaseTargetsTable',
+            tableVar: targetTable, 
+            fields: [
+                { field: 'ipaddr', title: 'IP Address' },
+                { field: 'domain', title: 'Domain' },
+                { field: 'port', title: 'Port' },
+                { field: 'protocol', title: 'Protocol' },
+            ],
+            containerId: 'filter-panel-container'
+        });
+    }
 
     async function processSelectedItems(id) {
-        let target_type = document.getElementById('IpsDomainsDropdown').textContent.split('\n')[1].replaceAll(' ', '');
-        let targets = [];
-        document.querySelectorAll('#DataBaseTargetsContainer input[type="checkbox"]:checked').forEach(checkbox => {
-            if (target_type === "IP") {
-                targets.push({
-                    "protocol" : null,
-                    "ip" : checkbox.id || null,
-                    "domain" : null,
-                    "port" : null
-                })
-            }
-            if (target_type === "Domains") {
-                targets.push({
-                    "protocol" : null,
-                    "ip" : null,
-                    "domain" : checkbox.id || null,
-                    "port" : null
-                })
-            }
-            if (target_type === "IP:Port") {
-                ip_port = checkbox.id.split('_')
-                targets.push({
-                    "protocol" : null,
-                    "ip" : ip_port[0],
-                    "domain" : null,
-                    "port" : ip_port[1]
-                })
-            }
-        })
-        await axios.post(`/api/v1/scope/${id}/targets`, {targets: targets}, {headers: {'Content-Type': 'application/json'}}).then(response =>{
-            getScopeTargets(id)
-        })
+        const targets = [];
+
+        for (const [key, rowData] of Object.entries(selectedRowsState)) {
+            if (!rowData) continue;
+            targets.push({
+                ip: rowData.ipaddr || null,
+                domain: rowData.domain || null,
+                port: rowData.port || null,
+                protocol: rowData.protocol || null
+            });
+        }
+
+        await axios.post(`/api/v1/scope/${id}/targets`, { targets: targets }, {
+            headers: { 'Content-Type': 'application/json' }
+        }).then(response => {
+            getScopeTargets(id);
+        });
     }
 
     async function addNewTargetLine(){
@@ -894,6 +930,8 @@ Scopes
     }
 
     async function addTargetsOnFile(id) {
+        const modalContainer = document.getElementById("idModalForWritingTargets");
+        modalContainer.innerHTML = '';
         var input = document.createElement('input');
         input.type = 'file';
         input.multiple = false;
@@ -936,9 +974,9 @@ Scopes
                 })(file);
                 reader.onerror = (function (file) {
                     return function (e) {
-                        create_toast('Error', `Not enough permissions. Check file owner`, 'error')
+                        create_toast('Error', `Not enough permissions. Check file owner`, 'error');
                     }
-                })(file)
+                })(file);
                 reader.readAsDataURL(file);
             }
         };
@@ -959,30 +997,42 @@ Scopes
     let fileTargetsModal = null;
 
     function displayFileTargetsPage(id) {
-        let modal_elem = document.getElementById("idModalForWritingTargets");
+        const modalContainer = document.getElementById("idModalForWritingTargets");
         
-        modal_elem.innerHTML = '';
-        
+        if (!document.getElementById("idModalForChoosingMethodAddingTargets2")) {
+            modalContainer.innerHTML = `
+                <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="fileTargetsModalTitle"></h5>
+                            </div>
+                            <div class="modal-body" id="fileTargetsModalBody"></div>
+                            <div class="modal-footer" id="fileTargetsModalFooter"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const modalEl = document.getElementById("idModalForChoosingMethodAddingTargets2");
+            fileTargetsModal = new bootstrap.Modal(modalEl);
+            fileTargetsModal.show();
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                fileTargetsModal = null;
+            });
+        }
+
+        let modalBody = document.getElementById("fileTargetsModalBody");
+        let modalFooter = document.getElementById("fileTargetsModalFooter");
+        let modalTitle = document.getElementById("fileTargetsModalTitle");
+
         let startIdx = (fileTargetsCurrentPage - 1) * fileTargetsPageSize;
         let endIdx = startIdx + fileTargetsPageSize;
         let pageData = fileTargetsData.slice(startIdx, endIdx);
 
-        modal_elem.innerHTML = `
-        <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">${i18next.t('Targets from file')} (${fileTargetsData.length} ${i18next.t('targets')}, ${selectedTargets.size} ${i18next.t('selected')})</h5>
-                    </div>
-                    <div class="modal-body">
-                        
-                        ${targetsWithErrors.size > 0 ? `
-                            <div class="alert alert-warning mb-3">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            ${i18next.t('some targets have validation errors and are highlighted in red')}
-                            </div>
-                        ` : ''}
-                        
+        modalTitle.innerHTML = `${i18next.t('Targets from file')} (${fileTargetsData.length} ${i18next.t('targets')}, ${selectedTargets.size} ${i18next.t('selected')})`;
+
+        modalBody.innerHTML = `
                         <div class="d-flex justify-content-between mb-3">
                             <div class="page-size-selector">
                                 <label for="filePageSize">${i18next.t('Show rows')}:</label>
@@ -1059,29 +1109,24 @@ Scopes
                         </div>
                         
                         ${createFilePaginationHTML()}
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-success" onclick="addSelectedFileTargets('${id}')" ${selectedTargets.size === 0 ? 'disabled' : ''}>
-                            ${i18next.t('Add selected targets')} (${selectedTargets.size})
-                        </button>
-                        <button class="btn btn-primary" onclick="addCurrentPageTargets('${id}')">
-                            ${i18next.t('Add current page targets')} (${pageData.length})
-                        </button>
-                        <button class="btn btn-info" onclick="addAllFileTargets('${id}')">
-                            ${i18next.t('Add all targets')} (${fileTargetsData.length})
-                        </button>
-                        <button class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Cancel')}</button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
+                    `;
+
+        modalFooter.innerHTML = `
+            <button class="btn btn-success" onclick="addSelectedFileTargets('${id}')" ${selectedTargets.size === 0 ? 'disabled' : ''}>
+                ${i18next.t('Add selected targets')} (${selectedTargets.size})
+            </button>
+            <button class="btn btn-primary" onclick="addCurrentPageTargets('${id}')">
+                ${i18next.t('Add current page targets')} (${pageData.length})
+            </button>
+            <button class="btn btn-info" onclick="addAllFileTargets('${id}')">
+                ${i18next.t('Add all targets')} (${fileTargetsData.length})
+            </button>
+            <button class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Cancel')}</button>
+        `;
 
         if (fileTargetsModal) {
-            fileTargetsModal.hide();
+            fileTargetsModal.show();
         }
-        
-        fileTargetsModal = new bootstrap.Modal(modal_elem.children[0]);
-        fileTargetsModal.show();
     }
 
     function clearTargetError(targetId, id) {

@@ -7,12 +7,16 @@ Vulnerabilities
 <link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
 <link href="/static/css/src/vulnerabilities.css" rel="stylesheet">
 <script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/src/filterPanel.js"></script>
 {% endblock %}
 {% block content %}
 {% import './modals/vulnerabilities_modal.html' as modals %}
 {{ modals.create_vulnerabilities_add_modal() }}
 <div class="container-fluid">
-    <button class="btn btn-primary mt-2 mb-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
+    <div class="d-flex flex-row">
+        <div id="filter-panel-container"></div>
+        <button class="btn btn-primary mt-2 mb-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
+    </div>
     <div class="modal fade" id="{{tab.name}}_scansPickModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -192,7 +196,7 @@ Vulnerabilities
                             validationMode: 'highlight',
                             columns: [
                                 {% for col in tab.columns %}
-                                {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerMenu: headerMenu
+                                {{'{'}}title: "{{col.title}}", field: "{{col.field}}", headerFilter: "{{col.headerFilter}}", headerFilterPlaceholder: "{{col.headerFilterPlaceholder}}", headerFilterFunc: "{{col.headerFilterFunc}}", headerMenu: headerMenu
                                 {% if col.editor %}, editable: isRowSelected{% if col.editor == "datetime" %}, editable: false, editor: datetimeEditor, formatter: datetimeFormatter{% else %}, editor: "{{col.editor}}"{% endif %} {% endif %}
                         {% if col.formatter %}, editorParams: { values: foriegnData{{ col.field }}, itemFormatter: function(label, value, item, element) { label = label.length > 0 ? `<strong>${label}</strong>` : "<i>empty string</i>"; return label + `<br/><div style="font-size:80%">id: ${value}</div>` } }, formatter: {{ col.formatter }} (foriegnData{{ col.field }}) {% endif %}
                         {% if col.validator %}, validator: "{{col.validator}}"{% endif %} {{ '}' }}, {% endfor %}
@@ -202,6 +206,16 @@ Vulnerabilities
         return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities_{{ tab.name }}('${cell.getRow().getData().id}');">${i18next.t('Vulnerabilities')} (${cell.getRow().getData().vuln_count})</button>`;
     }
 
+    createFilterPanel({ 
+        tableId: '#table-{{ tab.name }}',
+        tableVar: {{ tab.name }}_table, 
+        fields: [
+            {% for col in tab.columns %}
+            { field: "{{ col.field }}", title: "{{ col.title }}" }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ],
+        containerId: 'filter-panel-container'
+    });
 
 
     async function getVulnerabilities_{{ tab.name }}(id){

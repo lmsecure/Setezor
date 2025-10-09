@@ -11,7 +11,7 @@ i18next.init({
         "Wiki": "Wiki",
         "About project": "About project",
         "About Setezor text": "Setezor is a network traffic analyzer with the ability to automatically buildnetwork topology. For more information, please visit our resources:",
-        "SetezorVersion": "Version: v1.0.5",
+        "SetezorVersion": "Version: v1.0.6",
         "Close": "Close",
         "Notifications": "Notifications",
         "Exit to project menu": "Exit to project menu",
@@ -69,6 +69,7 @@ i18next.init({
         "Select node to see the information": "Select node to see the information",
         "Find": "Find",
         "IP address or netmask": "IP address or netmask",
+        "IP Address": "IP Address",
         "Cluster": "Cluster",
         "Decluster": "Decluster",
         "Export to": "Export to",
@@ -107,6 +108,7 @@ i18next.init({
         "You cannot remove the last agent": "You cannot remove the last agent",
         "Node Info": "Node Info",
         "Comments": "Comments",
+        "Comment": "Comment",
         "network mask": "network mask",
         "Union": "Union",
         "Division": "Division",
@@ -398,7 +400,11 @@ i18next.init({
         "XML format": "XML format",
         "Json format": "Json format",
         "Enter domain": "Enter domain",
-        "Timeout": "Timeout:"
+        "Timeout": "Timeout:",
+        "Nodes with comment": "Nodes with comment",
+        "Current page": "Current page",
+        "The whole table": "The whole table",
+        "Export": "Export",
       }
     },
     ru: {
@@ -409,7 +415,7 @@ i18next.init({
         "Admin settings": "Настройки администратора",
         "About project": "О проекте",
         "About Setezor text": "Сетезор - это анализатор сетевого трафика с возможностью автоматического построения топологии сети. Для получения дополнительной информации посетите наши ресурсы:",
-        "SetezorVersion": "Версия: v1.0.5",
+        "SetezorVersion": "Версия: v1.0.6",
         "Close": "Закрыть",
         "Notifications": "Уведомления",
         "Exit to project menu": "Выход в меню выбора проекта",
@@ -466,6 +472,7 @@ i18next.init({
         "Select node to see the information": "Выберите узел, чтобы просмотреть информацию",
         "Find": "Найти",
         "IP address or netmask": "IP-адрес или сетевая маска",
+        "IP Address": "IP-адрес",
         "Cluster": "Кластер",
         "Decluster": "Декластер",
         "Export to": "Экспорт в",
@@ -504,6 +511,7 @@ i18next.init({
         "Node Info": "Информация об узле",
         "Node": "Узел",
         "Comments": "Комментарии",
+        "Comment": "Комментарий",
         "network mask": "маска сети",
         "Union": "Объединить",
         "Division": "Разъединить",
@@ -796,7 +804,12 @@ i18next.init({
         "XML format": "Формат XML",
         "Json format": "Формат Json",
         "Enter domain": "Введите домен",
-        "Timeout": "Таймаут:"
+        "Timeout": "Таймаут:",
+        "Nodes with comment": "Узлы с комментарием",
+        "Current page": "Текущая страница",
+        "The whole table": "Вся таблица",
+        "Export": "Экспорт",
+        "Export Options": "Настройки экспорта",
       }
     }
   }

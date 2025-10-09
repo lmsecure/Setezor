@@ -4,12 +4,8 @@ from .object_repository import ObjectRepository
 from .mac_repository import MACRepository
 from .ip_repository import IPRepository
 from .port_repository import PortRepository
-from .dns_a_repository import DNS_A_Repository
-from .dns_mx_repository import DNS_MX_Repository
-from .dns_cname_repository import DNS_CNAME_Repository
-from .dns_txt_repository import DNS_TXT_Repository
-from .dns_soa_repository import DNS_SOA_Repository
-from .dns_ns_repository import DNS_NS_Repository
+from .dns_repository import DNSRepository
+from .dns_type_repository import DNS_Type_Repository
 from .domain_repository import DomainRepository
 from .route_repository import RouteRepository
 from .route_list_repository import RouteListRepository

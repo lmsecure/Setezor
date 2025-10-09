@@ -1,11 +1,13 @@
 from abc import abstractmethod
-from typing import Generic, TypeVar, Type, Any
+from typing import Generic, TypeVar, Type, Any, List
 import datetime
 
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import func
 from sqlmodel import select, update
 from sqlalchemy import insert as alc_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from setezor.models import Port, IP, DNS, Domain
 from sqlalchemy.engine.result import ScalarResult
 from setezor.settings import ENGINE
 

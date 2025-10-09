@@ -57,4 +57,3 @@ class DNS:
             task = asyncio.create_task(cls.resolve_domain(domain, record))
             tasks.append(task)
         return await asyncio.gather(*tasks, return_exceptions=True)
-

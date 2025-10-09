@@ -223,8 +223,11 @@
 						aria-hidden="true">
 						<div class="modal-dialog modal-xl" style="--bs-modal-width: 1300px">
 							<div class="modal-content">
-								<div class="modal-header">
-									<h4 data-i18n="Tasks list"></h4>
+								<div class="modal-header" style="justify-content: left;">
+								<h4 data-i18n="Tasks list"></h4>
+								<a href="https://help.setezor.net/%D0%A1%D0%BF%D0%B8%D1%81%D0%BE%D0%BA%20%D0%B7%D0%B0%D0%B4%D0%B0%D1%87.html" target="_blank" style="margin-left: 0.2rem;">
+										<i class="bi bi-question-circle fs-4" style="font-family: 'Times New Roman', Times, serif; color: var(--bs-link-color);"></i>
+										</a>
 								</div>
 								<div class="modal-body">
 									<div id="v-pills-tasks" role="tabpanel" aria-labelledby="v-pills-tasks-tab">
@@ -700,10 +703,54 @@
 					scan_id = currentScan.id
 					result += `<button type="button" class="btn btn-success btn-limit" disabled id="currentPickedScan">${currentScan.name}</button>`
 				}
-				result += "</div>"
 				el.innerHTML = result
 			}
 		}
+
+		function openAddScanModal() {
+			const openModals = document.querySelectorAll('.modal.show');
+			let previousModal = null;
+
+			if (openModals.length > 0) {
+				previousModal = openModals[openModals.length - 1];
+
+				if (!previousModal.querySelector('[data-dim-overlay]')) {
+					const overlay = document.createElement('div');
+					overlay.setAttribute('data-dim-overlay', 'true');
+
+					Object.assign(overlay.style, {
+						position: 'absolute',
+						top: '0',
+						left: '0',
+						width: '100%',
+						height: '100%',
+						backgroundColor: 'rgba(0, 0, 0, 0.5)',
+						zIndex: '1060',
+						pointerEvents: 'none'
+					});
+
+					previousModal.appendChild(overlay);
+				}
+			}
+
+			const modalEl = document.getElementById('addScanModal');
+			const modal = new bootstrap.Modal(modalEl, {
+				backdrop: false,
+				keyboard: false
+			});
+			modalEl.style.zIndex = '1500';
+			modal.show();
+
+			document.getElementById('addScanModal').addEventListener('hidden.bs.modal', () => {
+				const openModals = document.querySelectorAll('.modal.show');
+				for (const modal of openModals) {
+					const overlay = modal.querySelector('[data-dim-overlay]');
+					if (overlay) overlay.remove();
+				}
+			});
+		}
+
+
 		async function addScan(event) {
 			event.preventDefault()
 			let formdata = new FormData(event.target)

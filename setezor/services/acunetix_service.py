@@ -32,8 +32,9 @@ from setezor.tasks.acunetix_scan_task import AcunetixScanTask
 from setezor.modules.acunetix.acunetix_config import Config
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.models import Vulnerability as VulnerabilityModel
-from setezor.models.dns_a import DNS_A
+from setezor.models.dns import DNS
 from setezor.tools.url_parser import parse_url
+from setezor.db.entities import DNSTypes
 
 class AcunetixService(BaseService):
     async def get_project_apis(self, project_id: str) -> list[Acunetix]:
@@ -70,13 +71,13 @@ class AcunetixService(BaseService):
             if domain := data.get("domain"):
                 responses = [await DNSModule.resolve_domain(domain, "A")]
                 domains = DNSModule.proceed_records(responses)
-                new_domain, new_ip, dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain)
+                new_domain, new_ip, dns = await DNS_Scan_Task_Restructor.restruct(domains, domain)
                 if new_ip.ip in ips:
                     new_ip = ips[new_ip.ip]
-                    dns_a.ip = new_ip
+                    dns.ip = new_ip
                 else:
                     ips[new_ip.ip] = new_ip
-                result.extend([new_domain, new_ip, dns_a])
+                result.extend([new_domain, new_ip, dns])
             else:
                 new_domain = Domain(domain="")
                 result.append(new_domain)
@@ -172,7 +173,7 @@ class AcunetixService(BaseService):
                     targets.extend(await api.get_targets())
         return targets
         
-    async def get_targets_for_sync(self, project_id: str, acunetix_id: str):
+    async def get_targets_for_sync(self, project_id: str, acunetix_id: str, scope_id: str):
         targets = await self.get_targets(project_id=project_id, acunetix_id=acunetix_id)
         groups = await self.get_groups(project_id=project_id, acunetix_id=acunetix_id)
         target_to_group = {}
@@ -194,7 +195,7 @@ class AcunetixService(BaseService):
             data = parse_url(url=target["address"])
             scheme = target["address"].split("://")[0]
             async with self._uow:
-                target_in_setezor = await self._uow.target.find_one(protocol=scheme, project_id=project_id, **data)
+                target_in_setezor = await self._uow.target.find_one(protocol=scheme, project_id=project_id, scope_id=scope_id, deleted_at=None, **data)
             target["in_setezor_id"] = target_in_setezor.id if target_in_setezor else None
             if group_id := target_to_group.get(target["target_id"]):
                 output[group_id]["targets"].append(target)
@@ -202,7 +203,8 @@ class AcunetixService(BaseService):
                 output["deadbeef"]["targets"].append(target)
         return output
 
-    async def sync_targets_between_setezor_and_acunetix(self, sync_payload: SyncPayload, scan_id: str, project_id: str):
+    async def sync_targets_between_setezor_and_acunetix(self, sync_payload: SyncPayload, scope_id: str, scan_id: str, project_id: str):
+
         ips = {}
         ports = {}
         common_domains = {}
@@ -212,7 +214,6 @@ class AcunetixService(BaseService):
         found_dns = {}
         async with self._uow:
             for index, target in enumerate(sync_payload.targets):
-                scope_id = target.scope_id
                 acunetix_id = target.acunetix_id
                 acunetix_target_id = target.in_acunetix_id
 
@@ -226,6 +227,7 @@ class AcunetixService(BaseService):
                                                                   protocol=scheme,
                                                                   scope_id=scope_id,
                                                                   **data)
+                    
                     if not target_in_setezor:
                         target_in_setezor = self._uow.target.add({
                             "project_id": project_id,
@@ -233,7 +235,10 @@ class AcunetixService(BaseService):
                             "scope_id": scope_id,
                             **data
                         })
-                        await self._uow.commit()
+                    else:
+                        target_in_setezor.deleted_at = None
+                        
+                    await self._uow.commit()
 
                 config = await self._uow.acunetix.find_one(project_id=project_id, id=acunetix_id)
                 api = AcunetixApi.from_config(config.model_dump())
@@ -241,29 +246,29 @@ class AcunetixService(BaseService):
                 if domain := data.get("domain"):
                     if domain in common_domains:
                         new_domain = common_domains[domain]
-                        new_dns_a = found_dns[domain]
+                        new_dns = found_dns[domain]
                     else:
                         try:
                             responses = [await DNSModule.resolve_domain(domain=domain, record="A")]
                             domains = DNSModule.proceed_records(responses)
-                            new_domain, new_ip, new_dns_a = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
+                            new_domain, new_ip, new_dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
                             if new_ip.ip in ips and new_ip.ip:
                                 new_ip = ips[new_ip.ip]
-                                new_dns_a.target_ip = new_ip
-                                result.append(new_dns_a)
+                                new_dns.target_ip = new_ip
+                                result.append(new_dns)
                             else:
                                 ips[new_ip.ip] = new_ip
                                 result.append(new_ip)
-                                result.append(new_dns_a)
+                                result.append(new_dns)
                         except:
                             new_domain = Domain(domain=domain)
                             new_ip = IP()
-                            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
+                            new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)
                             result.append(new_ip)
-                            result.append(new_dns_a)
+                            result.append(new_dns)
                         
                         common_domains[domain] = new_domain
-                        found_dns[domain] = new_dns_a
+                        found_dns[domain] = new_dns
                         result.append(new_domain)
 
                 if ip := data.get("ip"):
@@ -272,12 +277,12 @@ class AcunetixService(BaseService):
                         if not (ip in empty_domains):
                             new_domain = Domain()
                             result.append(new_domain)
-                            new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
-                            result.append(new_dns_a)
+                            new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)
+                            result.append(new_dns)
                             empty_domains[ip] = new_domain
-                            empty_dns[ip] = new_dns_a
+                            empty_dns[ip] = new_dns
                         new_domain = empty_domains[ip]
-                        new_dns_a = empty_dns[ip]
+                        new_dns = empty_dns[ip]
                     else:
                         new_ip = IP(ip=ip)
                         ips[ip] = new_ip
@@ -286,10 +291,10 @@ class AcunetixService(BaseService):
                         new_domain = Domain()
                         result.append(new_domain)
                         
-                        new_dns_a = DNS_A(target_ip=new_ip, target_domain=new_domain)
-                        result.append(new_dns_a)
+                        new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)
+                        result.append(new_dns)
                         empty_domains[ip] = new_domain
-                        empty_dns[ip] = new_dns_a
+                        empty_dns[ip] = new_dns
 
 
                 key = f"{new_ip.ip or new_domain.domain}_{data.get("port")}"
@@ -304,7 +309,7 @@ class AcunetixService(BaseService):
                 new_software = Software()
                 result.append(new_software)
 
-                new_l4_software = L4Software(l4=new_port, dns_a=new_dns_a, software=new_software)
+                new_l4_software = L4Software(l4=new_port, dns=new_dns, software=new_software)
                 result.append(new_l4_software)
 
                 scans = await api.get_target_scans(target_id=acunetix_target_id)

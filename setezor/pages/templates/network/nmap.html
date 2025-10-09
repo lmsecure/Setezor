@@ -504,6 +504,18 @@ function resetNmapModal() {
 document.addEventListener('DOMContentLoaded', function () {
     initNmapModal();
 });
+document.querySelectorAll('input[type="radio"]').forEach(radio => {
+  radio.addEventListener('click', function () {
+    const group = document.querySelectorAll(`input[type="radio"][name="${this.name}"]`);
+    if (this.checked && this.dataset.wasChecked === "true") {
+      this.checked = false;
+      this.dataset.wasChecked = "false";
+    } else {
+      group.forEach(r => r.dataset.wasChecked = "false");
+      this.dataset.wasChecked = "true";
+    }
+  });
+});
 </script>
 {% endmacro %}
 

@@ -21,6 +21,5 @@ class MAC(IDDependent, Base, table=True):
     vendor: "Vendor" = Relationship(back_populates="macs") # type: ignore
 
     @field_serializer('mac')
-    def serialize_mac(self, mac: int | None, _info):
-        if not mac: return None
-        return str(MacAddress(mac))
+    def serialize_mac(self, mac: str, _info):
+        return str(MacAddress(mac)) if mac else ''

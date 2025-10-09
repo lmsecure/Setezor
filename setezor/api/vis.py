@@ -71,6 +71,19 @@ async def list_comments_for_node(
     return comments
 
 
+@router.get("/comments_for_all_nodes")
+async def list_first_comments_for_all_nodes(
+    node_service: Annotated[NodeService, Depends(NodeService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    scans: list[str] = Query([]),
+    _: bool = Depends(role_required(
+        [Roles.owner, Roles.executor, Roles.viewer]))
+) -> list[dict]:
+    
+    return await node_service.get_comments_for_all_nodes(project_id=project_id, scans=scans)
+
+
+
 @router.post("/comment")
 async def add_comment_to_node(
     comment_form: NodeCommentForm,

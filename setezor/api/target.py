@@ -1,5 +1,6 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from setezor.schemas.roles import Roles
 from setezor.dependencies.project import get_current_project, role_required
 from setezor.services.target_service import TargetService
@@ -55,3 +56,32 @@ async def get_ips_and_port_for_target(
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list:
     return await ip_service.get_ips_and_ports(project_id=project_id)
+
+
+@router.get("/get_all_data")
+async def get_all_data_for_target(
+    target_service: Annotated[TargetService, Depends(TargetService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    scans: list[str] = Query([]),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+    total, data = await target_service.get_l4_data_for_target_wrapper(
+        project_id=project_id,
+        scans=scans,
+        page=page,
+        size=size,
+        sort=sort,
+        filter=filter
+    )
+
+    if isinstance(data, dict) and data.get("error"):
+        return JSONResponse(content={"error": data["error"]}, status_code=500)
+
+    last_page = (total + size - 1) // size
+
+    return JSONResponse(content={"data": data, "last_page": last_page})
+

@@ -11,12 +11,7 @@ from .d_network_type import Network_Type
 from .asn import ASN
 from .port import Port
 from .domain import Domain
-from .dns_a import DNS_A
-from .dns_cname import DNS_CNAME
-from .dns_mx import DNS_MX
-from .dns_ns import DNS_NS
-from .dns_txt import DNS_TXT
-from .dns_soa import DNS_SOA
+from .dns import DNS
 from .task import Task
 from .route import Route
 from .route_list import RouteList
@@ -27,6 +22,7 @@ from .d_vendor import Vendor
 from .d_software import Software
 from .d_software_type import SoftwareType
 from .d_software_version import SoftwareVersion
+from .d_dns_type import DNS_Type
 
 from .vulnerability import Vulnerability
 from .acunetix import Acunetix

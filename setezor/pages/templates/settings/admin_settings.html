@@ -49,7 +49,7 @@
                             <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
                         </ul>
                     </div>
-                    <a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/online/?utm_source=online"
+                    <a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/?utm_source=public"
                         target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;" data-testid="wiki_help">
                         <i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
                     </a>
@@ -182,7 +182,7 @@
         <div class="d-flex flex-row" style="margin-left: 2rem;">
             <h2 class="p-2" data-i18n="All Agents"></h2>
             <div style="margin-top: 0.6rem;">
-                <a href="https://help.setezor.net/online/Агент%20и%20Сервер.html#id2" target="_blank">
+                <a href="https://help.setezor.net/%D0%90%D0%B4%D0%BC%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D0%B5%20%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B8.html" target="_blank">
                 <i class="bi bi-question-circle fs-3" style="font-family: 'Times New Roman', Times, serif"></i>
                 </a>
             </div>
@@ -228,10 +228,6 @@
                             <tr>
                                 <td data-i18n="Agent REST URL"></td>
                                 <td><input id="agent-rest-url" name="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="NAT-Agent"></td>
-                                <td><input id="agent-flag" class="form-check" type="checkbox"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -432,12 +428,10 @@
             name = sanitize(document.getElementById('agent-name').value)
             desc = sanitize(document.getElementById('agent-description').value)
             rest_url = document.getElementById('agent-rest-url').value
-            flag = document.getElementById('agent-flag').checked
             agent = new Object()
             agent.name = name
             agent.description = desc
             agent.rest_url = rest_url
-            agent.flag = flag
             resp = await fetch('/api/v1/agents',
                 {
                     method: 'post',
@@ -655,9 +649,6 @@
                         ${cell.getRow().getData().secret_key != "" ? `<div class="ms-1 btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';showParentAgents('${cell.getRow().getData().name}',currentAgent)">
                             ${i18next.t('Parent agents')}
                         </div>`:""}
-                        ${cell.getRow().getData().secret_key != "" ? `<div class="ms-1 btn btn-secondary btn-sm" onclick="currentAgent='${agent_id}';copyAgentConfig(currentAgent)">
-                            ${i18next.t('Agent config')}
-                        </div>`:""}
                     </div>
                     `
         }
@@ -684,15 +675,6 @@
                 let myModal = new bootstrap.Modal(document.getElementById('parentAgentsModal'));
                 myModal.show();
             }
-        }
-        async function copyAgentConfig(agent_id) {
-            let resp = await fetch(`/api/v1/agents/${agent_id}/config`)
-            let data = await resp.json()
-            navigator.clipboard.writeText(data.config).then(function() {
-                create_toast('Success', 'Config was copied to buffer', 'success')
-            }, function(err) {
-                create_toast('Error', 'Error copying config to buffer', 'error')
-            });
         }
         async function saveParentAgents() {
             let el = document.getElementById("parentAgentsList")
@@ -784,23 +766,6 @@
         })
     </script>
     <script defer src="static/js/src/update_language.js"></script>
-    	<!-- Yandex.Metrika counter -->
-	<script type="text/javascript" >
-		(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-		m[i].l=1*new Date();
-		for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-		k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-		(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-	
-		ym(101032932, "init", {
-			clickmap:true,
-			trackLinks:true,
-			accurateTrackBounce:true,
-			webvisor:true
-		});
-	</script>
-	<noscript><div><img src="https://mc.yandex.ru/watch/101032932" style="left:-9999px;" alt="" /></div></noscript>
-	<!-- /Yandex.Metrika counter -->
 </body>
 </html>
 {% endblock content %}

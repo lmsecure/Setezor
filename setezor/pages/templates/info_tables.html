@@ -1,495 +1,1579 @@
 {% extends 'base.html' %}
-{% block title %}
-Information
-{% endblock title %}
+{% block title %} Information {% endblock title %}
 {% block scripts %}
 
-<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
-<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet" />
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet" />
 <script src="/static/js/libs/tabulator.min.js"></script>
 <script src="/static/js/libs/luxon.min.js"></script>
 <script src="/static/js/libs/jquery.inputmask.js"></script>
+<script src="/static/js/libs/xlsx.full.min.js"></script>
+<script src="/static/js/libs/jspdf.umd.min.js"></script>
+<script src="/static/js/libs/jspdf.plugin.autotable.min.js"></script>
 {% endblock %}
-
 {% block content %}
 
-{% import 'network/nmap.html' as nmap %}
-{{ nmap.nmap_script_modal_to_info_tabs() }}
+{% import 'network/nmap.html' as nmap %} 
+{{ nmap.nmap_script_modal_to_info_tabs() }} 
 {% import 'network/masscan.html' as masscan%}
-{{ masscan.masscan_modal_to_info_tabs('full_masscan') }}
-{% import 'network/cert.html' as cert%}
-{{ cert.nmap_script_modal_to_info_tabs() }}
-{% import 'network/whois.html' as whois%}
-{{ whois.whois_script_modal_to_info_tabs() }}
-{% import 'network/domains.html' as domains%}
+{{ masscan.masscan_modal_to_info_tabs('full_masscan') }} 
+{% import'network/cert.html' as cert%}
+{{ cert.cert_script_modal_to_info_tabs() }} 
+{%import 'network/whois.html' as whois%} 
+{{ whois.whois_script_modal_to_info_tabs() }} 
+{% import 'network/domains.html' as domains%} 
 {{ domains.domains_script_modal_to_info_tabs() }}
-{% import 'network/dns_a_screenshot.html' as dns_a_screenshot%}
-{{ dns_a_screenshot.dns_a_screenshot_script_modal_to_info_tabs() }}
+{% import'network/dns_a_screenshot.html' as dns_a_screenshot%}
+{{dns_a_screenshot.dns_a_screenshot_script_modal_to_info_tabs() }}
 {{ dns_a_screenshot.dns_a_screenshot_full_modal() }}
 
 <script>
-    let selectedScans = []
+  let selectedScans = [];
+  let screenshotModal = null;
+  let screenshotBootstrapModal = null;
+  let keyHandler = null;
 </script>
 
-<div id="main_bar" class="container-fluid justify-content-between bd-highlight mb-3">
-    <div class="row">
-        <div class="col-2">
-            <div class="p-2 bd-highlight">
-                <div class="d-flex flex-column flex-shrink-0 p-3">
-                    <h4 data-i18n="Tables"></h4>
-                    <div class="nav flex-column nav-pills me-1" id="tab_buttons" role="tablist"
-                        aria-orientation="vertical">
-                        {% for tab in tabs %}
-                        <button class="nav-link {% if loop.index0 == 0 %}active{% endif %}" id="infotabs-{{tab.name}}"
-                            data-bs-toggle="tab"
-                            data-bs-target="#tab-content-{{tab.name}}" type="button" role="tab"
-                            aria-controls="tab-content-{{tab.name}}">{{ tab.name.upper()}}
-                        </button>
-                        {% endfor %}
-                    </div>
-                </div>
+<div id="main_bar" class="container-fluid bd-highlight mb-3">
+  <div class="col-12">
+    <hr style="margin: 0.4rem 0;">
+
+    <ul class="nav nav-pills" id="tab_buttons" role="tablist">
+      {% for tab in tabs %}
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link {% if loop.index0 == 0 %}active{% endif %}"
+          id="infotabs-{{tab.name}}"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-content-{{tab.name}}"
+          type="button"
+          role="tab"
+          aria-controls="tab-content-{{tab.name}}"
+        >
+          {{ tab.name.upper()}}
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+<hr style="margin: 0.4rem 0;">
+      <div class="tab-content" id="nav-tabContent">
+        {% for tab in tabs %}
+        <div
+          class="tab-pane fade{% if loop.index0 == 0 %} show active{% endif %}"
+          id="tab-content-{{tab.name}}"
+          role="tabpanel"
+          aria-labelledby="infotabs-{{name}}"
+        >
+          <div class="d-flex flex-row justify-content-between">
+            <div id="filter {{tab.name}}" class="d-flex flex-row py-2">
+              <div class="btn-group" style="padding-right: 0.3rem" role="group">
+                <button
+                  class="btn btn-primary"
+                  id="{{tab.name}}-reload-data"
+                  onclick="{{tab.name}}_table.dataLoader.reloadData()"
+                >
+                  <i
+                    class="bi bi-arrow-clockwise"
+                    style="font-family: 'Times New Roman', Times, serif"
+                  ></i>
+                </button>
+              </div>
+              <div class="me-1">
+                <select class="form-select h-100" id="filter-field-{{tab.name}}">
+                  {% for col in tab.columns %} {% if col.title != "ID" %}
+                  <option value="{{ col.field }}">{{ col.title }}</option>
+                  {% endif %} {%endfor%}
+                </select>
+              </div>
+
+              <div class="me-1">
+                <select class="form-select h-100" id="filter-type-{{tab.name}}">
+                  <option value="=">=</option>
+                  <option value="<">&lt;</option>
+                  <option value="<=">&lt;=</option>
+                  <option value=">">&gt;</option>
+                  <option value=">=">&gt;=</option>
+                  <option value="!=">!=</option>
+                  <option value="like">like</option>
+                </select>
+              </div>
+                <input
+                  id="filter-value-{{tab.name}}"
+                  name="filter-value-{{tab.name}}"
+                  class="form-control me-1"
+                  type="text"
+                  data-i18n-placeholder="value1,value2,value3"
+                  style="width: 40%"
+                  title="Введите значения через запятую для множественного фильтра"
+                />
+
+              <button
+                id="filter-search-{{tab.name}}"
+                class="btn btn-primary me-1"
+                style="width: 5rem"
+                onclick="{{tab.name}}ApplyFilter()"
+                data-i18n="Search"
+              ></button>
+              <button
+                id="filter-clear-{{tab.name}}"
+                class="btn btn-danger me-1"
+                style="width: 7rem"
+                onclick="{{tab.name}}clearFilter()"
+                data-i18n="Clear"
+              ></button>
+
+              {% if tab.name == 'software' or tab.name == 'ip_mac_port' %}
+              <div class="me-1">
+                <select
+                  class="form-select h-100"
+                  style="width: 12rem"
+                  id="filter-tools-{{tab.name}}"
+                >
+                  <option value="nmap">nmap</option>
+                  <option value="masscan">masscan</option>
+                  <option value="cert">cert</option>
+                  <option value="whois">whois</option>
+                </select>
+              </div>
+              {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip'
+              or tab.name == 'dns_a_screenshot' %}
+              <div class="me-1">
+                <select
+                  class="form-select h-100"
+                  style="width: 12rem"
+                  id="filter-tools-{{tab.name}}"
+                >
+                  <option value="nmap">nmap</option>
+                  <option value="masscan">masscan</option>
+                  <option value="cert">cert</option>
+                  <option value="domains">domains</option>
+                  <option value="whois">whois</option>
+                  <option value="dns_a_screenshot">dns_a_screenshot</option>
+                </select>
+              </div>
+              {% endif %} {% if tab.name == 'software' or tab.name ==
+              'ip_mac_port' or tab.name == 'domain_ip' or tab.name ==
+              'auth_credentials' or tab.name == 'dns_a_screenshot' %}
+              <button
+                class="btn btn-success"
+                style="width: 7rem"
+                onclick="{{tab.name}}open_modal_tools();"
+                data-i18n="Start"
+              ></button>
+              {% endif %}
+              <div
+                class="btn-group me-1"
+                style="margin-left: 0.3rem"
+                role="group"
+              >
+                <button
+                  class="btn btn-success dropdown-toggle"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  data-i18n="Export"
+                >
+                  <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="#"
+                      onclick="{{tab.name}}exportTable('csv')"
+                      >CSV</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="#"
+                      onclick="{{tab.name}}exportTable('json')"
+                      >JSON</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="#"
+                      onclick="{{tab.name}}exportTable('xlsx')"
+                      >Excel</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="#"
+                      onclick="{{tab.name}}exportTable('pdf')"
+                      >PDF</a
+                    >
+                  </li>
+                </ul>
+              </div>
             </div>
-        </div>
-
-        <div class="col-10">
-            <div class="tab-content" id="nav-tabContent">
-                {% for tab in tabs %}
-                <div class="tab-pane fade{% if loop.index0 == 0 %} show active{% endif %}" id="tab-content-{{tab.name}}"
-                    role="tabpanel" aria-labelledby="infotabs-{{name}}">
-                    <div class="d-flex flex-row justify-content-between">
-                        <div id="filter {{tab.name}}" class="d-flex flex-row py-2">
-                            <div class="btn-group" style="padding-right: 0.3rem;" role="group">
-                                <button class="btn btn-primary" id="{{tab.name}}-reload-data"
-                                    onclick="{{tab.name}}_table.dataLoader.reloadData()"><i
-                                        class="bi bi-arrow-clockwise" style="font-family: 'Times New Roman', Times, serif;"></i></button>
-                            </div>
-                            <div class="me-1">
-                                <select class="form-select" id="filter-field-{{tab.name}}">
-                                    {% for col in tab.columns %}
-                                        {% if col.title != "ID" %}
-                                            <option value="{{ col.field }}">{{ col.title }}</option>
-                                        {% endif %}
-                                    {%endfor%}
-                                </select>
-                            </div>
-
-                            <div class="me-1">
-                                <select class="form-select" id="filter-type-{{tab.name}}">
-                                    <option value="=">=</option>
-                                    <option value="<">&lt;</option>
-                                    <option value="<=">&lt;=</option>
-                                    <option value=">">&gt;</option>
-                                    <option value=">=">&gt;=</option>
-                                    <option value="!=">!=</option>
-                                    <option value="like">like</option>
-                                </select>
-                            </div>
-                            <input id="filter-value-{{tab.name}}" name="filter-value-{{tab.name}}" class="form-control me-1" type="text"
-                            data-i18n-placeholder="value to filter" style="width: 40%">
-                            <button id="filter-search-{{tab.name}}" class="btn btn-primary me-1" style="width: 5rem; "
-                                onclick="{{tab.name}}ApplyFilter()" data-i18n="Search"></button>
-                            <button id="filter-clear-{{tab.name}}" class="btn btn-danger me-1" style="width: 7rem; "
-                                onclick="{{tab.name}}clearFilter()" data-i18n="Clear"></button>
-
-                        {% if tab.name == 'software' or tab.name == 'ip_mac_port' %}
-                            <div class="me-1">
-                                <select class="form-select" style="width: 12rem; " id="filter-tools-{{tab.name}}">
-                                    <option value="nmap">nmap</option>
-                                    <option value="masscan">masscan</option>
-                                    <option value="cert">cert</option>
-                                    <option value="whois">whois</option>
-                                </select>
-                            </div>
-                        {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip' or tab.name == 'dns_a_screenshot' %}
-                        <div class="me-1">
-                            <select class="form-select" style="width: 12rem; " id="filter-tools-{{tab.name}}">
-                                <option value="nmap">nmap</option>
-                                <option value="masscan">masscan</option>
-                                <option value="cert">cert</option>
-                                <option value="domains">domains</option>
-                                <option value="whois">whois</option>
-                                <option value="dns_a_screenshot">dns_a_screenshot</option>
-                            </select>
-                        </div>   
-                        {% endif %}
-                        {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' or tab.name == 'dns_a_screenshot' %}
-                            <button class="btn btn-success" style="width: 7rem;"  onclick="{{tab.name}}open_modal_tools();" data-i18n="Start"></button>
-                        {% endif %}    
+            <button
+              class="btn btn-primary mb-2 mt-2"
+              data-bs-toggle="modal"
+              data-bs-target="#{{tab.name}}_scansPickModal"
+              data-i18n="Pick scans"
+            ></button>
+            <div
+              class="modal fade"
+              id="{{tab.name}}_scansPickModal"
+              tabindex="-1"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 data-i18n="Pick scans"></h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"
+                    ></button>
+                  </div>
+                  <form
+                    name="showInformationForScansFormName"
+                    onsubmit="showInformationForScans(event)"
+                  >
+                    <div
+                      class="modal-body"
+                      id="{{tab.name}}_scansContainer"
+                    ></div>
+                    <div class="modal-footer">
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                        data-i18n="Close"
+                      ></button>
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        data-bs-dismiss="modal"
+                        data-i18n="Show"
+                      ></button>
                     </div>
-                    <button class="btn btn-primary mb-2 mt-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
-                    <div class="modal fade" id="{{tab.name}}_scansPickModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 data-i18n="Pick scans"></h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="modal fade"
+              id="{{tab.name}}_exportModal"
+              tabindex="-1"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="Export Options"></h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"
+                    ></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="{{tab.name}}_exportType"
+                        id="{{tab.name}}_exportCurrent"
+                        value="current"
+                        checked
+                      />
+                      <label
+                        class="form-check-label"
+                        for="{{tab.name}}_exportCurrent"
+                        data-i18n="Current page"
+                      >
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="{{tab.name}}_exportType"
+                        id="{{tab.name}}_exportAll"
+                        value="all"
+                      />
+                      <label
+                        class="form-check-label"
+                        for="{{tab.name}}_exportAll"
+                        data-i18n="The whole table"
+                      >
+                      </label>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal"
+                      data-i18n="Cancel"
+                    >
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      onclick="{{tab.name}}confirmExport()"
+                      data-i18n="Export"
+                    >
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal fade" id="{{tab.name}}commentsModal" tabindex="-1" data-bs-backdrop="static" role="dialog" aria-labelledby="{{tab.name}}commentsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="{{tab.name}}commentsModalLabel">
+                            <i class="fas fa-comments me-2" data-i18n="Comments"></i>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="{{tab.name}}commentsContainer">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden" data-i18n="Loading..."></span>
                                 </div>
-                                <form name="showInformationForScansFormName" onsubmit="showInformationForScans(event)">
-                                    <div class="modal-body" id="{{tab.name}}_scansContainer">
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-                                        <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
-                                    </div>
-                                </form>
                             </div>
                         </div>
                     </div>
-
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                        </button>
+                    </div>
                 </div>
-
-                <div id="{{tab.name}}-table" ></div>
-
-    <script>
-        async function getScans(){
-        let resp = await fetch("/api/v1/scan");
-        let scans = await resp.json();
-        return scans;
-    }
-
-    getScans().then(data => {
-        let el = document.getElementById("{{tab.name}}_scansContainer");
-        let result = "";
-        for (const scan of data){
-            let scan_html = `
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="{{tab.name}}_scan_label_${scan.id}">
-                    <label class="form-check-label" style="word-break: break-all; white-space: normal" for="{{tab.name}}_scan_label_${scan.id}">
-                        ${scan.name} - ${scan.created_at}
-                    </label>
-                </div>
-            `;
-            result += scan_html;
-        }
-        el.innerHTML = result;
-    });
-
-    async function showInformationForScans(event){
-        event.preventDefault();
-        let formData = new FormData(event.target);
-        selectedScans = [];
-        for (const [_, scan_id] of formData) {
-            selectedScans.push(scan_id);
-        }
-
-        software_table.setData(software_table.getAjaxUrl(), {}, "GET");
-        ip_mac_port_table.setData(ip_mac_port_table.getAjaxUrl(), {}, "GET");
-        domain_ip_table.setData(domain_ip_table.getAjaxUrl(), {}, "GET");
-        dns_a_screenshot_table.setData(dns_a_screenshot_table.getAjaxUrl(), {}, "GET");
-        soft_vuln_link_table.setData(soft_vuln_link_table.getAjaxUrl(), {}, "GET");
-        auth_credentials_table.setData(auth_credentials_table.getAjaxUrl(), {}, "GET");
-    }
-
-
-                    function {{tab.name}}get_selected_rows() {
-                        let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
-                        let t_rows = {{tab.name}}_table.getData();
-                        let selected_id = [];
-                        
-                        for (const [k, v] of {{tab.name}}_selected_row) {
-                            if (v)
-                                selected_id.push(Number(k.split('-')[2]));
-                        }
-                        
-                        let grouped = {};
-                        for (let i = 0; i < t_rows.length; i++) {
-                            if (selected_id.includes(t_rows[i].id)) {
-                                let ip = t_rows[i].ipaddr;
-                                let portStr = t_rows[i].port != null ? t_rows[i].port.toString() : "";
-                                
-                                if (!grouped[ip]) {
-                                    grouped[ip] = { ...t_rows[i] };
-                                    grouped[ip].port = [portStr];
-                                } else {
-                                    grouped[ip].port.push(portStr);
-                                }
-                            }
-                        }
-                        
-                        let result = [];
-                        for (let ip in grouped) {
-                            if (grouped.hasOwnProperty(ip)) {
-                                let item = {...grouped[ip]};
-                                item.port = item.port.join(',');
-                                result.push(item);
-                            }
-                        }
-                        return result;
-                    }
-                    function {{tab.name}}open_modal_tools()
-                    {
-                        let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
-                        rows = {{tab.name}}get_selected_rows();
-                        
-                        {
-                            switch (tool) {
-                            case "nmap":
-                                nmap_script_modal_to_info_tabs(rows);
-                                break;
-                            case "masscan":
-                                masscan_script_modal_to_info_tabs(rows, 'full_masscan');
-                                break;
-                            case "domains":
-                                domains_script_modal_to_info_tabs(rows)
-                                break;
-                            case "cert":
-                                cert_script_modal_to_info_tabs(rows)
-                                break;
-                            case "whois":
-                                whois_script_modal_to_info_tabs(rows)
-                                break;
-                            case "dns_a_screenshot":
-                                dns_a_screenshot_script_modal_to_info_tabs(rows)
-                                break;
-                            default:
-                                break;
-                            }
-                        }
-                    }
-
-                    function {{tab.name}}clearFilter(){
-                        document.getElementById('filter-value-{{tab.name}}').value = ''
-                        {{tab.name}}_table.clearFilter()
-                    }
-
-                    function {{tab.name}}ApplyFilter() {
-                        let field = document.getElementById('filter-field-{{tab.name}}').value.toString();
-                        let type = document.getElementById('filter-type-{{tab.name}}').value.toString();
-                        let value = document.getElementById('filter-value-{{tab.name}}').value.toString();
-                        
-                        if (field && value) {
-                            {{tab.name}}_table.setFilter(field, type, value);
-                        }
-                    }
-                    function {{tab.name}}getCurrentFilters() {
-                        return {{tab.name}}_table.getFilters();
-                    }
-
-                    let {{tab.name}}_selected_row = new Map();
-                    function checkbox_formatter(cell, formatterParams, onRendered)
-                    {
-                        let checkbox_id = '{{tab.name}}-checkbox-' + cell.getRow().getData().id;
-                        return `<input type='checkbox' name="{{tab.name}}-checkbox" class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
-                    }
-                    
-                    function screenshots_formatter(cell, formatterParams, onRendered)
-                    { 
-                        return `<button class="btn btn-sm btn-outline-primary" onclick="viewScreenshot('${cell.getRow().getData().screenshot_id}')" data-i18n-title="View screenshot">
-                                        <i class="bi bi-image"></i>
-                                     </button>`;
-                    }
-                    
-                    function viewScreenshot(screenshotId) {
-                        const modal = document.createElement('div');
-                        modal.className = 'modal fade';
-                        modal.id = `screenshot-modal-${screenshotId}`;
-                        modal.innerHTML = `
-                            <div class="modal-dialog modal-lg modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Screenshot</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body text-center">
-                                        <img src="/api/v1/dns_a_screenshot/screenshot/${screenshotId}" 
-                                             class="img-fluid" 
-                                             alt="Screenshot" 
-                                             style="max-width: 100%; height: auto;"
-                                             onload="this.style.cursor='pointer'"
-                                             onclick="window.open(this.src, '_blank')">
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <a href="/api/v1/dns_a_screenshot/screenshot/${screenshotId}" 
-                                           class="btn btn-primary" 
-                                           download="screenshot_${screenshotId}.png">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        document.body.appendChild(modal);
-                        const bootstrapModal = new bootstrap.Modal(modal);
-                        bootstrapModal.show();
-                        
-                        modal.addEventListener('hidden.bs.modal', () => {
-                            document.body.removeChild(modal);
-                        });
-                    }
-                    
-                    function isRowSelected(cell) {
-                        return cell.getRow().isSelected()
-                    }
-                    var headerMenu = function () {
-                        var menu = [];
-                        var columns = this.getColumns();
-                        for (let column of columns) {
-                            if (column.getDefinition().field && column.getDefinition().field !== "selected") {
-                                let icon = document.createElement("i");
-                                icon.classList.add("bi");
-                                icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
-                                let label = document.createElement("span");
-                                let title = document.createElement("span");
-                                title.textContent = " " + column.getDefinition().title;
-                                label.appendChild(icon);
-                                label.appendChild(title);
-                                menu.push({
-                                    label: label,
-                                    action: function (e) {
-                                        e.stopPropagation();
-                                        column.toggle();
-                                        if (column.isVisible()) {
-                                            icon.classList.remove("bi-square");
-                                            icon.classList.add("bi-check-square");
-                                        } else {
-                                            icon.classList.remove("bi-check-square");
-                                            icon.classList.add("bi-square");
-                                        }
-                                        {{tab.name}}_table.redraw()
-                                    }
-                                });
-                            }
-                        }
-                        return menu;
-                    };
-                    var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                        {% if tab.name == 'auth_credentials' or tab.name == 'software' %}
-                            layout: "fitDataStretch",
-                        {% elif  tab.name =='soft_vuln_link'%}
-                            layout: "fitDataTable",
-                        {% else %}
-                            layout: "fitColumns",
-                        {% endif %}
-                        ajaxURL: "{{tab.base_url}}",
-                        ajaxParams: { scans: selectedScans },
-
-                        ajaxURLGenerator: function (url, config, params) {
-                            //url - the url from the ajaxURL property or setData function
-                            //config - the request config object from the ajaxConfig property
-                            //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
-
-                            //return request url
-                            const sort = encodeURIComponent(JSON.stringify(params.sort || []));
-                            const filter = encodeURIComponent(JSON.stringify(params.filter || []));
-                            const scansParam = (selectedScans || [])
-                                .map(scan => `scans=${encodeURIComponent(scan)}`)
-                                .join("&");
-                            const finalUrl = `${url}?page=${params.page}&size=${params.size}&sort=${sort}&filter=${filter}${
-                                scansParam ? `&${scansParam}` : ""  }`
-                            return finalUrl; //encode parameters as a json object
-                        },
-                        selectable: false,
-                        sortMode: "remote",
-                        filterMode: "remote",
-                        pagination: true,
-                        paginationMode: "remote",
-                        paginationSize: 10,
-                        paginationInitialPage: 1,
-                        paginationSizeSelector: [5, 10, 25, 50, 100],
-                        validationMode: 'highlight',
-                        columns: [
-                            {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' or tab.name == 'dns_a_screenshot' %}
-                                { 
-                                    title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>", 
-                                    field: "selected", 
-                                    formatter: checkbox_formatter, 
-                                    headerSort: false,
-                                    headerTooltip: "Click to select/deselect all",
-                                    hozAlign: "center",
-                                    headerHozAlign: "center",
-                                    headerClick: function(e, column){
-                                        const checkboxes = document.querySelectorAll('input[name="{{tab.name}}-checkbox"]');
-                                        let allChecked = true;
-                                        
-                                        checkboxes.forEach(checkbox => {
-                                            if(!checkbox.checked) {
-                                                allChecked = false;
-                                            }
-                                        });
-                                        
-                                        const newState = !allChecked;
-                                        const btn = column.getElement().querySelector('.select-all-btn');
-                                        
-                                        checkboxes.forEach(checkbox => {
-                                            checkbox.checked = newState;
-                                            const clickEvent = new Event('click');
-                                            checkbox.dispatchEvent(clickEvent);
-                                        });
-                                    },
-                                    formatterParams: {
-                                        selectAll: false
-                                    }
-                                }
-                            {% endif %},
-                            {% for col in tab.columns %}
-                                {{'{'}}
-                                title: "{{col.title}}",
-                                field: "{{col.field}}",
-                                headerMenu: headerMenu
-                                {% if col.field == 'screenshot_path' %},
-                                formatter: screenshots_formatter,
-                                headerSort: false
-                                {% endif %}
-                                {{ '}' }},
-                            {% endfor %}
-                            
-                            ] })
-                </script>
-                </div>
-                {% endfor %}
             </div>
         </div>
-    </div>
-    <style>
-        .tabulator-menu {
-            max-height: 200px; /* чтобы менюшка для того чтобы убрать и добавить колонки в хедере таблицы не вылезала за экран */
-            overflow-y: auto;
+          <div id="{{tab.name}}-table"></div>
+          <script>
+            let {{tab.name}}_currentExportFormat = null;
+
+            function {{tab.name}}exportTable(format) {
+                {{tab.name}}_currentExportFormat = format;
+                $('#{{tab.name}}_exportModal').modal('show');
+            }
+
+            function {{tab.name}}confirmExport() {
+              const exportType = document.querySelector('input[name="{{tab.name}}_exportType"]:checked').value;
+              $('#{{tab.name}}_exportModal').modal('hide');
+
+              if (exportType === 'current') {
+                  const currentPageData = {{tab.name}}_table.getData();
+                  
+                  switch({{tab.name}}_currentExportFormat) {
+                      case 'csv':
+                          {{tab.name}}exportToCSV(currentPageData);
+                          break;
+                      case 'json':
+                          {{tab.name}}exportToJSON(currentPageData);
+                          break;
+                      case 'xlsx':
+                          {{tab.name}}exportToExcel(currentPageData);
+                          break;
+                      case 'pdf':
+                          {{tab.name}}exportToPDF(currentPageData);
+                          break;
+                  }
+              } else {
+                  {{tab.name}}exportAllData(exportType);
+              }
+          }
+
+          async function {{tab.name}}exportAllData(exportType) {
+            try {
+                const currentFilters = {{tab.name}}_table.getFilters().map(filter => ({
+                    field: filter.field,
+                    type: filter.type,
+                    value: filter.value
+                }));
+                
+                const currentSort = {{tab.name}}_table.getSorters().map(sorter => ({
+                    column: sorter.field,
+                    dir: sorter.dir
+                }));
+
+                const searchParams = new URLSearchParams();
+                
+                searchParams.append('page', '1');
+                searchParams.append('size', '1000000');
+                searchParams.append('sort', JSON.stringify(currentSort));
+                searchParams.append('filter', JSON.stringify(currentFilters));
+                searchParams.append('export', 'true');
+
+                if (selectedScans.length > 0) {
+                    selectedScans.forEach(scan => {
+                        searchParams.append('scans', scan);
+                    });
+                }
+
+                let url = "{{tab.base_url}}?" + searchParams.toString();
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+
+                switch({{tab.name}}_currentExportFormat) {
+                    case 'csv':
+                        {{tab.name}}exportToCSV(data.data);
+                        break;
+                    case 'json':
+                        {{tab.name}}exportToJSON(data.data);
+                        break;
+                    case 'xlsx':
+                        {{tab.name}}exportToExcel(data.data);
+                        break;
+                    case 'pdf':
+                        {{tab.name}}exportToPDF(data.data);
+                        break;
+                }
+
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Ошибка при экспорте данных: ' + error.message);
+            }
         }
-    </style>
-    <script>
-        const inputFilterFields = document.querySelectorAll('[id^="filter-value-"]');
-        const filterButtons = document.querySelectorAll('[id^="filter-search-"]');
+          function {{tab.name}}getVisibleColumns() {
+              return {{tab.name}}_table.getColumns().filter(col => {
+                  const definition = col.getDefinition();
+                  return col.isVisible() && 
+                        definition.field !== "selected" && 
+                        definition.title !== "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>" &&
+                        (!definition.formatter || definition.formatter.toString().indexOf('checkbox_formatter') === -1);
+              });
+          }
 
-        inputFilterFields.forEach((inputField, index) => {
-            inputField.addEventListener("keypress", function(event){
-                if (event.key === "Enter" || event.keyCode === 13) {
-                    event.preventDefault();
-                    if (filterButtons[index]){
-                    filterButtons[index].click();}
-                }
-            })
-        })
-    </script>
-    <script>
-        /* Убирает у столбцов port и permissions фильтр like (потому что поля интовые) */
 
-        const columnSelects = document.querySelectorAll('[id^="filter-field-"]');
-        columnSelects.forEach(columnSelect => {
-            columnSelect.addEventListener('change', function(event) {
-                const tabName = this.id.replace('filter-field-', '');
-                const filterTypeSelect = document.getElementById(`filter-type-${tabName}`);
-                
-                const likeOption = filterTypeSelect.querySelector('option[value="like"]');
-                
-                if (event.target.value === "port" || event.target.value === "permissions") {
-                    if (likeOption) {
-                        likeOption.remove();
-                    }
-                } else {
-                    if (!likeOption) {
-                        const newLikeOption = new Option('like', 'like');
-                        filterTypeSelect.add(newLikeOption);
-                    }
+
+          function {{tab.name}}exportToCSV(data) {
+              const columns = {{tab.name}}getVisibleColumns();
+
+              let csvContent = columns.map(col => '"' + col.getDefinition().title + '"').join(',') + '\n';
+
+              data.forEach(row => {
+                  const rowData = columns.map(col => {
+                      let value = row[col.getField()];
+                      if (value === null || value === undefined) value = '';
+                      if (typeof value === 'string') value = value.replace(/"/g, '""');
+                      return '"' + value + '"';
+                  });
+                  csvContent += rowData.join(',') + '\n';
+              });
+
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = '{{tab.name}}_all_data.csv';
+              link.click();
+          }
+
+
+          function {{tab.name}}exportToJSON(data) {
+              const columns = {{tab.name}}getVisibleColumns();
+
+              const jsonData = data.map(row => {
+                  const filteredRow = {};
+                  columns.forEach(col => {
+                      filteredRow[col.getField()] = row[col.getField()];
+                  });
+                  return filteredRow;
+              });
+
+              const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = '{{tab.name}}_all_data.json';
+              link.click();
+          }
+
+
+
+          function {{tab.name}}exportToExcel(data) {
+              const columns = {{tab.name}}getVisibleColumns();
+              
+              const worksheet = XLSX.utils.json_to_sheet(
+                  data.map(row => {
+                      const obj = {};
+                      columns.forEach(col => {
+                          obj[col.getDefinition().title] = row[col.getField()];
+                      });
+                      return obj;
+                  })
+              );
+
+              const workbook = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(workbook, worksheet, '{{tab.name}}');
+              XLSX.writeFile(workbook, '{{tab.name}}_all_data.xlsx');
+          }
+
+
+
+          function {{tab.name}}exportToPDF(data) {
+              const jsPDF = window.jspdf.jsPDF;
+              const doc = new jsPDF();
+
+              const columns = {{tab.name}}getVisibleColumns();
+
+              const tableColumn = columns.map(col => col.getDefinition().title);
+              const tableRows = [];
+
+              data.forEach(row => {
+                  const rowData = columns.map(col => {
+                      let value = row[col.getField()] || '';
+                      if (typeof value === 'string' && value.length > 100) {
+                          value = value.substring(0, 100) + '...';
+                      }
+                      return value;
+                  });
+                  tableRows.push(rowData);
+              });
+
+              const tableConfig = {
+                  head: [tableColumn],
+                  body: tableRows,
+                  theme: 'grid',
+                  styles: {
+                      fontSize: 7,
+                      cellPadding: 1,
+                      overflow: 'linebreak'
+                  },
+                  headStyles: {
+                      fillColor: [66, 139, 202],
+                      fontSize: 8,
+                      cellPadding: 2
+                  },
+                  margin: { top: 10, right: 5, bottom: 5, left: 5 },
+                  pageBreak: 'auto',
+                  tableWidth: 'wrap',
+                  showHead: 'everyPage',
+                  horizontalPageBreak: true,
+                  columnStyles: {}
+              };
+
+              columns.forEach((col, index) => {
+                  tableConfig.columnStyles[index] = {
+                      cellWidth: 'wrap',
+                      minCellHeight: 5,
+                      maxCellHeight: 20
+                  };
+              });
+
+              try {
+                  doc.autoTable(tableConfig);
+                  doc.save('{{tab.name}}_all_data.pdf');
+              } catch (error) {
+                  console.error('PDF export error:', error);
+                  alert('Export to PDF error: ' + error.message);
+              }
+          }
+          </script>
+          <script>
+                async function getScans(){
+                let resp = await fetch("/api/v1/scan");
+                let scans = await resp.json();
+                return scans;
+            }
+
+            getScans().then(data => {
+                let el = document.getElementById("{{tab.name}}_scansContainer");
+                let result = "";
+                for (const scan of data){
+                    let scan_html = `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="{{tab.name}}_scan_label_${scan.id}">
+                            <label class="form-check-label" style="word-break: break-all; white-space: normal" for="{{tab.name}}_scan_label_${scan.id}">
+                                ${scan.name} - ${scan.created_at}
+                            </label>
+                        </div>
+                    `;
+                    result += scan_html;
                 }
+                el.innerHTML = result;
             });
-        });
-        columnSelects.forEach(select => {
-            select.dispatchEvent(new Event('change'));
-        });
-    </script>
-<script>
-    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
-</script>
-{% endblock content %}
+
+            async function showInformationForScans(event){
+                event.preventDefault();
+                let formData = new FormData(event.target);
+                selectedScans = [];
+                for (const [_, scan_id] of formData) {
+                    selectedScans.push(scan_id);
+                }
+
+                software_table.setData(software_table.getAjaxUrl(), {}, "GET");
+                ip_mac_port_table.setData(ip_mac_port_table.getAjaxUrl(), {}, "GET");
+                domain_ip_table.setData(domain_ip_table.getAjaxUrl(), {}, "GET");
+                dns_a_screenshot_table.setData(dns_a_screenshot_table.getAjaxUrl(), {}, "GET");
+                soft_vuln_link_table.setData(soft_vuln_link_table.getAjaxUrl(), {}, "GET");
+                auth_credentials_table.setData(auth_credentials_table.getAjaxUrl(), {}, "GET");
+            }
+
+                            function {{tab.name}}get_selected_rows() {
+                                let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
+                                let t_rows = {{tab.name}}_table.getData();
+                                let selected_id = [];
+
+                                for (const [k, v] of {{tab.name}}_selected_row) {
+                                    if (v)
+                                        selected_id.push(Number(k.split('-')[2]));
+                                }
+
+                                let grouped = {};
+                                for (let i = 0; i < t_rows.length; i++) {
+                                    if (selected_id.includes(t_rows[i].id)) {
+                                        let ip = t_rows[i].ipaddr;
+                                        let portStr = t_rows[i].port != null ? t_rows[i].port.toString() : "";
+
+                                        if (!grouped[ip]) {
+                                            grouped[ip] = { ...t_rows[i] };
+                                            grouped[ip].port = [portStr];
+                                        } else {
+                                            grouped[ip].port.push(portStr);
+                                        }
+                                    }
+                                }
+
+                                let result = [];
+                                for (let ip in grouped) {
+                                    if (grouped.hasOwnProperty(ip)) {
+                                        let item = {...grouped[ip]};
+                                        item.port = item.port.join(',');
+                                        result.push(item);
+                                    }
+                                }
+                                return result;
+                            }
+                            function {{tab.name}}open_modal_tools()
+                            {
+                                let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
+                                rows = {{tab.name}}get_selected_rows();
+
+                                {
+                                    switch (tool) {
+                                    case "nmap":
+                                        nmap_script_modal_to_info_tabs(rows);
+                                        break;
+                                    case "masscan":
+                                        masscan_script_modal_to_info_tabs(rows, 'full_masscan');
+                                        break;
+                                    case "domains":
+                                        domains_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "cert":
+                                        cert_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "whois":
+                                        whois_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "dns_a_screenshot":
+                                        dns_a_screenshot_script_modal_to_info_tabs(rows)
+                                        break;
+                                    default:
+                                        break;
+                                    }
+                                }
+                            }
+
+                            function {{tab.name}}clearFilter(){
+                                document.getElementById('filter-value-{{tab.name}}').value = ''
+                                {{tab.name}}_table.clearFilter()
+                            }
+
+                            function {{tab.name}}ApplyFilter() {
+                              let field = document.getElementById('filter-field-{{tab.name}}').value.toString();
+                              let type = document.getElementById('filter-type-{{tab.name}}').value.toString();
+                              let value = document.getElementById('filter-value-{{tab.name}}').value.toString();
+
+                              if (field && value) {
+                                  if (value.includes(',')) {
+                                      const values = value.split(',').map(v => v.trim()).filter(v => v !== '');
+                                      
+                                      if (values.length > 1) {
+                                          const filters = values.map(val => ({
+                                              field: field,
+                                              type: type,
+                                              value: val
+                                          }));
+                                          
+                                          const currentFilters = {{tab.name}}_table.getFilters();
+                                          const newFilters = [...currentFilters, ...filters];
+                                          
+                                          {{tab.name}}_table.setFilter(newFilters);
+                                          return;
+                                      }
+                                  }
+                                  
+                                  {{tab.name}}_table.setFilter(field, type, value);
+                              }
+                          }
+                            function {{tab.name}}getCurrentFilters() {
+                                return {{tab.name}}_table.getFilters();
+                            }
+
+                            let {{tab.name}}_selected_row = new Map();
+                            function checkbox_formatter(cell, formatterParams, onRendered)
+                            {
+                                let checkbox_id = '{{tab.name}}-checkbox-' + cell.getRow().getData().id;
+                                return `<input type='checkbox' name="{{tab.name}}-checkbox" class='row-checkbox' id='${checkbox_id}' onclick="( function(elem, status){ {{tab.name}}_selected_row.set(elem, status); }(this.id, this.checked) )" >`
+                            }
+
+
+                            function getAllScreenshotsFromTable() {
+                                const tableData = dns_a_screenshot_table.getData();
+                                return tableData.filter(row => row.screenshot_path).map(row => ({
+                                    screenshot_path: row.screenshot_path,
+                                    domain: row.domain,
+                                    ip: row.ip
+                                }));
+                            }
+
+                            function viewScreenshot(screenshotId, domain, ip) {
+                                currentScreenshots = getAllScreenshotsFromTable();
+
+                                currentScreenshotIndex = currentScreenshots.findIndex(
+                                    screenshot => screenshot.screenshot_path === screenshotId
+                                );
+
+                                if (currentScreenshotIndex === -1) {
+                                    currentScreenshotIndex = 0;
+                                }
+
+                                showScreenshotModal();
+                            }
+
+
+                            function showScreenshotModal() {
+                                if (currentScreenshots.length === 0) return;
+
+                                const screenshot = currentScreenshots[currentScreenshotIndex];
+                                const modalId = `screenshot-carousel-modal`;
+
+                                if (screenshotModal && document.body.contains(screenshotModal)) {
+                                    updateModalContent(screenshot);
+                                    return;
+                                }
+
+                                screenshotModal = document.createElement('div');
+                                screenshotModal.className = 'modal fade screenshot-modal';
+                                screenshotModal.id = modalId;
+                                screenshotModal.setAttribute('tabindex', '-1');
+
+                                createModalContent(screenshotModal, screenshot);
+
+                                document.body.appendChild(screenshotModal);
+                                screenshotBootstrapModal = new bootstrap.Modal(screenshotModal);
+                                screenshotBootstrapModal.show();
+
+                                if (!keyHandler) {
+                                    keyHandler = (e) => {
+                                        if (e.key === 'ArrowLeft' && currentScreenshotIndex > 0) {
+                                            e.preventDefault();
+                                            navigateScreenshot(-1);
+                                        } else if (e.key === 'ArrowRight' && currentScreenshotIndex < currentScreenshots.length - 1) {
+                                            e.preventDefault();
+                                            navigateScreenshot(1);
+                                        } else if (e.key === 'Escape') {
+                                            screenshotBootstrapModal.hide();
+                                        }
+                                    };
+                                    document.addEventListener('keydown', keyHandler);
+                                }
+
+                                screenshotModal.addEventListener('hidden.bs.modal', () => {
+                                    document.removeEventListener('keydown', keyHandler);
+                                    keyHandler = null;
+                                    if (screenshotModal && document.body.contains(screenshotModal)) {
+                                        document.body.removeChild(screenshotModal);
+                                    }
+                                    screenshotModal = null;
+                                    screenshotBootstrapModal = null;
+                                });
+                            }
+
+                            function createModalContent(modal, screenshot) {
+                                modal.innerHTML = `
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="modal-title">
+                                                    <i class="bi bi-image me-2"></i>
+                                                    <span id="modal-domain-ip">${screenshot.domain} - ${screenshot.ip}</span>
+                                                    <small class="text-muted ms-2" id="modal-counter">(${currentScreenshotIndex + 1} из ${currentScreenshots.length})</small>
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body position-relative text-center p-0">
+                                                <!-- Кнопки навигации -->
+                                                <div id="navigation-buttons">
+                                                    ${currentScreenshots.length > 1 ? `
+                                                        <button class="btn btn-primary position-absolute start-0 translate-middle-y ms-3"
+                                                                style="z-index: 1000; top: 10rem"
+                                                                onclick="navigateScreenshot(-1)"
+                                                                id="prev-btn"
+                                                                title="Предыдущий скриншот">
+                                                            <i class="bi bi-chevron-left"></i>
+                                                        </button>
+                                                        <button class="btn btn-primary position-absolute end-0 translate-middle-y me-3"
+                                                                style="z-index: 1000; top: 10rem"
+                                                                onclick="navigateScreenshot(1)"
+                                                                id="next-btn"
+                                                                title="Следующий скриншот">
+                                                            <i class="bi bi-chevron-right"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+
+                                                <div class="d-flex justify-content-center align-items-center screenshot-loading"
+                                                    style="min-height: 400px;" id="image-container">
+                                                    <div class="spinner-border text-primary" role="status" id="loading-spinner">
+                                                        <span class="visually-hidden">Загрузка...</span>
+                                                    </div>
+                                                    <img src="/api/v1/dns_a_screenshot/screenshot/${screenshot.screenshot_path}"
+                                                        class="img-fluid d-none"
+                                                        id="screenshot-image"
+                                                        alt="Screenshot для ${screenshot.domain}"
+                                                        onclick="window.open(this.src, '_blank')"
+                                                        onload="hideLoadingSpinner()"
+                                                        onerror="showErrorMessage()"
+                                                        title="Нажмите для открытия в новой вкладке">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer d-flex justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    ${currentScreenshots.length > 1 ? `
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-keyboard me-1"></i>
+                                                            Используйте ← → или кнопки для навигации
+                                                        </small>
+                                                    ` : ''}
+                                                </div>
+                                                <div>
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        <i class="bi bi-x-lg"></i> Закрыть
+                                                    </button>
+                                                    <a href="/api/v1/dns_a_screenshot/screenshot/${screenshot.screenshot_path}"
+                                                    class="btn btn-primary ms-2"
+                                                    id="download-link"
+                                                    download="screenshot_${screenshot.domain}_${screenshot.ip}.png"
+                                                    title="Скачать скриншот">
+                                                        <i class="bi bi-download"></i> Скачать
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            function updateModalContent(screenshot) {
+                                const domainIpElement = document.getElementById('modal-domain-ip');
+                                const counterElement = document.getElementById('modal-counter');
+                                if (domainIpElement) {
+                                    domainIpElement.textContent = `${screenshot.domain} - ${screenshot.ip}`;
+                                }
+                                if (counterElement) {
+                                    counterElement.textContent = `(${currentScreenshotIndex + 1} из ${currentScreenshots.length})`;
+                                }
+
+                                const prevBtn = document.getElementById('prev-btn');
+                                const nextBtn = document.getElementById('next-btn');
+                                if (prevBtn) {
+                                    prevBtn.disabled = currentScreenshotIndex === 0;
+                                }
+                                if (nextBtn) {
+                                    nextBtn.disabled = currentScreenshotIndex === currentScreenshots.length - 1;
+                                }
+
+                                const loadingSpinner = document.getElementById('loading-spinner');
+                                const screenshotImage = document.getElementById('screenshot-image');
+                                if (loadingSpinner) {
+                                    loadingSpinner.classList.remove('d-none');
+                                }
+                                if (screenshotImage) {
+                                    screenshotImage.style.opacity = '0';
+                                    setTimeout(() => {
+                                        screenshotImage.classList.add('d-none');
+                                        screenshotImage.src = `/api/v1/dns_a_screenshot/screenshot/${screenshot.screenshot_path}`;
+                                        screenshotImage.alt = `Screenshot для ${screenshot.domain}`;
+                                    }, 150);
+                                }
+
+                                const downloadLink = document.getElementById('download-link');
+                                if (downloadLink) {
+                                    downloadLink.href = `/api/v1/dns_a_screenshot/screenshot/${screenshot.screenshot_path}`;
+                                    downloadLink.download = `screenshot_${screenshot.domain}_${screenshot.ip}.png`;
+                                }
+                            }
+
+                            function navigateScreenshot(direction) {
+                                if (currentScreenshots.length <= 1) return;
+
+                                const newIndex = currentScreenshotIndex + direction;
+
+                                if (newIndex >= 0 && newIndex < currentScreenshots.length) {
+                                    currentScreenshotIndex = newIndex;
+                                    showScreenshotModal();
+                                }
+                            }
+
+                            function hideLoadingSpinner() {
+                                const spinner = document.getElementById('loading-spinner');
+                                const image = document.getElementById('screenshot-image');
+
+                                if (spinner) spinner.classList.add('d-none');
+                                if (image) {
+                                    image.classList.remove('d-none');
+                                    setTimeout(() => {
+                                        image.style.opacity = '1';
+                                    }, 50);
+                                }
+                            }
+
+                            function showErrorMessage() {
+                                const spinner = document.getElementById('loading-spinner');
+                                const container = spinner?.parentElement;
+
+                                if (spinner) spinner.classList.add('d-none');
+                                if (container) {
+                                    container.innerHTML = `
+                                        <div class="text-center py-5">
+                                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                                            <h5 class="mt-3 text-dark">Ошибка загрузки изображения</h5>
+                                            <p class="text-muted">Не удалось загрузить скриншот</p>
+                                            <button class="btn btn-outline-primary mt-2" onclick="location.reload()">
+                                                <i class="bi bi-arrow-clockwise"></i> Перезагрузить страницу
+                                            </button>
+                                        </div>
+                                    `;
+                                }
+                            }
+
+                            function screenshots_formatter(cell, formatterParams, onRendered) {
+                                return `<button class="btn btn-sm btn-outline-primary"
+                                                onclick="viewScreenshot('${cell.getRow().getData().screenshot_path}', '${cell.getRow().getData().domain}', '${cell.getRow().getData().ip}')"
+                                                title="Просмотр скриншота">
+                                            <i class="bi bi-image"></i>
+                                        </button>`;
+                            }
+
+
+                            function modalLinkFormatter(cell, formatterParams, onRendered) {
+                                const value = cell.getValue();
+                                if (!value) {
+                                    return "";
+                                }
+                                
+                                let links = [];
+                                
+                                if (Array.isArray(value)) {
+                                    links = value;
+                                } else if (typeof value === 'string') {
+                                    links = value.includes(',') ? 
+                                        value.split(',').map(link => link.trim()).filter(link => link) : 
+                                        [value];
+                                }
+                                
+                                if (links.length === 0) {
+                                    return "";
+                                }
+                                
+                                if (links.length === 1) {
+                                    const maxLength = 20;
+                                    const url = links[0];
+                                    const displayText = url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
+                                    
+                                    return `<a href="${url}" target="_blank" class="text-primary text-decoration-none" title="${url}">${displayText}</a>`;
+                                } else {
+                                    const modalId = `modal_${Math.random().toString(36).substr(2, 9)}`;
+                                    const linksList = links.map(link => 
+                                        `<li class="list-group-item"><a href="${link}" target="_blank" class="text-primary text-decoration-none">${link}</a></li>`
+                                    ).join('');
+                                    
+                                    onRendered(() => {
+                                        if (!document.getElementById(modalId)) {
+                                            document.body.insertAdjacentHTML('beforeend', `
+                                                <div class="modal fade" id="${modalId}" tabindex="-1">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Vulnerability Links</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <ul class="list-group list-group-flush">
+                                                                    ${linksList}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `);
+                                        }
+                                    });
+                                    
+                                    return `<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#${modalId}">
+                                                View ${links.length} links
+                                            </button>`;
+                                }
+                            }
+
+                            function commentsFormatter(cell) {
+                                const count = cell.getValue() || 0;
+                                const rowData = cell.getRow().getData();
+                                const tabName = "{{tab.name}}"; 
+                                console.log(rowData)
+                                const buttonText = `${i18next.t("Comments")}`;
+
+                                return `<button class="btn btn-sm btn-outline-primary"
+                                                onclick="openCommentsModal('${rowData.ip_id}', '${tabName}')">
+                                            ${buttonText} (${rowData.comments_count})
+                                        </button>`;
+                            }
+
+                            async function openCommentsModal(ip_id, tabName) {
+                                try {
+                                    const response = await axios.get(`/api/v1/vis/comment/${ip_id}`);
+                                    const comments = response.data;
+
+                                    let html_all_comments = `
+                                        <div class="mb-3">
+                                            <form id="AddCommentForm-${tabName}" onsubmit="addNewComment(event, '${ip_id}', '${tabName}')">
+                                                <div class="form-group mb-2">
+                                                    <textarea class="form-control" id="newCommentText-${tabName}" rows="3" 
+                                                            placeholder="${i18next.t("Write a comment...")}" required></textarea>
+                                                </div>
+                                                <div class="d-flex justify-content-end">
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        ${i18next.t("Add Comment")}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <hr>
+                                    `;
+
+                                    if (comments && comments.length > 0) {
+                                        comments.forEach((comment) => {
+                                            let createdAt = new Date(comment.updated_at || comment.created_at);
+                                            let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+
+                                            if (comment.deleted_at == null) {
+                                                html_all_comments += `
+                                                    <div id="commentContainer-${comment.id}" class="comment mb-3 p-3 border rounded" data-deleted="false">
+                                                        <div class="comment-content mb-2">
+                                                            <h6 class="mb-2">
+                                                                ${sanitize(comment.text)}
+                                                            </h6>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div class="comment-meta">
+                                                                <span class="text-muted small d-block">${comment.login}</span>
+                                                                <span class="text-muted small">${formattedDate}</span>
+                                                            </div>
+                                                            <div class="comment-actions" style="display:flex; gap:5px;">
+                                                                <button class="btn btn-outline-danger btn-sm" onclick="deleteComment('${comment.id}', '${tabName}', '${ip_id}')">${i18next.t(
+                                                    "Delete"
+                                                )}</button>
+                                                                <button class="btn btn-outline-primary btn-sm" id="edit-btn-${comment.id}" onclick="editComment('${comment.id}')">${i18next.t(
+                                                    "Edit"
+                                                )}</button>
+                                                                <button class="btn btn-outline-secondary btn-sm" onclick="replyToComment('${comment.id}', '${ip_id}', '${tabName}')">${i18next.t(
+                                                    "Reply"
+                                                )}</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>`;
+                                            }
+
+                                            if (comment.child_comments && comment.child_comments.length > 0) {
+                                                comment.child_comments.forEach((child) => {
+                                                    let childDate = new Date(child.updated_at || child.created_at);
+                                                    let childFormatted = `${childDate.toLocaleDateString()} ${childDate.toLocaleTimeString()}`;
+                                                    
+                                                    if (child.deleted_at == null) {
+                                                    html_all_comments += `
+                                                        <div id="commentContainer-${child.id}" class="comment mb-3 p-3 border rounded ms-4" data-deleted="false" style="margin-left:2rem; background-color: #f8f9fa;">
+                                                            <div class="comment-content mb-2">
+                                                                <p class="mb-2">
+                                                                    ${sanitize(child.text)}
+                                                                </p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div class="comment-meta">
+                                                                    <span class="text-muted small d-block">${child.login}</span>
+                                                                    <span class="text-muted small">${childFormatted}</span>
+                                                                </div>
+                                                                <div class="comment-actions" style="display:flex; gap:5px;">
+                                                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteComment('${child.id}', '${tabName}', '${ip_id}')">${i18next.t(
+                                                        "Delete"
+                                                    )}</button>
+                                                                    <button class="btn btn-outline-primary btn-sm" id="edit-btn-${child.id}" onclick="editComment('${child.id}')">${i18next.t(
+                                                        "Edit"
+                                                    )}</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>`;}
+                                                });
+                                            }
+                                        });
+                                    }
+
+                                    document.getElementById(`${tabName}commentsContainer`).innerHTML = html_all_comments;
+
+                                    const modalEl = document.getElementById(`${tabName}commentsModal`);
+                                    let modal = bootstrap.Modal.getInstance(modalEl);
+
+                                    if (!modal) {
+                                        modal = new bootstrap.Modal(modalEl);
+                                    }
+                                    modal.show();
+                                } catch (error) {
+                                    console.error("Error loading comments:", error);
+                                }
+                            }
+
+                            async function addNewComment(event, ip_id, tabName) {
+                                event.preventDefault();
+                                
+                                const textareaId = `newCommentText-${tabName}`;
+                                const textarea = document.getElementById(textareaId);
+                                const commentText = textarea.value.trim();
+                                
+                                if (!commentText) {
+                                    return;
+                                }
+                                
+                                try {
+                                    await axios.post('/api/v1/vis/comment', {
+                                        text: commentText,
+                                        ip_id: ip_id
+                                    }, {
+                                        headers: { 'Content-Type': 'application/json' }
+                                    });
+                                    
+                                    textarea.value = '';
+                                    
+                                    openCommentsModal(ip_id, tabName);
+                                    
+                                    if (typeof addTableNodesWithComments === 'function') {
+                                        addTableNodesWithComments();
+                                    }
+                                    
+                                } catch (error) {
+                                    console.error('Error adding comment:', error);
+                                    alert(i18next.t('Error adding comment'));
+                                }
+                            }
+
+                            function editComment(commentId) {
+                                const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+                                const commentContent = commentContainer.querySelector('.comment-content');
+                                const textElement = commentContent.querySelector('h6, p');
+                                const actionsDiv = commentContainer.querySelector('.comment-actions');
+                                
+                                const originalContent = textElement.innerHTML;
+                                const originalText = textElement.textContent;
+                                const originalTag = textElement.tagName.toLowerCase();
+                                
+                                const textarea = document.createElement('textarea');
+                                textarea.className = 'form-control';
+                                textarea.value = originalText;
+                                textarea.rows = 3;
+                                textarea.setAttribute('data-original-content', originalContent);
+                                textarea.setAttribute('data-original-tag', originalTag);
+                                
+                                textElement.replaceWith(textarea);
+                                
+                                const editButtons = document.createElement('div');
+                                editButtons.className = 'edit-buttons mt-2';
+                                editButtons.style.display = 'flex';
+                                editButtons.style.gap = '5px';
+                                
+                                const cancelBtn = document.createElement('button');
+                                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
+                                cancelBtn.textContent = i18next.t('Cancel');
+                                cancelBtn.onclick = () => cancelCommentEdit(commentId);
+
+                                const confirmBtn = document.createElement('button');
+                                confirmBtn.className = 'btn btn-outline-success btn-sm';
+                                confirmBtn.textContent = i18next.t('Save');
+                                confirmBtn.onclick = () => confirmCommentEdit(commentId);
+
+                                editButtons.appendChild(cancelBtn);
+                                editButtons.appendChild(confirmBtn);
+                                
+                                commentContent.appendChild(editButtons);
+                                
+                                actionsDiv.style.display = 'none';
+                            }
+
+                            function cancelCommentEdit(commentId) {
+                                const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+                                const textarea = commentContainer.querySelector('textarea');
+                                const editButtons = commentContainer.querySelector('.edit-buttons');
+                                const actionsDiv = commentContainer.querySelector('.comment-actions');
+                                
+                                const originalContent = textarea.getAttribute('data-original-content');
+                                const originalTag = textarea.getAttribute('data-original-tag');
+                                
+                                const textElement = document.createElement(originalTag);
+                                textElement.className = 'mb-2';
+                                textElement.innerHTML = originalContent;
+                                
+                                textarea.replaceWith(textElement);
+                                editButtons.remove();
+                                
+                                actionsDiv.style.display = 'flex';
+                            }
+
+                            async function confirmCommentEdit(commentId) {
+                                const commentContainer = document.getElementById(`commentContainer-${commentId}`);
+                                const textarea = commentContainer.querySelector('textarea');
+                                const editButtons = commentContainer.querySelector('.edit-buttons');
+                                const actionsDiv = commentContainer.querySelector('.comment-actions');
+                                
+                                const newText = textarea.value.trim();
+                                const originalTag = textarea.getAttribute('data-original-tag');
+                                
+                                if (!newText) {
+                                    alert(i18next.t('Comment cannot be empty'));
+                                    return;
+                                }
+                                
+                                try {
+                                    await axios.put(
+                                        `/api/v1/vis/comment/${commentId}?comment_text=${encodeURIComponent(newText)}`,
+                                        null, 
+                                        {
+                                            headers: { 'Content-Type': 'application/json' }
+                                        }
+                                    );
+                                    
+                                    const textElement = document.createElement(originalTag);
+                                    textElement.className = 'mb-2';
+                                    textElement.style.wordBreak = 'break-word';
+                                    textElement.style.whiteSpace = 'pre-wrap';
+                                    textElement.textContent = newText;
+                                    
+                                    textarea.replaceWith(textElement);
+                                    editButtons.remove();
+                                    
+                                    actionsDiv.style.display = 'flex';
+                                    
+                                    if (typeof addTableNodesWithComments === 'function') {
+                                        addTableNodesWithComments();
+                                    }
+                                    
+                                } catch (error) {
+                                    console.error('Error updating comment:', error);
+                                    alert(i18next.t('Error updating comment'));
+                                    cancelCommentEdit(commentId);
+                                }
+                            }
+
+                            async function deleteComment(commentId, tabName, ip_id) {
+                                if (!confirm(i18next.t('Are you sure you want to delete this comment?'))) {
+                                    return;
+                                }
+                                
+                                try {
+                                    await axios.delete(`/api/v1/vis/comment/${commentId}`);
+                                    
+                                    openCommentsModal(ip_id, tabName);
+                                    
+                                    if (typeof addTableNodesWithComments === 'function') {
+                                        addTableNodesWithComments();
+                                    }
+                                    
+                                } catch (error) {
+                                    console.error('Error deleting comment:', error);
+                                    alert(i18next.t('Error deleting comment'));
+                                }
+                            }
+
+                            function replyToComment(commentId, ip_id, tabName) {
+                                const replyFormId = `replyForm-${commentId}`;
+                                let existingReplyForm = document.getElementById(replyFormId);
+
+                                if (existingReplyForm) {
+                                    existingReplyForm.remove();
+                                    return;
+                                }
+
+                                const replyForm = document.createElement('div');
+                                replyForm.id = replyFormId;
+                                replyForm.className = 'reply-form mt-3 p-3 border rounded bg-light';
+                                replyForm.innerHTML = `
+                                    <form onsubmit="submitReply(event, '${commentId}', '${ip_id}', '${tabName}')">
+                                        <div class="form-group mb-2">
+                                            <textarea class="form-control" id="replyText-${commentId}" rows="2" 
+                                                    placeholder="${i18next.t('Write a reply...')}" required></textarea>
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                    onclick="document.getElementById('${replyFormId}').remove()">
+                                                ${i18next.t('Cancel')}
+                                            </button>
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                ${i18next.t('Send Reply')}
+                                            </button>
+                                        </div>
+                                    </form>
+                                `;
+
+                                const commentElement = document.getElementById(`commentContainer-${commentId}`);
+                                if (commentElement) {
+                                    commentElement.appendChild(replyForm);
+                                } else {
+                                    console.error(`Comment container not found: ${commentId}`);
+                                }
+                            }
+
+                            async function submitReply(event, parentCommentId, ip_id, tabName) {
+                                event.preventDefault();
+                                
+                                const replyText = document.getElementById(`replyText-${parentCommentId}`).value.trim();
+                                
+                                if (!replyText) {
+                                    return;
+                                }
+                                
+                                try {
+                                    await axios.post('/api/v1/vis/comment', {
+                                        text: replyText,
+                                        parent_comment_id: parentCommentId,
+                                        ip_id: ip_id
+                                    }, {
+                                        headers: { 'Content-Type': 'application/json' }
+                                    });
+                                    
+                                    document.getElementById(`replyForm-${parentCommentId}`).remove();
+                                    
+                                    openCommentsModal(ip_id, tabName);
+                                    
+                                    if (typeof addTableNodesWithComments === 'function') {
+                                        addTableNodesWithComments();
+                                    }
+                                    
+                                } catch (error) {
+                                    console.error('Error adding reply:', error);
+                                    alert(i18next.t('Error adding reply'));
+                                }
+                            }
+
+                            function isRowSelected(cell) {
+                                return cell.getRow().isSelected()
+                            }
+                            var headerMenu = function () {
+                                var menu = [];
+                                var columns = this.getColumns();
+                                for (let column of columns) {
+                                    if (column.getDefinition().field && column.getDefinition().field !== "selected") {
+                                        let icon = document.createElement("i");
+                                        icon.classList.add("bi");
+                                        icon.classList.add(column.isVisible() ? "bi-check-square" : "bi-square");
+                                        let label = document.createElement("span");
+                                        let title = document.createElement("span");
+                                        title.textContent = " " + column.getDefinition().title;
+                                        label.appendChild(icon);
+                                        label.appendChild(title);
+                                        menu.push({
+                                            label: label,
+                                            action: function (e) {
+                                                e.stopPropagation();
+                                                column.toggle();
+                                                if (column.isVisible()) {
+                                                    icon.classList.remove("bi-square");
+                                                    icon.classList.add("bi-check-square");
+                                                } else {
+                                                    icon.classList.remove("bi-check-square");
+                                                    icon.classList.add("bi-square");
+                                                }
+                                                {{tab.name}}_table.redraw()
+                                            }
+                                        });
+                                    }
+                                }
+                                return menu;
+                            };
+                            var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
+                                {% if tab.name == 'auth_credentials' or tab.name == 'web' %}
+                                    layout: "fitDataStretch",
+                                {% elif  tab.name =='soft_vuln_link' or tab.name == 'whois' or tab.name == 'software' or tab.name == 'cve' %}
+                                    layout: "fitDataTable",
+                                {% else %}
+                                    layout: "fitColumns",
+                                {% endif %}
+                                ajaxURL: "{{tab.base_url}}",
+                                ajaxParams: { scans: selectedScans },
+
+                                ajaxURLGenerator: function (url, config, params) {
+                                    //url - the url from the ajaxURL property or setData function
+                                    //config - the request config object from the ajaxConfig property
+                                    //params - the params object from the ajaxParams property, this will also include any pagination, filter and sorting properties based on table setup
+
+                                    //return request url
+                                    const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                                    const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                                    const scansParam = (selectedScans || [])
+                                        .map(scan => `scans=${encodeURIComponent(scan)}`)
+                                        .join("&");
+                                    const finalUrl = `${url}?page=${params.page}&size=${params.size}&sort=${sort}&filter=${filter}${
+                                        scansParam ? `&${scansParam}` : ""  }`
+                                    return finalUrl; //encode parameters as a json object
+                                },
+                                selectable: false,
+                                sortMode: "remote",
+                                filterMode: "remote",
+                                pagination: true,
+                                paginationMode: "remote",
+                                paginationSize: 50,
+                                paginationInitialPage: 1,
+                                paginationSizeSelector: [5, 10, 25, 50, 100, 250, 500],
+                                validationMode: 'highlight',
+                                columns: [
+                                    {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' or tab.name == 'dns_a_screenshot' %}
+                                        {
+                                            title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>",
+                                            field: "selected",
+                                            formatter: checkbox_formatter,
+                                            headerSort: false,
+                                            headerTooltip: "Click to select/deselect all",
+                                            hozAlign: "center",
+                                            headerHozAlign: "center",
+                                            headerClick: function(e, column){
+                                                const checkboxes = document.querySelectorAll('input[name="{{tab.name}}-checkbox"]');
+                                                let allChecked = true;
+
+                                                checkboxes.forEach(checkbox => {
+                                                    if(!checkbox.checked) {
+                                                        allChecked = false;
+                                                    }
+                                                });
+
+                                                const newState = !allChecked;
+                                                const btn = column.getElement().querySelector('.select-all-btn');
+
+                                                checkboxes.forEach(checkbox => {
+                                                    checkbox.checked = newState;
+                                                    const clickEvent = new Event('click');
+                                                    checkbox.dispatchEvent(clickEvent);
+                                                });
+                                            },
+                                            formatterParams: {
+                                                selectAll: false
+                                            }
+                                        }
+                                    {% endif %},
+                                    {% for col in tab.columns %}
+                                        {{'{'}}
+                                        title: "{{col.title}}",
+                                        field: "{{col.field}}",
+                                        headerMenu: headerMenu
+                                        {% if col.field == 'screenshot_path' %},
+                                        formatter: screenshots_formatter,
+                                        headerSort: false,
+                                        {% endif %}
+                                        {% if col.field == 'data' %},
+                                        hozAlign: "left",
+                                        {% endif %}
+                                        {% if col.field == 'link' %},
+                                        formatter: modalLinkFormatter,
+                                        {% endif %}
+                                        {% if col.field == 'comments' %},
+                                        formatter: commentsFormatter,
+                                        headerSort: false,
+                                        {% endif %}
+                                        
+                                        {# Добавляем редакторы для API колонок #}
+                                        {% if col.field == 'api_dir' or col.field == 'api_endpoint' or col.field == 'http_method' or col.field == 'body' %},
+                                        editor: "input",
+                                        editable: true,
+                                        cellEdited: function(cell) {
+                                            updateApiData(cell.getRow().getData().id, cell.getField(), cell.getValue());
+                                        }
+                                        {% endif %}
+                                        {{ '}' }},
+                                    {% endfor %}
+
+                                    ] })
+          </script>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <style>
+    .tabulator-menu {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+  <script>
+    const inputFilterFields = document.querySelectorAll(
+      '[id^="filter-value-"]'
+    );
+    const filterButtons = document.querySelectorAll('[id^="filter-search-"]');
+
+    inputFilterFields.forEach((inputField, index) => {
+      inputField.addEventListener("keypress", function (event) {
+        if (event.key === "Enter" || event.keyCode === 13) {
+          event.preventDefault();
+          if (filterButtons[index]) {
+            filterButtons[index].click();
+          }
+        }
+      });
+    });
+  </script>
+  <script>
+    /* Убирает у столбцов port и permissions фильтр like (потому что поля интовые) */
+    const columnSelects = document.querySelectorAll('[id^="filter-field-"]');
+    columnSelects.forEach((columnSelect) => {
+      columnSelect.addEventListener("change", function (event) {
+        const tabName = this.id.replace("filter-field-", "");
+        const filterTypeSelect = document.getElementById(
+          `filter-type-${tabName}`
+        );
+
+        const likeOption = filterTypeSelect.querySelector(
+          'option[value="like"]'
+        );
+
+        if (
+          event.target.value === "port" ||
+          event.target.value === "permissions"
+        ) {
+          if (likeOption) {
+            likeOption.remove();
+          }
+        } else {
+          if (!likeOption) {
+            const newLikeOption = new Option("like", "like");
+            filterTypeSelect.add(newLikeOption);
+          }
+        }
+      });
+    });
+    columnSelects.forEach((select) => {
+      select.dispatchEvent(new Event("change"));
+    });
+  </script>
+  <script>
+    var message_sock = create_websocket(`/api/v1/project/ws`, "{{user_id}}");
+  </script>
+  
+  {% endblock content %}
+</div>
