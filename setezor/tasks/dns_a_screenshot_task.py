@@ -1,4 +1,5 @@
 from setezor.tasks.base_job import BaseJob
+from setezor.restructors.dns_a_screenshot_restructor import DNSAScreenshotTaskRestructor
 
 
 class DNS_A_ScreenshotTask(BaseJob):
@@ -7,4 +8,6 @@ class DNS_A_ScreenshotTask(BaseJob):
     Эта таска не выполняет никакой работы на сервере, а только обрабатывает
     результаты, полученные от агента через реструктор.
     """
-    pass 
+
+    logs_folder = "screenshots"
+    restructor = DNSAScreenshotTaskRestructor

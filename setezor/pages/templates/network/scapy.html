@@ -24,7 +24,7 @@
                         var reader = new FileReader();
                         reader.onload = (function (file) {
                             return async function (e) {
-                                data = {file: e.target.result, agent_id: agentData.default_agent}
+                                data = {file: e.target.result, agent_id: agentData.default_agent, filename:file.name}
                                 resp = await fetch(
                                     '/api/v1/task/scapy_parse_task', {method: 'POST',
                                     headers: {

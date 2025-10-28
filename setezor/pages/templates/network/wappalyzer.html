@@ -18,9 +18,12 @@
                                 {
                                     return async function (e) 
                                     {
-                                        data = {log_file: e.target.result,
-                                        agent_id: agentData.default_agent, 
-                                        groups: wappalyzer_parse_event()}
+                                        data = {
+                                            file: e.target.result,
+                                            agent_id: agentData.default_agent,
+                                            filename: file.name,
+                                            groups: wappalyzer_parse_event()
+                                        }
                                         resp = await fetch('/api/v1/task/wappalyzer_log_parse', {method: 'POST', 
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -200,6 +203,14 @@ function wapplyzer_category_select_all()
                 myModal.hide();
             }
         };
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const wappModal = document.getElementById('wappalyzerModalWindow');
+
+        wappModal.addEventListener('hidden.bs.modal', function () {
+            wapplyzer_category_clear();
+        });
     });
 </script>
 

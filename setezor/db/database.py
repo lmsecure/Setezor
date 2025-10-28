@@ -11,7 +11,7 @@ from setezor.models.agent import Agent
 from setezor.models.base import generate_unique_id
 from setezor.models.d_dns_type import DNS_Type
 
-from setezor.settings import DB_URI, BASE_PATH, ENGINE
+from setezor.settings import DB_URI, ENGINE, DEV
 from setezor.tools.password import PasswordTool
 from setezor.logger import logger
 from setezor.schemas.roles import Roles
@@ -22,8 +22,26 @@ from .entities import ObjectTypes, NetworkTypes, DNSTypes
 engine = create_async_engine(DB_URI)
 if os.environ.get("PYTEST_VERSION") is not None and os.environ.get("ENGINE", "sqlite") != "sqlite":
     engine = create_async_engine(DB_URI, poolclass=NullPool)
-    
+
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
+
+
+async def get_db_tables():
+    async with engine.begin() as conn:
+        def get_tables(sync_conn):
+            inspector = inspect(sync_conn)
+            return inspector.get_table_names()
+        return await conn.run_sync(get_tables)
+
+
+async def init_db():
+    tables = await get_db_tables()
+    if not tables:
+        logger.info("the database is not initialized")
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+            logger.success("the database is initialized")
+        await fill_db()
 
 
 async def get_tables_for_triggers() -> list[str]:
@@ -40,13 +58,6 @@ async def get_tables_for_triggers() -> list[str]:
             return tables
 
         return await conn.run_sync(sync_inspect)
-
-
-async def init_db():
-    if os.environ.get("ENGINE", "sqlite") != "sqlite":
-        return
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
 
 
 async def init_triggers():
@@ -88,7 +99,7 @@ async def init_triggers():
                            WHERE table_schema = child.child_schema
                              AND table_name = child.child_table
                              AND column_name = 'deleted_at';
-                    
+
                           IF FOUND THEN
                             sql := format(
                               'UPDATE %I.%I SET deleted_at = NOW() WHERE %I = $1 AND deleted_at IS NULL',
@@ -100,7 +111,7 @@ async def init_triggers():
                           END IF;
                         END LOOP;
                       END IF;
-                    
+
                       RETURN NEW;
                     END;
                     $$ LANGUAGE plpgsql;
@@ -166,8 +177,6 @@ async def init_triggers():
 
 
 async def fill_db(manual: bool = False):
-    if not (os.environ.get("ENGINE", "sqlite") == "sqlite" or manual):
-        return
     from setezor.db.uow_dependency import get_uow
     uow = get_uow()
     async with uow:
@@ -198,6 +207,8 @@ async def fill_db(manual: bool = False):
         user = await uow.user.find_one(login='admin')
         if not user:
             plain_password = get_random_bytes(64).hex()
+            if DEV.mode:
+                DEV.password = plain_password
             print(f"Admin password = {plain_password}")
             new_pwd = PasswordTool.hash(plain_password)
             admin_user = User(
@@ -209,8 +220,6 @@ async def fill_db(manual: bool = False):
             )
             uow.user.add(admin_user.model_dump())
             logger.debug(f"CREATED object {admin_user.__class__.__name__} {admin_user.model_dump_json()}")
-            
-
             server_agent = Agent(
                 id=generate_unique_id(),
                 name="Server",
@@ -220,7 +229,6 @@ async def fill_db(manual: bool = False):
                 is_connected=True
             )
             uow.agent.add(server_agent.model_dump())
-        
         await uow.commit()
 
     async with uow:
@@ -229,7 +237,6 @@ async def fill_db(manual: bool = False):
             if not await uow.role.exists(role_obj):
                 uow.role.add(role_obj.model_dump())
         await uow.commit()
-
 
     base_settings = [
         Setting(name="open_reg",
@@ -242,3 +249,5 @@ async def fill_db(manual: bool = False):
             if not await uow.setting.exists(setting):
                 uow.setting.add(setting.model_dump())
         await uow.commit()
+
+    logger.success("initial data has been loaded into the database")

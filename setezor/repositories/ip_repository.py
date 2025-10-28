@@ -1,6 +1,6 @@
 import ipaddress
 from typing import List
-from sqlalchemy import Select
+from sqlalchemy import Select, collate
 from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type
 from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
@@ -162,10 +162,13 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)
@@ -259,10 +262,13 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)
@@ -341,12 +347,40 @@ class IPRepository(SQLAlchemyRepository[IP]):
             for filter_item in filter_params:
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
-                value = filter_item.get("value")
-                if (field == 'port'):
-                    value = int(value)
+                raw_value = filter_item.get("value")
 
-                if field in field_mapping and value is not None:
-                    column = field_mapping[field]
+                if field not in field_mapping or raw_value is None:
+                    continue
+
+                column = field_mapping[field]
+
+                if isinstance(raw_value, str) and ',' in raw_value:
+                    values = [v.strip() for v in raw_value.split(',') if v.strip()]
+                    if not values:
+                        continue
+
+                    if field == 'port':
+                        try:
+                            values = [int(v) for v in values]
+                        except ValueError:
+                            continue
+
+                    if type_op == "=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column.in_(values))
+                    elif type_op == "!=":
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(~column.in_(values))
+                    elif type_op == "like":
+                        or_conditions = [column.ilike(f"%{v}%") for v in values]
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(or_(*or_conditions))
+                    else:
+                        continue
+                else:
+                    value = raw_value
+                    if field == 'port':
+                        try:
+                            value = int(value)
+                        except (ValueError, TypeError):
+                            continue
 
                     if type_op == "=":
                         tabulator_dashboard_data = tabulator_dashboard_data.having(column == value)
@@ -361,9 +395,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
                     elif type_op == "<=":
                         tabulator_dashboard_data = tabulator_dashboard_data.having(column <= value)
                     elif type_op == "like":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(
-                            column.ilike(f"%{value}%")
-                        )
+                        tabulator_dashboard_data = tabulator_dashboard_data.having(column.ilike(f"%{value}%"))
 
         if sort_params:
             order_clauses = []

@@ -1,81 +1,169 @@
-async function createFilterPanel({ tableId, tableVar, fields, containerId }) {
-    const container = document.getElementById(containerId);
+let filterPanelCounter = 0;
 
+function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allowMultipleFilters = false }) {
+    const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container "${containerId}" not found`);
         return;
     }
 
+    const valuePlaceholder = allowMultipleFilters
+        ? i18next.t('value1, value2')
+        : i18next.t('value');
+
+    const addFilterButton = allowMultipleFilters
+        ? `<button class="btn btn-outline-success btn" id="add-filter-panel-${tableId}">
+              <i class="bi bi-plus-lg"></i> ${i18next.t('Add filter')}
+           </button>`
+        : '';
+
     container.innerHTML = `
-        <div class="d-flex flex-row justify-content-start py-2 " id="filter-panel-${tableId}">
-            <div class="btn-group me-1" role="group">
-                <button class="btn btn-primary" id="${tableId}-reload-data">
-                    <i class="bi bi-arrow-clockwise" style="font-family: 'Times New Roman', Times, serif"></i>
-                </button>
-            </div>
-            <div class="me-1">
-                <select class="form-select" id="filter-field-${tableId}">
-                    ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(`${title}`)}</option>`).join('')}
+        <div class="d-flex flex-wrap align-items-start gap-2 mt-2 w-100" id="main-filter-row-${tableId}">
+            <!-- Первая панель -->
+            <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-0">
+                <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-0">
+                    ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
                 </select>
-            </div>
-            <div class="me-1">
-                <select class="form-select" id="filter-type-${tableId}">
+                <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-0">
                     <option value="=">=</option>
-                    <option value="<">&lt;</option>
-                    <option value="<=">&lt;=</option>
-                    <option value=">">&gt;</option>
-                    <option value=">=">&gt;=</option>
+                    <option value="<"><</option>
+                    <option value="<="><=</option>
+                    <option value=">">></option>
+                    <option value=">=">>=</option>
                     <option value="!=">!=</option>
                     <option value="like">like</option>
                 </select>
+                <input id="filter-value-${tableId}-0" class="form-control form-control" type="text" placeholder="${valuePlaceholder}" style="width: 15rem;"/>
             </div>
-            <input id="filter-value-${tableId}" class="form-control me-1" type="text" style="width: 15rem;" />
-            <button class="btn btn-primary me-1" style="width: 5rem" id="filter-search-${tableId}">${i18next.t('Search')}</button>
-            <button class="btn btn-danger me-1" style="width: 7rem" id="filter-clear-${tableId}">${i18next.t('Clear')}</button>
+
+            <!-- Кнопки управления справа -->
+            <div class="d-flex flex-wrap align-items-center gap-1 flex-grow-1">
+                ${addFilterButton}
+                <button class="btn btn-primary btn" id="apply-all-filters-${tableId}">
+                    ${i18next.t('Search')}
+                </button>
+                <button class="btn btn-danger btn" id="clear-all-filters-${tableId}">
+                    ${i18next.t('Clear')}
+                </button>
+                <button class="btn btn-primary btn" id="${tableId}-reload-data">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Обёртка со скроллом для дополнительных панелей -->
+        <div class="mt-1 mb-2" style="max-height: 150px; overflow-y: auto;">
+            <div class="d-flex flex-column gap-1" id="extra-filter-panels-${tableId}"></div>
         </div>
     `;
 
-    document.getElementById(`${tableId}-reload-data`).onclick = () => {
-        tableVar?.dataLoader?.reloadData?.();
-    };
+    const extraWrapper = document.getElementById(`extra-filter-panels-${tableId}`);
 
-    document.getElementById(`filter-search-${tableId}`).onclick = () => {
-        const field = document.getElementById(`filter-field-${tableId}`).value;
-        const type = document.getElementById(`filter-type-${tableId}`).value;
-        const value = document.getElementById(`filter-value-${tableId}`).value;
-        if (field && value) {
-            tableVar.setFilter(field, type, value);
-        }
-    };
-
-    document.getElementById(`filter-clear-${tableId}`).onclick = () => {
-        document.getElementById(`filter-value-${tableId}`).value = '';
-        tableVar.clearFilter();
-    };
-
-    /*fetch('/api/v1/scan')
-        .then(res => res.json())
-        .then(scans => {
-            const el = document.getElementById(`${tableId}_scansContainer`);
-            if (!el) return;
-
-            el.innerHTML = scans.map(scan => `
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${scan.id}" id="${tableId}_scan_${scan.id}">
-                    <label class="form-check-label" for="${tableId}_scan_${scan.id}">
-                        ${scan.name} - ${scan.created_at}
-                    </label>
-                </div>
-            `).join('');
+    if (allowMultipleFilters) {
+        document.getElementById(`add-filter-panel-${tableId}`)?.addEventListener('click', () => {
+            addExtraFilterPanel(extraWrapper, tableId, fields, filterPanelCounter++);
         });
+    }
 
-    document.querySelector(`form[name="showInformationForScansForm_${tableId}"]`)?.addEventListener("submit", function (e) {
-        e.preventDefault();
-        const selectedScans = Array.from(this.querySelectorAll('input[type="checkbox"]:checked'))
-            .map(checkbox => checkbox.value);
+    document.getElementById(`apply-all-filters-${tableId}`).addEventListener('click', () => {
+        applyAllFilters(tableId, tableVar);
+    });
 
-        console.log(`[${tableId}] Selected scans:`, selectedScans);
+    document.getElementById(`clear-all-filters-${tableId}`).addEventListener('click', () => {
+        clearAllFilters(tableId, tableVar);
+    });
 
-        tableVar.setData(tableVar.getAjaxUrl(), {}, "GET");
-    });*/
+    document.getElementById(`${tableId}-reload-data`).addEventListener('click', () => {
+        tableVar?.dataLoader?.reloadData?.();
+    });
+
+    filterPanelCounter = 1;
 }
+
+function addExtraFilterPanel(wrapper, tableId, fields, index) {
+    const panelHTML = `
+        <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-${index}">
+            <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-${index}">
+                ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
+            </select>
+            <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-${index}">
+                <option value="=">=</option>
+                <option value="<"><</option>
+                <option value="<="><=</option>
+                <option value=">">></option>
+                <option value=">=">>=</option>
+                <option value="!=">!=</option>
+                <option value="like">like</option>
+            </select>
+            <input id="filter-value-${tableId}-${index}" class="form-control form-control" type="text" placeholder="${i18next.t('value1, value2')}" style="width: 15rem;"/>
+            <button type="button" class="btn btn btn-outline-danger" title="${i18next.t('Remove filter')}" 
+                    onclick="removeFilterPanel('${tableId}', ${index})">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    `;
+    wrapper.insertAdjacentHTML('beforeend', panelHTML);
+}
+
+function removeFilterPanel(tableId, index) {
+    const panel = document.getElementById(`${tableId}-filter-panel-${index}`);
+    if (panel) {
+        panel.remove();
+    }
+}
+
+function applyAllFilters(tableId, tableVar) {
+    const allPanels = [
+        document.getElementById(`${tableId}-filter-panel-0`),
+        ...Array.from(document.querySelectorAll(`[id^="${tableId}-filter-panel-"]:not([id="${tableId}-filter-panel-0"])`))
+    ].filter(Boolean);
+
+    const allFilters = [];
+
+    allPanels.forEach(panel => {
+        const idParts = panel.id.split('-');
+        const index = idParts[idParts.length - 1];
+        const field = document.getElementById(`filter-field-${tableId}-${index}`)?.value;
+        const type = document.getElementById(`filter-type-${tableId}-${index}`)?.value;
+        const rawValue = document.getElementById(`filter-value-${tableId}-${index}`)?.value;
+
+        if (!field || !rawValue) return;
+
+        allFilters.push({ field, type, value: rawValue });
+    });
+
+    tableVar.setFilter(allFilters);
+}
+
+function clearAllFilters(tableId, tableVar) {
+    document.querySelectorAll(`[id^="filter-value-${tableId}-"]`).forEach(input => {
+        input.value = '';
+    });
+    tableVar.clearFilter();
+}
+
+/*fetch('/api/v1/scan')
+    .then(res => res.json())
+    .then(scans => {
+        const el = document.getElementById(`${tableId}_scansContainer`);
+        if (!el) return;
+
+        el.innerHTML = scans.map(scan => `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="${scan.id}" id="${tableId}_scan_${scan.id}">
+                <label class="form-check-label" for="${tableId}_scan_${scan.id}">
+                    ${scan.name} - ${scan.created_at}
+                </label>
+            </div>
+        `).join('');
+    });
+
+document.querySelector(`form[name="showInformationForScansForm_${tableId}"]`)?.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const selectedScans = Array.from(this.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => checkbox.value);
+
+    console.log(`[${tableId}] Selected scans:`, selectedScans);
+
+    tableVar.setData(tableVar.getAjaxUrl(), {}, "GET");
+});*/

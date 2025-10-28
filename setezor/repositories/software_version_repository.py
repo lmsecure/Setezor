@@ -12,9 +12,10 @@ class SoftwareVersionRepository(SQLAlchemyRepository[SoftwareVersion]):
     model = SoftwareVersion
 
     async def exists(self, software_version_obj: SoftwareVersion):
-        dct = software_version_obj.model_dump()
-        filtered_keys = {k:v for k, v in dct.items() if v is not None}
-        if not filtered_keys: return False
-        stmt = select(SoftwareVersion).filter_by(**filtered_keys)
-        res = await self._session.exec(stmt)
-        return res.first()
+        if not software_version_obj.cpe23:
+            return
+        cpe23 = software_version_obj.cpe23
+        stmt = select(SoftwareVersion).filter(SoftwareVersion.cpe23 == cpe23)
+        result = await self._session.exec(stmt)
+        result_obj = result.first()
+        return result_obj

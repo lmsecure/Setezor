@@ -21,8 +21,8 @@
 <script src="../../static/js/src/toasts.js"></script>
 </head>
 <body>
-<header id="myHeader">
-		<nav class="navbar navbar-dark navbar-expand-lg bg-dark">
+<header id="myHeader" class="sticky-top">
+  <nav class="navbar navbar-dark navbar-expand-lg bg-dark shadow-sm">
 			<div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem;">
 				<div class="bd-highlight" style="margin-left: 40px;">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -179,23 +179,56 @@ aria-labelledby="offcanvasNotificationsLabel">
 <div class="offcanvas-body" id="notifications_body">
 </div>
 </div>
-<div class="container">
-    <h4 class="form-label" data-i18n="Choose project"></h4>
-
-    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
-        {% if projects %}
-        {% for items in projects %}
-        <div class="col mb-3">
-            {% import 'projects/project_card.html' as project_cards with context%}
-            {{project_cards.show(items.project, items.analytics, items.role)}}
+<div class="mt-2 px-4">
+  <div class="row g-4">
+    
+    <div class="col-12 col-lg-auto order-1 order-lg-1 ps-0 pe-2 ms-4" id="projects-column">
+      <div class="sidebar-sticky d-flex justify-content-center" style="max-width: 200px; min-height: 400px;">
+        <div class="row mb-0">
+          <div class="col">
+            {% import 'projects/new_project_card.html' as new_project_card with context %}
+            {{ new_project_card.show() }}
+          </div>
         </div>
-        {% endfor %}
-        {% endif %}
-        <div class="col mb-3">
-            {% import 'projects/new_project_card.html' as new_project_card with context%}
-            {{new_project_card.show()}}
-        </div>
+      </div>
     </div>
+
+    <div class="col-12 col-lg-9 order-2 order-lg-2 ms-4">
+      {% if owned_projects %}
+      <details open class="mb-4 mt-1">
+        <summary class="h4 form-label mb-3 d-flex align-items-center gap-2" style="cursor: pointer; list-style: none;">
+          <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          <span data-i18n="My projects"></span>
+        </summary>
+        <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-5 row-cols-xl-6">
+          {% for items in owned_projects %}
+          <div class="col mb-3">
+            {% import 'projects/project_card.html' as project_cards with context %}
+            {{ project_cards.show(items.project, items.analytics, items.role, items.owner_login) }}
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+
+      {% if shared_projects %}
+      <details open class="mb-4">
+        <summary class="h4 form-label mb-3 d-flex align-items-center gap-2" style="cursor: pointer; list-style: none;">
+          <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          <span data-i18n="Shared projects"></span>
+        </summary>
+        <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-5 row-cols-xl-6">
+          {% for items in shared_projects %}
+          <div class="col mb-3">
+            {% import 'projects/project_card.html' as project_cards with context %}
+            {{ project_cards.show(items.project, items.analytics, items.role, items.owner_login) }}
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <script>

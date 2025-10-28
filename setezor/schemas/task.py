@@ -131,9 +131,11 @@ class ScapySniffTaskPayload(BaseModel):
 class ScapyParseTaskPayload(BaseModel):
     agent_id: str
     file: str
+    filename: str
 
 class WappalyzerParseTaskPayload(BaseModel):
-    log_file: str
+    file: str
+    filename: str
     groups: list[str]
     agent_id: str
 

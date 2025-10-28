@@ -686,9 +686,12 @@
                                 }
                             }
 
-                            function {{tab.name}}clearFilter(){
-                                document.getElementById('filter-value-{{tab.name}}').value = ''
-                                {{tab.name}}_table.clearFilter()
+                            function {{tab.name}}clearFilter() {
+                                document.getElementById('filter-value-{{tab.name}}').value = '';
+
+                                {{tab.name}}_table.clearHeaderFilter();
+
+                                {{tab.name}}_table.clearFilter();
                             }
 
                             function {{tab.name}}ApplyFilter() {
@@ -1033,7 +1036,7 @@
                                 const count = cell.getValue() || 0;
                                 const rowData = cell.getRow().getData();
                                 const tabName = "{{tab.name}}"; 
-                                console.log(rowData)
+                                //console.log(rowData)
                                 const buttonText = `${i18next.t("Comments")}`;
 
                                 return `<button class="btn btn-sm btn-outline-primary"
@@ -1482,6 +1485,15 @@
                                         title: "{{col.title}}",
                                         field: "{{col.field}}",
                                         headerMenu: headerMenu
+                                        {% if col.headerFilter %},
+                                        headerFilter: "{{col.headerFilter}}"{% endif %}
+                                        {% if col.headerFilterPlaceholder %},
+                                        headerFilterPlaceholder: i18next.t("{{col.headerFilterPlaceholder}}"){% endif %}
+                                        {% if col.headerFilterFunc %},
+                                        headerFilterFunc: "{{col.headerFilterFunc}}"{% endif %}
+                                        {% if col.headerFilterParams %},
+                                        headerFilterParams: {{ col.headerFilterParams | tojson }}{% endif %}
+                                        
                                         {% if col.field == 'screenshot_path' %},
                                         formatter: screenshots_formatter,
                                         headerSort: false,
@@ -1509,6 +1521,15 @@
                                     {% endfor %}
 
                                     ] })
+                                
+                                {{tab.name}}_table.on("tableBuilt", function() {
+                                    const filterInputs = {{tab.name}}_table.element.querySelectorAll(".tabulator-header-filter input");
+                                    filterInputs.forEach(input => {
+                                        if (input.placeholder && !input.title) {
+                                            input.title = input.placeholder;
+                                        }
+                                    });
+                                });
           </script>
         </div>
         {% endfor %}
@@ -1553,7 +1574,6 @@
         );
 
         if (
-          event.target.value === "port" ||
           event.target.value === "permissions"
         ) {
           if (likeOption) {

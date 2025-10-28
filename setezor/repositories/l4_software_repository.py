@@ -1,6 +1,6 @@
 
 from typing import List
-from sqlalchemy import case, func, literal, text
+from sqlalchemy import case, func, literal, text, collate
 from sqlalchemy.sql.functions import coalesce
 from setezor.models import L4Software, Port, IP, SoftwareVersion, Software, SoftwareType, Vendor, Vulnerability, L4SoftwareVulnerability, DNS, Domain, VulnerabilityLink
 from setezor.models.node_comment import NodeComment
@@ -127,10 +127,13 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 tabulator_dashboard_data = tabulator_dashboard_data.order_by(*order_clauses)
@@ -222,10 +225,11 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]
+                    sorted_column = func.coalesce(column, "")
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)
@@ -421,10 +425,13 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                     else:
                         column = field_mapping[field]
                     
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)
@@ -515,11 +522,13 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]
-                    
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)

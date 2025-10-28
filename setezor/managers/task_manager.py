@@ -18,7 +18,6 @@ from setezor.services.agent_in_project_service import AgentInProjectService
 from setezor.services.agent_service import AgentService
 from setezor.data_writer.data_structure_service import DataStructureService
 from setezor.services.scope_service import ScopeService
-from setezor.tasks import get_folder_for_task, get_restructor_for_task, get_task_by_class_name
 from setezor.tasks.base_job import BaseJob
 from setezor.tasks.speed_test_task import SpeedTestServerTask, SpeedTestClientTask
 from setezor.models import Task
@@ -124,13 +123,23 @@ class TaskManager:
                 return False
 
         safe_params = {k: v for k, v in kwargs.items() if safe_json(v)}
-        
+        header_data = safe_params.pop("file", None) or safe_params.pop("log_file", None)
         agent_id = kwargs.pop("agent_id", None)
         task: Task = await self.__tasks_service.create(project_id=project_id,
                                                        scan_id=scan_id,
                                                        params=safe_params,
                                                        agent_id=agent_id,
                                                        created_by=job.__name__)
+        if header_data:
+            task_class = BaseJob.get_task_by_class_name(task.created_by)
+            filename = f"{str(datetime.datetime.now())}_{task.created_by}_{task.id}"
+            data = base64.b64decode(header_data.split(',')[1])
+            input_filename = safe_params.get("filename", '')
+            extension =  ''.join(input_filename.rpartition('.')[1:]) if '.' in input_filename else ''
+            await self.__file_manager.save_file(
+                file_path=[PROJECTS_DIR_PATH, task.project_id, task.scan_id, task_class.logs_folder, f"{filename}{extension}"],
+                data=data
+            )
 
         message = WebSocketMessage(
             title="Task status", text=f"Task {task.id = } {TaskStatus.created}", type="info")
@@ -314,7 +323,8 @@ class TaskManager:
 
     async def autostart_speed_test_client(self, task_id: str):
         task = await self.__tasks_service.get_by_id(id=task_id)
-        if not (get_task_by_class_name(task.created_by) is SpeedTestServerTask):
+        task_class = BaseJob.get_task_by_class_name(task.created_by)
+        if not (task_class is SpeedTestServerTask):
             return
         task_params = json.loads(task.params)
         task_params["agent_id"] = task_params.get("agent_id_from")
@@ -409,13 +419,13 @@ class TaskManager:
 
     async def write_result(self, task_id: str, data: dict):
         task: Task = await self.__tasks_service.get_by_id(id=task_id)
+        task_class = BaseJob.get_task_by_class_name(task.created_by)
         project_id = task.project_id
         scan_id = task.scan_id
-        restructor = get_restructor_for_task(task.created_by)
         data["agent_id"] = task.agent_id
         data["project_id"] = project_id
         data["scan_id"] = scan_id
-        entities = await restructor.restruct(**data)
+        entities = await task_class.restructor.restruct(**data)
         await self.__data_structure_service.make_magic(project_id=project_id,
                                                        scan_id=scan_id,
                                                        result=entities)
@@ -428,9 +438,8 @@ class TaskManager:
                                data: str,
                                extension: str):
         task: Task = await self.__tasks_service.get_by_id(id=task_id)
-        restructor = get_restructor_for_task(task.created_by)
-        data = restructor.get_raw_result(data)
-        module_folder = get_folder_for_task(task.created_by)
+        task_class = BaseJob.get_task_by_class_name(task.created_by)
+        data = task_class.restructor.get_raw_result(data)
         filename = f"{str(datetime.datetime.now())}_{task.created_by}_{task_id}"
         await self.__file_manager.save_file(file_path=[PROJECTS_DIR_PATH, task.project_id, task.scan_id,
-                                                               module_folder, f"{filename}.{extension}"], data=data)
+                                                               task_class.logs_folder, f"{filename}.{extension}"], data=data)

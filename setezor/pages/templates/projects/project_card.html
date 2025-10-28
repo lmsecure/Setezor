@@ -1,4 +1,4 @@
-{% macro show(project, analytics, role) %}
+{% macro show(project, analytics, role, owner_login) %}
 {% import 'projects/donut_card.html' as charts %}
 <script>
 
@@ -47,12 +47,16 @@
             style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
             <label class="form-check-label me-2" for="{{ project.name }}" style="flex-grow: 1;">
                 {{ project.name }} [{{ role }}]
+                    {% if owner_login and role != 'owner' %}
+                        <br><small class="text-muted"><span data-i18n="Owner"></span>: {{ owner_login }}</small>
+                    {% endif %}
             </label>
             <div class="dropdown">
                 <i class="bi bi-three-dots" type="button" id="dropdownMenuButton_{{ project.id }}"
                     data-bs-toggle="dropdown" aria-expanded="false">
                 </i>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ project.id }}">
+                {% if role == 'owner' %}
                   <li>
                     <a class="dropdown-item" href="#">
                       <button type="button"
@@ -62,6 +66,7 @@
                       </button>
                     </a>
                   </li>
+                {% endif %}
                     <li>
                         <a class="dropdown-item" href="#">
                             <button type="button" class="btn btn-danger flex-fill w-100"
@@ -87,7 +92,7 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
                             
-                            All ports
+                            <span data-i18n="All ports"></span>
                             {% if analytics.top_ports %}
                                 {{ charts.create_donut('All ports', 'analytics.top_ports' + '_' + project.id,
                                 analytics.top_ports.data | safe ,
@@ -109,7 +114,7 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            All protocols
+                            <span data-i18n="All protocols"></span>
                             {% if analytics.top_protocols %}
                             {{ charts.create_donut('All protocols', 'analytics.top_protocols' + '_' + project.id,
                             analytics.top_protocols.data | safe ,
@@ -129,7 +134,7 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            All objects
+                            <span data-i18n="All objects"></span>
                             {% if analytics.device_types %}
                             {{ charts.create_donut('All objects', 'analytics.device_types' + '_' + project.id,
                             analytics.device_types.data | safe ,
@@ -150,7 +155,7 @@
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="text-center">
 
-                            All products
+                            <span data-i18n="All products"></span>
                             {% if analytics.top_products %}
                             {{ charts.create_donut('All products', 'analytics.top_products' + '_' + project.id,
                             analytics.top_products.data | safe ,

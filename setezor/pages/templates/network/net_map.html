@@ -94,6 +94,11 @@
         }
         el.innerHTML = result
     })
+
+    document.getElementById('scansPickModal').addEventListener('hidden.bs.modal', () => {
+        document.forms['showMapForScansFormName'].reset();
+    });
+
     async function showMapForScans(event){
         event.preventDefault()
         let formData = new FormData(event.target)

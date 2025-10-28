@@ -10,6 +10,9 @@ class PostgresSettings(BaseSettings):
     postgres_password: str
     postgres_db: str
 
+class DEV:
+    mode = os.environ.get("DEV_MODE", "False").lower() == "true"
+    password = ""
 
 if hasattr(sys, '_MEIPASS'):            # Nuitka/PyInstaller onefile
     BASE_PATH = sys._MEIPASS
@@ -25,6 +28,8 @@ REFRESH_TOKEN_EXPIRE_TIME = datetime.timedelta(days=30)
 INVITE_LINK_EXPIRE_TIME = datetime.timedelta(minutes=5)
 COMMIT_STEP = 1000
 LOG_LEVEL = "INFO"
+if DEV.mode:
+    LOG_LEVEL = "DEBUG"
 TEMPLATES_DIR_PATH = os.path.join(BASE_PATH, 'pages/templates')
 STATIC_FILES_DIR_PATH = os.path.join(BASE_PATH, 'pages/static/')
 PROJECTS_DIR_PATH = os.path.abspath(os.path.join(PATH_PREFIX, 'projects'))

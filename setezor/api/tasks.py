@@ -21,7 +21,10 @@ from setezor.services import TasksService
 from setezor.managers import TaskManager
 from setezor.services.project_service import ProjectService
 from setezor.services.software import SoftwareService
-from setezor.tasks import DNSTask, WhoisTask, SdFindTask, NmapParseTask
+from setezor.tasks.dns_task import DNSTask
+from setezor.tasks.whois_task import WhoisTask
+from setezor.tasks.domain_task import SdFindTask
+from setezor.tasks.nmap_parse_task import NmapParseTask
 from setezor.tasks.masscan_scan_task import MasscanScanTask
 from setezor.tasks.masscan_parse_task import MasscanLogTask
 from setezor.tasks.nmap_scan_task import NmapScanTask
@@ -51,6 +54,17 @@ async def list_tasks(
 ) -> List[Task]:
     tasks = await tasks_service.list(project_id=project_id, status=status)
     return tasks
+
+
+@router.get("/raw_log/{task_id}")
+async def get_task_raw_log(
+    task_id: str,
+    tasks_service: Annotated[TasksService, Depends(TasksService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> dict:
+    file_name, file_data =  await tasks_service.get_task_raw_log(project_id=project_id, task_id=task_id)
+    return {"file_name": file_name, "file_data": file_data}
 
 
 @router.post("/{id}/soft_stop")

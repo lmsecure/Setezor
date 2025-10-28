@@ -48,6 +48,39 @@
         });
     });
 
+    async function downloadTaskFile(taskId) {
+        try {
+            const resp = await fetch(`/api/v1/task/raw_log/${taskId}`);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                create_toast("Error", err.detail || "Failed to load task", "error");
+                return;
+            }
+            const task = await resp.json();
+
+            const filename = task.file_name;
+            const base64Data = task.file_data;
+
+            const cleanBase64 = base64Data.trim().replace(/^["']|["']$/g, '').replace(/\s/g, '');
+            const binaryString = atob(cleanBase64);
+            const bytes = Uint8Array.from(binaryString, char => char.charCodeAt(0));
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Download failed:', error);
+            create_toast("Error", "Failed to download file: " + (error.message || "unknown error"), "error");
+        }
+    }
+
     async function getTasks(status) {
         let resp = await fetch(`/api/v1/task?status=${status}`);
         let tasks = await resp.json();
@@ -72,22 +105,38 @@
         <td ">${task.created_at}</td>
         ${task.status == "FINISHED" ? `<td ">${task.updated_at}</td>` : ``}
         <td colspan="2"><textarea class="form-control" disabled rows="3">${task.params}</textarea></td>
+        <td style="text-align: center; vertical-align: middle;">
+            ${task.created_by === "ScapySniffTask"
+                ? (task.status === "FINISHED" || task.status === "FAILED")
+                    ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
+                        <span class="bi bi-download text-success"></span>
+                    </button>`
+                    : ``
+                : task.created_by === "ScapyLogsTask"
+                    ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
+                        <span class="bi bi-download text-success"></span>
+                    </button>`
+                    : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLog('${task.id}')">
+                        <span class="bi bi-file-earmark-text"></span>
+                    </button>`
+            }
+        </td>
         <td style="text-align: center;vertical-align: middle;">
-            ${task.status == "STARTED" ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
-            </svg>
-            </button>` : ``}
-            ${task.status == "CREATED" ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
-            </svg>
-            </button>` : ``}
-            ${task.status == "REGISTERED" ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
-            </svg>
-            </button>` : ``}
+            ${task.status == "STARTED" 
+                ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
+                    <span class="bi bi-stop-circle-fill"></span>
+                </button>` 
+                : ``}
+            ${task.status == "CREATED" 
+                ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+                    <span class="bi bi-stop-circle-fill"></span>
+                </button>` 
+                : ``}
+            ${task.status == "REGISTERED" 
+                ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+                    <span class="bi bi-stop-circle-fill"></span>
+                </button>` 
+                : ``}
             ${task.status == "FAILED" ? `<textarea class="form-control" disabled rows="3">${task.traceback}</textarea>` : ``}
         </td>
     </tr>`;
@@ -100,8 +149,9 @@
                 <th>${i18next.t('Created By')}</th>
                 <th>${i18next.t('Created At')}</th>
                 ${status == "FINISHED" ? `<th class="text-center">${i18next.t('Finished At')}</th>` : ''}
-                <th>${i18next.t('Params')}</th>
+                <th>${i18next.t('Params')}</th>           
                 <th></th>
+                <th class="text-center">${i18next.t('Logs')}</th>
                 ${status == "CREATED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "REGISTERED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
@@ -148,6 +198,97 @@
             }
         )
         let data = await resp.json()
+    }
+
+    let taskLogModal = null;
+    let taskLogModalInstance = null;
+
+    async function showTaskLog(taskId) {
+        try {
+            const resp = await fetch(`/api/v1/task/raw_log/${taskId}`);
+            if (!resp.ok) {
+                let answer = await resp.json()
+                create_toast("Error", answer.detail, "error")
+                return;
+            }
+            const data = await resp.json();
+            const base64Data = await data.file_data;
+            let logText = '';
+
+            try {
+                const cleanBase64 = base64Data.trim().replace(/^["']|["']$/g, '').replace(/\s/g, '');
+                
+                const binaryString = atob(cleanBase64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                logText = new TextDecoder('utf-8').decode(bytes);
+            } catch (e) {
+                console.error('Base64 decode error:', e);
+                logText = i18next.t('Failed to decode log (invalid base64)');
+            }
+
+            if (!taskLogModal) {
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div class="modal fade" id="taskLogViewerModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">${i18next.t('Task Log')} — ${taskId}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${i18next.t('Close')}"></button>
+                                </div>
+                                <div class="modal-body p-0">
+                                    <textarea 
+                                        class="form-control" 
+                                        readonly 
+                                        rows="20" 
+                                        style="
+                                            font-family: monospace; 
+                                            font-size: 0.9em; 
+                                            resize: none; 
+                                            border: none; 
+                                            width: 100%; 
+                                            box-sizing: border-box; 
+                                            padding: 0.1rem;
+                                            background: transparent;
+                                            outline: none;
+                                        "
+                                    ></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <a id="taskLogDownloadBtn" class="btn btn-primary">
+                                        <span class="bi bi-download"></span>
+                                        ${i18next.t('Download')}
+                                    </a>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        ${i18next.t('Close')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                taskLogModal = document.getElementById('taskLogViewerModal');
+                taskLogModalInstance = new bootstrap.Modal(taskLogModal, {
+                    backdrop: true,
+                    keyboard: true
+                });
+            }
+
+            const textarea = taskLogModal.querySelector('textarea');
+            const downloadBtn = taskLogModal.querySelector('#taskLogDownloadBtn');
+            textarea.value = logText;
+            downloadBtn.href = `/api/v1/task/raw_log/${taskId}`;
+            downloadBtn.download = data.file_name;
+
+            taskLogModalInstance.show();
+
+        } catch (error) {
+            create_toast(i18next.t('Error'), i18next.t('Failed to load log') + ': ' + error.message, "error");
+            console.error('Log fetch error:', error);
+        }
     }
 </script>
 <style>

@@ -256,6 +256,11 @@ Dashboard
         }
         el.innerHTML = result
     })
+
+    document.getElementById('scansPickModal').addEventListener('hidden.bs.modal', () => {
+        document.forms['showDashboardForScansFormName'].reset();
+    });
+
     async function showDashboardForScans(event){
         event.preventDefault()
         let formData = new FormData(event.target)

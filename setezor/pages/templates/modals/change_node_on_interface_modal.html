@@ -115,6 +115,19 @@
         document.getElementById("id_button_changeNodeOnInterface_modalClose").click();
     }
 
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('id_changeNodeOnInterface_modal');
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('id_formChangeNodeOnInterface')?.reset();
+
+            document.getElementById('modal_assign_node_as_interface_body').innerHTML = '';
+            document.getElementById('id_select_variant').innerHTML = '';
+
+            document.getElementById('id_ip_id').value = '';
+        });
+    });
+
 </script>
 
 {% endmacro %}

@@ -15,7 +15,9 @@ Vulnerabilities
 <div class="container-fluid">
     <div class="d-flex flex-row">
         <div id="filter-panel-container"></div>
-        <button class="btn btn-primary mt-2 mb-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
+        <div>
+        <button class="btn btn-primary btn mt-2 mb-2 ms-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
+        </div>
     </div>
     <div class="modal fade" id="{{tab.name}}_scansPickModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -174,6 +176,7 @@ Vulnerabilities
     }
     let counter = 1
     let objCount = 0
+    let isRestoringState = false
     var {{ tab.name }}_table = new Tabulator('#table-{{ tab.name }}', {
                             layout: "fitColumns",
                             ajaxURL: "/api/v1/{{ tab.base_url }}",
@@ -203,10 +206,17 @@ Vulnerabilities
                         {{ '{' }} title: "Actions", formatter: buttons_formatter_{{ tab.name }}, headerSort: false{{ '}' }}]
                         })
     function buttons_formatter_{{ tab.name }}(cell, formatterParams, onRendered) {
-        return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="currentResourceID='${cell.getRow().getData().id}';getVulnerabilities_{{ tab.name }}('${cell.getRow().getData().id}');">${i18next.t('Vulnerabilities')} (${cell.getRow().getData().vuln_count})</button>`;
+        return `<button class='btn btn-outline-primary btn-sm btnIdentifyClass' id="{{tab.name}}-edit-${cell.getRow().getData().id}" onclick="selectResourceAndLoadVulns('${cell.getRow().getData().id}')">${i18next.t('Vulnerabilities')} (${cell.getRow().getData().vuln_count})</button>`;
     }
 
-    createFilterPanel({ 
+    function selectResourceAndLoadVulns(resourceID) {
+        currentResourceID = resourceID;
+        const currentPage = {{ tab.name }}_table.getPage();
+        getVulnerabilities_{{ tab.name }}(resourceID);
+        saveVulnerabilityState(resourceID, 0, currentPage);
+    }
+
+    initFilterPanelContainer({ 
         tableId: '#table-{{ tab.name }}',
         tableVar: {{ tab.name }}_table, 
         fields: [
@@ -310,21 +320,35 @@ Vulnerabilities
         }
     }
 
+    function saveVulnerabilityState(resourceID, vulnIndex, tablePage) {
+        sessionStorage.setItem('vulnState', JSON.stringify({
+            resourceID: resourceID,
+            vulnIndex: vulnIndex,
+            tablePage: tablePage
+        }));
+    }
+
     var myCarousel = document.getElementById('carouselCards')
-    myCarousel.addEventListener('slide.bs.carousel', function (event) {
-        if (event.direction == "left"){
-            counter++
-        }else{
-            counter--
+
+    myCarousel.addEventListener('slid.bs.carousel', function () {
+        if (isRestoringState) return;
+
+        const items = document.querySelectorAll('#carouselCards .carousel-item');
+        const activeIndex = Array.prototype.findIndex.call(items, item => item.classList.contains('active'));
+
+        const newIndex = (activeIndex >= 0) ? activeIndex : 0;
+
+        counter = newIndex + 1;
+        objCount = items.length || objCount;
+        if (objCount === 0) {
+            document.getElementById("cardsCounter").innerHTML = `0 / 0`;
+        } else {
+            document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`;
         }
-        if (counter > objCount){
-            counter = 1
-        }
-        if (counter < 1){
-            counter = objCount
-        }
-        document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`
-      })
+
+        const currentPage = {{ tab.name }}_table.getPage();
+        saveVulnerabilityState(currentResourceID, newIndex, currentPage);
+    });
 
     async function setVulnerabilityStatus_{{ tab.name }}(id, status){
         resp = await fetch(`/api/v1/{{ tab.base_url }}-vulnerability/${id}/confirm`,{method:'put',headers: {"Content-Type": "application/json",},body:JSON.stringify({"status":status})})
@@ -438,6 +462,53 @@ Vulnerabilities
             }
         }
       };
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        const savedState = sessionStorage.getItem('vulnState');
+        if (savedState) {
+            try {
+                const { resourceID, vulnIndex, tablePage } = JSON.parse(savedState);
+
+                setTimeout(async () => {
+                    try {
+                        await {{ tab.name }}_table.setPage(tablePage);
+                    } catch (e) {
+                        await {{ tab.name }}_table.setPage(1);
+                    }
+
+                    setTimeout(async () => {
+                        const row = {{ tab.name }}_table.getRow(resourceID);
+                        if (row) {
+                            row.getElement().scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                            currentResourceID = resourceID;
+                            await getVulnerabilities_{{ tab.name }}(resourceID);
+
+                            setTimeout(() => {
+                                const items = document.querySelectorAll('#carouselCards .carousel-item');
+                                if (items.length > 0 && vulnIndex >= 0 && vulnIndex < items.length) {
+                                    isRestoringState = true;
+                                    const carousel = bootstrap.Carousel.getOrCreateInstance(myCarousel);
+                                    carousel.to(vulnIndex);
+                                    const onFirstSlid = function () {
+                                        isRestoringState = false;
+                                        myCarousel.removeEventListener('slid.bs.carousel', onFirstSlid);
+                                    };
+                                    myCarousel.addEventListener('slid.bs.carousel', onFirstSlid);
+                                    counter = vulnIndex + 1;
+                                    objCount = items.length;
+                                    document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`;
+                                }
+                            }, 150);
+                        }
+                    }, 150);
+                }, 300);
+            } catch (e) {
+                console.warn("Failed to restore vulnerability state:", e);
+                sessionStorage.removeItem('vulnState');
+            }
+        }
+    });
 </script>
 
 <script>

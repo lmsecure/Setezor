@@ -168,11 +168,12 @@ class WappalyzerParser:
             cpe23 = soft.pop("cpe23", "") or ""
             soft_version_hash_string = vendor_name + product + version + build + cpe23
 
-            if vendor_name in vendors:
+            if vendor_name and vendor_name in vendors:
                 vendor_obj = vendors.get(vendor_name)
             else:
                 vendor_obj = Vendor(name=vendor_name)
-                vendors[vendor_name] = vendor_obj
+                if vendor_name:
+                    vendors[vendor_name] = vendor_obj
                 result.append(vendor_obj)
                      
             if software_hash_string in softwares:

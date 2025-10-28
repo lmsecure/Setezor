@@ -1,8 +1,11 @@
 from setezor.tasks.base_job import BaseJob
 from setezor.models.target import Target
+from setezor.restructors.nmap_scan_task_restructor import NmapScanTaskRestructor
 
 
 class NmapScanTask(BaseJob):
+    logs_folder = "nmap_logs"
+    restructor = NmapScanTaskRestructor
 
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):

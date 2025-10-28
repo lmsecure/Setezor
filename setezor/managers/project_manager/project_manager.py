@@ -7,7 +7,7 @@ import pickle
 from fastapi import Depends, HTTPException, UploadFile
 
 from setezor.managers.hash_manager import UploadFileHashManager
-from setezor.managers.project_manager.files import FilesStructure, ProjectFolders
+from setezor.managers.project_manager.files import ProjectFolders
 from setezor.models import Project, UserProject, Object, Agent, AgentInProject, Domain, DNS
 from setezor.models.agent_parent_agent import AgentParentAgent
 from setezor.models.asn import ASN
@@ -177,8 +177,6 @@ class ProjectManager:
         ProjectFolders.create(project_id=new_project.id)
         project_path = ProjectFolders.get_path_for_project(
             project_id=new_project.id)
-        scan_project_path = os.path.join(project_path, new_scan.id)
-        FilesStructure.create_project_structure(scan_project_path)
 
         return new_project
 

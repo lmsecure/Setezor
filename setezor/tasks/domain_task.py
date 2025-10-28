@@ -1,8 +1,10 @@
 from setezor.tasks.base_job import BaseJob
 from setezor.models.target import Target
+from setezor.restructors.sd_find_scan_task_restructor import Sd_Scan_Task_Restructor
 
 
 class SdFindTask(BaseJob):
+    restructor = Sd_Scan_Task_Restructor
 
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):

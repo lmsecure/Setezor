@@ -19,12 +19,13 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         return res.all()
 
     async def exists(self, software_obj: Software):
-        dct = software_obj.model_dump()
-        filtered_keys = {k:v for k, v in dct.items() if v is not None}
-        if not filtered_keys: return False
-        stmt = select(Software).filter_by(**filtered_keys)
-        res = await self._session.exec(stmt)
-        return res.first()
+        if not software_obj.product:
+            return
+        product = software_obj.product
+        stmt = select(Software).filter(Software.product == product)
+        result = await self._session.exec(stmt)
+        result_obj = result.first()
+        return result_obj
 
     async def get_software_version_cpe(self, project_id: str, scans: List[str]):
 
@@ -48,17 +49,20 @@ class SoftwareRepository(SQLAlchemyRepository[Software]):
         software_version_cpe = await self._session.exec(query)
         return software_version_cpe.fetchall()
 
-    async def get_top_products(self, project_id: str, last_scan_id: str):
+    async def get_top_products(self, project_id: str, scans: List[str]):
+        addition = [L4Software.scan_id == scan_id for scan_id in scans]
+
         top_products: Select = select(
             Software.product, 
             func.count(Software.product).label("count")
         ).join(SoftwareVersion, Software.id == SoftwareVersion.software_id)\
         .join(L4Software, L4Software.software_version_id == SoftwareVersion.id)\
-        .filter(L4Software.project_id == project_id, L4Software.scan_id == last_scan_id)\
+        .filter(L4Software.project_id == project_id)\
         .filter(Software.product != None)\
         .filter(Software.product != "")\
+        .filter(or_(*addition))\
         .group_by(Software.product)\
-        .order_by(desc("count"))\
+        .order_by(desc("count"))
 
         result = await self._session.exec(top_products)
         top_products_result = result.all()

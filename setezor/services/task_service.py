@@ -1,11 +1,17 @@
 import json
 
+import os
+import base64
+
 from typing import List
-from setezor.tools.websocket_manager import WS_MANAGER
-from setezor.schemas.task import TaskStatus, WebSocketMessage
+from setezor.schemas.task import TaskStatus
 from setezor.services.base_service import BaseService
-from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import Task
+from setezor.tasks.base_job import BaseJob
+
+from fastapi import HTTPException
+
+from setezor.settings import PATH_PREFIX
 
 
 class TasksService(BaseService):
@@ -42,3 +48,29 @@ class TasksService(BaseService):
             task_id = await self._uow.task.edit_one(id=id, data={"status": status, "traceback": traceback})
             await self._uow.commit()
         return task_id
+
+    async def get_task_raw_log(self, project_id: str, task_id: str) -> tuple[str, bytes]:
+        async with self._uow:
+            task = await self._uow.task.find_one(id=task_id, project_id=project_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        task_class = BaseJob.get_task_by_class_name(task.created_by)
+        if not task_class.logs_folder:
+            raise HTTPException(status_code=404, detail="Log file not found")
+        file_path = os.path.join(PATH_PREFIX, "projects", project_id, task.scan_id, task_class.logs_folder)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Log file not found")
+        files = os.listdir(file_path)
+        file_data = b''
+        file_name = ""
+        for file_n in files:
+            if task.id in file_n:
+                with open(os.path.join(file_path, file_n), 'rb') as f:
+                    file_name = f"{task.id}.{file_n.rpartition('.')[-1]}"
+                    file_data = f.read()
+                break
+        else:
+            raise HTTPException(status_code=404, detail="Log file not found")
+        if not file_data:
+            raise HTTPException(status_code=400, detail="Log file is empty")
+        return file_name, base64.b64encode(file_data)

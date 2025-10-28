@@ -1,8 +1,11 @@
 from .base_job import BaseJob
 from setezor.models.target import Target
+from setezor.restructors.masscan_scan_task_restructor import MasscanTaskRestructor
 
 
 class MasscanScanTask(BaseJob):
+    logs_folder = "masscan_logs"
+    restructor = MasscanTaskRestructor
 
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):

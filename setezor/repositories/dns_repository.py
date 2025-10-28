@@ -1,6 +1,7 @@
 from typing import List
 from sqlmodel import func, literal, select
 from sqlalchemy.orm import aliased
+from sqlalchemy import collate
 
 from setezor.models import DNS, IP, Domain, WhoIsDomain, WhoIsIP
 from setezor.db.entities import DNSTypes
@@ -131,10 +132,13 @@ class DNSRepository(SQLAlchemyRepository[DNS]):
                 
                 if field in field_mapping:
                     column = subquery.c[field]
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)

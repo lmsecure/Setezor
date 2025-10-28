@@ -14,4 +14,5 @@ class NetworkRepository(SQLAlchemyRepository[Network]):
                                       Network.scan_id==network_obj.scan_id
                                       )
         result = await self._session.exec(stmt)
-        return result.first()
+        result_obj = result.first()
+        return result_obj

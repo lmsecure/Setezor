@@ -88,20 +88,23 @@ class AnalyticsService(BaseService):
                 'data': [i[3] for i in result]
             }
 
-    async def get_top_products(self, project_id: str) -> List:
+    async def get_top_products(self, project_id: str, scans: list[str] | None = None) -> List:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.software.get_top_products(project_id=project_id, last_scan_id=last_scan_id)
+            if not scans:
+                scans = [await self.get_last_scan_id(project_id=project_id)]
+            return await self._uow.software.get_top_products(project_id=project_id, scans=scans)
 
-    async def get_top_ports(self, project_id: str) -> List:
+    async def get_top_ports(self, project_id: str, scans: list[str] | None = None) -> List:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.port.get_top_ports(project_id=project_id, last_scan_id=last_scan_id)
+            if not scans:
+                scans = [await self.get_last_scan_id(project_id=project_id)]
+            return await self._uow.port.get_top_ports(project_id=project_id, scans=scans)
 
-    async def get_top_protocols(self, project_id: str) -> List:
+    async def get_top_protocols(self, project_id: str, scans: list[str] | None = None) -> List:
         async with self._uow:
-            last_scan_id = await self.get_last_scan_id(project_id=project_id)
-            return await self._uow.port.get_top_protocols(project_id=project_id, last_scan_id=last_scan_id)
+            if not scans:
+                scans = [await self.get_last_scan_id(project_id=project_id)]
+            return await self._uow.port.get_top_protocols(project_id=project_id, scans=scans)
 
     async def get_vulnerabilities(self, scans: list[str], project_id: str) -> Dict:
         async with self._uow:
@@ -521,129 +524,138 @@ class AnalyticsService(BaseService):
         
     @classmethod
     def get_l4_software_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                    {'field': 'ipaddr', 'title': 'IP'},
-                    {'field': 'domain', 'title': 'DOMAIN'},
-                    {'field': 'port', 'title': 'PORT'},
-                    {'field': 'state', 'title': 'STATE'},
-                    {'field': 'protocol', 'title': 'PROTOCOL'},
-                    {'field': 'service_name', 'title': 'SERVICE_NAME'},
-                    {'field': 'vendor', 'title': 'VENDOR'},
-                    {'field': 'product', 'title': 'PRODUCT'},
-                    {'field': 'version', 'title': 'VERSION'},
-                    {'field': 'os', 'title': 'OS'},
-                    {'field': 'is_secured', 'title': 'is_secured'},
-                ]
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+            {'field': 'state', 'title': 'STATE', "headerFilter": "input", "headerFilterPlaceholder": "Search state..."},
+            {'field': 'protocol', 'title': 'PROTOCOL', "headerFilter": "input", "headerFilterPlaceholder": "Search protocol..."},
+            {'field': 'service_name', 'title': 'SERVICE_NAME', "headerFilter": "input", "headerFilterPlaceholder": "Search service..."},
+            {'field': 'vendor', 'title': 'VENDOR', "headerFilter": "input", "headerFilterPlaceholder": "Search vendor..."},
+            {'field': 'product', 'title': 'PRODUCT', "headerFilter": "input", "headerFilterPlaceholder": "Search product..."},
+            {'field': 'version', 'title': 'VERSION', "headerFilter": "input", "headerFilterPlaceholder": "Search version..."},
+            {'field': 'os', 'title': 'OS', "headerFilter": "input", "headerFilterPlaceholder": "Search OS..."},
+            {'field': 'is_secured', 'title': 'is_secured', "headerFilter":"select", "headerFilterPlaceholder": "Select true/false", 'headerFilterParams': {'values': [True, False]}},
+        ]
 
     @classmethod
     def get_ip_mac_port_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                    {'field': 'ipaddr', 'title': 'IP'},
-                    {'field': 'port', 'title': 'PORT'},
-                    {'field': 'mac', 'title': 'MAC'}]
-
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+            {'field': 'mac', 'title': 'MAC', "headerFilter": "input", "headerFilterPlaceholder": "Search MAC..."},
+        ]
+    
     @classmethod
     def get_domain_ip_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                {'field': 'ipaddr', 'title': 'IP'},
-                {'field': 'port', 'title': 'PORT'},
-                {'field': 'domain', 'title': 'DOMAIN'},
-                {'field': 'DNS', 'title': 'DNS'},
-                {'field': 'value', 'title': 'VALUE'},
-                {'field': 'extra_data', 'title': 'EXTRA DATA'},
-                {'field': 'comments', 'title': 'Comments'},
-                ]
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+            {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'DNS', 'title': 'DNS', "headerFilter": "input", "headerFilterPlaceholder": "Search DNS..."},
+            {'field': 'value', 'title': 'VALUE', "headerFilter": "input", "headerFilterPlaceholder": "Search value..."},
+            {'field': 'extra_data', 'title': 'EXTRA DATA', "headerFilter": "input", "headerFilterPlaceholder": "Search extra data..."},
+            {'field': 'comments', 'title': 'Comments'},
+        ]
 
 
     @classmethod
     def get_soft_vuln_link_columns_tabulator_data(cls) -> list:
-        return [{'field': 'vendor', 'title': 'VENDOR'},
-                       {'field': 'product', 'title': 'PRODUCT'},
-                       {'field': 'type', 'title': 'TYPE'},
-                       {'field': 'version', 'title': 'VERSION'},
-                       {'field': 'build', 'title': 'BUILD'},
-                       {'field': 'cpe23', 'title': 'CPE23'},
-                       {'field': 'vulnerability_name', 'title': 'VULN_NAME'},
-                       {'field': 'cve', 'title': 'CVE'},
-                       {'field': 'cwe', 'title': 'CWE'},
-                       {'field': 'link', 'title': 'LINK'}]
+        return [
+            {'field': 'vendor', 'title': 'VENDOR', "headerFilter": "input", "headerFilterPlaceholder": "Search vendor..."},
+            {'field': 'product', 'title': 'PRODUCT', "headerFilter": "input", "headerFilterPlaceholder": "Search product..."},
+            {'field': 'type', 'title': 'TYPE', "headerFilter": "input", "headerFilterPlaceholder": "Search type..."},
+            {'field': 'version', 'title': 'VERSION', "headerFilter": "input", "headerFilterPlaceholder": "Search version..."},
+            {'field': 'build', 'title': 'BUILD', "headerFilter": "input", "headerFilterPlaceholder": "Search build..."},
+            {'field': 'cpe23', 'title': 'CPE23', "headerFilter": "input", "headerFilterPlaceholder": "Search CPE..."},
+            {'field': 'vulnerability_name', 'title': 'VULN_NAME', "headerFilter": "input", "headerFilterPlaceholder": "Search vuln name..."},
+            {'field': 'cve', 'title': 'CVE', "headerFilter": "input", "headerFilterPlaceholder": "Search CVE..."},
+            {'field': 'cwe', 'title': 'CWE', "headerFilter": "input", "headerFilterPlaceholder": "Search CWE..."},
+            {'field': 'link', 'title': 'LINK', "headerFilter": "input", "headerFilterPlaceholder": "Search link..."},
+        ]
 
     @classmethod
     def get_auth_credentials_tabulator_data(cls) -> list:
-        return [       {'field': 'id', 'title': 'ID'},
-                       {'field': 'ipaddr', 'title': 'IP'},
-                       {'field': 'domain', 'title': 'DOMAIN'},
-                       {'field': 'port', 'title': 'PORT'},
-                       {'field': 'login', 'title': 'LOGIN'},
-                       {'field': 'password', 'title': 'PASSWORD'},
-                       {'field': 'permissions', 'title': 'PERMISSIONS'},
-                       {'field': 'parameters', 'title': 'PARAMETERS'}]
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+            {'field': 'login', 'title': 'LOGIN', "headerFilter": "input", "headerFilterPlaceholder": "Search login..."},
+            {'field': 'password', 'title': 'PASSWORD', "headerFilter": "input", "headerFilterPlaceholder": "Search password..."},
+            {'field': 'permissions', 'title': 'PERMISSIONS', "headerFilter": "number", "headerFilterPlaceholder": "Search permissions..."},
+            {'field': 'parameters', 'title': 'PARAMETERS', "headerFilter": "input", "headerFilterPlaceholder": "Search parameters..."},
+        ]
     
     @classmethod
     def get_dns_a_screenshot_columns_tabulator_data(cls) -> list:
-        return [{'field': 'id', 'title': 'ID'},
-                {'field': 'domain', 'title': 'DOMAIN'},
-                {'field': 'ip', 'title': 'IP'},
-                {'field': 'screenshot_path', 'title': 'SCREENSHOT_PATH'},
-                {'field': 'created_at', 'title': 'CREATED_AT'}]
-    
+        return [
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'ip', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'screenshot_path', 'title': 'SCREENSHOT_PATH'},
+            {'field': 'created_at', 'title': 'CREATED_AT', "headerFilter": "input", "headerFilterPlaceholder": "Search date..."},
+        ]
 
     # Пинтестеры
 
     @classmethod
     def get_whois_columns_tabulator_data(cls) -> list:
         return [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ipaddr','title': 'WHOIS IP'},
-                {'field': 'domain', 'title': 'WHOIS Domain'},
-                {'field': 'range_ip', 'title': 'Range IP'},
-                {'field': 'AS', 'title': 'AS'},
-                {'field': 'org-name', 'title': 'Org-name'},
-                {'field': 'data', 'title': 'Data'},
-                ]
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'WHOIS IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'domain', 'title': 'WHOIS Domain', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'range_ip', 'title': 'Range IP', "headerFilter": "input", "headerFilterPlaceholder": "Search range..."},
+            {'field': 'AS', 'title': 'AS', "headerFilter": "input", "headerFilterPlaceholder": "Search AS..."},
+            {'field': 'org-name', 'title': 'Org-name', "headerFilter": "input", "headerFilterPlaceholder": "Search org..."},
+            {'field': 'data', 'title': 'Data', "headerFilter": "input", "headerFilterPlaceholder": "Search data..."},
+        ]
     
     @classmethod
     def get_web_columns_tabulator_data(cls) -> list:
         return [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ipaddr','title': 'IP'},
-                {'field': 'domain', 'title': 'Domain'},
-                {'field': 'port', 'title': 'Ports'},
-                {'field': 'code', 'title': 'Code'},
-                {'field': 'product', 'title': 'Software'},
-                {'field': 'waf', 'title': 'WAF'},
-                {'field': 'is_vuln_scanned', 'title': 'Is vuln scanned'},
-                {'field': 'link', 'title': 'Vuln and exploits'},
-                {'field': 'comments', 'title': 'Comments'},
-                ]
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'domain', 'title': 'Domain', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'port', 'title': 'Ports', "headerFilter": "number", "headerFilterPlaceholder": "Search ports...", "headerFilterFunc": "like"},
+            {'field': 'code', 'title': 'Code', "headerFilter": "input", "headerFilterPlaceholder": "Search code..."},
+            {'field': 'product', 'title': 'Software', "headerFilter": "input", "headerFilterPlaceholder": "Search software..."},
+            {'field': 'waf', 'title': 'WAF', "headerFilter": "input", "headerFilterPlaceholder": "Search WAF..."},
+            {'field': 'is_vuln_scanned', 'title': 'Is vuln scanned', "headerFilter":"select", "headerFilterPlaceholder": "Select true/false", 'headerFilterParams': {'values': [True, False]}},
+            {'field': 'link', 'title': 'Vuln and exploits'},
+            {'field': 'comments', 'title': 'Comments'},
+        ]
     
     @classmethod
     def get_api_columns_tabulator_data(cls) -> list:
         return [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ipaddr','title': 'IP'},
-                {'field': 'domain', 'title': 'Domain'},
-                {'field': 'api_dir', 'title': 'API Dir'},
-                {'field': 'api_endpoint', 'title': 'API Endpoint'},
-                {'field': 'http_method', 'title': 'HTTP Method'},
-                {'field': 'body', 'title': 'body'},
-                {'field': 'comments', 'title': 'Comments'},
-                ]
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'domain', 'title': 'Domain', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'api_dir', 'title': 'API Dir', "headerFilter": "input", "headerFilterPlaceholder": "Search dir..."},
+            {'field': 'api_endpoint', 'title': 'API Endpoint', "headerFilter": "input", "headerFilterPlaceholder": "Search endpoint..."},
+            {'field': 'http_method', 'title': 'HTTP Method', "headerFilter": "input", "headerFilterPlaceholder": "GET/POST..."},
+            {'field': 'body', 'title': 'body', "headerFilter": "input", "headerFilterPlaceholder": "Search body..."},
+            {'field': 'comments', 'title': 'Comments'},
+        ]
     
     @classmethod
     def get_cve_columns_tabulator_data(cls) -> list:
         return [
-                {'field': 'id', 'title': 'ID'},
-                {'field': 'ipaddr','title': 'IP'},
-                {'field': 'product', 'title': 'Software'},
-                {'field': 'version', 'title': 'Version'},
-                {'field': 'cve', 'title': 'CVE'},
-                {'field': 'cvss3', 'title': 'CVSS'},
-                {'field': 'cvss3_score', 'title': 'CVSS rating'},
-                {'field': 'link', 'title': 'Exploit/POC URL'},
-                {'field': 'cve_url', 'title': 'CVE URL'},
-                {'field': 'vulnerability_type', 'title': 'Vulnerability type'},
-                ]
+            {'field': 'id', 'title': 'ID'},
+            {'field': 'ipaddr', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
+            {'field': 'product', 'title': 'Software', "headerFilter": "input", "headerFilterPlaceholder": "Search software..."},
+            {'field': 'version', 'title': 'Version', "headerFilter": "input", "headerFilterPlaceholder": "Search version..."},
+            {'field': 'cve', 'title': 'CVE', "headerFilter": "input", "headerFilterPlaceholder": "Search CVE..."},
+            {'field': 'cvss3', 'title': 'CVSS', "headerFilter": "input", "headerFilterPlaceholder": "Search CVSS..."},
+            {'field': 'cvss3_score', 'title': 'CVSS rating', "headerFilter": "input", "headerFilterPlaceholder": "Search score..."},
+            {'field': 'link', 'title': 'Exploit/POC URL', "headerFilter": "input", "headerFilterPlaceholder": "Search exploit..."},
+            {'field': 'cve_url', 'title': 'CVE URL', "headerFilter": "input", "headerFilterPlaceholder": "Search CVE URL..."},
+            {'field': 'vulnerability_type', 'title': 'Vulnerability type', "headerFilter": "input", "headerFilterPlaceholder": "Search type..."},
+        ]
 
 
 

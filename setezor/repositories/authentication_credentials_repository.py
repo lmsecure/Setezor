@@ -1,6 +1,6 @@
 
 from typing import List
-from sqlalchemy import func
+from sqlalchemy import func, collate
 from setezor.repositories import SQLAlchemyRepository
 from setezor.models import Authentication_Credentials, Port, IP, Domain, DNS
 
@@ -85,10 +85,13 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
                 
                 if field in field_mapping:
                     column = field_mapping[field]
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(column.desc())
+                        order_clauses.append(sorted_column.desc())
                     else:
-                        order_clauses.append(column.asc())
+                        order_clauses.append(sorted_column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)

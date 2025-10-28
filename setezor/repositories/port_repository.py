@@ -45,7 +45,10 @@ class PortRepository(SQLAlchemyRepository[Port]):
             if port_obj.service_name and obj.service_name != port_obj.service_name:
                 return
         else:
-            obj.service_name = port_obj.service_name
+            if port_obj.service_name:
+                obj.service_name = port_obj.service_name
+            else:
+                return
         if obj.state:
             if port_obj.state and obj.state != port_obj.state:
                 obj.state = port_obj.state
@@ -73,8 +76,11 @@ class PortRepository(SQLAlchemyRepository[Port]):
         return result.one()
 
 
-    async def get_top_ports(self, project_id: str, last_scan_id: str):
-        top_ports: Select = select(self.model.port, func.count(self.model.port).label("count")).group_by(self.model.port).order_by(desc("count")).filter(self.model.project_id == project_id, self.model.scan_id == last_scan_id)
+    async def get_top_ports(self, project_id: str, scans: list[str]):
+        top_ports: Select = select(self.model.port, func.count(self.model.port).label("count")).group_by(self.model.port).order_by(desc("count")).filter(self.model.project_id == project_id)
+        
+        addition = [self.model.scan_id == scan_id for scan_id in scans]
+        top_ports = top_ports.filter(or_(*addition))
         result = await self._session.exec(top_ports)
         top_ports_result = result.all()
         return top_ports_result
@@ -113,12 +119,14 @@ class PortRepository(SQLAlchemyRepository[Port]):
         .join(SoftwareType, Software.type_id == SoftwareType.id)\
         .join(Port, Port.id == L4Software.l4_id)\
         .join(Vendor, Vendor.id == Software.vendor_id)\
-        .filter(Port.id == l4_id)
+        .filter(Port.id == l4_id, Port.project_id == project_id)
         result = await self._session.exec(stmt)
         return result.all()
 
 
-    async def get_top_protocols(self, project_id: str, last_scan_id: str):
+    async def get_top_protocols(self, project_id: str, scans: list[str]):
+        addition = [Port.scan_id == scan_id for scan_id in scans]
+
         stmt_protocols = select(
                 case(
                     (Port.protocol.is_(None), "unknown"),
@@ -126,7 +134,8 @@ class PortRepository(SQLAlchemyRepository[Port]):
                     else_=Port.protocol
                 ).label("labels"),
                 func.count(Port.protocol).label("values")
-            ).filter(Port.project_id == project_id, Port.scan_id == last_scan_id)\
+            ).filter(Port.project_id == project_id)\
+            .filter(or_(*addition))\
             .group_by(Port.protocol)\
             .order_by(func.count(Port.protocol).desc()) 
 

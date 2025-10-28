@@ -7,11 +7,21 @@ from setezor.logger import logger
 
 
 class BaseJob(Job):
+    logs_folder = None
+    restructor = None
+
     def __init__(self, scheduler, name: str, update_graph: bool = True, agent_id: int | None = None):
         super().__init__(None, scheduler)  # FixMe add custom exception handler
         self.agent_id = agent_id
         self.name = name
         self.update_graph = update_graph
+
+    @classmethod
+    def get_task_by_class_name(cls, name: str):
+        for model_class in BaseJob.__subclasses__():
+            if model_class.__name__ == name:
+                return model_class
+        return None
 
     @classmethod
     @abstractmethod

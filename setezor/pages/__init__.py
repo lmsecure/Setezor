@@ -1,8 +1,12 @@
 from fastapi.templating import Jinja2Templates
-from setezor.settings import TEMPLATES_DIR_PATH
+from setezor.settings import TEMPLATES_DIR_PATH, DEV
 
 
 TEMPLATES_DIR = Jinja2Templates(directory=TEMPLATES_DIR_PATH)
+
+TEMPLATES_DIR.env.globals.update({
+    "DEV_MODE": DEV.mode
+})
 
 from setezor.pages.auth import router as router_auth
 from setezor.pages.registration import router as router_registration

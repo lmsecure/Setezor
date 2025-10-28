@@ -28,7 +28,7 @@ async def add_domain(
         project_id=project_id,
         domain=domain,
     )
-    created_dns_a = await dns_a_service.add_dns_a(
+    created_dns_a = await dns_a_service.add_dns(
         ip_id=id,
         target_domain_id=created_domain.id,
         target_ip_id=ip_id

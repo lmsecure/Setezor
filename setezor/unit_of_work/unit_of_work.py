@@ -1,5 +1,3 @@
-from typing import Optional
-
 from setezor.repositories import \
     TasksRepository, \
     MACRepository, \
@@ -40,7 +38,6 @@ from setezor.repositories import \
     L4SoftwareVulnerabilityScreenshotRepository, \
     NetworkSpeedTestRepository
 
-
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel.ext.asyncio.session import AsyncSession
 from setezor.logger import logger
@@ -61,6 +58,7 @@ from setezor.repositories.setting_repository import SettingRepository
 from setezor.repositories.software_type_repository import SoftwareTypeRepository
 from setezor.repositories.software_version_repository import SoftwareVersionRepository
 from setezor.repositories.dns_a_screenshot_repository import DNS_A_ScreenshotRepository
+from setezor.settings import DEV
 
 class UnitOfWork:
     def __init__(self, session_factory):
@@ -77,7 +75,7 @@ class UnitOfWork:
             logger.error(exc_value)
             await self.rollback()
         await self.__session.close()
-        return False
+        return DEV.mode
 
     async def commit(self):
         await self.__session.commit()
@@ -253,7 +251,7 @@ class UnitOfWork:
     @property
     def organization_department(self) -> OrganizationDepartmentRepository: return OrganizationDepartmentRepository(self.__session)
 
-    def get_repo_by_model(self, model) -> Optional[SQLAlchemyRepository]:
+    def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():
             if repository.model is model:
                 return repository(self.__session)

@@ -118,6 +118,14 @@
                 myModal.hide();
             }
         };
+
+        const cpeModal = document.getElementById('cpeModalWindow');
+        cpeModal.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('cpeFinder');
+            if (form) form.reset();
+            const list = document.getElementById('cpeList');
+            if (list) list.innerHTML = '';
+        });
     });
 </script>
 

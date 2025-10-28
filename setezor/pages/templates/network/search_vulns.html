@@ -150,8 +150,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('searchVulnsModalWindow'), {
+        const modalEl = document.getElementById('searchVulnsModalWindow');
+        const myModal = new bootstrap.Modal(modalEl, {
             keyboard: false
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById("tokenSaveFormSearchVulns")?.reset();
+            document.getElementById("tokenSearchFormSearchVulns")?.reset();
+            document.getElementById("vulnsList").innerHTML = "";
+            document.getElementById("softName").innerHTML = "";
         });
 
         document.querySelector(".btn-close").onclick = function () {
@@ -159,7 +167,7 @@
         };
 
         window.onclick = function (event) {
-            if (event.target === document.getElementById("searchVulnsModalWindow")) {
+            if (event.target === modalEl) {
                 myModal.hide();
             }
         };
