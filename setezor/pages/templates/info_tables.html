@@ -19,10 +19,6 @@
 {{ masscan.masscan_modal_to_info_tabs('full_masscan') }} 
 {% import'network/cert.html' as cert%}
 {{ cert.cert_script_modal_to_info_tabs() }} 
-{%import 'network/whois.html' as whois%} 
-{{ whois.whois_script_modal_to_info_tabs() }} 
-{% import 'network/domains.html' as domains%} 
-{{ domains.domains_script_modal_to_info_tabs() }}
 {% import'network/dns_a_screenshot.html' as dns_a_screenshot%}
 {{dns_a_screenshot.dns_a_screenshot_script_modal_to_info_tabs() }}
 {{ dns_a_screenshot.dns_a_screenshot_full_modal() }}
@@ -81,14 +77,18 @@
               </div>
               <div class="me-1">
                 <select class="form-select h-100" id="filter-field-{{tab.name}}">
-                  {% for col in tab.columns %} {% if col.title != "ID" %}
+                  {% for col in tab.columns %} 
+                  {% if col.title != "ID" and 
+                  col.title != "Vulnerabilities" and 
+                  col.title != "Comments"%}
                   <option value="{{ col.field }}">{{ col.title }}</option>
-                  {% endif %} {%endfor%}
+                  {% endif %} 
+                  {%endfor%}
                 </select>
               </div>
 
               <div class="me-1">
-                <select class="form-select h-100" id="filter-type-{{tab.name}}">
+                <select class="form-select" id="filter-type-{{tab.name}}" style="width: 80px;">
                   <option value="=">=</option>
                   <option value="<">&lt;</option>
                   <option value="<=">&lt;=</option>
@@ -123,7 +123,7 @@
                 data-i18n="Clear"
               ></button>
 
-              {% if tab.name == 'software' or tab.name == 'ip_mac_port' %}
+              {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'open_ports' %}
               <div class="me-1">
                 <select
                   class="form-select h-100"
@@ -134,10 +134,13 @@
                   <option value="masscan">masscan</option>
                   <option value="cert">cert</option>
                   <option value="whois">whois</option>
+                  <option value="brute">brute</option>
+                  <option value="ip-info">ip-info</option>
+                  <option value="resolve">resolve</option>
                 </select>
               </div>
-              {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip'
-              or tab.name == 'dns_a_screenshot' %}
+              {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip' or tab.name == 'ip_domain'
+              or tab.name == 'dns_a_screenshot' or tab.name == 'web_screenshot' %}
               <div class="me-1">
                 <select
                   class="form-select h-100"
@@ -147,14 +150,19 @@
                   <option value="nmap">nmap</option>
                   <option value="masscan">masscan</option>
                   <option value="cert">cert</option>
-                  <option value="domains">domains</option>
+                  <option value="recon">recon</option>
                   <option value="whois">whois</option>
+                  <option value="brute">brute</option>
+                  <option value="ip-info">ip-info</option>
+                  <option value="resolve">resolve</option>
                   <option value="dns_a_screenshot">dns_a_screenshot</option>
                 </select>
               </div>
               {% endif %} {% if tab.name == 'software' or tab.name ==
               'ip_mac_port' or tab.name == 'domain_ip' or tab.name ==
-              'auth_credentials' or tab.name == 'dns_a_screenshot' %}
+              'auth_credentials' or tab.name == 'dns_a_screenshot' or 
+              tab.name == 'open_ports' or tab.name == 'ip_domain' or 
+              tab.name == 'web_screenshot'%}
               <button
                 class="btn btn-success"
                 style="width: 7rem"
@@ -212,12 +220,27 @@
                 </ul>
               </div>
             </div>
-            <button
-              class="btn btn-primary mb-2 mt-2"
-              data-bs-toggle="modal"
-              data-bs-target="#{{tab.name}}_scansPickModal"
-              data-i18n="Pick scans"
-            ></button>
+            <div class="d-flex mb-2 mt-2">
+                <div class="dropdown" style="width: 10rem;">
+                    <button class="btn btn-light border dropdown-toggle w-100 text-start"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            id="scope-selector-btn-{{tab.name}}">
+                        Select scopes...
+                    </button>
+
+                    <ul class="dropdown-menu w-100" id="scope-selector-{{tab.name}}">
+                        <!-- сюда динамически добавятся чекбоксы -->
+                    </ul>
+                </div>
+                <button
+                    class="btn btn-primary me-1 ml-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#{{tab.name}}_scansPickModal"
+                    data-i18n="Pick scans"
+                ></button>
+            </div>
             <div
               class="modal fade"
               id="{{tab.name}}_scansPickModal"
@@ -581,6 +604,239 @@
           }
           </script>
           <script>
+            const {{tab.name}}_SCOPE_KEY_FIELDS = {{ 
+                (
+                '["ipaddr"]' if tab.name in ['ip_info', 'cve'] else
+                '["ipaddr", "port", "protocol"]' if tab.name in ['open_ports'] else
+                '["ipaddr", "domain"]' if tab.name in ['ip_domain'] else
+                '["ipaddr", "domain", "port"]' if tab.name in ['web', 'auth_credentials'] else
+                '["ip", "domain"]' if tab.name in ['web_screenshot']
+                ) | safe 
+            }};
+
+            if (!window["scopeColorCache"]) {
+                window["scopeColorCache"] = {};
+            }
+
+            function randomPastelColor() {
+                const hue = Math.floor(Math.random() * 360);
+                const saturation = 45 + Math.floor(Math.random() * 15);
+                const lightness = 80 + Math.floor(Math.random() * 8);
+
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            }
+
+            async function {{tab.name}}loadScopeIps() {
+                const selectedScopeIds = Array.from(
+                    document.querySelectorAll(`.scope-checkbox-{{tab.name}}:checked`)
+                ).map(cb => String(cb.value));
+
+                {{tab.name}}_table.getRows().forEach(row => {
+                    row.getElement().className = row.getElement().className
+                        .split(' ')
+                        .filter(cls => !cls.startsWith('in-scope-row-'))
+                        .join(' ');
+                });
+
+                if (selectedScopeIds.length === 0) {
+                    window["{{tab.name}}_inScopeCompositeKeyToId"] = new Map();
+                    window["{{tab.name}}_inScopeIpToIds"] = new Map();
+                    window["{{tab.name}}_inScopeDomainToIds"] = new Map();
+                    window["{{tab.name}}_inScopePortToIds"] = new Map();
+                    {{tab.name}}_table.getRows().forEach(row => {
+                        row.getElement().title = '';
+                    });
+                    document.getElementById(`scope-style-{{tab.name}}`)?.remove();
+                    return;
+                }
+
+                const compositeKeyToScopeIds = new Map();
+                const ipToScopeIds = new Map();
+                const domainToScopeIds = new Map();
+                const portToScopeIds = new Map();
+
+                const scopeIdToIndex = {};
+                selectedScopeIds.forEach((sid, idx) => {
+                    scopeIdToIndex[String(sid)] = idx;
+                });
+                
+                const scopeColors = window["scopeColorCache"];
+                selectedScopeIds.forEach(scopeId => {
+                    scopeId = String(scopeId);
+                    if (!scopeColors[scopeId]) {
+                        scopeColors[scopeId] = randomPastelColor();
+                    }
+                });
+
+                for (let i = 0; i < selectedScopeIds.length; i++) {
+                    const scopeId = selectedScopeIds[i];
+                    try {
+                        const resp = await fetch(`/api/v1/scope/${scopeId}/targets`);
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data = await resp.json();
+                        const items = data.data ?? [];
+
+                        for (const t of items) {
+                            const parts = [];
+                            if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("ipaddr") && t.ip) {
+                                parts.push(t.ip.split('/')[0]);
+                            }
+                            if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("port") && t.port != null) {
+                                parts.push(String(t.port));
+                            }
+                            if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("domain") && t.domain) {
+                                parts.push(t.domain);
+                            }
+                            if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("protocol") && t.protocol) {
+                                parts.push(t.protocol);
+                            }
+                            const compositeKey = parts.join('|');
+                            if (compositeKey) {
+                                if (!compositeKeyToScopeIds.has(compositeKey)) {
+                                    compositeKeyToScopeIds.set(compositeKey, new Set());
+                                }
+                                compositeKeyToScopeIds.get(compositeKey).add(String(scopeId));
+                            }
+
+                            if (t.ip) {
+                                const cleanIp = t.ip.split('/')[0];
+                                if (!ipToScopeIds.has(cleanIp)) ipToScopeIds.set(cleanIp, new Set());
+                                ipToScopeIds.get(cleanIp).add(String(scopeId));
+                            }
+                            if (t.domain) {
+                                if (!domainToScopeIds.has(t.domain)) domainToScopeIds.set(t.domain, new Set());
+                                domainToScopeIds.get(t.domain).add(String(scopeId));
+                            }
+                            if (t.port) {
+                                const portStr = String(t.port);
+                                if (!portToScopeIds.has(portStr)) portToScopeIds.set(portStr, new Set());
+                                portToScopeIds.get(portStr).add(String(scopeId));
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Ошибка загрузки скоупа:", scopeId, err);
+                        // не прерываем цикл, продолжаем с другими скоупами
+                    }
+                }
+
+                window["{{tab.name}}_inScopeCompositeKeyToId"] = compositeKeyToScopeIds;
+                window["{{tab.name}}_inScopeIpToIds"] = ipToScopeIds;
+                window["{{tab.name}}_inScopeDomainToIds"] = domainToScopeIds;
+                window["{{tab.name}}_inScopePortToIds"] = portToScopeIds;
+
+                {{tab.name}}_table.getRows().forEach(row => {
+                    const data = row.getData();
+                    const parts = [];
+                    if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("ipaddr") && data.ipaddr) parts.push(data.ipaddr);
+                    if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("port") && data.port != null) parts.push(String(data.port));
+                    if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("domain") && data.domain) parts.push(data.domain);
+                    if ({{tab.name}}_SCOPE_KEY_FIELDS.includes("protocol") && data.protocol) parts.push(data.protocol);
+                    const key = parts.join('|');
+
+                    const scopeIds = compositeKeyToScopeIds.get(key);
+                    const el = row.getElement();
+
+                    el.className = el.className
+                        .split(' ')
+                        .filter(cls => !cls.startsWith('in-scope-row-'))
+                        .join(' ');
+
+                    if (scopeIds && scopeIds.size > 0) {
+                        const sidArray = Array.from(scopeIds).map(String);
+
+                        const idx = scopeIdToIndex[sidArray[0]];
+                        if (idx !== undefined) {
+                            el.classList.add(`in-scope-row-${idx}`);
+                        }
+
+                        const names = sidArray.map(sid => window.globalScopeIdToName[sid]);
+                        el.title = names.join(", ");
+                    } else {
+                        el.title = '';
+                    }
+                });
+
+                document.getElementById(`scope-style-{{tab.name}}`)?.remove();
+                const style = document.createElement('style');
+                style.id = `scope-style-{{tab.name}}`;
+
+                let css = "";
+                selectedScopeIds.forEach((sid) => {
+                    const s = String(sid);
+                    const idx = scopeIdToIndex[s];
+                    const color = scopeColors[s];
+                    if (idx !== undefined && color) {
+                        css += `
+                            .tabulator .tabulator-row.in-scope-row-${idx},
+                            .tabulator .tabulator-row.in-scope-row-${idx} .tabulator-cell {
+                                background-color: ${color} !important;
+                            }
+                        `;
+                    }
+                });
+
+                style.textContent = css;
+                document.head.appendChild(style);
+            }
+
+
+            function updateScopeSelectDisplay(tabName) {
+                const checkboxes = document.querySelectorAll(`.scope-checkbox-${tabName}`);
+                const btn = document.getElementById(`scope-selector-btn-${tabName}`);
+
+                const selectedIds = [];
+                const selectedNames = [];
+
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedIds.push(cb.value);
+                        selectedNames.push(cb.parentElement.textContent.trim());
+                    }
+                });
+
+                if (selectedNames.length === 0) {
+                    btn.textContent = "Select scopes...";
+                } else if (selectedNames.length <= 3) {
+                    btn.textContent = selectedNames.join(", ");
+                } else {
+                    btn.textContent = `${selectedNames.length} selected`;
+                }
+
+                window[`${tabName}loadScopeIps`]();
+            }
+
+            async function loadScopesForTab(tabName) {
+                const resp = await fetch('/api/v1/scope');
+                const scopes = await resp.json();
+                const container = document.getElementById(`scope-selector-${tabName}`);
+                const btn = document.getElementById(`scope-selector-btn-${tabName}`);
+
+                container.innerHTML = "";
+
+                (scopes.data ?? scopes).forEach(scope => {
+                    container.insertAdjacentHTML('beforeend', `
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="scope-checkbox-${tabName}" value="${scope.id}">
+                                ${scope.name}
+                            </label>
+                        </li>
+                    `);
+                });
+
+                container.querySelectorAll(`.scope-checkbox-${tabName}`).forEach(cb => {
+                    cb.addEventListener("change", () => updateScopeSelectDisplay(tabName));
+                });
+                
+                window.globalScopeIdToName = {};
+                scopes.forEach(s => {
+                    window.globalScopeIdToName[String(s.id)] = s.name;
+                });
+            }
+
+            loadScopesForTab("{{tab.name}}");
+          </script>
+          <script>
                 async function getScans(){
                 let resp = await fetch("/api/v1/scan");
                 let scans = await resp.json();
@@ -612,14 +868,14 @@
                     selectedScans.push(scan_id);
                 }
 
-                software_table.setData(software_table.getAjaxUrl(), {}, "GET");
-                ip_mac_port_table.setData(ip_mac_port_table.getAjaxUrl(), {}, "GET");
-                domain_ip_table.setData(domain_ip_table.getAjaxUrl(), {}, "GET");
-                dns_a_screenshot_table.setData(dns_a_screenshot_table.getAjaxUrl(), {}, "GET");
-                soft_vuln_link_table.setData(soft_vuln_link_table.getAjaxUrl(), {}, "GET");
+                ip_info_table.setData(ip_info_table.getAjaxUrl(), {}, "GET");
+                open_ports_table.setData(open_ports_table.getAjaxUrl(), {}, "GET");
+                ip_domain_table.setData(ip_domain_table.getAjaxUrl(), {}, "GET");
+                web_table.setData(web_table.getAjaxUrl(), {}, "GET");
+                web_screenshot_table.setData(web_screenshot_table.getAjaxUrl(), {}, "GET");
+                cve_table.setData(cve_table.getAjaxUrl(), {}, "GET");
                 auth_credentials_table.setData(auth_credentials_table.getAjaxUrl(), {}, "GET");
             }
-
                             function {{tab.name}}get_selected_rows() {
                                 let chk = document.querySelectorAll('[id^="{{tab.name}}-checkbox"]');
                                 let t_rows = {{tab.name}}_table.getData();
@@ -668,17 +924,26 @@
                                     case "masscan":
                                         masscan_script_modal_to_info_tabs(rows, 'full_masscan');
                                         break;
-                                    case "domains":
-                                        domains_script_modal_to_info_tabs(rows)
+                                    case "recon":
+                                        window.recon_script_modal_to_info_tabs(rows);
                                         break;
                                     case "cert":
                                         cert_script_modal_to_info_tabs(rows)
                                         break;
                                     case "whois":
-                                        whois_script_modal_to_info_tabs(rows)
+                                        window.whois_script_modal_to_info_tabs(rows)
                                         break;
                                     case "dns_a_screenshot":
                                         dns_a_screenshot_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "brute":
+                                        brute_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "ip-info":
+                                        ip_info_script_modal_to_info_tabs(rows)
+                                        break;
+                                    case "resolve":
+                                        resolve_script_modal_to_info_tabs(rows)
                                         break;
                                     default:
                                         break;
@@ -695,32 +960,27 @@
                             }
 
                             function {{tab.name}}ApplyFilter() {
-                              let field = document.getElementById('filter-field-{{tab.name}}').value.toString();
-                              let type = document.getElementById('filter-type-{{tab.name}}').value.toString();
-                              let value = document.getElementById('filter-value-{{tab.name}}').value.toString();
+                                let field = document.getElementById('filter-field-{{tab.name}}').value.toString();
+                                let type = document.getElementById('filter-type-{{tab.name}}').value.toString();
+                                let value = document.getElementById('filter-value-{{tab.name}}').value.toString();
 
-                              if (field && value) {
-                                  if (value.includes(',')) {
-                                      const values = value.split(',').map(v => v.trim()).filter(v => v !== '');
-                                      
-                                      if (values.length > 1) {
-                                          const filters = values.map(val => ({
-                                              field: field,
-                                              type: type,
-                                              value: val
-                                          }));
-                                          
-                                          const currentFilters = {{tab.name}}_table.getFilters();
-                                          const newFilters = [...currentFilters, ...filters];
-                                          
-                                          {{tab.name}}_table.setFilter(newFilters);
-                                          return;
-                                      }
-                                  }
-                                  
-                                  {{tab.name}}_table.setFilter(field, type, value);
-                              }
-                          }
+                                if (!field || !value) {
+                                    {{tab.name}}_table.clearFilter();
+                                    return;
+                                }
+
+                                let filters = [];
+
+                                if (value.includes(',')) {
+                                    const values = value.split(',').map(v => v.trim()).filter(v => v !== '');
+                                    filters = values.map(val => ({ field, type, value: val }));
+                                } else {
+                                    filters = [{ field, type, value }];
+                                }
+
+                                {{tab.name}}_table.setFilter(filters);
+                            }
+                            
                             function {{tab.name}}getCurrentFilters() {
                                 return {{tab.name}}_table.getFilters();
                             }
@@ -734,7 +994,7 @@
 
 
                             function getAllScreenshotsFromTable() {
-                                const tableData = dns_a_screenshot_table.getData();
+                                const tableData = web_screenshot_table.getData();
                                 return tableData.filter(row => row.screenshot_path).map(row => ({
                                     screenshot_path: row.screenshot_path,
                                     domain: row.domain,
@@ -1030,6 +1290,85 @@
                                                 View ${links.length} links
                                             </button>`;
                                 }
+                            }
+
+                            function vulnsBtnFormatter(cell) {
+                                const row = cell.getRow().getData();
+                                const ip = row.ipaddr || row.ip || '';
+                                const port = row.port || '';
+                                const domain = row.domain || '';
+                                const buttonText = `${i18next.t("Vulerabilities")}`;
+                                return `<button class="btn btn-sm btn-outline-danger vulns-btn"
+                                                onclick="showVulnsModal('${ip}', '${port}', '${domain}')">
+                                        ${buttonText}
+                                        </button>`;
+                            }
+
+                            function showVulnsModal(ip, port, domain) {
+                                const url = `/api/v1/vulns?ip=${encodeURIComponent(ip)}${port ? '&port=' + encodeURIComponent(port) : ''}${domain ? '&domain=' + encodeURIComponent(domain) : ''}`;
+
+                                const modalEl = document.getElementById('vulnsModal');
+                                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                                const content = document.getElementById('vulnsModalContent');
+
+                                content.innerHTML = `
+                                    <div class="d-flex justify-content-center">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden" data-i18n="Loading..."></span>
+                                        </div>
+                                    </div>
+                                `;
+                                modal.show();
+
+                                fetch(url)
+                                    .then(r => {
+                                        if (!r.ok) throw new Error(r.statusText);
+                                        return r.json();
+                                    })
+                                    .then(data => {
+                                        if (!data || !data.vulnerabilities || data.vulnerabilities.length === 0) {
+                                            content.innerHTML = `<div class="alert alert-info" data-i18n="No vulnerabilities found"></div>`;
+                                            return;
+                                        }
+
+                                        let html = `<div class="list-group">`;
+                                        data.vulnerabilities.forEach(vuln => {
+                                            html += `
+                                                <div class="list-group-item">
+                                                    <div class="d-flex justify-content-between">
+                                                        <strong>${vuln.cve || vuln.id || '—'}</strong>
+                                                        <small class="text-muted">${vuln.cvss_score ? 'CVSS: ' + vuln.cvss_score : ''}</small>
+                                                    </div>
+                                                    <p class="mb-1">${vuln.description || ''}</p>
+                                                    ${vuln.link ? `<a href="${vuln.link}" target="_blank" class="text-primary">${vuln.link}</a>` : ''}
+                                                </div>
+                                            `;
+                                        });
+                                        html += `</div>`;
+                                        content.innerHTML = html;
+                                    })
+                                    .catch(err => {
+                                        console.error("Vuln fetch error:", err);
+                                        content.innerHTML = `<div class="alert alert-danger" data-i18n="Failed to load vulnerabilities">: ${err.message}</div>`;
+                                    });
+                            }
+
+                            function descrFormatter(cell) {
+                                const rawData = cell.getValue();
+                                if (!rawData) return "";
+
+                                try {
+                                    const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
+                                    const descr = data.descr;
+                                    if (Array.isArray(descr)) {
+                                        return descr.map(line => `<div>${line}</div>`).join('');
+                                    } else if (typeof descr === "string") {
+                                        return `<div>${descr}</div>`;
+                                    }
+                                } catch (e) {
+                                    console.warn("Failed to parse 'data' field:", e);
+                                }
+                                return "";
                             }
 
                             function commentsFormatter(cell) {
@@ -1412,9 +1751,9 @@
                                 return menu;
                             };
                             var {{tab.name}}_table = new Tabulator('#{{tab.name}}-table', {
-                                {% if tab.name == 'auth_credentials' or tab.name == 'web' %}
+                                {% if tab.name == 'auth_credentials' or tab.name == 'web' or tab.name == 'cve' %}
                                     layout: "fitDataStretch",
-                                {% elif  tab.name =='soft_vuln_link' or tab.name == 'whois' or tab.name == 'software' or tab.name == 'cve' %}
+                                {% elif  tab.name =='soft_vuln_link' or tab.name == 'whois' or tab.name == 'software' %}
                                     layout: "fitDataTable",
                                 {% else %}
                                     layout: "fitColumns",
@@ -1447,10 +1786,11 @@
                                 paginationSizeSelector: [5, 10, 25, 50, 100, 250, 500],
                                 validationMode: 'highlight',
                                 columns: [
-                                    {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'domain_ip' or tab.name == 'auth_credentials' or tab.name == 'dns_a_screenshot' %}
+                                    {% if tab.name == 'open_ports' or tab.name == 'ip_domain' or tab.name == 'web_screenshot' or tab.name == 'auth_credentials'%}
                                         {
                                             title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>",
                                             field: "selected",
+                                            width: 100,
                                             formatter: checkbox_formatter,
                                             headerSort: false,
                                             headerTooltip: "Click to select/deselect all",
@@ -1485,6 +1825,10 @@
                                         title: "{{col.title}}",
                                         field: "{{col.field}}",
                                         headerMenu: headerMenu
+                                        {% if col.tooltip %},
+                                        tooltip: true {% endif %}
+                                        {% if col.width %},
+                                        width: "{{col.width}}"{% endif %}
                                         {% if col.headerFilter %},
                                         headerFilter: "{{col.headerFilter}}"{% endif %}
                                         {% if col.headerFilterPlaceholder %},
@@ -1499,13 +1843,19 @@
                                         headerSort: false,
                                         {% endif %}
                                         {% if col.field == 'data' %},
+                                        formatter: descrFormatter,
                                         hozAlign: "left",
+                                        headerSort: false,
                                         {% endif %}
                                         {% if col.field == 'link' %},
                                         formatter: modalLinkFormatter,
                                         {% endif %}
                                         {% if col.field == 'comments' %},
                                         formatter: commentsFormatter,
+                                        headerSort: false,
+                                        {% endif %}
+                                        {% if col.field == 'vulns_btn' %},
+                                        formatter: vulnsBtnFormatter,
                                         headerSort: false,
                                         {% endif %}
                                         
@@ -1529,6 +1879,9 @@
                                             input.title = input.placeholder;
                                         }
                                     });
+                                });
+                                {{tab.name}}_table.on('dataLoaded', () => {                              
+                                    {{tab.name}}loadScopeIps();                          
                                 });
           </script>
         </div>
@@ -1560,7 +1913,6 @@
     });
   </script>
   <script>
-    /* Убирает у столбцов port и permissions фильтр like (потому что поля интовые) */
     const columnSelects = document.querySelectorAll('[id^="filter-field-"]');
     columnSelects.forEach((columnSelect) => {
       columnSelect.addEventListener("change", function (event) {
@@ -1574,7 +1926,8 @@
         );
 
         if (
-          event.target.value === "permissions"
+            event.target.value === "port" ||
+            event.target.value === "permissions"
         ) {
           if (likeOption) {
             likeOption.remove();
@@ -1594,6 +1947,42 @@
   <script>
     var message_sock = create_websocket(`/api/v1/project/ws`, "{{user_id}}");
   </script>
-  
+  <!-- Модалка уязвимостей -->
+    <div class="modal fade" id="vulnsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" data-i18n="Vulnerabilities"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="vulnsModalContent">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border" role="status">
+                    <span class="visually-hidden" data-i18n="Loading..."></span>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.nav-link[data-bs-toggle="tab"]').forEach(btn => {
+                btn.addEventListener('shown.bs.tab', (e) => {
+                    const target = e.target.getAttribute('data-bs-target');
+                    const tabName = target?.replace('#tab-content-', '');
+                    if (!tabName) return;
+                    if (typeof window[`${tabName}loadScopeIps`] === 'function') {
+                        window[`${tabName}loadScopeIps`]();
+                    }
+                });
+            });
+        });
+    </script>
   {% endblock content %}
 </div>

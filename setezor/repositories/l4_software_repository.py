@@ -121,15 +121,19 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
 
         if sort_params:
             order_clauses = []
+            numeric_fields = {"port"}
             for sort_item in sort_params:
                 field = sort_item.get("field")
                 direction = sort_item.get("dir", "asc")
                 
                 if field in field_mapping:
                     column = field_mapping[field]
-                    sorted_column = func.coalesce(column, "")
-                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
-                        sorted_column = collate(sorted_column, 'C')
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
+                        if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                            sorted_column = collate(sorted_column, 'C')                
                     if direction == "desc":
                         order_clauses.append(sorted_column.desc())
                     else:
@@ -495,6 +499,8 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
+                if (field == 'port'):
+                    value = int(value)
                 
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
@@ -516,13 +522,17 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
         
         if sort_params:
             order_clauses = []
+            numeric_fields = {"port"} 
             for sort_item in sort_params:
                 field = sort_item.get("field")
                 direction = sort_item.get("dir", "asc")
                 
                 if field in field_mapping:
                     column = field_mapping[field]
-                    sorted_column = func.coalesce(column, "")
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
                     if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
                         sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":

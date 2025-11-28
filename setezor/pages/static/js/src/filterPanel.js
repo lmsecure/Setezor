@@ -1,5 +1,31 @@
 let filterPanelCounter = 0;
 
+const NUMERIC_FIELDS = new Set(['port']);
+
+function getOperatorSelectHtml(field) {
+    const options = [];
+    options.push('<option value="=">=</option>');
+    options.push('<option value="!=">!=</option>');
+
+    if (NUMERIC_FIELDS.has(field)) {
+        options.push('<option value="<"><</option>');
+        options.push('<option value="<="><=</option>');
+        options.push('<option value=">">></option>');
+        options.push('<option value=">=">>=</option>');
+    } else {
+        options.push('<option value="like">like</option>');
+    }
+
+    return options.join('');
+}
+
+function updateOperatorSelect(tableId, index, field) {
+    const operatorSelect = document.getElementById(`filter-type-${tableId}-${index}`);
+    if (operatorSelect) {
+        operatorSelect.innerHTML = getOperatorSelectHtml(field);
+    }
+}
+
 function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allowMultipleFilters = false }) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -17,6 +43,7 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
            </button>`
         : '';
 
+    const initialField = fields.length > 0 ? fields[0].field : '';
     container.innerHTML = `
         <div class="d-flex flex-wrap align-items-start gap-2 mt-2 w-100" id="main-filter-row-${tableId}">
             <!-- Первая панель -->
@@ -25,13 +52,7 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
                     ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
                 </select>
                 <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-0">
-                    <option value="=">=</option>
-                    <option value="<"><</option>
-                    <option value="<="><=</option>
-                    <option value=">">></option>
-                    <option value=">=">>=</option>
-                    <option value="!=">!=</option>
-                    <option value="like">like</option>
+                    ${getOperatorSelectHtml(initialField)}
                 </select>
                 <input id="filter-value-${tableId}-0" class="form-control form-control" type="text" placeholder="${valuePlaceholder}" style="width: 15rem;"/>
             </div>
@@ -57,6 +78,13 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
         </div>
     `;
 
+    const firstFieldSelect = document.getElementById(`filter-field-${tableId}-0`);
+    if (firstFieldSelect) {
+        firstFieldSelect.addEventListener('change', function () {
+            updateOperatorSelect(tableId, 0, this.value);
+        });
+    }
+
     const extraWrapper = document.getElementById(`extra-filter-panels-${tableId}`);
 
     if (allowMultipleFilters) {
@@ -81,19 +109,14 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
 }
 
 function addExtraFilterPanel(wrapper, tableId, fields, index) {
+    const initialField = fields.length > 0 ? fields[0].field : '';
     const panelHTML = `
         <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-${index}">
             <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-${index}">
                 ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
             </select>
             <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-${index}">
-                <option value="=">=</option>
-                <option value="<"><</option>
-                <option value="<="><=</option>
-                <option value=">">></option>
-                <option value=">=">>=</option>
-                <option value="!=">!=</option>
-                <option value="like">like</option>
+                ${getOperatorSelectHtml(initialField)}
             </select>
             <input id="filter-value-${tableId}-${index}" class="form-control form-control" type="text" placeholder="${i18next.t('value1, value2')}" style="width: 15rem;"/>
             <button type="button" class="btn btn btn-outline-danger" title="${i18next.t('Remove filter')}" 
@@ -103,6 +126,12 @@ function addExtraFilterPanel(wrapper, tableId, fields, index) {
         </div>
     `;
     wrapper.insertAdjacentHTML('beforeend', panelHTML);
+    const newFieldSelect = document.getElementById(`filter-field-${tableId}-${index}`);
+    if (newFieldSelect) {
+        newFieldSelect.addEventListener('change', function () {
+            updateOperatorSelect(tableId, index, this.value);
+        });
+    }
 }
 
 function removeFilterPanel(tableId, index) {
@@ -133,6 +162,13 @@ function applyAllFilters(tableId, tableVar) {
     });
 
     tableVar.setFilter(allFilters);
+}
+
+function removeFilterPanel(tableId, index) {
+    const panel = document.getElementById(`${tableId}-filter-panel-${index}`);
+    if (panel) {
+        panel.remove();
+    }
 }
 
 function clearAllFilters(tableId, tableVar) {

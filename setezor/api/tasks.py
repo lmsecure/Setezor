@@ -16,7 +16,8 @@ from setezor.schemas.task import DNSTaskPayload, \
     MasscanLogTaskPayload, \
     SnmpBruteCommunityStringPayload, \
     SpeedTestTaskPayload, \
-    DNSAScreenshotTaskPayload
+    DNSAScreenshotTaskPayload, \
+    IPInfoTaskPayload
 from setezor.services import TasksService
 from setezor.managers import TaskManager
 from setezor.services.project_service import ProjectService
@@ -36,6 +37,7 @@ from setezor.tasks.cve_refresh_task import CVERefresher
 from setezor.tasks.snmp_brute_community_string_task import SnmpBruteCommunityStringTask
 from setezor.tasks.speed_test_task import SpeedTestClientTask, SpeedTestServerTask
 from setezor.tasks.dns_a_screenshot_task import DNS_A_ScreenshotTask
+from setezor.tasks.ip_info_task import IpInfoTask
 from setezor.schemas.roles import Roles
 
 
@@ -51,7 +53,7 @@ async def list_tasks(
     status: Literal["STARTED", "REGISTERED", "IN QUEUE", "FINISHED", "FAILED", "CREATED", "CANCELED"],
     project_id: str = Depends(get_current_project),
     _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> List[Task]:
+) -> list[dict]:
     tasks = await tasks_service.list(project_id=project_id, status=status)
     return tasks
 
@@ -324,4 +326,19 @@ async def create_dns_a_screenshot_task(
         project_id=project_id,
         scan_id=scan_id,
         **dns_a_screenshot_task_payload.model_dump()
+    )
+
+
+@router.post("/ip_info_task", status_code=201)
+async def create_ip_info_task(
+    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
+    payload: IPInfoTaskPayload,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project)
+) -> None:
+    await task_manager.create_job(
+        job=IpInfoTask,
+        scan_id=scan_id,
+        project_id=project_id,
+        **payload.model_dump()
     )

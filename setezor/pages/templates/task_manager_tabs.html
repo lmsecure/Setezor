@@ -81,6 +81,14 @@
         }
     }
 
+    function formatDateTime(dateTimeStr) {
+        if (!dateTimeStr) return '';
+        const d = new Date(dateTimeStr);
+        const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        return `<div style="line-height:1.3; padding-top:6px; padding-bottom:2px; margin:0; text-align:center;">${date}<br>${time}</div>`;
+    }
+
     async function getTasks(status) {
         let resp = await fetch(`/api/v1/task?status=${status}`);
         let tasks = await resp.json();
@@ -102,42 +110,43 @@
     <tr>
         <td ">${task.id}</td>
         <td ">${task.created_by}</td>
-        <td ">${task.created_at}</td>
-        ${task.status == "FINISHED" ? `<td ">${task.updated_at}</td>` : ``}
+        <td ">${formatDateTime(task.created_at)}</td>
+        ${status == "FINISHED" ? `<td ">${formatDateTime(task.updated_at)}</td>` : ``}
         <td colspan="2"><textarea class="form-control" disabled rows="3">${task.params}</textarea></td>
         <td style="text-align: center; vertical-align: middle;">
-            ${task.created_by === "ScapySniffTask"
-                ? (task.status === "FINISHED" || task.status === "FAILED")
-                    ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
-                        <span class="bi bi-download text-success"></span>
-                    </button>`
-                    : ``
-                : task.created_by === "ScapyLogsTask"
-                    ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
-                        <span class="bi bi-download text-success"></span>
-                    </button>`
-                    : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLog('${task.id}')">
-                        <span class="bi bi-file-earmark-text"></span>
-                    </button>`
-            }
+            ${task.is_log
+                ? task.created_by === "ScapySniffTask"
+                    ? (status === "FINISHED" || status === "FAILED")
+                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
+                            <span class="bi bi-download text-success"></span>
+                        </button>`
+                        : ``
+                    : task.created_by === "ScapyLogsTask"
+                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
+                            <span class="bi bi-download text-success"></span>
+                        </button>`
+                        : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLog('${task.id}')">
+                            <span class="bi bi-file-earmark-text"></span>
+                        </button>`
+                : ``}
         </td>
         <td style="text-align: center;vertical-align: middle;">
-            ${task.status == "STARTED" 
+            ${status == "STARTED" 
                 ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>` 
                 : ``}
-            ${task.status == "CREATED" 
+            ${status == "CREATED" 
                 ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>` 
                 : ``}
-            ${task.status == "REGISTERED" 
+            ${status == "REGISTERED" 
                 ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>` 
                 : ``}
-            ${task.status == "FAILED" ? `<textarea class="form-control" disabled rows="3">${task.traceback}</textarea>` : ``}
+            ${status == "FAILED" ? `<textarea class="form-control" disabled rows="3">${task.error}</textarea>` : ``}
         </td>
     </tr>`;
         }

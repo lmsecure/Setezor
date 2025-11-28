@@ -127,3 +127,8 @@ header {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+.tabulator .tabulator-row.in-scope-row,
+.tabulator .tabulator-row.in-scope-row .tabulator-cell {
+    background-color: #9ed1ad !important;
+}

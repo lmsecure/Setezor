@@ -1,78 +1,78 @@
 {% from "modals/base_modal_framework.html" import tools_header_bar, target_scope_database_tabs, base_input, base_scope, base_database_content, base_modal %}
 
-{# Специфичная логика для whois инструмента - основная часть #}
-{% macro whois_main_content() %}
+{# Специфичная логика для ip-info инструмента - основная часть #}
+{% macro ip_info_main_content() %}
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="startWhoisFind" 
-            onclick="processWhoisTask()" data-i18n="Start"></button>
+    <button type="button" class="btn btn-primary w-50" id="startIpInfoFind" 
+            onclick="processIpInfoTask()" data-i18n="Start"></button>
 </div>
 {% endmacro %}
 
-{# Форма whois инструмента #}
-{% macro whois_form() %}
-<form id="WhoisForm" name="WhoisFormName" class="needs-validation" novalidate>
+{# Форма ip-info инструмента #}
+{% macro ip_info_form() %}
+<form id="IpInfoForm" name="IpInfoFormName" class="needs-validation" novalidate>
     {{ target_scope_database_tabs(
-        prefix='whois-',
-        simple_content=base_input(prefix='whois', placeholder_i18n='Domain name or IP'),
-        scope_content=base_scope(prefix='whois-'),
+        prefix='ip-info-',
+        simple_content=base_input(prefix='ip-info', placeholder_i18n='Enter the IP address'),
+        scope_content=base_scope(prefix='ip-info-'),
         database_content=base_database_content(
-            prefix='whois-',
-            table_id='whoisDatabaseTargetsTable',
-            selected_targets_var='selectedWhoisTargets'
+            prefix='ip-info-',
+            table_id='ipInfoDatabaseTargetsTable',
+            selected_targets_var='selectedIpInfoTargets'
         )
     ) }}
-    {{ whois_main_content() }}
+    {{ ip_info_main_content() }}
 </form>
 {% endmacro %}
 
-{# Глобальные функции для whois tool #}
-{% macro whois_global_functions() %}
-window.show_whoisModalWindow = function() {
-    console.log('show_whoisModalWindow called');
-    resetWhoisModal();
-    const myModal = new bootstrap.Modal(document.getElementById('whoisModalWindow'));
+{# Глобальные функции для ip-info tool #}
+{% macro ip_info_global_functions() %}
+window.show_ipInfoModalWindow = function() {
+    console.log('show_ipInfoModalWindow called');
+    resetIpInfoModal();
+    const myModal = new bootstrap.Modal(document.getElementById('ipInfoModalWindow'));
     myModal.show();
     
     // Инициализируем таблицу при открытии модалки
     setTimeout(() => {
-        initWhoisDatabase();
+        initIpInfoDatabase();
         // Загружаем список scope
-        get_scope_list('whois-');
+        get_scope_list('ip-info-');
     }, 100);
 }
 
-window.close_whoisModalWindow = function() {
-    const myModal = bootstrap.Modal.getInstance(document.getElementById('whoisModalWindow'));
+window.close_ipInfoModalWindow = function() {
+    const myModal = bootstrap.Modal.getInstance(document.getElementById('ipInfoModalWindow'));
     if (myModal) {
         myModal.hide();
     }
 }
 
-// Функция сброса для whois модального окна
-window.resetWhoisModal = function() {
-    const whoisForm = document.getElementById('WhoisForm');
-    if (whoisForm) whoisForm.reset();
+// Функция сброса для ip-info модального окна
+window.resetIpInfoModal = function() {
+    const ipInfoForm = document.getElementById('IpInfoForm');
+    if (ipInfoForm) ipInfoForm.reset();
 
-    const container = document.getElementById('whoisInputContainer');
+    const container = document.getElementById('ip-infoInputContainer');
     if (container) container.innerHTML = '';
 
-    const originalInput = document.getElementById('whoisinput');
+    const originalInput = document.getElementById('ip-infoinput');
     if (originalInput) originalInput.value = '';
 
-    const dropdownButton = document.getElementById('whois-ScopeDropdown');
+    const dropdownButton = document.getElementById('ip-info-ScopeDropdown');
     if (dropdownButton) dropdownButton.textContent = 'Select scope';
     
-    window.selectedScope_whois = '';
-    window.selectedWhoisTargets = {};
+    window.selectedScope_ip_info = '';
+    window.selectedIpInfoTargets = {};
 
     // Сброс вкладок
-    const simpleTab = document.getElementById('whois-simple-tab');
-    const scopeTab = document.getElementById('whois-scope-tab');
-    const databaseTab = document.getElementById('whois-database-tab');
-    const simpleMode = document.getElementById('whois-simple-mode');
-    const scopeMode = document.getElementById('whois-scope-mode');
-    const databaseMode = document.getElementById('whois-database-mode');
+    const simpleTab = document.getElementById('ip-info-simple-tab');
+    const scopeTab = document.getElementById('ip-info-scope-tab');
+    const databaseTab = document.getElementById('ip-info-database-tab');
+    const simpleMode = document.getElementById('ip-info-simple-mode');
+    const scopeMode = document.getElementById('ip-info-scope-mode');
+    const databaseMode = document.getElementById('ip-info-database-mode');
     
     if (simpleTab && scopeTab && databaseTab && simpleMode && scopeMode && databaseMode) {
         simpleTab.classList.add('active');
@@ -84,65 +84,65 @@ window.resetWhoisModal = function() {
     }
     
     // Очищаем выбор в таблице
-    if (window.whoisDatabaseTargetsTable && typeof window.whoisDatabaseTargetsTable.deselectRow === 'function') {
-        window.whoisDatabaseTargetsTable.deselectRow();
+    if (window.ipInfoDatabaseTargetsTable && typeof window.ipInfoDatabaseTargetsTable.deselectRow === 'function') {
+        window.ipInfoDatabaseTargetsTable.deselectRow();
     }
 }
 
 // Инициализация таблицы при открытии модалки
-window.initWhoisDatabase = function() {
-    window.whoisDatabaseTargetsTable = initDatabaseTable(
-        'whoisDatabaseTargetsTable', 
-        'selectedWhoisTargets', 
-        'whois-SelectedCount'
+window.initIpInfoDatabase = function() {
+    window.ipInfoDatabaseTargetsTable = initDatabaseTable(
+        'ipInfoDatabaseTargetsTable', 
+        'selectedIpInfoTargets', 
+        'ip-info-SelectedCount'
     );
     
     // Добавляем обработчик для rowSelectionChanged
-    if (window.whoisDatabaseTargetsTable) {
-        window.whoisDatabaseTargetsTable.on("rowSelectionChanged", function(data, rows) {
+    if (window.ipInfoDatabaseTargetsTable) {
+        window.ipInfoDatabaseTargetsTable.on("rowSelectionChanged", function(data, rows) {
             console.log('Row selection changed:', rows.length, 'rows selected');
-            window.selectedWhoisTargets = {};
+            window.selectedIpInfoTargets = {};
             
             rows.forEach(row => {
                 const rowData = row.getData();
                 const uniqueKey = `${rowData.ipaddr}:${rowData.domain}`;
-                window.selectedWhoisTargets[uniqueKey] = {
+                window.selectedIpInfoTargets[uniqueKey] = {
                     ip: rowData.ipaddr,
                     domain: rowData.domain,
                     port: rowData.port
                 };
             });
             
-            console.log('Updated selectedWhoisTargets:', window.selectedWhoisTargets);
+            console.log('Updated selectedIpInfoTargets:', window.selectedIpInfoTargets);
         });
     }
 }
 
-// Бизнес-логика whois инструмента
-window.sendWhoisTask = function(params) {
-    console.log('Sending WHOIS task:', params);
-    fetch('/api/v1/task/whois_task', {
+// Бизнес-логика ip-info инструмента
+window.sendIpInfoTask = function(params) {
+    console.log('Sending IP-INFO task:', params);
+    fetch('/api/v1/task/ip_info_task', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(params)
     }).then(response => {
-        console.log('WHOIS task response:', response.status);
+        console.log('IP-INFO task response:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
     }).then(data => {
-        console.log('WHOIS task success:', data);
+        console.log('IP-INFO task success:', data);
     }).catch(error => {
-        console.error('WHOIS task error:', error);
+        console.error('IP-INFO task error:', error);
     });
 }
 
-window.handleWhoisSimpleMode = function(params) {
+window.handleIpInfoSimpleMode = function(params) {
     const targets = [];
-    const targetInputs = document.querySelectorAll('#WhoisForm [id^="whoisinput"]');
+    const targetInputs = document.querySelectorAll('#IpInfoForm [id^="ip-infoinput"]');
     
     for (const input of targetInputs) {
         if (input.value.trim() !== '') {
@@ -159,33 +159,33 @@ window.handleWhoisSimpleMode = function(params) {
             agent_id: getAgent()
         };
 
-        sendWhoisTask(targetParams);
+        sendIpInfoTask(targetParams);
     }
 }
 
-window.handleWhoisScopeMode = function(params) {
+window.handleIpInfoScopeMode = function(params) {
     // ИСПРАВЛЕНО: используем правильное имя переменной
-    if (!window['selectedScope_whois-'] || window['selectedScope_whois-'] === '') {
-        alert('Please select a scope first');
+    if (!window['selectedScope_ip-info-'] || window['selectedScope_ip-info-'] === '') {
+        create_toast('Warning', 'Please select a scope first', 'warning');
         return;
     }
     
-    params['scope_id'] = window['selectedScope_whois-'];
+    params['scope_id'] = window['selectedScope_ip-info-'];
     params['agent_id'] = getAgent();
 
-    console.log('Processing scope mode with scope ID:', window['selectedScope_whois-']);
+    console.log('Processing scope mode with scope ID:', window['selectedScope_ip-info-']);
 
-    sendWhoisTask(params);
+    sendIpInfoTask(params);
 }
 
-window.handleWhoisDatabaseMode = function(params) {
+window.handleIpInfoDatabaseMode = function(params) {
     // Проверяем, что есть выбранные цели
-    if (!window.selectedWhoisTargets || Object.keys(window.selectedWhoisTargets).length === 0) {
-        alert('Please select targets from database first');
+    if (!window.selectedIpInfoTargets || Object.keys(window.selectedIpInfoTargets).length === 0) {
+        create_toast('Warning', 'Please select targets from database first', 'warning');
         return;
     }
     
-    const targets = Object.values(window.selectedWhoisTargets);
+    const targets = Object.values(window.selectedIpInfoTargets);
     
     console.log('Processing database targets:', targets);
     
@@ -193,8 +193,8 @@ window.handleWhoisDatabaseMode = function(params) {
     const uniqueTargets = new Set();
     
     for (const target of targets) {
-        // Используем domain если есть, иначе ip
-        const targetValue = target.domain || target.ip;
+        // Используем ip если есть, иначе domain
+        const targetValue = target.ip || target.domain;
         if (targetValue && targetValue.trim() !== '') {
             uniqueTargets.add(targetValue.trim());
         }
@@ -204,7 +204,7 @@ window.handleWhoisDatabaseMode = function(params) {
     console.log('Unique targets from database selection:', targetsArray);
     
     if (targetsArray.length === 0) {
-        alert('No valid targets found in selected targets');
+        create_toast('Error','No valid targets found in selected targets', 'error');
         return;
     }
     
@@ -216,61 +216,61 @@ window.handleWhoisDatabaseMode = function(params) {
             agent_id: getAgent()
         };
 
-        console.log('Sending WHOIS task for target:', target, 'with params:', targetParams);
+        console.log('Sending IP-INFO task for target:', target, 'with params:', targetParams);
         
-        sendWhoisTask(targetParams);
+        sendIpInfoTask(targetParams);
     }
 }
 
-window.processWhoisTask = function() {
+window.processIpInfoTask = function() {
     const params = {};
     const agent_id = getAgent();
     
     if (!agent_id) {
-        alert('Please select an agent first');
+        create_toast('Warning','Please select an agent first', 'warning');
         return;
     }
 
     params['agent_id'] = agent_id;
 
-    const simpleForm = document.getElementById('whois-simple-mode');
-    const scopeForm = document.getElementById('whois-scope-mode');
-    const databaseForm = document.getElementById('whois-database-mode');
+    const simpleForm = document.getElementById('ip-info-simple-mode');
+    const scopeForm = document.getElementById('ip-info-scope-mode');
+    const databaseForm = document.getElementById('ip-info-database-mode');
 
-    console.log('Processing whois task with mode:', {
+    console.log('Processing ip-info task with mode:', {
         simple: simpleForm?.classList.contains('show') && simpleForm.classList.contains('active'),
         scope: scopeForm?.classList.contains('show') && scopeForm.classList.contains('active'),
         database: databaseForm?.classList.contains('show') && databaseForm.classList.contains('active'),
-        selectedWhoisTargets: window.selectedWhoisTargets,
-        selectedScope: window['selectedScope_whois-']
+        selectedIpInfoTargets: window.selectedIpInfoTargets,
+        selectedScope: window['selectedScope_ip-info-']
     });
 
     if (simpleForm && simpleForm.classList.contains('show') && simpleForm.classList.contains('active')) {
-        handleWhoisSimpleMode(params);
+        handleIpInfoSimpleMode(params);
     } else if (scopeForm && scopeForm.classList.contains('show') && scopeForm.classList.contains('active')) {
-        handleWhoisScopeMode(params);
+        handleIpInfoScopeMode(params);
     } else if (databaseForm && databaseForm.classList.contains('show') && databaseForm.classList.contains('active')) {
-        handleWhoisDatabaseMode(params);
+        handleIpInfoDatabaseMode(params);
     } else {
         console.error('No active tab found');
-        alert('Please select a target mode (Target/Scope/Database)');
+        create_toast('Warning','Please select a target mode (Target/Scope/Database)', 'warning');
         return;
     }
 
-    close_whoisModalWindow();
+    close_ipInfoModalWindow();
 }
 
 // Вспомогательные функции для интеграции с другими частями системы
-window.whois_script_modal_to_node = function(ip) {
-    show_whoisModalWindow();
-    const inputTarget = document.getElementById('whoisinput');
+window.ip_info_script_modal_to_node = function(ip) {
+    show_ipInfoModalWindow();
+    const inputTarget = document.getElementById('ip-infoinput');
     if (inputTarget && ip) {
         inputTarget.value = ip;
     }
 }
 
-window.whois_script_modal_to_info_tabs = async function(rows) {
-    show_whoisModalWindow();
+window.ip_info_script_modal_to_info_tabs = async function(rows) {
+    show_ipInfoModalWindow();
     
     // Ждем пока modal полностью откроется
     await new Promise(resolve => setTimeout(resolve, 150));
@@ -287,12 +287,12 @@ window.whois_script_modal_to_info_tabs = async function(rows) {
     console.log('Unique targets to process:', uniqueTargets);
     
     // Сбрасываем форму
-    const container = document.getElementById('whoisInputContainer');
+    const container = document.getElementById('ip-infoInputContainer');
     if (container) {
         container.innerHTML = '';
     }
     
-    const originalInput = document.getElementById('whoisinput');
+    const originalInput = document.getElementById('ip-infoinput');
     if (originalInput) {
         originalInput.value = '';
     }
@@ -301,19 +301,19 @@ window.whois_script_modal_to_info_tabs = async function(rows) {
     for (let i = 0; i < uniqueTargets.length; i++) {
         if (i === 0) {
             // Первая цель в основное поле
-            const firstInput = document.getElementById('whoisinput');
+            const firstInput = document.getElementById('ip-infoinput');
             if (firstInput) {
                 firstInput.value = uniqueTargets[i];
             }
         } else {
             // Остальные цели в дополнительные поля
-            addNewInputForm('whois');
+            addNewInputForm('ip-info');
             
             // Ждем обновления DOM
             await new Promise(resolve => setTimeout(resolve, 50));
             
             // Находим все input'ы и заполняем последний
-            const allInputs = document.querySelectorAll('[id^="whoisinput"]');
+            const allInputs = document.querySelectorAll('[id^="ip-infoinput"]');
             const lastInput = allInputs[allInputs.length - 1];
             if (lastInput) {
                 lastInput.value = uniqueTargets[i];
@@ -322,15 +322,15 @@ window.whois_script_modal_to_info_tabs = async function(rows) {
     }
 }
 
-// Функция для запуска whois задачи из database вкладки
-window.whois_script_modal_to_database = async function(rows) {
-    show_whoisModalWindow();
+// Функция для запуска ip-info задачи из database вкладки
+window.ip_info_script_modal_to_database = async function(rows) {
+    show_ipInfoModalWindow();
     
     // Ждем пока modal полностью откроется
     await new Promise(resolve => setTimeout(resolve, 150));
     
     // Переключаемся на database вкладку
-    const databaseTab = document.getElementById('whois-database-tab');
+    const databaseTab = document.getElementById('ip-info-database-tab');
     if (databaseTab) {
         databaseTab.click();
         
@@ -339,14 +339,14 @@ window.whois_script_modal_to_database = async function(rows) {
     }
     
     // Очищаем текущий выбор в таблице
-    if (window.whoisDatabaseTargetsTable) {
-        window.whoisDatabaseTargetsTable.deselectRow();
+    if (window.ipInfoDatabaseTargetsTable) {
+        window.ipInfoDatabaseTargetsTable.deselectRow();
     }
     
     // Выбираем строки в таблице, соответствующие переданным rows
-    if (window.whoisDatabaseTargetsTable && rows && rows.length > 0) {
+    if (window.ipInfoDatabaseTargetsTable && rows && rows.length > 0) {
         // Получаем текущие данные таблицы
-        const tableData = window.whoisDatabaseTargetsTable.getData();
+        const tableData = window.ipInfoDatabaseTargetsTable.getData();
         console.log('Table data:', tableData);
         console.log('Rows to select:', rows);
         
@@ -369,8 +369,8 @@ window.whois_script_modal_to_database = async function(rows) {
         
         // Выбираем найденные строки
         if (rowsToSelect.length > 0) {
-            window.whoisDatabaseTargetsTable.selectRow(rowsToSelect);
-            console.log('Selected rows in whois database table:', rowsToSelect.length);
+            window.ipInfoDatabaseTargetsTable.selectRow(rowsToSelect);
+            console.log('Selected rows in ip-info database table:', rowsToSelect.length);
         } else {
             console.warn('No matching rows found in table');
         }
@@ -378,21 +378,21 @@ window.whois_script_modal_to_database = async function(rows) {
 }
 
 // Отладочная информация
-console.log('Whois tool global functions loaded');
+console.log('Ip-info tool global functions loaded');
 {% endmacro %}
 
-{# Главный макрос whois инструмента #}
-{% macro whois_tool_modal() %}
-    {% set modal_content = whois_form() %}
-    {% set global_functions = whois_global_functions() %}
+{# Главный макрос ip-info инструмента #}
+{% macro ip_info_tool_modal() %}
+    {% set modal_content = ip_info_form() %}
+    {% set global_functions = ip_info_global_functions() %}
     
     {{ base_modal(
-        modal_id='whoisModalWindow',
-        modal_title='Whois Tool',
-        help_url='https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#whois',
-        header_bar=tools_header_bar(prefix='whois_'),
+        modal_id='ipInfoModalWindow',
+        modal_title='IP Info Tool',
+        help_url='https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#ip-info',
+        header_bar=tools_header_bar(prefix='ip_info_'),
         content=modal_content,
-        reset_function='resetWhoisModal',
+        reset_function='resetIpInfoModal',
         custom_scripts=global_functions
     ) }}
 {% endmacro %}

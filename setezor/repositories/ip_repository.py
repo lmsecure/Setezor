@@ -1,10 +1,10 @@
 import ipaddress
 from typing import List
 from sqlalchemy import Select, collate
-from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type
+from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type, ASN, WhoIsIP
 from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import case, select, func, or_
+from sqlmodel import case, select, func, or_, and_
 from sqlalchemy.orm import aliased
 
 
@@ -152,19 +152,25 @@ class IPRepository(SQLAlchemyRepository[IP]):
                     elif type_op == "<=":
                         stmt = stmt.filter(column <= value)
                     elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        if field != "port":
+                            stmt = stmt.filter(column.ilike(f"%{value}%"))
         
         if sort_params:
             order_clauses = []
+            numeric_fields = {"port"} 
             for sort_item in sort_params:
                 field = sort_item.get("field")
                 direction = sort_item.get("dir", "asc")
                 
                 if field in field_mapping:
-                    column = field_mapping[field]
-                    sorted_column = func.coalesce(column, "")
-                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
-                        sorted_column = collate(sorted_column, 'C')
+                    column = field_mapping[field]                
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
+                        if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                            sorted_column = collate(sorted_column, 'C')
+                    
                     if direction == "desc":
                         order_clauses.append(sorted_column.desc())
                     else:
@@ -256,13 +262,17 @@ class IPRepository(SQLAlchemyRepository[IP]):
         
         if sort_params:
             order_clauses = []
+            numeric_fields = {"port"} 
             for sort_item in sort_params:
                 field = sort_item.get("field")
                 direction = sort_item.get("dir", "asc")
                 
                 if field in field_mapping:
-                    column = field_mapping[field]
-                    sorted_column = func.coalesce(column, "")
+                    column = field_mapping[field]                
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
                     if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
                         sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
@@ -277,6 +287,81 @@ class IPRepository(SQLAlchemyRepository[IP]):
         offset = (page - 1) * size
         paginated_query = stmt.offset(offset).limit(size)
         
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()
+
+
+    async def get_ip_info_tabulator_data(
+        self,
+        project_id: str,
+        scans: List[str],
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ) -> tuple[int, list]:
+        addition = [IP.scan_id == scan_id for scan_id in scans]
+        stmt = select(
+            IP.ip.label("ipaddr"),
+            Network.start_ip.label("start_ip"),
+            Network.mask.label("mask"),
+            ASN.name.label("AS-name"),
+            ASN.number.label("AS-number"),
+            ASN.org.label("org-name"),
+            WhoIsIP.data.label("data")
+        ).select_from(IP)\
+            .join(Network, Network.id == IP.network_id)\
+            .join(ASN, ASN.id == Network.asn_id)\
+            .join(WhoIsIP, WhoIsIP.ip_id == IP.id, isouter=True)\
+        .filter(IP.project_id == project_id, or_(*addition))
+
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "AS": ASN.name,
+            "AS-number": ASN.number,
+            "org-name": ASN.org
+        }
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                if field in field_mapping and value is not None:
+                    column = field_mapping.get(field)
+                    if type_op == "=":
+                        stmt = stmt.filter(column == value)
+                    elif type_op == "!=":
+                        stmt = stmt.filter(column != value)
+                    elif type_op == "like":
+                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+                    elif type_op == ">":
+                        stmt = stmt.filter(column > value)
+                    elif type_op == ">=":
+                        stmt = stmt.filter(column >= value)
+                    elif type_op == "<":
+                        stmt = stmt.filter(column < value)
+                    elif type_op == "<=":
+                        stmt = stmt.filter(column <= value)
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                if field in field_mapping:
+                    column = field_mapping.get(field)
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
+                    if direction == "desc":
+                        order_clauses.append(sorted_column.desc())
+                    else:
+                        order_clauses.append(sorted_column.asc())
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        count_query = select(func.count()).select_from(stmt.alias())
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
         total = await self._session.scalar(count_query)
         result = await self._session.exec(paginated_query)
         return total, result.all()
@@ -324,23 +409,39 @@ class IPRepository(SQLAlchemyRepository[IP]):
             "ipaddr": IP.ip,
             "domain": Domain.domain,
             "port": Port.port,
-            "protocol": Port.protocol
+            "protocol": Port.protocol,
+            "service_name": Port.service_name
         }
-
+        addition = []
+        addition.extend([IP.scan_id == scan_id for scan_id in scans])
+        addition.extend([DNS.scan_id == scan_id for scan_id in scans])
+        addition.extend([Domain.scan_id == scan_id for scan_id in scans])
+        addition.extend([Port.scan_id == scan_id for scan_id in scans])
         tabulator_dashboard_data = (
             select(
                 IP.ip,
                 Domain.domain,
                 Port.port,
                 Port.protocol,
+                Port.service_name,
                 func.count(Port.port).label("port_count")
             )
             .select_from(Port)
-            .join(IP, Port.ip_id == IP.id)
-            .join(DNS, DNS.target_ip_id == IP.id)
-            .join(Domain, Domain.id == DNS.target_domain_id, isouter=True)
-            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
-            .group_by(IP.ip, Domain.domain, Port.port, Port.protocol)
+            .join(IP, Port.ip_id == IP.id, full=True)
+            .join(DNS, DNS.target_ip_id == IP.id, full=True)
+            .join(Domain, Domain.id == DNS.target_domain_id, full=True)
+            .filter(or_(IP.project_id == project_id,
+                        DNS.project_id == project_id,
+                        Domain.project_id == project_id,
+                        Port.project_id == project_id),
+                    or_(*addition),
+                    or_(
+                        and_(IP.ip != None, IP.ip != ""),
+                        and_(Domain.domain != None, Domain.domain != ""),
+                        and_(Port.port != None),
+                        and_(Port.protocol != None, Port.protocol != ""),
+                        and_(Port.service_name != None, Port.service_name != "")))
+            .group_by(IP.ip, Domain.domain, Port.port, Port.protocol, Port.service_name)
         )
 
         if filter_params:
@@ -418,6 +519,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
         count_query = select(func.count()).select_from(tabulator_dashboard_data.alias())
         offset = (page - 1) * size
         paginated_query = tabulator_dashboard_data.offset(offset).limit(size)
+
         total = await self._session.scalar(count_query)
         result = await self._session.exec(paginated_query)
 

@@ -105,7 +105,26 @@ Vulnerabilities
     var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
     let currentResourceID = 0
     let currentResourceVulnerabilityID = ""
-    let selectedScans = []
+
+    const SCANS_STORAGE_KEY = 'selectedScans';
+
+    function loadSelectedScans() {
+        const saved = sessionStorage.getItem(SCANS_STORAGE_KEY);
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn("Failed to parse selectedScans from sessionStorage");
+            }
+        }
+        return [];
+    }
+
+    function saveSelectedScans(scans) {
+        sessionStorage.setItem(SCANS_STORAGE_KEY, JSON.stringify(scans));
+    }
+
+    let selectedScans = loadSelectedScans();
 
     async function getScans(){
         let resp = await fetch("/api/v1/scan");
@@ -137,7 +156,8 @@ Vulnerabilities
         for (const [_, scan_id] of formData) {
             selectedScans.push(scan_id);
         }
-
+        saveSelectedScans(selectedScans);
+        sessionStorage.removeItem('vulnState');
         l4_resources_table.setData(l4_resources_table.getAjaxUrl(), {}, "GET");
     }
 
@@ -463,51 +483,66 @@ Vulnerabilities
         }
       };
     
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
         const savedState = sessionStorage.getItem('vulnState');
-        if (savedState) {
-            try {
-                const { resourceID, vulnIndex, tablePage } = JSON.parse(savedState);
+        if (!savedState) return;
 
-                setTimeout(async () => {
-                    try {
-                        await {{ tab.name }}_table.setPage(tablePage);
-                    } catch (e) {
-                        await {{ tab.name }}_table.setPage(1);
-                    }
-
-                    setTimeout(async () => {
-                        const row = {{ tab.name }}_table.getRow(resourceID);
-                        if (row) {
-                            row.getElement().scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                            currentResourceID = resourceID;
-                            await getVulnerabilities_{{ tab.name }}(resourceID);
-
-                            setTimeout(() => {
-                                const items = document.querySelectorAll('#carouselCards .carousel-item');
-                                if (items.length > 0 && vulnIndex >= 0 && vulnIndex < items.length) {
-                                    isRestoringState = true;
-                                    const carousel = bootstrap.Carousel.getOrCreateInstance(myCarousel);
-                                    carousel.to(vulnIndex);
-                                    const onFirstSlid = function () {
-                                        isRestoringState = false;
-                                        myCarousel.removeEventListener('slid.bs.carousel', onFirstSlid);
-                                    };
-                                    myCarousel.addEventListener('slid.bs.carousel', onFirstSlid);
-                                    counter = vulnIndex + 1;
-                                    objCount = items.length;
-                                    document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`;
-                                }
-                            }, 150);
-                        }
-                    }, 150);
-                }, 300);
-            } catch (e) {
-                console.warn("Failed to restore vulnerability state:", e);
-                sessionStorage.removeItem('vulnState');
-            }
+        let state;
+        try {
+            state = JSON.parse(savedState);
+        } catch (e) {
+            console.warn("Failed to parse saved vulnerability state:", e);
+            sessionStorage.removeItem('vulnState');
+            return;
         }
+
+        let hasRestored = false;
+
+        {{ tab.name }}_table.on("dataLoaded", async (data) => {
+            if (hasRestored) return;
+            hasRestored = true;
+
+            const { resourceID, vulnIndex, tablePage } = state;
+
+            try {
+                await {{ tab.name }}_table.setPage(tablePage);
+            } catch (e) {
+                console.warn("Could not restore page, defaulting to 1:", e);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            const row = {{ tab.name }}_table.getRow(resourceID);
+            if (!row) {
+                console.warn("Row not found for resourceID:", resourceID);
+                sessionStorage.removeItem('vulnState');
+                return;
+            }
+
+            row.getElement().scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            currentResourceID = resourceID;
+            await getVulnerabilities_{{ tab.name }}(resourceID);
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            const items = document.querySelectorAll('#carouselCards .carousel-item');
+            if (items.length > 0 && vulnIndex >= 0 && vulnIndex < items.length) {
+                isRestoringState = true;
+                const carousel = bootstrap.Carousel.getOrCreateInstance(myCarousel);
+                carousel.to(vulnIndex);
+
+                const onFirstSlid = () => {
+                    isRestoringState = false;
+                    myCarousel.removeEventListener('slid.bs.carousel', onFirstSlid);
+                };
+                myCarousel.addEventListener('slid.bs.carousel', onFirstSlid);
+
+                counter = vulnIndex + 1;
+                objCount = items.length;
+                document.getElementById("cardsCounter").innerHTML = `${counter} / ${objCount}`;
+            }
+        });
     });
 </script>
 

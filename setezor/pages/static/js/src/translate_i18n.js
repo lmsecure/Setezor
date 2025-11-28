@@ -11,7 +11,7 @@ i18next.init({
         "Wiki": "Wiki",
         "About project": "About project",
         "About Setezor text": "Setezor is a network traffic analyzer with the ability to automatically buildnetwork topology. For more information, please visit our resources:",
-        "SetezorVersion": "Version: v1.0.7",
+        "SetezorVersion": "Version: v1.0.8",
         "Close": "Close",
         "Notifications": "Notifications",
         "Exit to project menu": "Exit to project menu",
@@ -460,7 +460,13 @@ i18next.init({
         "Add filter": "Add filter",
         "Logs": "Logs",
         "Download": "Download",
-        "Task Log": "Task Log"
+        "Task Log": "Task Log",
+        "NS Servers": "NS Servers",
+        "Enter the IP address": "Enter the IP address",
+        "Database": "Database",
+        "Upload wordlist file (optional):": "Upload wordlist file (optional):",
+        "value1,value2,value3": "value1,value2,value3",
+        "Optional: Specify custom nameservers for DNS queries (comma separated)": "Optional: Specify custom nameservers for DNS queries (comma separated)"
       }
     },
     ru: {
@@ -471,7 +477,7 @@ i18next.init({
         "Admin settings": "Настройки администратора",
         "About project": "О проекте",
         "About Setezor text": "Сетезор - это анализатор сетевого трафика с возможностью автоматического построения топологии сети. Для получения дополнительной информации посетите наши ресурсы:",
-        "SetezorVersion": "Версия: v1.0.7",
+        "SetezorVersion": "Версия: v1.0.8",
         "Close": "Закрыть",
         "Notifications": "Уведомления",
         "Exit to project menu": "Выход в меню выбора проекта",
@@ -921,7 +927,13 @@ i18next.init({
         "Add filter": "Добавить фильтр",
         "Logs": "Логи",
         "Download": "Скачать",
-        "Task Log": "Лог задачи"
+        "Task Log": "Лог задачи",
+        "NS Servers": "NS Сервера",
+        "Enter the IP address": "Введите IP-адрес",
+        "Database": "База данных",
+        "Upload wordlist file (optional):": "Загрузить словарь субдоменов (необязательно):",
+        "value1,value2,value3": "значение1, значение2, значение3",
+        "Optional: Specify custom nameservers for DNS queries (comma separated)": "Необязательно: укажите пользовательские серверы имен для DNS-запросов (через запятую)",
       }
     }
   }

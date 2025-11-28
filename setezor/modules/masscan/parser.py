@@ -62,11 +62,13 @@ class XMLParser(BaseMasscanParser):
             try:
                 if i['address'].get('addr') not in port_result:
                     port_result[i['address'].get('addr')] = []
+                port = i['ports']['port'].get('portid')
+                ttl = i['ports']['port']['state'].get('reason_ttl')
                 port_result[i['address'].get('addr')].append({
-                    "port": i['ports']['port'].get('portid'),
+                    "port": int(port) if port else None,
                     "protocol": i['ports']['port'].get('protocol'),
                     "state": i['ports']['port']['state'].get('state'),
-                    "ttl": i['ports']['port']['state'].get('reason_ttl')})
+                    "ttl": int(ttl) if ttl else None})
             except:
                 continue
         return port_result
@@ -88,11 +90,13 @@ class JsonParser(BaseMasscanParser):
                 if i.get('ip', None):
                     if i.get('ip') not in port_result:
                         port_result[i.get('ip')] = []
+                    port = i['ports'][0].get('port', None)
+                    ttl = i['ports'][0].get('ttl', None)
                     port_result[i.get('ip', None)].append({
-                        "port": i['ports'][0].get('port', None),
+                        "port": int(port) if port else None,
                         "protocol": i['ports'][0].get('proto', None),
                         "state": i['ports'][0].get('status', None),
-                        "ttl": i['ports'][0].get('ttl', None)})
+                        "ttl": int(ttl) if ttl else None})
             except:
                 continue
         return port_result

@@ -71,42 +71,68 @@
 {% macro cert_start() %}
 <div class="btn-group d-flex my-2" role="group">
     <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="
-                    const requiredTLS = document.getElementById('CertForm');
-
-                    const params = {};
-                    const domains_tls = [];
-                    const ports_tls = [];
-
-                    for (const d of form.elements) {
-                        if (d.name === 'TargetTLS') {
-                            domains_tls.push(d.value);
-                        }
-                        if (d.name === 'Port') {
-                            ports_tls.push(d.value);
-                        }
-                    }
-
-                    const combinedParams = domains_tls.map((domain, index) => ({
-                        target: domain,
-                        port: ports_tls[index] || null,
-                        agent_id: getAgent(),
-                    }));
-
-                    combinedParams.forEach(domainTlsParams => {
-                        fetch('/api/v1/task/cert_info_task', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(domainTlsParams)
-                        });
-                    });
-                    var myModal = bootstrap.Modal.getInstance(document.getElementById('certModalWindow'));
-                                    if (myModal) {
-                                        myModal.hide();
-                                    }" data-i18n="Start">
+    <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="startTlsScan()" data-i18n="Start">
     </button>
-
 </div>
+<script>
+    function collectTlsFormData(form) {
+    const domains_tls = [];
+    const ports_tls = [];
+
+    for (const element of form.elements) {
+        if (element.name === 'TargetTLS') {
+            domains_tls.push(element.value);
+        }
+        if (element.name === 'Port') {
+            ports_tls.push(element.value);
+        }
+    }
+
+    return { domains_tls, ports_tls };
+}
+
+function prepareTlsParams(domains, ports) {
+    return domains.map((domain, index) => ({
+        target: domain,
+        port: ports[index] || null,
+        agent_id: getAgent(),
+    }));
+}
+
+function sendCertInfoTask(params) {
+    fetch('/api/v1/task/cert_info_task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+    });
+}
+
+function hideCertModal() {
+    const modalElement = document.getElementById('certModalWindow');
+    if (modalElement) {
+        const myModal = bootstrap.Modal.getInstance(modalElement);
+        if (myModal) {
+            myModal.hide();
+        }
+    }
+}
+
+function startTlsScan() {
+    const form = document.getElementById('CertForm');
+
+    if (!form) {
+        console.error('Форма CertForm не найдена');
+        return;
+    }
+
+    const { domains_tls, ports_tls } = collectTlsFormData(form);
+    const combinedParams = prepareTlsParams(domains_tls, ports_tls);
+
+    combinedParams.forEach(sendCertInfoTask);
+
+    hideCertModal();
+}
+</script>
 {% endmacro %}
 
 {% macro cert_script_modal_to_info_tabs() %}

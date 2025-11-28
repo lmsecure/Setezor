@@ -66,7 +66,7 @@ class TargetService(BaseService):
                 filter_params=filter_params
             )
 
-            keys = ["ipaddr", "domain", "port", "protocol"]
+            keys = ["ipaddr", "domain", "port", "protocol", "service_name"]
             tabulator_transform_dashboard_data = [dict(zip(keys, row)) for row in rows]
 
             return total, tabulator_transform_dashboard_data

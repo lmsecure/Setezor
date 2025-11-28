@@ -1,0 +1,319 @@
+{# Базовый макрос для верхней панели инструментов #}
+{% macro tools_header_bar(prefix) %}
+{% set prefix = prefix or '' %}
+<div class="d-flex mb-2" id="{{ prefix }}agent_interface_bar">
+    <div data-agent-bar="agent_{{ prefix }}"></div>
+    <div data-interface-bar="interface_{{ prefix }}" class="ms-3"></div>
+    <div id="scans_bar{{ prefix }}" class="ms-3"></div>
+</div>
+{% endmacro %}
+
+{# Базовый макрос для вкладок Target/Scope/Database #}
+{% macro target_scope_database_tabs(prefix, simple_content, scope_content, database_content) %}
+{% set prefix = prefix or '' %}
+<div class="tab-content w-100" id="{{ prefix }}tab-content" style="padding-top: 7px;">
+    <div class="nav nav-tabs me-3 mb-3" id="{{ prefix }}tabs" role="tablist">
+        <button class="nav-link active" id="{{ prefix }}simple-tab" data-bs-toggle="tab" 
+            data-bs-target="#{{ prefix }}simple-mode" type="button" role="tab" 
+            aria-controls="{{ prefix }}simple-mode" aria-selected="true" data-i18n="Target"></button>
+        <button class="nav-link" id="{{ prefix }}scope-tab" data-bs-toggle="tab" 
+            data-bs-target="#{{ prefix }}scope-mode" type="button" role="tab" 
+            aria-controls="{{ prefix }}scope-mode" aria-selected="false" data-i18n="Scope"></button>
+        <button class="nav-link" id="{{ prefix }}database-tab" data-bs-toggle="tab" 
+            data-bs-target="#{{ prefix }}database-mode" type="button" role="tab" 
+            aria-controls="{{ prefix }}database-mode" aria-selected="false" data-i18n="Database"></button>
+    </div>
+    
+    <div class="tab-pane fade show active" id="{{ prefix }}simple-mode" role="tabpanel" 
+        aria-labelledby="{{ prefix }}simple-tab">
+        {{ simple_content }}
+    </div>
+    
+    <div class="tab-pane fade" id="{{ prefix }}scope-mode" role="tabpanel" 
+        aria-labelledby="{{ prefix }}scope-tab">
+        {{ scope_content }}
+    </div>
+    
+    <div class="tab-pane fade" id="{{ prefix }}database-mode" role="tabpanel" 
+        aria-labelledby="{{ prefix }}database-tab">
+        {{ database_content }}
+    </div>
+</div>
+
+{% endmacro %}
+
+{# Базовый макрос для ввода доменов/хостов #}
+{% macro base_input(prefix, input_type, placeholder_i18n, required) %}
+{% set prefix = prefix or '' %}
+{% set input_type = input_type or 'text' %}
+{% set placeholder_i18n = placeholder_i18n or 'Domain name' %}
+{% set required = required or true %}
+<div id="{{ prefix }}InputContainer"></div>
+<div class="input-group" style="padding-top: 7px;" id="{{ prefix }}Target">
+    <span class="input-group-text" id="{{ prefix }}basic-addon1" data-i18n="TARGET"></span>
+    <datalist id="{{ prefix }}List"></datalist>
+    <input type="{{ input_type }}" list="{{ prefix }}List" class="form-control" id='{{ prefix }}input' 
+    data-i18n-placeholder="{{ placeholder_i18n }}" aria-label="Input" 
+        aria-describedby="{{ prefix }}basic-addon1" {% if required %}required{% endif %} name="target">
+
+    <button id="{{ prefix }}add_new_form" onclick="addNewInputForm('{{ prefix }}')" 
+        type="button" class="btn btn-success" style="width: 3rem">+</button>
+</div>
+<script>
+    function addNewInputForm(prefix = '') {
+        const original = document.getElementById(prefix + 'Target');
+        const clone = original.cloneNode(true);
+        const newInputTarget = clone.querySelector('[id^="' + prefix + 'input"]');
+        newInputTarget.id = prefix + 'input_' + Date.now();
+        const originalInputTarget = document.getElementById(prefix + 'input');
+        
+        if (originalInputTarget) {
+            newInputTarget.value = originalInputTarget.value;
+            originalInputTarget.value = '';
+        }
+
+        let existingMinusButton = clone.querySelector('.btn-danger');
+        if (existingMinusButton) {
+            existingMinusButton.remove();
+        }
+    
+        let removeButton = document.createElement('button');
+        removeButton.textContent = '-';
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-danger';
+        removeButton.style.width = '3rem';
+        removeButton.onclick = () => {
+            clone.remove();
+        };
+    
+        clone.appendChild(removeButton);
+    
+        let addButton = clone.querySelector('#' + prefix + 'add_new_form');
+        if (addButton) {
+            addButton.remove();
+        }
+    
+        document.getElementById(prefix + 'InputContainer').appendChild(clone);
+    }
+</script>
+{% endmacro %}
+
+{# Базовый макрос для выбора scope #}
+{% macro base_scope(prefix) %}
+{% set prefix = prefix or '' %}
+<div class="dropdown w-100 mt-2">
+    <button class="btn btn dropdown-toggle w-100" 
+        style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
+        type="button" id="{{ prefix }}ScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        Select scope
+    </button>
+    <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" 
+        id="{{ prefix }}dropdownMenuForScopeData">
+    </ul>
+</div>
+<script>
+    function get_scope_list(prefix = '') {
+        axios.get('/api/v1/scope').then(resp => {
+            const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeData');
+            const dropdownButton = document.getElementById(prefix + 'ScopeDropdown');
+            
+            if (!dropdownMenu || !dropdownButton) return;
+            
+            dropdownMenu.innerHTML = '';
+
+            resp.data.forEach((item) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.classList.add('dropdown-item');
+                a.href = '#';
+                a.textContent = `${item.name}`;
+
+                a.addEventListener('click', () => {
+                    dropdownButton.textContent = `${item.name}`;
+                    window['selectedScope_' + prefix] = item.id;
+                });
+
+                li.appendChild(a);
+                dropdownMenu.appendChild(li);
+            });
+        })
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        get_scope_list('{{ prefix }}');
+    });
+</script>
+{% endmacro %}
+
+{# Базовый макрос для Database вкладки #}
+{% macro base_database_content(prefix, table_id, selected_targets_var) %}
+{% set prefix = prefix or '' %}
+{% set table_id = table_id or prefix + 'DatabaseTargetsTable' %}
+{% set selected_targets_var = selected_targets_var or 'selectedDatabaseTargets' %}
+<div class="database-tab-content">    
+    <div class="targets-selection-area mb-3" style="border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 10px;">
+        <div id="{{ table_id }}"></div>
+    </div>
+</div>
+
+<script>
+// Глобальные функции для работы с Database вкладкой
+window.initDatabaseTable = function(tableId, selectedTargetsVar, countElementId) {
+    const container = document.getElementById(tableId);
+    if (!container) {
+        console.error('Table container not found:', tableId);
+        return null;
+    }
+
+    const columns = [
+        {
+            title: "Select",
+            field: "selected",
+            formatter: "rowSelection",
+            titleFormatter: "rowSelection",
+            hozAlign: "center",
+            headerHozAlign: "center",
+            headerSort: false,
+            // width: 50,
+            formatterParams: { selectAll: false }
+        },
+        {
+            title: "IP Address",
+            field: "ipaddr",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Search IP..."
+        },
+        {
+            title: "Domain",
+            field: "domain", 
+            headerFilter: "input",
+            headerFilterPlaceholder: "Search domain..."
+        },
+        {
+            title: "Port",
+            field: "port",
+            headerFilter: "number", 
+            headerFilterPlaceholder: "Search port..."
+        }
+    ];
+
+    try {
+        const table = new Tabulator(container, {
+            layout: "fitColumns",
+            // height: "200px",
+            ajaxURL: "/api/v1/target/get_all_data",
+            ajaxParams: {
+                scans: window.selectedScans || [],
+            },
+            ajaxURLGenerator: function(url, config, params) {
+                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                const page = params.page || 1;
+                const size = params.size || 10;
+                const scansParam = (window.selectedScans || [])
+                    .map(scan => `scans=${encodeURIComponent(scan)}`)
+                    .join("&");
+                return `${url}?page=${page}&size=${size}&sort=${sort}&filter=${filter}${scansParam ? `&${scansParam}` : ""}`;
+            },
+            selectable: true,
+            sortMode: "remote",
+            filterMode: "remote", 
+            pagination: true,
+            paginationMode: "remote",
+            paginationSize: 10,
+            paginationSizeSelector: [10, 25, 50, 100],
+            columns: columns,
+            rowSelectionChanged: function(data, rows) {
+                window[selectedTargetsVar] = {};
+                rows.forEach(row => {
+                    const rowData = row.getData();
+                    const uniqueKey = `${rowData.ipaddr}:${rowData.domain}`;
+                    window[selectedTargetsVar][uniqueKey] = {
+                        ip: rowData.ipaddr,
+                        domain: rowData.domain
+                    };
+                });
+            }
+        });
+        
+        console.log('Database table initialized:', tableId);
+        return table;
+    } catch (error) {
+        console.error('Error initializing database table:', error);
+        return null;
+    }
+}
+
+window.loadDatabaseTargets = function(tableId) {
+    const table = window[tableId];
+    if (table) {
+        table.setData();
+    } else {
+        console.error('Table not found:', tableId);
+    }
+}
+</script>
+{% endmacro %}
+
+{# Базовый макрос для модального окна #}
+{% macro base_modal(modal_id, modal_title, help_url, header_bar, content, reset_function, custom_scripts) %}
+{% set custom_scripts = custom_scripts or '' %}
+<div id="{{ modal_id }}" class="modal fade" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="{{ modal_id }}Label">{{ modal_title }}</h5>
+                {% if help_url %}
+                <a href="{{ help_url }}" target="_blank" style="margin-top: 0.3rem; margin-left: 0.2rem;">
+                    <i class="bi bi-question-circle fs-4" style="font-family: 'Times New Roman', Times, serif"></i>
+                </a>
+                {% endif %}
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {{ header_bar }}
+                {{ content }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Глобальные функции для модального окна
+window.show_{{ modal_id }} = function() {
+    console.log('Opening modal:', '{{ modal_id }}');
+    if (typeof window.{{ reset_function }} === 'function') {
+        window.{{ reset_function }}();
+    }
+    const myModal = new bootstrap.Modal(document.getElementById('{{ modal_id }}'));
+    myModal.show();
+}
+
+window.close_{{ modal_id }} = function() {
+    const myModal = bootstrap.Modal.getInstance(document.getElementById('{{ modal_id }}'));
+    if (myModal) {
+        myModal.hide();
+    }
+}
+
+// Базовая логика закрытия модалки
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('{{ modal_id }}');
+    if (modalElement) {
+        const myModal = new bootstrap.Modal(modalElement, { keyboard: false });
+
+        modalElement.querySelector('.btn-close').onclick = function () {
+            myModal.hide();
+        };
+
+        modalElement.addEventListener('click', function (event) {
+            if (event.target === modalElement) {
+                myModal.hide();
+            }
+        });
+    }
+});
+
+{{ custom_scripts }}
+</script>
+{% endmacro %}

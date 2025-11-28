@@ -160,6 +160,25 @@ class TaskManager:
 
         return task
 
+
+    def task_is_os_the_agent(self, job: BaseJob, agent: Agent) -> bool:
+        if not agent.information:
+            return False
+        allowed_tasks = json.loads(agent.information).get("tasks", {})
+        if job.__name__ not in allowed_tasks:
+            return False
+        return True
+
+
+    def clean_payload(self, job: BaseJob, agent: Agent, payload: dict):
+        if not agent.information:
+            return
+        version = json.loads(agent.information).get("version")
+        if not version:
+            return
+        job.clean_payload(version=version, payload=payload)
+
+
     # метод сервера на создание джобы на агенте
     @TaskParamsPreparer.prepare
     async def create_job(self, job: BaseJob,
@@ -184,6 +203,16 @@ class TaskManager:
             await WS_MANAGER.send_message(entity_id=project_id, message=message)
             raise HTTPException(status_code=403,
                                 detail=f"Agent {agent.name} has no secret key")
+        if not self.task_is_os_the_agent(job=job, agent=agent):
+            message = WebSocketMessage(title="Error",
+                                       text=f"The selected agent {agent.name} is not able to perform this task {job.__name__}",
+                                       type="error")
+            await WS_MANAGER.send_message(entity_id=project_id, message=message)
+            raise HTTPException(
+                status_code=406,
+                detail="The selected agent is not able to perform this task",
+            )
+        self.clean_payload(job=job, agent=agent, payload=kwargs)
 
         agents_chain = await self.__agent_service.get_agents_chain(agent_id=agent.id,
                                                                    user_id=agent.user_id)

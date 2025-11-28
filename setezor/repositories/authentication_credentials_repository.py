@@ -79,13 +79,17 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
         
         if sort_params:
             order_clauses = []
+            numeric_fields = {"port", "permissions"} 
             for sort_item in sort_params:
                 field = sort_item.get("field")
                 direction = sort_item.get("dir", "asc")
                 
                 if field in field_mapping:
                     column = field_mapping[field]
-                    sorted_column = func.coalesce(column, "")
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
                     if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
                         sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":

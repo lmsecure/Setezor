@@ -83,7 +83,7 @@ Scopes
     let fileTargetsData = [];
     let selectedTargets = new Set();
     let fileTargetsIdCounter = 0;
-
+    let selectedTargetsFromTabs = new Map();
     let selectedRowsState = {};
     let targetTable;
     let selectedScans = [];
@@ -177,6 +177,47 @@ Scopes
             };
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show()
+    }
+
+    let scopeCompositeKeys = new Map();
+    let scopeIps = new Set();
+    let scopeDomains = new Set();
+    let scopePorts = new Set();
+
+    async function loadScopeForHighlighting(scopeId) {
+        if (!scopeId) {
+            scopeCompositeKeys.clear();
+            scopeIps.clear();
+            scopeDomains.clear();
+            scopePorts.clear();
+            return;
+        }
+
+        try {
+            const resp = await axios.get(`/api/v1/scope/${scopeId}/targets`);
+            const targets = resp.data.data || [];
+
+            scopeCompositeKeys.clear();
+            scopeIps.clear();
+            scopeDomains.clear();
+            scopePorts.clear();
+
+            for (const t of targets) {
+                const parts = [];
+                if (t.ip) parts.push(t.ip.split('/')[0]);
+                if (t.port != null) parts.push(String(t.port));
+                if (t.domain) parts.push(t.domain);
+                if (t.protocol) parts.push(t.protocol);
+                const key = parts.join('|');
+                if (key) scopeCompositeKeys.set(key, true);
+
+                if (t.ip) scopeIps.add(t.ip.split('/')[0]);
+                if (t.domain) scopeDomains.add(t.domain);
+                if (t.port != null) scopePorts.add(String(t.port));
+            }
+        } catch (err) {
+            console.error("Failed to load scope for highlighting:", err);
+        }
     }
 
     async function deleteTarget(scopeID, targetID) {
@@ -595,7 +636,7 @@ Scopes
     }
     async function enterTargetsFromDataBase(id) {
         let modal_elem = document.getElementById("idModalForWritingDataBaseTargets");
-        selectedRowsState = {};
+        selectedTargetsFromTabs.clear();
         modal_elem.innerHTML = `
         <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -607,14 +648,22 @@ Scopes
                     <div class="px-3 w-100">
                         <div id="filter-panel-container" style="height: 100%;"></div>
                     </div>
-                    <div class="modal-body justify-content-center">
-                        <div class="w-100">
-                            <div id="DataBaseTargetsTable"></div>
+                    <div class="modal-body">
+                        <ul class="nav nav-tabs" id="targetsTabs" role="tablist">
+                            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-ip_info">IP Info</a></li>
+                            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-open_ports">Open Ports</a></li>
+                            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ip_domain">IP Domain</a></li>
+                            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-web">Web</a></li>
+                        </ul>
+                        <div class="tab-content mt-2" style="height: 72vh; overflow-y: auto;">
+                            <div class="tab-pane fade show active" id="tab-ip_info"><div id="ip_info-table"></div></div>
+                            <div class="tab-pane fade" id="tab-open_ports"><div id="open_ports-table"></div></div>
+                            <div class="tab-pane fade" id="tab-ip_domain"><div id="ip_domain-table"></div></div>
+                            <div class="tab-pane fade" id="tab-web"><div id="web-table"></div></div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="processSelectedItems('${id}'); getElementById('idButtonCancelModalEnterTargets').click(); ">  ${i18next.t('Add selected targets')} </button>
-                        <button class="btn btn-info" id="idButtonAddAllFilteredTargets" onclick="addAllFilteredTargets('${id}')"> ${i18next.t('Add all filtred targets')}</button>
+                        <button class="btn btn-success" id="idButtonAddEnterTargets" onclick="addAllFromTabs('${id}')">  ${i18next.t('Add selected targets')} </button>
                         <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" id="idButtonCancelModalEnterTargets"> ${i18next.t('Cancel')} </button>
                     </div>
                 </div>
@@ -622,146 +671,327 @@ Scopes
         </div>`;
 
         document.getElementById("idButtonCancelModalEnterTargets").onclick = function () { 
+            selectedTargetsFromTabs.clear();
             modal_elem.innerHTML = ``; 
         };
 
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show();
-        initTabulatorTargetTable();
+        initTable('ip_info', '/api/v1/analytics/ip_info', id);
+        initTable('open_ports', '/api/v1/analytics/software', id);
+        initTable('ip_domain', '/api/v1/analytics/domain_ip', id);
+        initTable('web', '/api/v1/analytics/web_tabulator', id);
+        await loadScopeForHighlighting(id); 
     }
 
-    function initTabulatorTargetTable() {
-        const container = document.getElementById("DataBaseTargetsTable");
-
-        const columns = [
-            {
-                title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn' data-i18n-title='Select all none'><i class='bi bi-check-square'> Select </i></button></div>",
-                field: "selected",
-                formatter: "rowSelection",
-                titleFormatter: "rowSelection",
-                hozAlign: "center",
-                headerHozAlign: "center",
-                headerSort: false,
-                width: 50,
-                formatterParams: { selectAll: false }
-            },
-            {
-                title: "IP Address",
-                field: "ipaddr",
-                headerFilter: "input",
-                headerFilterPlaceholder: `${i18next.t("Search IP...")}`
-            },
-            {
-                title: "Domain",
-                field: "domain",
-                headerFilter: "input",
-                headerFilterPlaceholder: `${i18next.t("Search domain...")}`
-            },
-            {
-                title: "Port",
-                field: "port",
-                headerFilter: "number",
-                headerFilterPlaceholder: `${i18next.t("Search port...")}`,
-                headerFilterFunc: "like"
-            },
-            {
-                title: "Protocol",
-                field: "protocol",
-                headerFilter: "input",
-                headerFilterPlaceholder: `${i18next.t("Search protocol...")}`,
+    function syncSelectionByIp(ip) {
+        const tabs = ['open_ports', 'ip_domain', 'web'];
+        for (const tab of tabs) {
+            if (!window[`${tab}_table`]) continue;
+            const rows = window[`${tab}_table`].searchRows("ipaddr", "=", ip);
+            for (const row of rows) {
+                const data = row.getData();
+                const key = `${tab}-${tab}-checkbox-${data.id}`;
+                selectedTargetsFromTabs.set(key, data);
             }
-        ];
+        }
+    }
 
+    function syncWebByIpAndPort(ip, port) {
+        if (!window.web_table) return;
+        const rows = window.web_table.searchRows([
+            { field: "ipaddr", type: "=", value: ip },
+            { field: "port", type: "=", value: port }
+        ]);
+        for (const row of rows) {
+            const data = row.getData();
+            const checkboxId = `web-checkbox-${data.id}`;
+            const checkbox = document.getElementById(checkboxId);
 
-        
+            const key = `web-${checkboxId}`;
+            selectedTargetsFromTabs.set(key, data);
 
-        targetTable = new Tabulator(container, {
-            layout: "fitColumns",
-            ajaxURL: "/api/v1/target/get_all_data",
-            ajaxParams: {
-                scans: selectedScans,
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+        }
+    }
+
+    function syncWebByIpAndDomain(ip, domain) {
+        if (!window.web_table) return;
+        const rows = window.web_table.searchRows([
+            { field: "ipaddr", type: "=", value: ip },
+            { field: "domain", type: "=", value: domain }
+        ]);
+        for (const row of rows) {
+            const data = row.getData();
+            const checkboxId = `web-checkbox-${data.id}`;
+            const checkbox = document.getElementById(checkboxId);
+
+            const key = `web-${checkboxId}`;
+            selectedTargetsFromTabs.set(key, data);
+
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+        }
+    }
+
+    function initScopeSelector(tabName, scopeId) {
+        const select = document.getElementById(`scope-selector-${tabName}`);
+        if (!select) return;
+        select.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = scopeId;
+        opt.textContent = 'Current scope';
+        select.appendChild(opt);
+        select.value = scopeId;
+    }
+
+    async function initTable(tabName, baseUrl, scopeId) {
+        const SCOPE_KEY_FIELDS = (() => {
+            if (tabName === 'ip_info') return ['ipaddr'];
+            if (tabName === 'open_ports') return ['ipaddr', 'port', 'protocol'];
+            if (tabName === 'ip_domain') return ['ipaddr', 'domain'];
+            if (tabName === 'web') return ['ipaddr', 'domain', 'port'];
+            return [];
+        })();
+
+        const DISPLAY_COLUMNS = (() => {
+            if (tabName === 'ip_info') {
+                return [
+                    { field: 'ipaddr', title: 'WHOIS IP', headerFilter: "input", headerFilterPlaceholder: "Search IP..." },
+                    { field: 'range_ip', title: 'Range IP', headerFilter: "input", headerFilterPlaceholder: "Search range..." },
+                    { field: 'AS', title: 'AS', headerFilter: "input", headerFilterPlaceholder: "Search AS..." },
+                    { field: 'org-name', title: 'Org-name', headerFilter: "input", headerFilterPlaceholder: "Search org..." },
+                    { field: 'data', title: 'Data', headerFilter: "input", headerFilterPlaceholder: "Search data..." },
+                ];
+            } else if (tabName === 'open_ports') {
+                return [
+                    { field: 'ipaddr', title: 'IP', headerFilter: "input", headerFilterPlaceholder: "Search IP..." },
+                    { field: 'port', title: 'Port', headerFilter: "number", headerFilterPlaceholder: "Search port..." },
+                    { field: 'protocol', title: 'Protocol', headerFilter: "input", headerFilterPlaceholder: "Search protocol..." },
+                    { field: 'service_name', title: 'Service', headerFilter: "input", headerFilterPlaceholder: "Search service..." },
+                    { field: 'product', title: 'Product', headerFilter: "input", headerFilterPlaceholder: "Search product..." },
+                    { field: 'version', title: 'Version', headerFilter: "input", headerFilterPlaceholder: "Search version..." },
+                ];
+            } else if (tabName === 'ip_domain') {
+                return [
+                    { field: 'ipaddr', title: 'IP', headerFilter: "input", headerFilterPlaceholder: "Search IP..." },
+                    { field: 'domain', title: 'Domain', headerFilter: "input", headerFilterPlaceholder: "Search domain..." },
+                ];
+            } else if (tabName === 'web') {
+                return [
+                    { field: 'ipaddr', title: 'IP', headerFilter: "input", headerFilterPlaceholder: "Search IP..." },
+                    { field: 'domain', title: 'Domain', headerFilter: "input", headerFilterPlaceholder: "Search domain..." },
+                    { field: 'port', title: 'Port', headerFilter: "number", headerFilterPlaceholder: "Search port..." },
+                    { field: 'code', title: 'Code', headerFilter: "input", headerFilterPlaceholder: "Search code..." },
+                    { field: 'product', title: 'Software', headerFilter: "input", headerFilterPlaceholder: "Search software..." },
+                    { field: 'waf', title: 'WAF', headerFilter: "input", headerFilterPlaceholder: "Search WAF..." },
+                ];
+            }
+            return [];
+        })();
+
+        const checkboxColumn = {
+            title: "<div class='d-flex justify-content-center'><button class='btn btn-sm btn-outline-primary select-all-btn'><i class='bi bi-check-square'> Select </i></button></div>",
+            field: "selected",
+            width: 100,
+            formatter: (cell) => {
+                const data = cell.getRow().getData();
+                const id = data.id;
+                const ip = data.ipaddr || '';
+                return `<input type='checkbox' id='${tabName}-checkbox-${id}' data-ip='${ip}'>`;
             },
+            headerSort: false,
+            hozAlign: "center",
+            headerClick: function () {
+                const checkboxes = document.querySelectorAll(`input[id^="${tabName}-checkbox"]`);
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                const newState = !allChecked;
 
-            ajaxURLGenerator: function (url, config, params) {
-                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
-                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
-                const page = params.page || 1;
-                const size = params.size || 10;
-                const scansParam = (selectedScans || [])
-                    .map(scan => `scans=${encodeURIComponent(scan)}`)
-                    .join("&");
-                return `${url}?page=${page}&size=${size}&sort=${sort}&filter=${filter}${scansParam ? `&${scansParam}` : ""}`;
-            },
-            selectable: true, 
-            sortMode: "remote",
-            filterMode: "remote",
-            pagination: true,
-            paginationMode: "remote",
-            paginationSize: 10,
-            paginationInitialPage: 1,
-            paginationSizeSelector: [5, 10, 25, 50, 100],
-            validationMode: 'highlight',
-            columns: columns,
-            ajaxResponse: function (url, params, response) {
-                setTimeout(() => {
-                    targetTable.getRows().forEach(row => {
+                const uniqueIps = new Set();
+                const uniqueIpPort = new Set();
+                const uniqueIpDomain = new Set();
+
+                checkboxes.forEach(cb => {
+                    const rowId = cb.id.split('-').pop();
+                    const row = window[`${tabName}_table`]?.getRow(rowId);
+                    if (row) {
                         const data = row.getData();
-                        const uniqueKey = `${data.ipaddr}:${data.port}:${data.domain}:${data.protocol}`;
-                        if (selectedRowsState[uniqueKey]) {
-                            row.select();
+                        const key = `${tabName}-${cb.id}`;
+                        const ip = data.ipaddr;
+
+                        if (newState) {
+                            selectedTargetsFromTabs.set(key, data);
+
+                            if (tabName === 'ip_info' && ip) {
+                                uniqueIps.add(ip);
+                            } else if (tabName === 'open_ports' && ip) {
+                                uniqueIpPort.add(`${ip}:${data.port}`);
+                            } else if (tabName === 'ip_domain' && (ip || data.domain)) {
+                                uniqueIpDomain.add(`${ip}:${data.domain}`);
+                            }
                         } else {
-                            row.deselect();
+                            selectedTargetsFromTabs.delete(key);
+                        }
+
+                        cb.checked = newState;
+                    }
+                });
+
+                if (newState) {
+                    if (tabName === 'ip_info') {
+                        uniqueIps.forEach(ip => syncSelectionByIp(ip));
+                    } else if (tabName === 'open_ports') {
+                        uniqueIpPort.forEach(pair => {
+                            const [ip, port] = pair.split(':');
+                            syncWebByIpAndPort(ip, port || '');
+                        });
+                    } else if (tabName === 'ip_domain') {
+                        uniqueIpDomain.forEach(pair => {
+                            const [ip, domain] = pair.split(':');
+                            syncWebByIpAndDomain(ip || '', domain || '');
+                        });
+                    }
+                }
+            }
+        };
+
+        const columns = [checkboxColumn, ...DISPLAY_COLUMNS];
+
+        try {
+            const params = new URLSearchParams();
+            params.append('page', '1');
+            params.append('size', '10000');
+            if (selectedScans && selectedScans.length) {
+                selectedScans.forEach(scan => params.append('scans', scan));
+            }
+
+            const response = await axios.get(`${baseUrl}?${params.toString()}`);
+            let fullData = [];
+
+            if (response.data && Array.isArray(response.data)) {
+                fullData = response.data;
+            } else if (response.data && Array.isArray(response.data.data)) {
+                fullData = response.data.data;
+            } else {
+                console.error(`Unexpected response format from ${baseUrl}`, response.data);
+                fullData = [];
+            }
+
+            const table = new Tabulator(`#${tabName}-table`, {
+                layout: "fitColumns",
+                data: fullData,
+                pagination: true,
+                paginationMode: "local",
+                paginationSize: 10,
+                paginationSizeSelector: [10, 25, 50, 100, 500],
+                sortMode: "local",
+                filterMode: "local",
+                columns: columns,
+            });
+
+            window[`${tabName}_table`] = table;
+
+            table.on("renderComplete", function(){
+                const checkboxes = document.querySelectorAll(`#${tabName}-table input[type='checkbox'][id^='${tabName}-checkbox-']`);
+                checkboxes.forEach(cb => {
+                    cb.addEventListener('change', function(){
+                        const ip = cb.getAttribute('data-ip');
+                        const row = window[`${tabName}_table`].getRow(cb.id.split('-').pop());
+                        const rowData = row ? row.getData() : null;
+                        const key = `${tabName}-${cb.id}`;
+                        
+                        if (cb.checked && rowData) {
+                            selectedTargetsFromTabs.set(key, rowData);
+
+                            if (tabName === 'ip_info' && ip) {
+                                syncSelectionByIp(ip);
+                            }
+                            else if (tabName === 'open_ports' && ip) {
+                                syncWebByIpAndPort(ip, rowData.port || '');
+                            }
+                            else if (tabName === 'ip_domain' && (ip || data.domain)) {
+                                syncWebByIpAndDomain(ip, rowData.domain || '');
+                            }
+                        } else {
+                            selectedTargetsFromTabs.delete(key);
                         }
                     });
-                }, 0);
+                });
+                checkboxes.forEach(cb => {
+                    const key = `${tabName}-${cb.id}`;
+                    if (selectedTargetsFromTabs.has(key)) {
+                        cb.checked = true;
+                    }
+                });
+                table.getRows().forEach(row => {
+                    const data = row.getData();
+                    const parts = [];
+                    if (SCOPE_KEY_FIELDS.includes("ipaddr") && data.ipaddr) parts.push(data.ipaddr);
+                    if (SCOPE_KEY_FIELDS.includes("port") && data.port != null) parts.push(String(data.port));
+                    if (SCOPE_KEY_FIELDS.includes("domain") && data.domain) parts.push(data.domain);
+                    if (SCOPE_KEY_FIELDS.includes("protocol") && data.protocol) parts.push(data.protocol);
+                    const key = parts.join('|');
 
-                return response;
-            }
-        });
+                    const rowEl = row.getElement();
+                    if (scopeCompositeKeys.has(key)) {
+                        rowEl.classList.add('in-scope-row');
+                    } else {
+                        rowEl.classList.remove('in-scope-row');
+                    }
+                });
+            });
 
-        targetTable.on("tableBuilt", function() {
-            updateAddSelectedButtonCount();
-        });
-
-        targetTable.on("rowSelected", function(row) {
-            const rowData = row.getData();
-            const uniqueKey = `${rowData.ipaddr}:${rowData.port}:${rowData.domain}:${rowData.protocol}`;
-            selectedRowsState[uniqueKey] = rowData;
-            updateAddSelectedButtonCount();
-        });
-
-        targetTable.on("rowDeselected", function(row) {
-            const rowData = row.getData();
-            const uniqueKey = `${rowData.ipaddr}:${rowData.port}:${rowData.domain}:${rowData.protocol}`;
-            delete selectedRowsState[uniqueKey];
-            updateAddSelectedButtonCount();
-        });
-
-        initFilterPanelContainer({ 
-            tableId: 'DataBaseTargetsTable',
-            tableVar: targetTable, 
-            fields: [
-                { field: 'ipaddr', title: 'IP Address' },
-                { field: 'domain', title: 'Domain' },
-                { field: 'port', title: 'Port' },
-                { field: 'protocol', title: 'Protocol' },
-            ],
-            containerId: 'filter-panel-container',
-            allowMultipleFilters: true
-        });
-
-        const clearButton = document.getElementById('clear-all-filters-DataBaseTargetsTable');
-        if (clearButton) {
-            const originalClickHandler = clearButton.onclick;
-            clearButton.onclick = function (e) {
-                if (originalClickHandler) originalClickHandler(e);
-                selectedRowsState = {};
-                if (targetTable) {
-                    targetTable.deselectRow();
-                }
-                updateAddSelectedButtonCount();
-            };
+        } catch (err) {
+            console.error(`Failed to load data for ${tabName}:`, err);
+            document.getElementById(`${tabName}-table`).innerHTML = `<div class="alert alert-danger">Failed to load data</div>`;
         }
+    }
+
+    function addAllFromTabs(scopeId) {
+        const targets = [];
+        const seen = new Set();
+        for (const [key, rowData] of selectedTargetsFromTabs.entries()) {
+            const [tab] = key.split('-');
+            let target = {};
+            if (tab === 'ip_info') {
+                target = { ip: rowData.ipaddr, domain: null, port: null, protocol: null };
+            } else if (tab === 'open_ports') {
+                target = { ip: rowData.ipaddr, domain: null, port: rowData.port, protocol: rowData.protocol };
+            } else if (tab === 'ip_domain') {
+                target = { ip: rowData.ipaddr, domain: rowData.domain, port: null, protocol: null };
+            } else if (tab === 'web') {
+                target = { ip: rowData.ipaddr, domain: rowData.domain, port: rowData.port, protocol: null };
+            } else {
+                continue;
+            }
+            if (!target.ip && !target.domain) continue;
+
+            const uniqueKey = `${target.ip || ''}|${target.domain || ''}|${target.port || ''}|${target.protocol || ''}`;
+            if (seen.has(uniqueKey)) continue;
+            seen.add(uniqueKey);
+
+            targets.push(target);
+        }
+
+        if (targets.length === 0) {
+            alert('No targets selected');
+            return;
+        }
+
+        axios.post(`/api/v1/scope/${scopeId}/targets`, { targets })
+            .then(() => {
+                getScopeTargets(scopeId);
+                const cancelBtn = document.querySelector('#idModalForWritingDataBaseTargets .btn-secondary');
+                if (cancelBtn) cancelBtn.click();
+                selectedTargetsFromTabs.clear();
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Failed to add targets');
+            });
     }
 
     async function processSelectedItems(id) {
@@ -808,8 +1038,9 @@ Scopes
             .map(scan => `scans=${encodeURIComponent(scan)}`)
             .join("&");
         
+        const MAX_TARGETS = 10000;
         // Запрашиваем ВСЕ данные (ограничим, например, 10000, чтобы не упасть на огромных данных)
-        const allUrl = `/api/v1/target/get_all_data?sort=${sortParam}&filter=${filterParam}${scansParam ? `&${scansParam}` : ""}`;
+        const allUrl = `/api/v1/target/get_all_data?page=1&size=${MAX_TARGETS}&sort=${sortParam}&filter=${filterParam}${scansParam ? `&${scansParam}` : ""}`;
 
         try {
             const response = await axios.get(allUrl);

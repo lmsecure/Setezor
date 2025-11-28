@@ -28,6 +28,10 @@ class BaseJob(Job):
     def generate_params_from_scope(cls, targets: list, **base_kwargs):
         pass
 
+    @classmethod
+    def clean_payload(cls, version: str, payload: dict):
+        pass
+
     @abstractmethod
     async def run(self, *args, **kwargs):
         pass

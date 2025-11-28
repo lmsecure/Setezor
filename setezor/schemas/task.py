@@ -1,5 +1,6 @@
 
 from typing import Optional
+from enum import Enum
 from pydantic import BaseModel, HttpUrl, field_validator
 from urllib.parse import urlparse
 from pydantic.networks import IPv4Address, IPv4Network
@@ -65,14 +66,30 @@ class WebSocketMessageForProject(WebSocketMessage):
 class TaskPayloadWithScopeID(BaseModel):
     scope_id: str | None = None
 
+class DnsRecords(str, Enum):
+    A = "A"
+    NS = "NS"
+    MX = "MX"
+    CNAME = "CNAME"
+    SOA = "SOA"
+    TXT = "TXT"
+    AAAA = "AAAA"
+    SRV = "SRV"
+    PTR = "PTR"
+
 class DNSTaskPayload(TaskPayloadWithScopeID):
-    domain: str | None = None
     agent_id: str
+    domain: str | None = None
+    records: list[DnsRecords] | None = list(DnsRecords)
+    ns_servers: list[IPv4Address] | None = None
 
-class DomainTaskPayload(DNSTaskPayload):
-    crt_sh: bool
+class DomainTaskPayload(TaskPayloadWithScopeID):
+    agent_id: str
+    domain: str | None = None
+    dict_file: str | None = None
+    crt_sh: Optional[bool] = False
 
-class WHOISTaskPayload(BaseModel):
+class WHOISTaskPayload(TaskPayloadWithScopeID):
     target: str | None = None
     agent_id: str
 
@@ -171,3 +188,15 @@ class DNSAScreenshotTaskPayload(BaseModel):
         if not parsed.netloc:
             raise ValueError("URL must have a valid domain")
         return v
+
+
+class IPInfoTaskPayload(TaskPayloadWithScopeID):
+    agent_id: str
+    target: IPv4Address | None = None
+    fields: Optional[list] = [
+        'as', 'isp', 'lat', 'lon', 'org', 'zip', 'city',
+        'proxy', 'query', 'asname', 'mobile', 'offset',
+        'region', 'status', 'country', 'hosting', 'message',
+        'reverse', 'currency', 'district', 'timezone',
+        'continent', 'regionName', 'countryCode', 'continentCode'
+    ]

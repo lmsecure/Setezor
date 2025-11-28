@@ -38,3 +38,6 @@
     white-space: nowrap;
     z-index: 1000;
 }
+.in-scope-row {
+    background-color: #9ed1ad !important;
+}

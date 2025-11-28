@@ -6,6 +6,14 @@ from setezor.restructors.sd_find_scan_task_restructor import Sd_Scan_Task_Restru
 class SdFindTask(BaseJob):
     restructor = Sd_Scan_Task_Restructor
 
+
+    @classmethod
+    def clean_payload(cls, version: str, payload: dict):
+        if list(map(int, version.split('.'))) > [1, 0, 4]:
+            return
+        payload.pop("dict_file", None)
+
+
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
         result_params = []
@@ -13,5 +21,4 @@ class SdFindTask(BaseJob):
             if not target.domain:
                 continue
             result_params.append({**base_kwargs} | {"domain" : target.domain})
-            print(result_params[-1])
         return result_params

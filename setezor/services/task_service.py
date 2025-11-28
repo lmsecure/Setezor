@@ -30,10 +30,23 @@ class TasksService(BaseService):
             await self._uow.commit()
         return task
 
-    async def list(self, status: str, project_id: str) -> List[Task]:
+    async def list(self, status: str, project_id: str) -> list[dict]:
         async with self._uow:
             tasks = await self._uow.task.filter(project_id=project_id, status=status)
-        return tasks
+        result = []
+        for task in tasks:
+            task_class = BaseJob.get_task_by_class_name(task.created_by)
+            file_path = os.path.join(PATH_PREFIX, "projects", project_id, task.scan_id, task_class.logs_folder) if task_class.logs_folder else None
+            result.append({
+                "id": task.id,
+                "created_by": task.created_by,
+                "created_at": task.created_at,
+                "updated_at": task.updated_at,
+                "params": task.params,
+                "error": task.traceback,
+                "is_log": any([file_name for file_name in os.listdir(file_path) if task.id in file_name]) if file_path and os.path.exists(file_path) else False
+            })
+        return result
 
     async def get(self, id: int, project_id: str) -> Task:
         async with self._uow:

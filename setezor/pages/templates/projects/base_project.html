@@ -67,54 +67,6 @@
 						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
             data-i18n-title="About project"></i>
 					</button>
-					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
-						aria-hidden="true">
-						<div class="modal-dialog">
-							<div class="modal-content">
-								<div class="modal-header">
-									<h4 data-i18n="About project"></h4>
-								</div>
-								<div class="modal-body">
-									<div data-i18n="About Setezor text">
-									</div>
-									<div class="list-group">
-										<a href="https://setezor.ru"
-											class="list-group-item list-group-item-action list-group-item-success"
-											target="_blank">Site</a>
-										<a href="https://t.me/lmsecurity"
-											class="list-group-item list-group-item-action list-group-item-primary"
-											target="_blank">Telegram</a>
-										<a href="https://github.com/lmsecure/Setezor"
-											class="list-group-item list-group-item-action list-group-item-secondary"
-											target="_blank">GitHub</a>
-										<a href="https://hub.docker.com/r/lmsecure/setezor"
-											class="list-group-item list-group-item-action list-group-item-danger"
-											target="_blank">DockerHub</a>
-									</div>
-                  <hr>
-									<div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
-									</div>
-                  <div class="list-group">
-										<span>Bitcoin: </span>
-											<div class="input-group mb-3">
-												<input type="text" class="form-control" name="Bitcoin" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
-												<button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
-											  </div>
-										<span>Dash: </span>
-											<div class="input-group mb-3">
-												<input type="text" class="form-control" name="Dash" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
-												<button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
-											  </div>
-									</div>
-								</div>
-								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6 data-i18n="SetezorVersion"></h6>
-									<button type="button" class="btn btn-secondary"
-										data-bs-dismiss="modal" data-i18n="Close"></button>
-								</div>
-							</div>
-						</div>
-					</div>
 
 					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
 					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
@@ -165,6 +117,53 @@
       </form>
     </div>
   </div>
+</div>
+<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h4 data-i18n="About project"></h4>
+    </div>
+    <div class="modal-body">
+      <div data-i18n="About Setezor text">
+      </div>
+      <div class="list-group">
+        <a href="https://setezor.ru"
+          class="list-group-item list-group-item-action list-group-item-success"
+          target="_blank">Site</a>
+        <a href="https://t.me/lmsecurity"
+          class="list-group-item list-group-item-action list-group-item-primary"
+          target="_blank">Telegram</a>
+        <a href="https://github.com/lmsecure/Setezor"
+          class="list-group-item list-group-item-action list-group-item-secondary"
+          target="_blank">GitHub</a>
+        <a href="https://hub.docker.com/r/lmsecure/setezor"
+          class="list-group-item list-group-item-action list-group-item-danger"
+          target="_blank">DockerHub</a>
+      </div>
+      <hr>
+      <div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
+      </div>
+      <div class="list-group">
+        <span>Bitcoin: </span>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" name="Bitcoin" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
+            <button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
+            </div>
+        <span>Dash: </span>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" name="Dash" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+            <button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
+            </div>
+      </div>
+    </div>
+    <div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
+      <h6 data-i18n="SetezorVersion"></h6>
+      <button type="button" class="btn btn-secondary"
+        data-bs-dismiss="modal" data-i18n="Close"></button>
+    </div>
+  </div>
+</div>
 </div>
 <div id="particles-js" class="h-100"></div>
 <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">

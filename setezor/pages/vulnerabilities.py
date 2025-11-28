@@ -43,7 +43,7 @@ async def vulnerabilities_page(
              'columns': [
                 {'field': 'id', 'title': 'ID', "headerFilter": "input", "headerFilterPlaceholder": "Search ID..."},
                 {'field': 'ip', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
-                {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port...", "headerFilterFunc": "like"},
+                {'field': 'port', 'title': 'PORT', "headerFilter": "number", "headerFilterPlaceholder": "Search port..."},
                 {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search DOMAIN..."}]
             },
         'current_project': project_name, 
