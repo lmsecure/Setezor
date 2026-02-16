@@ -23,6 +23,7 @@ async def admin_settings_page(
     user = await users_service.get(user_id=user_id)
     context = {
         "request": request,
-        'user': user
+        'user': user,
+        'user_id': user_id,
     }
     return TEMPLATES_DIR.TemplateResponse(name="settings/admin_settings.html", context=context)

@@ -14,4 +14,4 @@ class Schedulers(enum.Enum):
     sd_find = "sd_find"
     other = "other"
     search_vulns = "search_vulns"
-    screenshoter = "screenshoter"
+    site_parser = "site_parser"

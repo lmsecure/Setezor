@@ -13,16 +13,16 @@ class CertInfo:
 
     @classmethod
     def get_cert(cls, host: str, port: int) -> str:
-        try:
+        # try:
             #logger.debug('Try get cert from  %s:%s ', (host, port))
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_OPTIONAL
             cert = ssl.get_server_certificate((host, port), timeout=1)
             return cert
-        except Exception as e:
+        # except Exception as e:
             #logger.error(f'[-] HOST: {host}, PORT: {port} {type(e).__name__}')
-            return None
+            # return None
 
     @classmethod
     def parse_cert(cls, cert: bytes) -> Dict[str, str]:
@@ -43,7 +43,10 @@ class CertInfo:
 
         for i in range(cert.get_extension_count()):
             inf = cert.get_extension(i)
-            cert_data[inf.get_short_name().decode()] = inf.__str__()
+            try:
+                cert_data[inf.get_short_name().decode()] = inf.__str__()
+            except:
+                 continue
 
         return cert_data
 

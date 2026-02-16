@@ -3,6 +3,7 @@ from typing import List
 from fastapi import HTTPException
 from setezor.models.node_comment import NodeComment
 from setezor.schemas.comment import NodeCommentForm
+from setezor.schemas.vis import Node
 from setezor.unit_of_work import UnitOfWork
 from setezor.services.base_service import BaseService
 from setezor.schemas.roles import Roles
@@ -10,54 +11,78 @@ from setezor.schemas.roles import Roles
 
 class NodeService(BaseService):
 
-    async def list(self, project_id: str, scans: list[str]):
+    async def list(self, project_id: str, scans: list[str]) -> List[Node]:
         async with self._uow:
             if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
                 scans.append(last_scan.id)
-            vis_nodes_and_interfaces = await self._uow.ip.vis_nodes_and_interfaces(project_id=project_id, scans=scans)
+            vis_nodes = await self._uow.ip.vis_nodes(project_id=project_id, scans=scans)
+            interfaces = await self._uow.agent_interface.get_interfaces_in_project(project_id=project_id)
             agents = await self._uow.agent_in_project.for_map(project_id=project_id)
             nodes = await self._uow.ip.get_nodes(project_id=project_id, scans=scans)
             server_agent = await self._uow.agent.find_one(name="Server", secret_key="")
             server_agent_in_project = await self._uow.agent_in_project.find_one(agent_id=server_agent.id, project_id=project_id)
         agents_ips = {}
-        for row in vis_nodes_and_interfaces:
-            if not agents_ips.get(row.ip_id):
-                agents_ips[row.ip_id] = {"agents": set()}
-                if row.agent_id:
-                    agents_ips[row.ip_id].update(
-                        {"agents": {row.agent_id}})
+        for ip_id, agent_id in vis_nodes:
+            if not agents_ips.get(ip_id):
+                agents_ips[ip_id] = {"agents": set()}
+                if agent_id:
+                    agents_ips[ip_id].update(
+                        {"agents": {agent_id}})
             else:
-                if row.agent_id:
-                    agents_ips[row.ip_id]["agents"].add(row.agent_id)
+                if agent_id:
+                    agents_ips[ip_id]["agents"].add(agent_id)
 
         result = []
         for agent in agents:
-            result.append({
-                "id": agent.id,
-                "mac_address": "",
-                "address": "",
-                "agents": [agent.id],
-                "agent": agent.id,
-                "parent_agent_id": True if agent.id != server_agent_in_project.id else None,
-                "group": "agents_group",
-                "value": 1,
-                "shape": "dot",
-                "is_server": agent.rest_url and not agent.secret_key,
-                "label": agent.name
-            })
+            result.append(
+                Node(
+                    id=agent.id,
+                    address="",
+                    agents=[agent.id],
+                    agent=agent.id,
+                    parent_agent_id=True if agent.id != server_agent_in_project.id else None,
+                    object_type="agent",
+                    group="agents_group",
+                    value=1,
+                    shape="dot",
+                    is_server=bool(agent.rest_url and not agent.secret_key),
+                    label=agent.name
+                )
+            )
+        unique_interfaces = set()
+        for interface in interfaces:
+            result.append(
+                Node(
+                    id=interface.id,
+                    address=interface.name,
+                    agents=[interface.agent_id],
+                    agent=None,
+                    object_type="interface",
+                    group="interfaces",
+                    value=1,
+                    shape="triangle",
+                    is_server=False,
+                    label=interface.name
+                )
+            )
+            unique_interfaces.add(interface.id)
         for node in nodes:
-            result.append({
-                "id": node.id,
-                "mac_address": node.mac,
-                "address": node.ip,
-                "agents": list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [server_agent_in_project.id],
-                "agent": None,
-                "object_type": node.name,
-                "group": f"{node.start_ip}/{node.mask}",
-                "value": 1,
-                "shape": "dot",
-                "label": node.ip,
-            })
+            if node.id in unique_interfaces:
+                continue
+            result.append(
+                Node(
+                    id=node.id,
+                    address=node.ip,
+                    agents=list(agents_ips[node.id]["agents"]) if node.id in agents_ips else [server_agent_in_project.id],
+                    agent=None,
+                    object_type=node.name,
+                    group=f"{node.start_ip}/{node.mask}",
+                    value=1,
+                    shape="dot",
+                    is_server=False,
+                    label=node.ip
+                )
+            )
         return result
 
     async def get_comments(self,

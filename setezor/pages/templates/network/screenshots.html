@@ -46,7 +46,7 @@
 
     async function createScreenshotTask(event){
         event.preventDefault()
-        let data = new FormData(event.target)
+        const data = new FormData(event.target);
         const formData = Object.fromEntries(data);
         
         if (!formData.agent_id) {
@@ -54,26 +54,22 @@
             return;
         }
 
-        try {
-            const response = await fetch('/api/v1/task/dns_a_screenshot_task', {
-                method: 'POST', 
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
+        const result = await window.executeToolTasks({
+            tasks: [{
+                endpoint: '/api/v1/task/dns_a_screenshot_task',
+                payload: formData
+            }],
+            stopOnFirstFailure: true
+        });
 
-            if (response.status === 201) {
-                alert('Screenshot task created successfully!');
-                event.target.reset();
-            } else {
-                const errorData = await response.json();
-                const errorMessage = errorData.detail?.[0]?.msg || 'Failed to create screenshot task';
-                alert('Error: ' + errorMessage);
-            }
-        } catch (error) {
-            console.error('Error creating screenshot task:', error);
-            alert('An error occurred while creating the screenshot task');
+        if (result.success) {
+            alert('Screenshot task created successfully!');
+            event.target.reset();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('screenshoterModalWindow'));
+            if (modal) modal.hide();
+        } else if (result.reason !== 'module_install_requested') {
+            const msg = result.error?.message || 'Failed to create screenshot task';
+            alert('Error: ' + msg);
         }
     }
 </script>

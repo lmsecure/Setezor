@@ -247,6 +247,7 @@ class InterfaceStruct(BaseStructModel):
     ip: str | None = None
     ip_id: str | None = None
     mac: str | None = None
+    is_already_enabled: bool = False
     
     
 class RouteStruct(BaseStructModel):

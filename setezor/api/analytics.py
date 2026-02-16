@@ -1,8 +1,8 @@
 import json
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
-from setezor.dependencies.project import get_current_project, role_required
+from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
 from setezor.services import AnalyticsService
 from setezor.schemas.roles import Roles
 
@@ -269,6 +269,27 @@ async def analytics_ip_info(
     last_page = (total + size - 1) // size
     return JSONResponse(content={"data": data, "last_page": last_page})
 
+@router.get("/domain_info")
+async def analytics_domain_info(
+      analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+      project_id: str = Depends(get_current_project),
+      scans: list[str] = Query([]),
+      page: int = Query(1, alias="page"),
+      size: int = Query(10, alias="size"),
+      sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+    total, data = await analytics_service.get_domain_info_tabulator_data(
+         project_id=project_id,
+         scans=scans,
+         page=page,
+         size=size,
+         sort=sort,
+         filter=filter)
+    last_page = (total + size - 1) // size
+    return JSONResponse(content={"data": data, "last_page": last_page})
+
 
 @router.get("/cve_tabulator")
 async def analytics_cve_data(
@@ -311,3 +332,25 @@ async def analytics_web_data(
             filter=filter)
         last_page = (total + size - 1) // size
         return JSONResponse(content={"data": data, "last_page": last_page})
+
+
+@router.get("/web_archives_tabulator")
+async def web_archive_data(
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    scans: list[str] = Query([]),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+    total, data = await analytics_service.get_web_archives_tabulator_data(
+        project_id=project_id,
+        scans=scans,
+        page=page,
+        size=size,
+        sort=sort,
+        filter=filter)
+    last_page = (total + size - 1) // size
+    return JSONResponse(content={"data": data, "last_page": last_page})

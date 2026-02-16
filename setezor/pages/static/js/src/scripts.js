@@ -2,6 +2,16 @@ function create_websocket(endpoint, user_id) {
     var sock = new WebSocket('wss://' + window.location.host + endpoint);
     sock.onmessage = function (message) {
         let data = JSON.parse(message.data)
+        //console.log(data)
+        if (data.title === "Install module") {
+            const text = data.text;
+            const match = text.match(/^Module\s+(\w+)\s+successfully installed$/);
+            const moduleName = match ? match[1] : null;
+            if (window.moduleInstaller) {
+                window.moduleInstaller.onModuleInstalled(moduleName);
+            }
+            return;
+        }
         if (window.location.pathname == '/network-map/' && data.command === "update") {
             get_nodes_and_edges([], true)
             return;

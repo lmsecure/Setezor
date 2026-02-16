@@ -112,3 +112,7 @@ class DNS_Scan_Task_Restructor:
                 return []
         result.append(dns_obj)
         return result
+
+    @classmethod
+    def get_raw_result(cls, data):
+        return json.dumps(data).encode()

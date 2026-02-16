@@ -11,4 +11,23 @@ services:
     ports:
       - "16661:16661"
     network_mode: "host"
-    env_file: ".env"
+    env_file:
+      - .env
+      - .env.postgres
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    env_file:
+      - .env.postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

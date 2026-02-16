@@ -68,7 +68,6 @@ class WappalyzerParser:
 
     @staticmethod
     def parse_json(wappalyzer_log: dict, groups: list[str]) -> dict:
-        # to do - берется url со статусом 200, но его может не быть...
         if not wappalyzer_log.get('technologies', []):
             return {}
         url = list(wappalyzer_log.get('urls').keys())[-1]
@@ -82,7 +81,6 @@ class WappalyzerParser:
             cpe = tech.get('cpe', "")
             cpe_type = ""
             vendor = ""
-            product = ""
             if cpe:
                 cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
                 vendor = cpe.replace('/', '2.3:').split(':')[3]
@@ -90,7 +88,8 @@ class WappalyzerParser:
             else:
                 product = tech.get("slug", "")
             version = tech.get('version', "")
-            if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+            if version:
+                version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
             if product and version:
                 list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
                 cpe = ', '.join(list_cpe) if list_cpe else ""
@@ -107,47 +106,52 @@ class WappalyzerParser:
         result.update({'softwares' : softwares})
         return result
 
-
     @classmethod
-    async def restruct_result(cls, data: dict):
+    async def restruct_result(
+        cls,
+        data: dict,
+        domain_obj: Domain = None,
+        dns_obj: DNS = None,
+        port_obj: Port = None
+    ):
         if not data:
             return []
 
         result = []
-        port = data.get("port")
-        domain = data.get("domain")
-        ip = data.get("ip")
+        if not domain_obj:
+            port = data.get("port")
+            domain = data.get("domain")
+            ip = data.get("ip")
 
-        new_ip = None
-        dns_obj = None
-        if domain:
-            new_domain = Domain(domain=domain)
-            try:
-                responses = [await DNSModule.resolve_domain(domain, "A")]
-                domains = DNSModule.proceed_records(responses)
-                new_domain, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
-                if dns:
-                    dns_obj = dns[0]
-                result.extend([new_domain, new_ip, *dns])
-            except:
-                result.append(new_domain)
-        else:
-            new_domain = Domain(domain="")
-            result.append(new_domain)
-        if not new_ip:
-            if ip:
-                new_ip = IP(ip=ip)
-                result.append(new_ip)
+            new_ip = None
+            dns_obj = None
+            if domain:
+                new_domain = Domain(domain=domain)
+                try:
+                    responses = [await DNSModule.resolve_domain(domain, "A")]
+                    domains = DNSModule.proceed_records(responses)
+                    new_domain, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                    if dns:
+                        dns_obj = dns[0]
+                    result.extend([new_domain, new_ip, *dns])
+                except:
+                    result.append(new_domain)
             else:
-                new_ip = IP(ip="")
-                result.append(new_ip)
-            new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A)
-            if not dns_obj:
-                dns_obj = new_dns
-            result.append(new_dns)
-        new_port = Port(port=port, ip=new_ip)
-        result.append(new_port)
-
+                new_domain = Domain(domain="")
+                result.append(new_domain)
+            if not new_ip:
+                if ip:
+                    new_ip = IP(ip=ip)
+                    result.append(new_ip)
+                else:
+                    new_ip = IP(ip="")
+                    result.append(new_ip)
+                new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A)
+                if not dns_obj:
+                    dns_obj = new_dns
+                result.append(new_dns)
+            port_obj = Port(port=port, ip=new_ip)
+            result.append(port_obj)
 
         vendors = {}
         softwares = {}
@@ -192,7 +196,7 @@ class WappalyzerParser:
                                                     cpe23=cpe23)
                 softwares_versions[soft_version_hash_string] = soft_version_obj
                 result.append(soft_version_obj)
-            L4Software_obj = L4Software(l4=new_port, software_version=soft_version_obj, dns=dns_obj)
+            L4Software_obj = L4Software(l4=port_obj, software_version=soft_version_obj, dns=dns_obj)
             result.append(L4Software_obj)
         return result
 

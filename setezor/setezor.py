@@ -1,6 +1,5 @@
 import atexit
 import datetime
-import time
 import sys
 import os
 from contextlib import ExitStack, asynccontextmanager, contextmanager
@@ -10,6 +9,8 @@ from Crypto.Random import get_random_bytes
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 import click
 from fastapi import FastAPI, HTTPException, Request
@@ -20,9 +21,11 @@ load_dotenv()
 
 sys.path[0] = ''
 from setezor.logger import logger
+from setezor.logger.logging_config import LOGGING_CONFIG
 from setezor.exceptions import RequiresLoginException, RequiresProjectException, RequiresRegistrationException
-from setezor.settings import DEV, PATH_PREFIX, STATIC_FILES_DIR_PATH
+from setezor.settings import DEV, HOST, PATH_PREFIX, STATIC_FILES_DIR_PATH
 from setezor.db.alembic import AlembicManager
+from setezor.db.database import check_server_port
 
 
 @asynccontextmanager
@@ -139,24 +142,37 @@ def create_app():
         app.include_router(router, prefix="/api/v1")
 
     app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR_PATH), name="static")
+    app.mount("/replay", StaticFiles(directory=os.path.join(STATIC_FILES_DIR_PATH, 'replay')), name="replay")
 
     @app.exception_handler(RequiresLoginException)
-    async def login_required(_, __):
+    async def login_required(request: Request, exc: HTTPException):
+        logger.error(f'Status code {exc.status_code} | detail: Login required', exc_info=False)
         return RedirectResponse('/login')
 
     @app.exception_handler(RequiresRegistrationException)
-    async def registration_required(_, __):
+    async def registration_required(request: Request, exc: HTTPException):
+        logger.error(f'Status code {exc.status_code} | detail: Registration required', exc_info=False)
         return RedirectResponse('/registration')
 
     @app.exception_handler(RequiresProjectException)
-    async def project_required(_, __):
+    async def project_required(request: Request, exc: HTTPException):
+        logger.error(f'Status code {exc.status_code} | detail: Project required', exc_info=False)
         return RedirectResponse('/projects')
 
     @app.exception_handler(404)
     async def custom_404_handler(request: Request, exc: HTTPException):
+        logger.error(f'Status code {exc.status_code} | detail: {exc.detail}', exc_info=False)
         if exc.detail != "Not Found":
             return JSONResponse({"detail": exc.detail}, status_code=404)
         return RedirectResponse("/projects")
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        logger.error(f'Status code {exc.status_code} | detail: {exc.detail}', exc_info=False)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
 
     if DEV.mode:
         @app.middleware("http")
@@ -165,7 +181,7 @@ def create_app():
                 DEV.password = ""
                 tokens = getattr(app.state, "dev_tokens", None)
                 if tokens:
-                    logger.success("automatic login completed")
+                    logger.info("automatic login completed")
                     response = RedirectResponse("/projects")
                     response.set_cookie("access_token", tokens["access_token"], httponly=True)
                     response.set_cookie("refresh_token", tokens["refresh_token"], httponly=True)
@@ -176,19 +192,23 @@ def create_app():
 
 
 @click.group(chain=False, invoke_without_command=True)
-@click.option('-p', '--port', default=16661, type=int, show_default=True, help='Server port')
-@click.option('-h', '--host', default="0.0.0.0", type=str, show_default=True, help='Server host')
-def run_app(port: int, host: str):
+def run_app():
     """Command starts web application"""
     if click.get_current_context().invoked_subcommand is not None:
         return
     if DEV.mode:
         logger.warning("the application is running in development mode")
+
+    server_port = check_server_port()
+
     app = create_app()
     with temp_ssl_files(*generate_self_signed_cert()) as (cert_path, key_path):
-        uvicorn.run(app=app, host=host, port=port,
+        uvicorn.run(app=app,
+                    host=HOST,
+                    port=server_port,
                     ssl_keyfile=key_path,
-                    ssl_certfile=cert_path)
+                    ssl_certfile=cert_path,
+                    log_config=LOGGING_CONFIG)
 
 
 @run_app.command()
@@ -227,6 +247,15 @@ def initial_fill():
     import asyncio
     from setezor.db.database import fill_db
     asyncio.run(fill_db(manual=True))
+
+
+@run_app.command()
+def reset_db():
+    import asyncio
+    from setezor.db.database import reset_db
+    if click.confirm('Are you sure want reset database?'):
+        asyncio.run(reset_db())
+        click.echo('DataBase successfully reset')
 
 
 @run_app.group()

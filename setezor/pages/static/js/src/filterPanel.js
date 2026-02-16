@@ -45,7 +45,7 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
 
     const initialField = fields.length > 0 ? fields[0].field : '';
     container.innerHTML = `
-        <div class="d-flex flex-wrap align-items-start gap-2 mt-2 w-100" id="main-filter-row-${tableId}">
+        <div class="d-flex flex-wrap align-items-start gap-2 w-100" id="main-filter-row-${tableId}">
             <!-- Первая панель -->
             <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-0">
                 <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-0">
@@ -112,6 +112,10 @@ function addExtraFilterPanel(wrapper, tableId, fields, index) {
     const initialField = fields.length > 0 ? fields[0].field : '';
     const panelHTML = `
         <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-${index}">
+            <span class="and-label px-1 text-nowrap"
+                style="font-size: 0.8rem; font-weight: 600; color: #6c757d; align-self: center;">
+                AND
+            </span>
             <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-${index}">
                 ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
             </select>
@@ -158,7 +162,13 @@ function applyAllFilters(tableId, tableVar) {
 
         if (!field || !rawValue) return;
 
-        allFilters.push({ field, type, value: rawValue });
+        const values = rawValue
+            .split(',')
+            .map(v => v.trim())
+            .filter(v => v !== '');
+
+        if (values.length === 0) return;
+        allFilters.push({ field, type, value: values });
     });
 
     tableVar.setFilter(allFilters);

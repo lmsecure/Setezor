@@ -10,17 +10,13 @@ from setezor.tools.ip_tools import get_network
 from setezor.db.entities import DNSTypes
 
 try:
-    # from exceptions.loggers import get_logger
     from network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 except ImportError:
-    # from ...exceptions.loggers import get_logger
     from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 
 from cpeguess.cpeguess import CPEGuess
 
 from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS, Domain
-
-# logger = get_logger(__package__, handlers=[])
 
 
 
@@ -315,6 +311,12 @@ class NmapParser:
                 result.traces.append(trace_data)
 
         return result, traceroute
+    
+    @staticmethod
+    def gen_arpa_address(ip_addr: str) -> str:
+        reverse_ip = '.'.join(ip_addr.split('.')[::-1])
+        arpa_adderess = f'{reverse_ip}.in-addr.arpa'
+        return arpa_adderess
 
     @classmethod
     def restruct_result(cls, data, interface_ip_id: int, traceroute: bool) -> list:
@@ -344,11 +346,15 @@ class NmapParser:
             domain_name = data.addresses[0].get('domain_name')
             if domain_name:
                 domain_obj = Domain(domain=domain_name)
+                result.append(domain_obj)
+                dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.PTR.value)
+                result.append(dns_obj)
             else:
-                domain_obj = Domain()
-            result.append(domain_obj)
-            dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.A.value)
-            result.append(dns_obj)
+                arpa_addr = cls.gen_arpa_address(data.addresses[i].get('ip'))
+                domain_obj = Domain(domain=arpa_addr)
+                result.append(domain_obj)
+                dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.PTR.value)
+                result.append(dns_obj)
             address_in_traceses[ip_obj.ip] = ip_obj
             ports = data.ports.get(data.addresses[i].get('ip'), [])
             softs = data.softwares.get(data.addresses[i].get('ip'), [])
@@ -413,10 +419,6 @@ class NmapParser:
                         result.append(network_obj)
                         ip_obj_in_trace = IP(ip=str(r.address), network=network_obj)
                         result.append(ip_obj_in_trace)
-                        domain_obj = Domain()
-                        result.append(domain_obj)
-                        dns_obj = DNS(target_ip=ip_obj_in_trace, target_domain=domain_obj, dns_type_id=DNSTypes.A.value)
-                        result.append(dns_obj)
                         froms_tos.append(str(r.address))
                         address_in_traceses.update({str(r.address) : ip_obj_in_trace})
                     else:

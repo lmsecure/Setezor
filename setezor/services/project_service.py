@@ -3,6 +3,7 @@ import asyncio
 from fastapi.exceptions import HTTPException
 from sqlmodel import SQLModel
 
+from setezor.models import Agent
 from setezor.schemas.task import WebSocketMessage
 from setezor.services.base_service import BaseService
 from setezor.models.project import Project
@@ -68,10 +69,11 @@ class ProjectService(BaseService):
                 self._uow.asn,  # network_asn
                 self._uow.network,  # network
                 self._uow.mac,  # network_mac
+                self._uow.agent,  # setezor_agent
+                self._uow.agent_interface,  # setezor_agent_network_interface
                 self._uow.ip,  # network_ip
                 self._uow.domain,  # network_domain
                 self._uow.dns,  # network_dns
-                self._uow.screenshot,  # screenshot
                 self._uow.dns_a_screenshot,  # network_dns_a_screenshot
                 self._uow.port,  # network_port
                 self._uow.vulnerability,  # software_vulnerability
@@ -100,16 +102,36 @@ class ProjectService(BaseService):
                 self._uow.scope,  # project_scope
                 self._uow.target,  # project_scope_targets
                 self._uow.vulnerability_link,  # software_vulnerability_link
+                self._uow.web_archive,  # network_web_archive
             ]
 
             for repo in repos:
                 obj_list_name = type(repo).__name__.replace('Repository', '')
+
+                if obj_list_name == 'Agent':
+                    objects['Agent'] = []
+                    users = await self._uow.user_project.filter(project_id=project_id)
+                    for user in users:
+                        user_agnets: list[Agent] = await self._uow.agent.filter(user_id=user.user_id)
+                        for agent in user_agnets:
+                            agent.user_id = None
+                        objects['Agent'].extend(user_agnets)
+                    continue
 
                 if obj_list_name == 'Software':
                     objects['SoftwareType'] = await self._uow.software_type.list()
                     objects['SoftwareVendor'] = await self._uow.software.get_software_vendors(project_id=project_id)
                     objects['Software'] = await self._uow.software.get_software_by_project(project_id=project_id)
                     objects['SoftwareVersion'] = await self._uow.software.get_software_versions(project_id=project_id)
+                    continue
+
+                if obj_list_name == 'AgentInterface':
+                    objects['AgentInterface'] = []
+
+                    agents = objects.get('Agent', [])
+                    for agent in agents:
+                        interfaces = await self._uow.agent_interface.filter(agent_id=agent.id)
+                        objects['AgentInterface'].extend(interfaces)
                     continue
 
                 if obj_list_name == 'MAC':
@@ -119,18 +141,36 @@ class ProjectService(BaseService):
 
             return ProjectDTO(name=project.name, data=objects)
 
-    async def import_project(self, user_id: str, objects: dict[str, list[SQLModel]], imported_projects: set[str], hashed_data: str):
+    async def import_project(self, user_id: str, objects: dict[str, list[SQLModel]]):
         async with self._uow:
             imported_project = objects['Project'][0]
             is_project_exists = await self._uow.project.find_one(id=imported_project.id, deleted_at=None)
 
         if is_project_exists:
-            raise HTTPException(status_code=400, detail='Project already exists')
+            msg = 'Project already exist'
+            message = WebSocketMessage(
+                title='Import project',
+                text=msg,
+                type='info',
+                command='notify_user',
+                user_id=user_id
+            )
+            await WS_USER_MANAGER.send_message(entity_id=user_id, message=message)
+            raise HTTPException(status_code=400, detail=msg)
 
-        asyncio.create_task(self.start_import_project(user_id, objects, imported_projects, hashed_data))
+        message = WebSocketMessage(
+            title='Import project',
+            text='Start importing project',
+            type='info',
+            command='notify_user',
+            user_id=user_id
+        )
+        await WS_USER_MANAGER.send_message(entity_id=user_id, message=message)
+        asyncio.create_task(self.start_import_project(user_id, objects))
 
-    async def start_import_project(self, user_id: str, objects: dict[str, list[SQLModel]], imported_projects: set[str], hashed_data: str):
-        imported_project = objects['Project'][0]
+    async def start_import_project(self, user_id: str, objects: dict[str, list[SQLModel]]):
+
+        imported_project: Project = objects['Project'][0]
 
         async with self._uow:
             current_project = await self._uow.project.find_one(id=imported_project.id)
@@ -160,41 +200,49 @@ class ProjectService(BaseService):
 
         for objects_name, models_list in objects.items():
             async with self._uow:
-                if not models_list:
-                    continue
+                try:
+                    if not models_list:
+                        continue
 
-                id_set = set()
-                for model in models_list:
-                    id_set.add(model.id)
-                    if 'user_id' in model.model_fields:
-                        model.user_id = user_id
-                    if 'role_id' in model.model_fields:
-                        model.role_id = owner_role.id
+                    id_set = set()
+                    for model in models_list:
+                        id_set.add(model.id)
+                        if 'user_id' in model.model_fields:
+                            model.user_id = user_id
+                        if 'role_id' in model.model_fields:
+                            model.role_id = owner_role.id
 
-                if objects_name == 'AgentInProject':
-                    for agent_in_project in models_list:
-                        if agent_in_project.agent_id == imported_server_id:
-                            agent_in_project.agent_id = current_server.id
+                    if objects_name == 'Agent':
+                        for agent in models_list:
+                            agent.name = 'Synthetic'
+                            agent.description = ''
+                            agent.rest_url = ''
+                            agent.secret_key = ''
 
-                if objects_name == 'Software':
-                    for software in models_list:
-                        if software_id_mapper.get(software.id):
-                            software.id = software_id_mapper[software.id]
+                    if objects_name == 'AgentInProject':
+                        for agent_in_project in models_list:
+                            if agent_in_project.agent_id == imported_server_id:
+                                agent_in_project.agent_id = current_server.id
 
-                if objects_name == 'ParentAgent':
-                    for parent_agent in models_list:
-                        if parent_agent.parent_agent_id not in all_user_agent:
-                            parent_agent.parent_agent_id = current_server.id
+                    if objects_name == 'Software':
+                        for software in models_list:
+                            if software_id_mapper.get(software.id):
+                                software.id = software_id_mapper[software.id]
 
-                repo = self._uow.get_repo_by_model(models_list[0])
+                    if objects_name == 'ParentAgent':
+                        for parent_agent in models_list:
+                            if parent_agent.parent_agent_id not in all_user_agent:
+                                parent_agent.parent_agent_id = current_server.id
 
-                await repo.add_many(models_list)
-                await self._uow.commit()
-                await repo.set_deleted_at(id_set)
-                await self._uow.commit()
+                    repo = self._uow.get_repo_by_model(models_list[0])
 
-        if hashed_data in imported_projects:
-            imported_projects.remove(hashed_data)
+                    await repo.add_many(models_list)
+                    await self._uow.commit()
+                    await repo.set_deleted_at(id_set)
+                    await self._uow.commit()
+                except Exception as e:
+                    pass
+
         message = WebSocketMessage(
             title='Import project',
             text='Project successfully imported',

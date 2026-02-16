@@ -11,5 +11,6 @@ class Task(IDDependent, Base, table=True):
 
     status: str = Field(sa_column_kwargs={"comment":"Статус задачи"})
     params: str = Field(sa_column_kwargs={"comment":"Аргументы задачи"})
-    agent_id: Optional[str] = Field(foreign_key="setezor_agent_in_project.id", sa_column_kwargs={"comment":"Идентификатор проекта"})
+    user_id: str = Field(foreign_key="user.id", sa_column_kwargs={"comment": "Идентификатор пользователя"})
+    agent_id: Optional[str] = Field(foreign_key="setezor_agent.id", sa_column_kwargs={"comment":"Идентификатор агента"})
     traceback: Optional[str] = Field(sa_column_kwargs={"comment": "Описание ошибки"})

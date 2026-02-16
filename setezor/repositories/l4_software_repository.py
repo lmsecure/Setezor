@@ -1,11 +1,11 @@
-
 from typing import List
-from sqlalchemy import case, func, literal, text, collate
+from sqlalchemy import case, func, literal, text, collate, between
 from sqlalchemy.sql.functions import coalesce
 from setezor.models import L4Software, Port, IP, SoftwareVersion, Software, SoftwareType, Vendor, Vulnerability, L4SoftwareVulnerability, DNS, Domain, VulnerabilityLink
 from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import select, cast, String
+from sqlmodel import select, cast, String, or_, and_
+
 
 class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
     model = L4Software
@@ -75,6 +75,7 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(SoftwareType, Software.type_id == SoftwareType.id, isouter=True)
             .join(Vendor, Software.vendor_id == Vendor.id, isouter=True)
             .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
+            .filter(between(Port.port, 1, 65535))
             .group_by(
                 Port.port,
                 Port.protocol,
@@ -96,28 +97,69 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                if (field == 'port'):
-                    value = int(value)
 
                 if field in field_mapping and value is not None:
+                    if field == "port":
+                        try:
+                            if isinstance(value, list):
+                                value = [int(v) for v in value]
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            continue
+
                     column = field_mapping[field]
                     
-                    if type_op == "=":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column == value)
-                    elif type_op == "!=":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column != value)
-                    elif type_op == ">":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column > value)
-                    elif type_op == ">=":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column >= value)
-                    elif type_op == "<":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column < value)
-                    elif type_op == "<=":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(column <= value)
-                    elif type_op == "like":
-                        tabulator_dashboard_data = tabulator_dashboard_data.having(
-                            column.ilike(f"%{value}%")
-                        )
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column.in_(value))
+                        elif type_op == "!=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(~column.in_(value))
+                        elif type_op == "like":
+
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                tabulator_dashboard_data = tabulator_dashboard_data.having(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column > v)
+                                elif type_op == ">=":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column >= v)
+                                elif type_op == "<":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column < v)
+                                elif type_op == "<=":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column <= v)
+                        continue
+                    else:
+                        if type_op == "like" and field == "port":
+                            continue
+                        if type_op == "=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column == value)
+                        elif type_op == "!=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column != value)
+                        elif type_op == "like":
+                            if value != "":
+                                tabulator_dashboard_data = tabulator_dashboard_data.having(
+                                    column.ilike(f"%{value}%")
+                                )
+                        elif type_op == ">":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column > value)
+                        elif type_op == ">=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column >= value)
+                        elif type_op == "<":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column < value)
+                        elif type_op == "<=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column <= value)
 
         if sort_params:
             order_clauses = []
@@ -206,20 +248,52 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
                     
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
         
         if sort_params:
             order_clauses = []
@@ -389,7 +463,8 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(L4SoftwareVulnerability, L4SoftwareVulnerability.l4_software_id == L4Software.id)\
             .join(Vulnerability, L4SoftwareVulnerability.vulnerability_id == Vulnerability.id)\
             .join(VulnerabilityLink, VulnerabilityLink.vulnerability_id == Vulnerability.id)\
-            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))\
+            .filter(between(Port.port, 1, 65535))
         
         if filter_params:
             for filter_item in filter_params:
@@ -400,20 +475,48 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
                     
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "like":
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        elif type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
         
         if sort_params:
             order_clauses = []
@@ -483,7 +586,10 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
             .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id)\
             .join(Software, SoftwareVersion.software_id == Software.id)\
             .join(NodeComment, NodeComment.ip_id == IP.id, isouter=True)\
-            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))\
+            .filter(IP.project_id == project_id,
+                    IP.scan_id.in_(scans),
+                    between(Port.port, 1, 65535),
+                    Port.service_name.contains('http'))\
             .group_by(
                 IP.ip,
                 Domain.domain,
@@ -499,26 +605,65 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                if (field == 'port'):
-                    value = int(value)
-                
+
+                if field == "port":
+                    try:
+                        if isinstance(value, list):
+                            value = [int(v) for v in value]
+                        else:
+                            value = int(value)
+                    except (ValueError, TypeError):
+                        continue
+
                 if field in field_mapping and value is not None:
                     column = field_mapping[field]
-                    
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "like":
+                            if field == "port":
+                                continue
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        elif type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
         
         if sort_params:
             order_clauses = []

@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlmodel import Field, Relationship
 from .import TimeDependent, IDDependent
 
+
 class Agent(IDDependent, TimeDependent, table=True):
     __tablename__ = "setezor_agent"
     __table_args__ = {
@@ -20,5 +21,6 @@ class Agent(IDDependent, TimeDependent, table=True):
     last_time_seen: Optional[datetime.datetime] = Field(default=None, nullable=True, sa_column_kwargs={"comment": "Последний раз агент выходил на связь"})
     information: Optional[str] = Field(default="", nullable=True, sa_column_kwargs={"comment": "Запускаемые таски"})
 
-    user: "User" = Relationship(back_populates="agents") # type: ignore
+    user: "User" = Relationship(back_populates="agents", sa_relationship_kwargs={"lazy": "selectin"}) # type: ignore
     projects: List["AgentInProject"] = Relationship(back_populates="agent") # type: ignore
+    interfaces: List["AgentInterface"] = Relationship(back_populates="agent") # type: ignore

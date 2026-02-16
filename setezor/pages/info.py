@@ -46,6 +46,7 @@ async def info_page(
     # cve_columns = analytics_service.get_cve_columns_tabulator_data()
 
     ip_info = analytics_service.get_ip_info_columns_tabulator_data()
+    domain_info = analytics_service.get_domain_info_columns_tabulator_data()
     open_ports = analytics_service.get_open_ports_columns_tabulator_data()
     ip_domain = analytics_service.get_ip_domain_columns_tabulator_data()
     web = analytics_service.get_web_columns_tabulator_data()
@@ -68,6 +69,11 @@ async def info_page(
                 'name': 'ip_info',
                 'base_url': '/api/v1/analytics/ip_info',
                 'columns': ip_info
+            },
+            {
+                'name': 'domain_info',
+                'base_url': '/api/v1/analytics/domain_info',
+                'columns': domain_info
             },
             {
                 'name': 'open_ports',

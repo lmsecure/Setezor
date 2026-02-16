@@ -162,23 +162,138 @@
 
         async function SpeedTestTask(event) {
             event.preventDefault();
-            let formData = new FormData(event.target);
-            let params = Object.fromEntries(formData);
-            let data = {};
-            data["agent_id_from"] = params["agent_id_from"];
-            Object.assign(data, JSON.parse(params["interface_from"]));
-            data["agent_id"] = params["agent_id_to"];
-            Object.assign(data, JSON.parse(params["interface_to"]));
-            data["target_port"] = params["target_port"];
-            data["protocol"] = Number(params["protocol"]);
-            data["duration"] = Number(params["duration"]);
-            data["packet_size"] = Number(params["packet_size"]);
-            await axios.post('/api/v1/task/speed_test_task', data, {headers: { 'Content-Type': 'application/json' }});
+            const formData = new FormData(event.target);
+            const params = Object.fromEntries(formData);
 
-            event.target.reset();
-            document.getElementById("id_button_{{ prefix }}_SpeedTestModalClose").click();
+            const data = {
+                agent_id_from: params["agent_id_from"],
+                agent_id: params["agent_id_to"],
+                target_port: Number(params["target_port"]),
+                protocol: Number(params["protocol"]),
+                duration: Number(params["duration"]),
+                packet_size: Number(params["packet_size"])
+            };
+
+            try {
+                Object.assign(data, JSON.parse(params["interface_from"]));
+                Object.assign(data, JSON.parse(params["interface_to"]));
+            } catch (e) {
+                console.error('Failed to parse interface data:', e);
+                return;
+            }
+
+            const result = await window.executeToolTasks({
+                tasks: [{
+                    endpoint: '/api/v1/task/speed_test_task',
+                    payload: data
+                }],
+                stopOnFirstFailure: true
+            });
+
+            if (result.success) {
+
+                document.getElementById("id_button_{{ prefix }}_SpeedTestModalClose").click();
+            } else if (result.reason !== 'module_install_requested') {
+                console.error('Speed test task failed:', result.error);
+            }
         }
 
     </script>
 
+{% endmacro %}
+
+{% macro speed_test_start_with_prefill(prefix) %}
+<script>
+async function speed_test_start_with_prefill(prefillParams, prefix = '') {
+    const safePrefix = (typeof prefix === 'string' ? prefix : '') || '';
+    const modalEl = document.getElementById(safePrefix + 'SpeedTestModalWindow');
+    
+    if (!modalEl) {
+        console.error('SpeedTest modal not found:', safePrefix + 'SpeedTestModalWindow');
+        return;
+    }
+
+    const originalSpeedTestModal = window.speed_test_modal_window;
+    
+    window.speed_test_modal_window = async function() {
+        await originalSpeedTestModal();
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!prefillParams) return;
+
+        if (prefillParams.agent_id_from) {
+            const fromAgentSelect = document.getElementById('id_select_agent_from');
+            if (fromAgentSelect) {
+                fromAgentSelect.value = prefillParams.agent_id_from;
+                fromAgentSelect.dispatchEvent(new Event('change'));
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        if (prefillParams.ip_id_from && document.getElementById('id_select_interface_from')) {
+            Array.from(document.getElementById('id_select_interface_from').options).some(opt => {
+                try {
+                    const data = JSON.parse(opt.value);
+                    if (data.ip_id_from === prefillParams.ip_id_from) {
+                        document.getElementById('id_select_interface_from').value = opt.value;
+                        return true;
+                    }
+                } catch (e) {}
+                return false;
+            });
+        }
+
+        if (prefillParams.agent_id) {
+            const toAgentSelect = document.getElementById('id_select_agent_to');
+            if (toAgentSelect) {
+                toAgentSelect.value = prefillParams.agent_id;
+                toAgentSelect.dispatchEvent(new Event('change'));
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        if (prefillParams.ip_id_to && document.getElementById('id_select_interface_to')) {
+            Array.from(document.getElementById('id_select_interface_to').options).some(opt => {
+                try {
+                    const data = JSON.parse(opt.value);
+                    if (data.ip_id_to === prefillParams.ip_id_to) {
+                        document.getElementById('id_select_interface_to').value = opt.value;
+                        return true;
+                    }
+                } catch (e) {}
+                return false;
+            });
+        }
+
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.value = String(val);
+        };
+        
+        setVal('id_source_port', prefillParams.target_port);
+        setVal('id_slider_duration', prefillParams.duration ?? 5);
+        setVal('id_slider_rate', prefillParams.packet_size ?? 1200);
+        
+        const durationLabel = document.getElementById('id_slider_duration_value');
+        if (durationLabel) {
+            durationLabel.textContent = prefillParams.duration ?? 5;
+        }
+
+        const packetSizeLabel = document.getElementById('id_slider_packet_size_value');
+        if (packetSizeLabel) {
+            packetSizeLabel.textContent = prefillParams.packet_size ?? 1200;
+        }
+        
+        if (prefillParams.protocol !== undefined) {
+            const protoRadio = document.querySelector(`input[name="protocol"][value="${Number(prefillParams.protocol)}"]`);
+            if (protoRadio) protoRadio.checked = true;
+        }
+    };
+
+    window.speed_test_modal_window();
+    
+    window.speed_test_modal_window = originalSpeedTestModal;
+}
+</script>
 {% endmacro %}

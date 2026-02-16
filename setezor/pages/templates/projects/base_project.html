@@ -201,7 +201,7 @@ aria-labelledby="offcanvasNotificationsLabel">
         </summary>
         <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-5 row-cols-xl-6">
           {% for items in owned_projects %}
-          <div class="col mb-3">
+          <div class="col mb-3" style="min-width: 200px;">
             {% import 'projects/project_card.html' as project_cards with context %}
             {{ project_cards.show(items.project, items.analytics, items.role, items.owner_login) }}
           </div>

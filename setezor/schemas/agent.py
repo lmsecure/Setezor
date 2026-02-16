@@ -1,6 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
 
 class AgentDisplay(BaseModel):
     name: str
@@ -9,8 +10,15 @@ class AgentDisplay(BaseModel):
     user_id: str | None = None
     flag: bool | None = False
 
+
 class AgentAdd(AgentDisplay):
     secret_key: Optional[str] = ''
+
+
+class AgentUpdate(BaseModel):
+    name: Optional[str] = Field(min_length=1, max_length=32)
+    description: Optional[str]
+    rest_url: Optional[str]
 
 
 class AgentInterfacesChain(BaseModel):
@@ -31,8 +39,11 @@ class BackWardData(BaseModel):
     sender: str
     data: str
 
+
 class AgentParents(BaseModel):
     parents: dict[str, bool]
 
+
 class AgentAddToProject(BaseModel):
     agents: dict[str, bool]
+

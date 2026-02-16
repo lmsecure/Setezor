@@ -40,8 +40,10 @@ class BaseMasscanParser:
                 ips_objs.update({ip_target : ip_obj})
                 result.extend([network_obj, ip_obj, domain_obj, dns_obj])
                 for port in ports_target:
-                    port_obj = Port(ip=ip_obj, **port)
-                    result.append(port_obj)
+                    if port.get('port'):
+                        port_obj = Port(ip=ip_obj, **port)
+                        result.append(port_obj)
+
         return result
 
 

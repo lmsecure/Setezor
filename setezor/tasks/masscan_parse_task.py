@@ -12,7 +12,7 @@ class MasscanLogTask(BaseJob):
                  task_id: int, 
                  project_id: str, 
                  scan_id: str, 
-                 agent_id: int, filename: str, file: str, interface_ip_id: int, ip: str, mac: str):
+                 agent_id: int, filename: str, file: str, interface_ip_id: int, ip: str):
         super().__init__(scheduler=scheduler, name=name)
         self.task_manager = task_manager
         self.task_id = task_id
@@ -23,7 +23,6 @@ class MasscanLogTask(BaseJob):
         self.file = file
         self.interface_ip_id = interface_ip_id
         self.ip = ip
-        self.mac = mac
         self._coro = self.run()
 
     async def _task_func(self):

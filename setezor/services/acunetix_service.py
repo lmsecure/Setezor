@@ -71,7 +71,8 @@ class AcunetixService(BaseService):
             if domain := data.get("domain"):
                 responses = [await DNSModule.resolve_domain(domain, "A")]
                 domains = DNSModule.proceed_records(responses)
-                new_domain, new_ip, dns = await DNS_Scan_Task_Restructor.restruct(domains, domain)
+                new_domain, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(domains, domain)
+                dns = dns[0]
                 if new_ip.ip in ips:
                     new_ip = ips[new_ip.ip]
                     dns.ip = new_ip
@@ -251,7 +252,8 @@ class AcunetixService(BaseService):
                         try:
                             responses = [await DNSModule.resolve_domain(domain=domain, record="A")]
                             domains = DNSModule.proceed_records(responses)
-                            new_domain, new_ip, new_dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
+                            new_domain, new_ip, *new_dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # может не разрезолвить
+                            new_dns = new_dns[0]
                             if new_ip.ip in ips and new_ip.ip:
                                 new_ip = ips[new_ip.ip]
                                 new_dns.target_ip = new_ip

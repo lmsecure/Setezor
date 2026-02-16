@@ -54,13 +54,17 @@ class SQLAlchemyRepository(Generic[T]):
         res: ScalarResult = await self._session.exec(stmt)
         return res.all()
 
-    async def find_one(self, **filter_by):
+    async def find_one(self, with_deleted_at: bool = False, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
+        if not with_deleted_at and hasattr(self.model, 'deleted_at'):
+            stmt = stmt.filter(self.model.deleted_at == None)
         res: ScalarResult = await self._session.exec(stmt)
         return res.first()
 
-    async def filter(self, **filter_by):
+    async def filter(self, with_deleted_at: bool = False, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
+        if not with_deleted_at and hasattr(self.model, 'deleted_at'):
+            stmt = stmt.filter(self.model.deleted_at == None)
         res: ScalarResult = await self._session.exec(stmt)
         return res.all()
 

@@ -19,6 +19,7 @@ from setezor.api.target import router as router_target
 from setezor.api.role import router as router_role
 from setezor.api.domain import router as router_domain
 from setezor.api.dns_a_screenshot import router as router_dns_a_screenshot
+from setezor.api.web_archive import router as router_web_archive
 from setezor.api.settings import router as settings_router
 
 
@@ -45,4 +46,5 @@ api_routers = [
     router_domain,
     settings_router,
     router_dns_a_screenshot,
+    router_web_archive
 ]

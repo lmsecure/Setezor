@@ -17,14 +17,12 @@ class CVERefresher(BaseJob):
                  project_id: str,
                  scan_id: str,
                  project_service: ProjectService,
-                 software_service: SoftwareService,
-                 agent_id: int):
+                 software_service: SoftwareService):
         super().__init__(scheduler=scheduler, name=name)
         self.task_manager = task_manager
         self.task_id = task_id
         self.project_id = project_id
         self.scan_id = scan_id
-        self.agent_id = agent_id
         self.vulnerabilities = {}
         self.links = set()
         self.results = {}

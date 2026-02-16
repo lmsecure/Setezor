@@ -79,7 +79,18 @@ function fillAgentBar(barSelector) {
     const button = elem.querySelector("button");
     const list = elem.querySelector("ul");
 
-    const html = agentData.agents
+    const createItem = `
+        <li>
+            <a class="dropdown-item text-success fw-medium" 
+               href="#" 
+               onclick="event.preventDefault(); agentManager.show({projectMode: true});">
+                <i class="bi bi-plus-circle me-2"></i>${i18next.t('Create new agent')}
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+    `;
+
+    const html = createItem + agentData.agents
         .filter((agent) => !agent.is_server)
         .map((agent) => createAgentElement(agent.id, agent.name))
         .join("\n");
@@ -136,3 +147,33 @@ function getAgent() {
     agent = agentData.agents.find((elem) => elem.id == agentData.default_agent)
     return agent.id
 }
+
+document.addEventListener('agentManagerFinish', async () => {
+    try {
+        const newAgentData = await window.getAgentData?.();
+        if (!newAgentData || !window.agentData) return;
+        
+        window.agentData = newAgentData;
+        
+        document.querySelectorAll('[data-agent-bar]').forEach(bar => {
+            if (typeof window.fillAgentBar === 'function') {
+                window.fillAgentBar(bar.getAttribute('data-agent-bar'));
+            }
+        });
+        
+        if (newAgentData.default_agent && typeof window.getInterfaceData === 'function') {
+            const newIfaceData = await window.getInterfaceData(newAgentData.default_agent);
+            if (newIfaceData && window.interfaceData) {
+                window.interfaceData = newIfaceData;
+                
+                document.querySelectorAll('[data-interface-bar]').forEach(bar => {
+                    if (typeof window.fillInterfaceBar === 'function') {
+                        window.fillInterfaceBar(bar.getAttribute('data-interface-bar'));
+                    }
+                });
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to refresh agent/interface bars:', err);
+    }
+});

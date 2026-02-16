@@ -5,6 +5,7 @@ from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructo
 
 class DNSTask(BaseJob):
     restructor = DNS_Scan_Task_Restructor
+    logs_folder = 'lookup_logs'
 
 
     @classmethod

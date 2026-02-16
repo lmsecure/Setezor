@@ -18,7 +18,7 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_manager: Annotated[AuthManager, Depends(AuthManager.new_instance)],
     response: Response
-) -> bool:
+):
     token_pairs = await auth_manager.login(username=form_data.username, password=form_data.password)
     if not token_pairs:
         raise HTTPException(
@@ -72,6 +72,6 @@ async def register(
     register_form: RegisterForm,
     auth_manager: Annotated[AuthManager, Depends(AuthManager.new_instance)],
     open_reg: bool = Depends(is_register_open)
-) -> bool:
+):
     return await auth_manager.register_by_invite_token(open_reg=open_reg,
                                                        register_form=register_form)

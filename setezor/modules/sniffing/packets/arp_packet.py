@@ -1,10 +1,7 @@
 from scapy.layers.l2 import ARP
 from scapy.packet import Packet
-# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
-
-# logger = get_logger(__package__, handlers=[])
 
 
 class ARPPacket(AbstractPacket):

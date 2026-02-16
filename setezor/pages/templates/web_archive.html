@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}
+Web archive
+{% endblock title %}
+{% block scripts %}
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/libs/tabulator.min.js"></script>
+<script src="/static/js/src/filterPanel.js"></script>
+<script src="/replay/ui.js"></script>
+{% endblock %}
+{% block content %}
+<div style="padding: 20px; display: flex; gap: 20px; height: calc(100vh - 48px);">
+    <!-- Left Panel: Resources Table -->
+    <div style="width: 25rem; flex-shrink: 0; display: flex; flex-direction: column;">
+        <button class="btn btn-primary mb-2" style="width: 100%; height: 2.2rem;" data-bs-toggle="modal" data-bs-target="#scansPickModal" data-i18n="Pick scans"></button>
+            <div class="modal fade" id="scansPickModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 data-i18n="Pick scans"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form name="showDashboardForScansFormName" onsubmit="showDashboardForScans(event)">
+                            <div class="modal-body" id="scansContainer">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                                <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        <div id="resources-table" style="flex: 1; overflow: auto;"></div>
+    </div>
+    
+    <!-- Right Panel: Viewer -->
+    <div style="flex: 1; display: flex; flex-direction: column;">
+        <div id="viewerContainer" style="flex: 1; border: 2px solid #ddd; border-radius: 5px; overflow: hidden;">
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
+                Select a resource to view
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedScans = []
+    async function getScans(){
+        let resp = await fetch("/api/v1/scan")
+        let scans = await resp.json()
+        return scans
+    }
+    getScans().then(data=>{
+        let el = document.getElementById("scansContainer")
+        let result = ""
+        for (const scan of data){
+            scan_html = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="scan_label_${scan.id}">
+                    <label class="form-check-label" style="word-break: break-all; white-space: normal" for="scan_label_${scan.id}">
+                        ${scan.name} - ${scan.created_at}
+                    </label>
+                </div>
+            `
+            result += scan_html
+        }
+        el.innerHTML = result
+    })
+
+    document.getElementById('scansPickModal').addEventListener('hidden.bs.modal', () => {
+        document.forms['showDashboardForScansFormName'].reset();
+    });
+
+    async function showDashboardForScans(event){
+        event.preventDefault()
+        let formData = new FormData(event.target)
+        selectedScans = [];
+        for (const [k, scan_id] of formData) {
+            selectedScans.push(scan_id);
+        }
+        resourcesTable.setData(resourcesTable.getAjaxUrl(), {scans: selectedScans}, "GET");
+    }
+
+    let resourcesTable;
+    selectedScans = [];
+    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
+    // Initialize Tabulator for resources
+    function initResourcesTable() {
+        resourcesTable = new Tabulator('#resources-table', {
+            layout: "fitColumns",
+            ajaxURL: "api/v1/analytics/web_archives_tabulator",
+            ajaxParams: { scans: selectedScans || [] },
+            ajaxURLGenerator: function (url, config, params) {
+                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                const scansParam = (selectedScans || [])
+                    .map(scan => `scans=${encodeURIComponent(scan)}`)
+                    .join("&");
+                const finalUrl = `${url}?page=${params.page}&size=${params.size}&sort=${sort}&filter=${filter}${
+                    scansParam ? `&${scansParam}` : ""
+                }`;
+                return finalUrl;
+            },
+            ajaxResponse: function(url, params, response) {
+                return {
+                    last_page: response.last_page || 1,
+                    data: response.data || []
+                };
+            },
+            selectable: false,
+            sortMode: "remote",
+            filterMode: "remote",
+            pagination: true,
+            paginationMode: "remote",
+            paginationSize: 50,
+            paginationInitialPage: 1,
+            paginationSizeSelector: [10, 25, 50, 100, 500],
+            validationMode: 'highlight',
+columns: [
+                {
+                    title: "Resource",
+                    field: "url",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter resources...",
+                    formatter: function(cell) {
+                        const value = cell.getValue();
+                        cell.getElement().style.cursor = "pointer";
+                        return value;
+                    },
+                    cellClick: function(e, cell) {
+                        const rowData = cell.getRow().getData();
+                        const resourceId = rowData.archive_id;
+                        loadResourceArchive(resourceId);
+                    }
+                }
+            ]
+        });
+
+        
+        // Add tooltip to filter inputs after table is built
+        resourcesTable.on("tableBuilt", function() {
+            const filterInputs = resourcesTable.element.querySelectorAll(".tabulator-header-filter input");
+            filterInputs.forEach(input => {
+                if (input.placeholder && !input.title) {
+                    input.title = input.placeholder;
+                }
+            });
+        });
+    }
+    
+    // Load archive for specific resource
+    async function loadResourceArchive(resourceId) {
+        console.log('Loading archive for resource:', resourceId);
+        
+        const viewerContainer = document.getElementById('viewerContainer');
+        viewerContainer.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                Loading archive...
+            </div>
+        `;
+        
+        try {
+            // Get current project and scan from URL or global variables
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('project_id') || window.currentProjectId || '';
+            const scanId = urlParams.get('scan_id') || window.currentScanId || '';
+            
+            console.log('Project ID:', projectId, 'Scan ID:', scanId);
+            
+            // Build URL with query parameters
+            let url = `/api/v1/web_archives/${resourceId}`;
+            const params = [];
+            if (projectId) params.push(`project_id=${projectId}`);
+            if (scanId) params.push(`scan_id=${scanId}`);
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            console.log('Fetching:', url);
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to load archive: ${response.status} ${response.statusText}`);
+            }
+            
+            const blob = await response.blob();
+            console.log('Archive loaded, size:', blob.size, 'bytes');
+            
+            const blobUrl = URL.createObjectURL(blob);
+            loadWacz(blobUrl, `resource_${resourceId}.warc`);
+        } catch (error) {
+            console.error('Error loading archive:', error);
+            viewerContainer.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #d9534f; flex-direction: column; padding: 20px; text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 10px;">Error loading archive</div>
+                    <div>${error.message}</div>
+                </div>
+            `;
+        }
+    }
+    
+    // Load WACZ file into viewer
+    function loadWacz(url, name) {
+        const viewerContainer = document.getElementById('viewerContainer');
+        viewerContainer.innerHTML = '';
+        
+        const viewer = document.createElement('replay-web-page');
+        viewer.source = url;
+        viewer.style.width = '100%';
+        viewer.style.height = '100%';
+        viewer.style.border = 'none';
+        
+        viewerContainer.appendChild(viewer);
+    }
+    
+    // Initialize table on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initResourcesTable();
+    });
+</script>
+
+{% endblock content %}

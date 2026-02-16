@@ -4,7 +4,7 @@ from setezor.unit_of_work.unit_of_work import UnitOfWork
 from setezor.models import IP
 
 class IPService(BaseService):
-    async def create(self, ip: IP) -> int:
+    async def create(self, ip: IP) -> IP:
         ip_dict = ip.model_dump()
         async with self._uow:
             ip = self._uow.ip.add(ip_dict)
