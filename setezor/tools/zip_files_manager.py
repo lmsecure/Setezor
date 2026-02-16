@@ -1,8 +1,11 @@
 import os
 from io import BytesIO
-from typing import Optional
+from typing import NewType, Optional
 
 from zipfile import ZipFile, ZipInfo
+
+
+Base64 = NewType("Base64", str)
 
 
 class ZipFileManager:

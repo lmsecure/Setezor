@@ -43,23 +43,41 @@
         let target_ip = selectedIp;
         let target_port = selectedPort;
         let files = document.getElementById('fileFromSNMPbrute_cs').files;
+        let agent_id = agentData?.default_agent;
 
+        let community_strings_file = "";
         if (files.length) {
-                var reader = new FileReader()
-                reader.onload = (
-                    function (file) {
-                        return async function (e) {
-                                data = {community_strings_file: e.target.result, target_ip: target_ip, target_port: target_port, agent_id: agentData.default_agent}
-                                resp = await fetch('/api/v1/task/snmp_brute_communitystring_task', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
-                            }
-                    }
-                ) (files[0])
-                data = reader.readAsDataURL(files[0]);
-            }
-        else {
-            data = {community_strings_file: "", target_ip: target_ip, target_port: target_port, agent_id: agentData.default_agent}
-            await fetch('/api/v1/task/snmp_brute_communitystring_task', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
-            }
+            const file = files[0];
+            const reader = new FileReader();
+            const content = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            community_strings_file = content;
+        }
+
+        const payload = {
+            community_strings_file,
+            target_ip,
+            target_port,
+            agent_id
+        };
+
+        const result = await window.executeToolTasks({
+            tasks: [{
+                endpoint: '/api/v1/task/snmp_brute_communitystring_task',
+                payload
+            }],
+            stopOnFirstFailure: true
+        });
+
+        if (result.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('snmpModalWindow'));
+            if (modal) modal.hide();
+        } else if (result.reason !== 'module_install_requested') {
+            console.error('SNMP scan failed:', result.error);
+        }
     }
 
     let selectedIp = '';
@@ -148,6 +166,62 @@
 
 {% endmacro %}
 
+{% macro snmp_start_with_prefill() %}
+<script>
+function snmp_start_with_prefill(rows, prefillParams) {
+    const modalEl = document.getElementById('snmpModalWindow');
+    if (!modalEl) {
+        console.error('SNMP modal not found');
+        return;
+    }
+
+    const originalDefaultAgent = window.agentData?.default_agent;
+
+    if (prefillParams?.agent_id && window.agentData) {
+        window.agentData.default_agent = prefillParams.agent_id;
+    }
+
+    const myModal = new bootstrap.Modal(modalEl);
+    
+    const handleShown = () => {
+        modalEl.removeEventListener('shown.bs.modal', handleShown);
+
+        if (prefillParams?.target_ip && prefillParams?.target_port) {
+            const targetText = `${prefillParams.target_ip}:${prefillParams.target_port}`;
+            const dropdownItems = modalEl.querySelectorAll('#dropdownMenuForIpPortData .dropdown-item');
+            let found = false;
+
+            for (const item of dropdownItems) {
+                if (item.textContent.trim() === targetText) {
+                    item.click();
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                console.warn('SNMP target not found in dropdown:', targetText);
+            }
+        }
+
+        const fileInput = document.getElementById('fileFromSNMPbrute_cs');
+        if (fileInput) fileInput.value = '';
+    };
+
+    modalEl.addEventListener('shown.bs.modal', handleShown);
+
+    const handleHidden = () => {
+        if (originalDefaultAgent !== undefined && window.agentData) {
+            window.agentData.default_agent = originalDefaultAgent;
+        }
+        modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+    };
+    modalEl.addEventListener('hidden.bs.modal', handleHidden);
+
+    myModal.show();
+}
+</script>
+{% endmacro %}
 
 {% macro show() %}
 

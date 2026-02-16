@@ -68,7 +68,6 @@ class WappalyzerParser:
 
     @staticmethod
     def parse_json(wappalyzer_log: dict, groups: list[str]) -> dict:
-        # to do - берется url со статусом 200, но его может не быть...
         if not wappalyzer_log.get('technologies', []):
             return {}
         url = list(wappalyzer_log.get('urls').keys())[-1]
@@ -82,7 +81,6 @@ class WappalyzerParser:
             cpe = tech.get('cpe', "")
             cpe_type = ""
             vendor = ""
-            product = ""
             if cpe:
                 cpe_type = {'a' : 'Applications', 'h' : 'Hardware', 'o' : 'Operating Systems'}.get(cpe.replace('/', '2.3:').split(':')[2])
                 vendor = cpe.replace('/', '2.3:').split(':')[3]
@@ -90,7 +88,8 @@ class WappalyzerParser:
             else:
                 product = tech.get("slug", "")
             version = tech.get('version', "")
-            if version: version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
+            if version:
+                version = re.search("([0-9]{1,}[.]){0,}[0-9]{1,}", version).group(0)
             if product and version:
                 list_cpe = CPEGuess.search(vendor=vendor, product=product, version=version, exact=True)
                 cpe = ', '.join(list_cpe) if list_cpe else ""

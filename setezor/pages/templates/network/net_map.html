@@ -1,184 +1,334 @@
-{% macro net_map(device_types) %}
-{% import 'network/union_netmask.html' as union_netmask %}
-{{ union_netmask.show() }}
-{% import 'network/division_netmask.html' as division_netmask %}
-{{ division_netmask.show() }}
-
-{% import 'network/nmap.html' as nmap %}
-{{ nmap.nmap_script_modal_to_node() }}
-{% import 'network/masscan.html' as masscan%}
-{{ masscan.masscan_script_modal_to_node('full_masscan') }}
-{% import 'network/cert.html' as cert%}
-{{ cert.cert_script_modal_to_node() }}
-{% import 'network/dns_a_screenshot.html' as dns_a_screenshot%}
-{{dns_a_screenshot.dns_a_screenshot_script_modal_to_node()}}
-{% import 'modals/change_node_on_interface_modal.html' as change_node_on_interface_modal %}
-{{change_node_on_interface_modal.change_node_on_interface_modal()}}
-
+{% macro net_map(device_types) %} {% import 'network/union_netmask.html' as
+union_netmask %} {{ union_netmask.show() }} {% import
+'network/division_netmask.html' as division_netmask %} {{
+division_netmask.show() }} {% import
+'modals/change_node_on_interface_modal.html' as change_node_on_interface_modal
+%} {{change_node_on_interface_modal.change_node_on_interface_modal()}}
 
 <div class="d-flex flex-row">
-    <div class="btn-group" role="group" style="padding-left: 0.47rem;">
-        <button class="btn btn-primary" id="cluster_nodes" onclick="cluster_by_netmask(); 
+  <div class="btn-group" role="group" style="padding-left: 0.47rem">
+    <button
+      class="btn btn-primary"
+      id="cluster_nodes"
+      onclick="cluster_by_netmask(); 
                 if (cluster) {
                     this.textContent = i18next.t('Decluster')
                 } else {
                     this.textContent = i18next.t('Cluster')
-                }" data-i18n="Cluster"></button>
-        <button class="btn btn-primary" id="full_screen_network" data-bs-toggle="tooltip" data-bs-toggle="top"
-        data-i18n-title="Fullscreen mode" onclick="fullscreen_network()" style="font-family: 'Times New Roman', Times, serif;"><i class="bi bi-arrows-fullscreen"></i></button>
-        <input id="inp" type='file' style="display:none" onchange="readFile(event)" />
-        <div class="btn-group" role="group">
-            <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
-                aria-expanded="false" style="font-family: 'Times New Roman', Times, serif;">
-                <i class="bi bi-download" data-bs-toggle="tooltip" data-bs-toggle="top" data-i18n-title="Export to"></i>
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                <li><a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a></li>
-                <li><a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a></li>
-                <li><a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a></li>
-            </ul>
-        </div>
-        <button class="btn btn-primary" id="updateNetwork" data-bs-toggle="tooltip" data-bs-toggle="top" style="font-family: 'Times New Roman', Times, serif;"
-        data-i18n-title="Update network" onclick="get_nodes_and_edges(/*true*/).then(() => {cluster_by_netmask()})"><i class="bi bi-arrow-clockwise"></i></button>
-
+                }"
+      data-i18n="Cluster"
+    ></button>
+    <button
+      class="btn btn-primary"
+      id="full_screen_network"
+      data-bs-toggle="tooltip"
+      data-bs-toggle="top"
+      data-i18n-title="Fullscreen mode"
+      onclick="fullscreen_network()"
+      style="font-family: 'Times New Roman', Times, serif"
+    >
+      <i class="bi bi-arrows-fullscreen"></i>
+    </button>
+    <input
+      id="inp"
+      type="file"
+      style="display: none"
+      onchange="readFile(event)"
+    />
+    <div class="btn-group" role="group">
+      <button
+        class="btn btn-primary dropdown-toggle"
+        type="button"
+        id="dropdownMenuButton1"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        style="font-family: 'Times New Roman', Times, serif"
+      >
+        <i
+          class="bi bi-download"
+          data-bs-toggle="tooltip"
+          data-bs-toggle="top"
+          data-i18n-title="Export to"
+        ></i>
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+        <li>
+          <a class="dropdown-item" href="#" onclick="export_to_svg()">SVG</a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="#" onclick="exportNetwork()">JSON</a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="#" onclick="exportToPNG()">PNG</a>
+        </li>
+      </ul>
     </div>
-    <!-- <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
+    <button
+      class="btn btn-primary"
+      id="updateNetwork"
+      data-bs-toggle="tooltip"
+      data-bs-toggle="top"
+      style="font-family: 'Times New Roman', Times, serif"
+      data-i18n-title="Update network"
+      onclick="get_nodes_and_edges(/*true*/).then(() => {cluster_by_netmask()})"
+    >
+      <i class="bi bi-arrow-clockwise"></i>
+    </button>
+  </div>
+  <!-- <div class="ms-2 ms-md-4" id="agent_interface_bar_net_map">
         <div data-agent-bar="agent_net_map"></div>
     </div> -->
-    <div class="ms-2">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scansPickModal" data-i18n="Pick scans"></button>
-    </div>
-    <div class="modal fade" id="scansPickModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 data-i18n="Pick scans"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form name="showMapForScansFormName" onsubmit="showMapForScans(event).then(() => {cluster_by_netmask()})">
-                    <div class="modal-body" id="scansContainer">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-                        <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="Show"></button>
-                    </div>
-                </form>
-            </div>
+  <div class="ms-2">
+    <button
+      class="btn btn-primary"
+      data-bs-toggle="modal"
+      data-bs-target="#scansPickModal"
+      data-i18n="Pick scans"
+    ></button>
+  </div>
+  <div class="modal fade" id="scansPickModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 data-i18n="Pick scans"></h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
+        <form
+          name="showMapForScansFormName"
+          onsubmit="showMapForScans(event).then(() => {cluster_by_netmask()})"
+        >
+          <div class="modal-body" id="scansContainer"></div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+              data-i18n="Close"
+            ></button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+              data-i18n="Show"
+            ></button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 <script>
-    let currentScans = [];
-    async function getScans(){
-        let resp = await fetch("/api/v1/scan")
-        let scans = await resp.json()
-        return scans
-    }
-    getScans().then(data=>{
-        let el = document.getElementById("scansContainer")
-        let result = ""
-        for (const scan of data){
-            scan_html = `
+  let currentScans = [];
+  async function getScans() {
+    let resp = await fetch("/api/v1/scan");
+    let scans = await resp.json();
+    return scans;
+  }
+  getScans().then((data) => {
+    let el = document.getElementById("scansContainer");
+    let result = "";
+    for (const scan of data) {
+      scan_html = `
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" value="${scan.id}" name="scan_${scan.id}" id="scan_label_${scan.id}">
                     <label class="form-check-label" style="word-break: break-all; white-space: normal" for="scan_label_${scan.id}">
                         ${scan.name} - ${scan.created_at}
                     </label>
                 </div>
-            `
-            result += scan_html
-        }
-        el.innerHTML = result
-    })
+            `;
+      result += scan_html;
+    }
+    el.innerHTML = result;
+  });
 
-    document.getElementById('scansPickModal').addEventListener('hidden.bs.modal', () => {
-        document.forms['showMapForScansFormName'].reset();
+  document
+    .getElementById("scansPickModal")
+    .addEventListener("hidden.bs.modal", () => {
+      document.forms["showMapForScansFormName"].reset();
     });
 
-    async function showMapForScans(event){
-        event.preventDefault()
-        let formData = new FormData(event.target)
-        let arr = new Array()
-        for (const [k,scan_id] of formData){
-            arr.push(scan_id)
-        }
-        currentScans = arr;
-        await get_nodes_and_edges(arr)
-        await addTableNodesWithComments()
+  async function showMapForScans(event) {
+    event.preventDefault();
+    let formData = new FormData(event.target);
+    let arr = new Array();
+    for (const [k, scan_id] of formData) {
+      arr.push(scan_id);
     }
+    currentScans = arr;
+    await get_nodes_and_edges(arr);
+    await addTableNodesWithComments();
+  }
 </script>
 
-<div id="edge-popUp" style="display: none;">
-    <span id="edge-operation" data-i18n="Add Edge"></span> <br>
-    <table style="margin: auto">
-        <tbody>
-            <tr>
-                <td>label</td>
-                <td><input id="edge-label" name="edge-label" data-i18n-value="new value"></td>
-            </tr>
-        </tbody>
-    </table>
-    <input type="button" data-i18n-value="save" id="edge-saveButton">
-    <input type="button" data-i18n-value="cancel" id="edge-cancelButton">
+<div id="edge-popUp" style="display: none">
+  <span id="edge-operation" data-i18n="Add Edge"></span> <br />
+  <table style="margin: auto">
+    <tbody>
+      <tr>
+        <td>label</td>
+        <td>
+          <input
+            id="edge-label"
+            name="edge-label"
+            data-i18n-value="new value"
+          />
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <input type="button" data-i18n-value="save" id="edge-saveButton" />
+  <input type="button" data-i18n-value="cancel" id="edge-cancelButton" />
 </div>
-
 
 <div id="netwrok_container" class="p-2 bd-highlight h-100">
-    <div id="network_topology">
-        <div class="vis-network"
-            style="position: relative; overflow: hidden; touch-action: pan-y; user-select: none; width: 100%; height: 100%;"
-            tabindex="0">
-            <canvas
-                style="position: relative; touch-action: none; user-select: none; width: 100%; height: 100%;"></canvas>
-        </div>
+  <div id="network_topology">
+    <div
+      class="vis-network"
+      style="
+        position: relative;
+        overflow: hidden;
+        touch-action: pan-y;
+        user-select: none;
+        width: 100%;
+        height: 100%;
+      "
+      tabindex="0"
+    >
+      <canvas
+        style="
+          position: relative;
+          touch-action: none;
+          user-select: none;
+          width: 100%;
+          height: 100%;
+        "
+      ></canvas>
     </div>
+  </div>
 </div>
-<div class="dropdown xs" id="nodeDropdownMenu" style="display:none">
-    {% if role.name == "owner" or role.name == "executor"%}
-    <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
-        <li class="dropdown dropend">
-            <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
-                aria-expanded="false" data-i18n="Device type"></a>
-            <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
-                {% for device_type in device_types %}
-                <li><a class="dropdown-item" href="#" onclick="set_device_type(this)"
-                        value="{{device_type.value}}">{{device_type.label}}</a></li>
-                {% endfor %}
-            </ul>
+<div class="dropdown xs" id="nodeDropdownMenu" style="display: none">
+  {% if role.name == "owner" or role.name == "executor"%}
+  <ul
+    class="dropdown-menu"
+    id="contextMenu"
+    style="position: static; display: block"
+  >
+    <li class="dropdown dropend">
+      <a
+        class="dropdown-item dropdown-toggle"
+        href="#"
+        id="deviceTypeDD"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        data-i18n="Device type"
+      ></a>
+      <ul class="dropdown-menu" aria-labelledby="deviceTypeDD">
+        {% for device_type in device_types %}
+        <li>
+          <a
+            class="dropdown-item"
+            href="#"
+            onclick="set_device_type(this)"
+            value="{{device_type.value}}"
+            >{{device_type.label}}</a
+          >
         </li>
-        <li class="dropdown dropend">
-            <a class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
-                aria-expanded="false" data-i18n="Tools"></a>
-            <ul class="dropdown-menu">
-                <li><a a class="dropdown-item"  onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))">
-                    Nmap
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]), 'full_masscan')">
-                    Masscan
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="window.recon_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Recon
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="cert_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Cert
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="window.whois_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Whois
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="dns_a_screenshot_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Screenshot
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="brute_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Brute
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="ip_info_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    IP-Info
-                </a></li>
-                <li><a a class="dropdown-item"  onclick="resolve_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)">
-                    Resolve
-                </a></li>
-                <li>
-                    <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addScan" onclick="document.getElementById('scanAddForm').reset();
+        {% endfor %}
+      </ul>
+    </li>
+    <li class="dropdown dropend">
+      <a
+        class="dropdown-item dropdown-toggle"
+        href="#"
+        aria-haspopup="true"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        data-i18n="Tools"
+      ></a>
+      <ul class="dropdown-menu">
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))"
+          >
+            Nmap
+          </a>
+        </li>
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]), 'full_masscan')"
+          >
+            Masscan
+          </a>
+        </li>
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="cert_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            Cert
+          </a>
+        </li>
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="window.whois_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            Whois
+          </a>
+        </li>
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="web_grabber_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            Screenshot
+          </a>
+        </li>
+        <!-- <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="brute_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            Brute
+          </a>
+        </li>
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="ip_info_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            IP-Info
+          </a>
+        </li> -->
+        <li>
+          <a
+            a
+            class="dropdown-item"
+            onclick="lookup_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
+          >
+            Lookup
+          </a>
+        </li>
+        <li>
+          <a
+            class="dropdown-item"
+            data-bs-toggle="modal"
+            data-bs-target="#addScan"
+            onclick="document.getElementById('scanAddForm').reset();
                         document.getElementById('acunetix_scan_target_id').value='';
                         document.getElementById('acunetix_scan_group_id').value='';
                         document.getElementById('scan_interval').required = false;
@@ -187,16 +337,20 @@
                         fillAcunetixScanProfiles();
                         fillAcunetixInstances('acunetix_scan_instances');
                         document.getElementById('acunetix_scan_target_db_id').value=network.getSelectedNodes()[0];
-                        document.getElementById('acunetix_scan_interval_div').style.display='';">Acunetix
-                    </a>
-                </li>
-            </ul>
+                        document.getElementById('acunetix_scan_interval_div').style.display='';"
+            >Acunetix
+          </a>
         </li>
-        <li class="dropdown dropend">
-            <button class="dropdown-item" onclick="create_change_node_on_interface_modal(networkData.nodes.get(network.getSelectedNodes()[0]).id)" data-i18n="Assign interface">
-            </button>
-        </li>
-        <!-- <li class="dropdown dropend">
+      </ul>
+    </li>
+    <li class="dropdown dropend">
+      <button
+        class="dropdown-item"
+        onclick="create_change_node_on_interface_modal(networkData.nodes.get(network.getSelectedNodes()[0]).id)"
+        data-i18n="Assign interface"
+      ></button>
+    </li>
+    <!-- <li class="dropdown dropend">
             <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Node managment</a>
                 <ul class="dropdown-menu">
@@ -215,11 +369,11 @@
                     </li>
                 </ul>
         </li> -->
-    </ul>
-    {% endif %}
+  </ul>
+  {% endif %}
 </div>
-<div class="dropdown xs" id="agentDropdownMenu" style="display:none">
-    <!-- <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
+<div class="dropdown xs" id="agentDropdownMenu" style="display: none">
+  <!-- <ul class="dropdown-menu" id="contextMenu" style="position: static;display: block">
         <li class="dropdown dropend">
             <a class="dropdown-item dropdown-toggle" href="#" id="deviceTypeDD" data-bs-toggle="dropdown"
                 aria-expanded="false">Device
@@ -250,8 +404,8 @@
                 </li>
             </ul>
         </li> -->
-        <!-- network.body.nodes[1] -->
-        <!-- <li class="dropdown dropend">
+  <!-- network.body.nodes[1] -->
+  <!-- <li class="dropdown dropend">
             <a id="NodeManagment" class="dropdown-item dropdown-toggle" href="#" aria-haspopup="true" data-bs-toggle="dropdown"
                 aria-expanded="false">Node managment</a>
                 <ul class="dropdown-menu">
@@ -270,517 +424,625 @@
                     </li>
                 </ul>
         </li> -->
-    <!-- </ul> -->
+  <!-- </ul> -->
 </div>
 
-<div id="ModalCreateNode">
-</div>
-<div id="ModalDeleteAgent">
-</div>
-<div id="ModalDeleteLastAgent">
-</div>
-<div id="ModalDeleteNode">
-</div>
+<div id="ModalCreateNode"></div>
+<div id="ModalDeleteAgent"></div>
+<div id="ModalDeleteLastAgent"></div>
+<div id="ModalDeleteNode"></div>
 <div id="ModalAddCredentials"></div>
 
-<div class="modal fade" id="agentModalNetMap" tabindex="-1" aria-labelledby="agentModalNetMapLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="agentModalNetMapLabel" data-i18n="Create agent"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <table style="margin: auto">
-                    <tbody>
-                        <tr>
-                            <td data-i18n="Agent name"></td>
-                            <td><input id="agent-name" name="agent-name" class="form-control" value="" required></td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="Agent description"></td>
-                            <td>
-                                <textarea class="form-control" id="agent-description" rows="3"></textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="Agent color"></td>
-                            <td><input id="agent-color" name="agent-color" type="color" class="form-control" value="#000000"></td>
-                        </tr>
-                    </tbody>
-                </table>
-
-            </div>
-            <div class="modal-footer">
-                <button id="close-create-agent" type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-                <button type="button" class="btn btn-primary" onclick="createAgent()" data-i18n="Save changes"></button>
-            </div>
-        </div>
+<div
+  class="modal fade"
+  id="agentModalNetMap"
+  tabindex="-1"
+  aria-labelledby="agentModalNetMapLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5
+          class="modal-title"
+          id="agentModalNetMapLabel"
+          data-i18n="Create agent"
+        ></h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <table style="margin: auto">
+          <tbody>
+            <tr>
+              <td data-i18n="Agent name"></td>
+              <td>
+                <input
+                  id="agent-name"
+                  name="agent-name"
+                  class="form-control"
+                  value=""
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td data-i18n="Agent description"></td>
+              <td>
+                <textarea
+                  class="form-control"
+                  id="agent-description"
+                  rows="3"
+                ></textarea>
+              </td>
+            </tr>
+            <tr>
+              <td data-i18n="Agent color"></td>
+              <td>
+                <input
+                  id="agent-color"
+                  name="agent-color"
+                  type="color"
+                  class="form-control"
+                  value="#000000"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button
+          id="close-create-agent"
+          type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+          data-i18n="Close"
+        ></button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick="createAgent()"
+          data-i18n="Save changes"
+        ></button>
+      </div>
     </div>
+  </div>
 </div>
-<div class="modal fade" id="demoteAgent" tabindex="-1" aria-labelledby="demoteAgentLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="demoteAgentLabel" data-i18n="Are you sure you want to demote the agent to a node?">
-                    </h5>
-                {# <button id='node-cancelButton' type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> #}
-            </div>
-            <form id='demoteAgentModal' name="demoteAgentFormName" onsubmit="confirmDemoteOfAgent(event)">
-                <div class="modal-body">
-                    
-                        <div id="node-popUp">
-                            <td data-i18n="Confirm deleting agent by typing his IP"></td>
-                            <input id="demote-agent-label" class="form-control" value="" name="ip" required>
-                        </div>
+<div
+  class="modal fade"
+  id="demoteAgent"
+  tabindex="-1"
+  aria-labelledby="demoteAgentLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5
+          class="modal-title"
+          id="demoteAgentLabel"
+          data-i18n="Are you sure you want to demote the agent to a node?"
+        ></h5>
+        {#
+        <button
+          id="node-cancelButton"
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+        #}
+      </div>
+      <form
+        id="demoteAgentModal"
+        name="demoteAgentFormName"
+        onsubmit="confirmDemoteOfAgent(event)"
+      >
+        <div class="modal-body">
+          <div id="node-popUp">
+            <td data-i18n="Confirm deleting agent by typing his IP"></td>
+            <input
+              id="demote-agent-label"
+              class="form-control"
+              value=""
+              name="ip"
+              required
+            />
+          </div>
 
-                        <div class="mt-3" id="agent_interface_bar">
-                            <td data-i18n="agent_id of all edges will be transferred to the selected agent"> </td>
-                            <div id="agent_bar3"></div>
-                        </div>
-                    
-                </div>
-                <div class="modal-footer">
-                    <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-                    <button id="node-demoteButton" type="submit" class="btn btn-primary" data-i18n="Demote Agent"></button>
-                </div>
-            </form>
+          <div class="mt-3" id="agent_interface_bar">
+            <td
+              data-i18n="agent_id of all edges will be transferred to the selected agent"
+            ></td>
+            <div id="agent_bar3"></div>
+          </div>
         </div>
+        <div class="modal-footer">
+          <button
+            id="node-cancelButton"
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+            data-i18n="Close"
+          ></button>
+          <button
+            id="node-demoteButton"
+            type="submit"
+            class="btn btn-primary"
+            data-i18n="Demote Agent"
+          ></button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
 <script>
+  // disable default context menu
+  document.onkeydown = keyboardDown;
+  document.onkeyup = keyboardUp;
+  document.oncontextmenu = function (e) {
+    var evt = new Object({ keyCode: 93 });
+    stopEvent(e);
+    keyboardUp(evt);
+  };
+  function stopEvent(event) {
+    if (event.preventDefault != undefined) event.preventDefault();
+    if (event.stopPropagation != undefined) event.stopPropagation();
+  }
+  function keyboardDown(e) {}
+  function keyboardUp(e) {}
 
-    // disable default context menu
-    document.onkeydown = keyboardDown;
-    document.onkeyup = keyboardUp;
-    document.oncontextmenu = function (e) {
-        var evt = new Object({ keyCode: 93 });
-        stopEvent(e);
-        keyboardUp(evt);
-    }
-    function stopEvent(event) {
-        if (event.preventDefault != undefined)
-            event.preventDefault();
-        if (event.stopPropagation != undefined)
-            event.stopPropagation();
-    };
-    function keyboardDown(e) {
-    };
-    function keyboardUp(e) {
-    };
-
-    update_agent_bar()
-    var cluster = false;
-    var network;
-    var networkData = { nodes: new vis.DataSet(), edges: new vis.DataSet() }
-    async function set_device_type(elem) {
-        var value = elem.attributes.value.value
-        var node_id = network.getSelectedNodes()[0]
-        await axios.put('/api/v1/vis/set_object_type', {ip_id: node_id, object_type_id: value},
-        {headers: {
-                'Content-Type': 'application/json'
-        }} ).then(resp => {
-            let object_type = resp.data
-            if (object_type.name == "unknown") {
-                network.body.data.nodes.updateOnly({
-                    "id":node_id,
-                    "shape":"dot",
-                    "image": null })
-                }
-            else {
-                network.body.data.nodes.updateOnly({
-                    "id":node_id,
-                    "shape":"image",
-                    "image":`/static/assets/${object_type.name}.svg` })
-            }
-        })
-        // networkData.nodes.update(ajax_request(`/api/v1/vis/${node_id}`, 'get').node)
-    }
-    function fullscreen_network() {
-        var node_info_map_div = document.getElementById("node_info_map_div");
-        var network_map_div = document.getElementById("network_map_div")
-        if (node_info_map_div.style.display != "none") {
-            node_info_map_div.style.display = "none";
-            network_map_div.classList = "col"
+  update_agent_bar();
+  var cluster = false;
+  var network;
+  var networkData = { nodes: new vis.DataSet(), edges: new vis.DataSet() };
+  async function set_device_type(elem) {
+    var value = elem.attributes.value.value;
+    var node_id = network.getSelectedNodes()[0];
+    await axios
+      .put(
+        "/api/v1/vis/set_object_type",
+        { ip_id: node_id, object_type_id: value },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((resp) => {
+        let object_type = resp.data;
+        if (object_type.name == "unknown") {
+          network.body.data.nodes.updateOnly({
+            id: node_id,
+            shape: "dot",
+            image: null,
+          });
         } else {
-            node_info_map_div.style.display = "";
-            network_map_div.classList = "col-9"
+          network.body.data.nodes.updateOnly({
+            id: node_id,
+            shape: "image",
+            image: `/static/assets/${object_type.name}.svg`,
+          });
         }
+      });
+    // networkData.nodes.update(ajax_request(`/api/v1/vis/${node_id}`, 'get').node)
+  }
+  function fullscreen_network() {
+    var node_info_map_div = document.getElementById("node_info_map_div");
+    var network_map_div = document.getElementById("network_map_div");
+    if (node_info_map_div.style.display != "none") {
+      node_info_map_div.style.display = "none";
+      network_map_div.classList = "col";
+    } else {
+      node_info_map_div.style.display = "";
+      network_map_div.classList = "col-9";
     }
-    let IPMap = new Map();
-    async function get_nodes_and_edges(scans=[], update = false) {
-        cluster = false
-        const params = scans.map(value => `scans=${encodeURIComponent(value)}`).join("&");
-        var nodes = ajax_request(`/api/v1/vis/nodes?${params}`, 'get', async = true);
-        var edges = ajax_request(`/api/v1/vis/edges?${params}`, 'get', async = true);
-        if (nodes.length < 1000) {
-            cluster = true
-        }
-        if (nodes.length > 10000) {
-            alert(i18next.t('There are too many objects loaded on the map, we can only process 10000 nodes, please select a scan with fewer nodes or see the node information on the Info tab.'))
-            return
-        }
-        if (nodes.length > 3000) {
-            alert(i18next.t('A large number of objects are detected on the map, the loading waiting time may be increased'))
-        }
-        try {
-            await waitForAgentData()
-            nodes.forEach((node) => {
-                caclculateNodeColor(node)
-            })
-        }
-        catch {
-            console.log('Can not fill color')
-        }
-
-        nodes.forEach((node => {
-            IPMap.set(node.id,node.address)
-            if (node.agent) {
-                if (node.is_server == true)
-                {
-                    node.icon = new ServerIcon(color = caclculateColor(node))
-                    node.shape="icon"
-                }
-                else {
-                    node.icon = new AgentIcon(color = caclculateColor(node))
-                    node.shape = 'icon'
-                }
-            } else {
-                if (node.object_type == "unknown") {
-                        node.shape="dot"
-                        node.size=50 }
-                else {
-                        node.shape="image"
-                        node.image=`/static/assets/${node.object_type}.svg`
-                        node.size=50
-                }
-            }
-        }))
-        if (update == true) {
-            nodes.forEach(elem => {
-                networkData.nodes.update(elem)
-            }
-            )
-            edges.forEach(elem => {
-                networkData.edges.update(elem)
-            })
-        }
-        else {
-            networkData.nodes.clear()
-            networkData.edges.clear()
-            networkData.nodes.add(nodes)
-            networkData.edges.add(edges)
-        }
+  }
+  let IPMap = new Map();
+  async function get_nodes_and_edges(scans = [], update = false) {
+    cluster = false;
+    const params = scans
+      .map((value) => `scans=${encodeURIComponent(value)}`)
+      .join("&");
+    var nodes = ajax_request(
+      `/api/v1/vis/nodes?${params}`,
+      "get",
+      (async = true)
+    );
+    var edges = ajax_request(
+      `/api/v1/vis/edges?${params}`,
+      "get",
+      (async = true)
+    );
+    if (nodes.length < 1000) {
+      cluster = true;
     }
-    function get_last_node_id() {
-        if (networkData.nodes) {
-            return networkData.nodes.max('id').id
-        }
-        else {
-            return 0
-        }
-
+    if (nodes.length > 10000) {
+      alert(
+        i18next.t(
+          "There are too many objects loaded on the map, we can only process 10000 nodes, please select a scan with fewer nodes or see the node information on the Info tab."
+        )
+      );
+      return;
     }
-    function get_id_for_next_node() {
-        return get_last_node_id() + 1
+    if (nodes.length > 3000) {
+      alert(
+        i18next.t(
+          "A large number of objects are detected on the map, the loading waiting time may be increased"
+        )
+      );
     }
-    function create_group_for_node(label) {
-        parts = label.split('.')
-        if (parts.lenght == 4) {
-            return parts.slice(0, -1).join('.')
-        }
-        else {
-            return ''
-        }
-    }
-    let deletionAgentData = undefined
-    let deletionAgentCallback = undefined
-    let modal = undefined
-    async function deleteNodeInDatabase(data, callback) {
-        node = networkData.nodes.get(data.nodes[0])
-        ip = node.label
-        let nodeIsAgent = false;
-
-        for (let i =0 ; i <agentData.agents.length; i++)
-            {
-                 if (node.address == agentData.agents[i].ip)
-                {   
-                    nodeIsAgent = true;
-                    break;
-                }
-             }
-        if (nodeIsAgent){  
-
-             deletionAgentData = data
-              deletionAgentCallback = callback
-
-            if (agentData.agents.length > 1){
-                modal = createDeleteAgentModal(true)
-                modal.show()
-            }else{
-                modal = createDeleteLastAgentModal(true)
-                modal.show()
-                callback()
-            }
-        }else{
-            modal = createDeleteNodeModal(true)
-            modal.show()
-        }
-
-    }
-    async function confirmDeletingOfAgent(event) {
-        event.preventDefault();
-        let data = new FormData(event.target);
-        let node_id = network.getSelectedNodes()[0];
-        let node = networkData.nodes.get(node_id);
-
-        if (data.get('ip') == node.address) {
-            const defaultAgentId = data.get('defaultAgent');
-            
-            const resp = await fetch('/api/object/delete_object', { 
-                method: 'DELETE', 
-                body: JSON.stringify({ ip: node.address, default_agent: defaultAgentId }), 
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            setDefaultAgent(defaultAgentId)
-            modal.hide();
-            update_agent_bar();
-            deletionAgentCallback(deletionAgentData);
-        }   
-    }
-    async function confirmDeletingOfNode(event) {
-        event.preventDefault();
-        resp = await fetch('/api/object/delete_object', { method: 'DELETE', body: JSON.stringify({ ip })});
-        modal.hide();
-        get_nodes_and_edges()
-        callback(data)
-        }
-    
-    function demoteAgent() {
-        document.getElementById('node-cancelButton').onclick = function () {
-        };
-        let node = networkData.nodes.get(network.getSelectedNodes()[0])
-        let _agent = agentData.agents.filter(ag => ag.id == node.agent)[0];
-        let elem = document.getElementById('agent_bar3')
-        let result = `<select name="defaultAgent"  class='form-select'>`
-        for (const agent of agentData.agents){
-            if (agent.id != _agent.id){
-                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
-            }
-        }
-        result += '</select>'
-        elem.innerHTML = result
-    }
-    async function demoteAgentInDatabase(data, callback) {
-            node = networkData.nodes.get(data.nodes[0])
-            ip = node.label
-            let nodeIsAgent = false;
-
-            for (let i =0 ; i <agentData.agents.length; i++)
-                {
-                    if (node.label == agentData.agents[i].ip)
-                    {   
-                        nodeIsAgent = true;
-                        break;
-                    }
-                }
-            if (nodeIsAgent){  
-
-                deletionAgentData = data
-                deletionAgentCallback = callback
-
-                if (agentData.agents.length > 1){
-                    modal = createDemoteAgentModal(true)
-                    modal.show()
-                }else{
-                    modal = createDeleteLastAgentModal(true)
-                    modal.show()
-                    callback()
-                }
-        }}
-        async function confirmDemoteOfAgent(event) {
-            event.preventDefault();
-            let data = new FormData(event.target);
-            let node_id = network.getSelectedNodes()[0];
-            let node = networkData.nodes.get(node_id);
-
-            if (data.get('ip') == node.label) {
-                const defaultAgentId = data.get('defaultAgent');
-                
-                const resp = await fetch('/api/object/demote_object', { 
-                    method: 'DELETE', 
-                    body: JSON.stringify({ ip: node.label, default_agent: defaultAgentId }), 
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setDefaultAgent(defaultAgentId)
-                update_agent_bar();
-                document.getElementById('node-cancelButton').click()
-                get_nodes_and_edges()
-        }
+    try {
+      await waitForAgentData();
+      nodes.forEach((node) => {
+        caclculateNodeColor(node);
+      });
+    } catch {
+      console.log("Can not fill color");
     }
 
-    async function deleteEdgeInDatabase(data, callback) {
-        edge = networkData.edges.get(data.edges[0])
-        first = networkData.nodes.get(edge.from).label
-        second = networkData.nodes.get(edge.to).label
-        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent}
-        resp = await fetch('/api/route/delete_edge', { method: 'DELETE', body: JSON.stringify(data) })
+    nodes.forEach((node) => {
+      IPMap.set(node.id, node.address);
+      if (node.agent) {
+        if (node.is_server == true) {
+          node.icon = new ServerIcon((color = caclculateColor(node)));
+          node.shape = "icon";
+        } else {
+          node.icon = new AgentIcon((color = caclculateColor(node)));
+          node.shape = "icon";
+        }
+      } else {
+        if (node.object_type == "interface") {
+          node.icon = new InterfaceIcon((color = caclculateColor(node)));
+          node.shape = "icon";
+        } else if (node.object_type == "unknown") {
+          node.size = 50;
+        } else {
+          node.shape = "image";
+          node.image = `/static/assets/${node.object_type}.svg`;
+          node.size = 50;
+        }
+      }
+    });
+    if (update == true) {
+      nodes.forEach((elem) => {
+        networkData.nodes.update(elem);
+      });
+      edges.forEach((elem) => {
+        networkData.edges.update(elem);
+      });
+    } else {
+      networkData.nodes.clear();
+      networkData.edges.clear();
+      networkData.nodes.add(nodes);
+      networkData.edges.add(edges);
     }
-    async function createEdgeInDatabase(data, callback) {
-        nodes = networkData.nodes
-        first = nodes.get(data.from).label
-        second = nodes.get(data.to).label
-        data = { first_ip: first, second_ip: second, agent_id: agentData.default_agent }
-        // send request for getting agent for node with ip=first.ip
-        resp = await fetch('/api/route/vis_add_edges', { method: 'POST', body: JSON.stringify(data) })
+  }
+  function get_last_node_id() {
+    if (networkData.nodes) {
+      return networkData.nodes.max("id").id;
+    } else {
+      return 0;
     }
-    async function editNode(data, cancelAction, callback, create) {
-        params = { ip_id: JSON.stringify(data.id) }
-        url_address = '/api/pivot/node_info?' + new URLSearchParams(params)
-        resp = await fetch(url_address, { method: 'GET' })
-        json = await resp.json()
-        if (json.ip) {
-            document.getElementById("node-label").value = json.ip
-        }
-        if (json.mac) {
-            document.getElementById("node-mac").value = json.mac
-        }
-        if (json.domain) {
-            document.getElementById("node-domain").value = json.domain
-        }
-        if (json.os) {
-            document.getElementById("node-os").value = json.os
-        }
-        if (json.vendor) {
-            document.getElementById("node-vendor").value = json.vendor
-        }
-        document.getElementById("node-saveButton").onclick = saveNodeData.bind(
-            this,
-            data,
-            callback,
-            create
-        );
-        document.getElementById("node-cancelButton").onclick =
-            cancelAction.bind(this, callback);
+  }
+  function get_id_for_next_node() {
+    return get_last_node_id() + 1;
+  }
+  function create_group_for_node(label) {
+    parts = label.split(".");
+    if (parts.lenght == 4) {
+      return parts.slice(0, -1).join(".");
+    } else {
+      return "";
     }
+  }
+  let deletionAgentData = undefined;
+  let deletionAgentCallback = undefined;
+  let modal = undefined;
+  async function deleteNodeInDatabase(data, callback) {
+    node = networkData.nodes.get(data.nodes[0]);
+    ip = node.label;
+    let nodeIsAgent = false;
 
-    // Callback passed as parameter is ignored
-    function clearNodePopUp() {
-        document.getElementById("node-saveButton").onclick = null;
-        document.getElementById("node-cancelButton").onclick = null;
-        document.getElementById("node-popUp").style.display = "none";
-        document.getElementById("node-label").value = ''
-        document.getElementById("node-mac").value = ''
-        document.getElementById("node-vendor").value = ''
-        document.getElementById("node-domain").value = ''
-        document.getElementById("node-os").value = ''
-        document.getElementById("node-mask").value = ''
+    for (let i = 0; i < agentData.agents.length; i++) {
+      if (node.address == agentData.agents[i].ip) {
+        nodeIsAgent = true;
+        break;
+      }
     }
+    if (nodeIsAgent) {
+      deletionAgentData = data;
+      deletionAgentCallback = callback;
 
-    function cancelNodeEdit(callback) {
-        clearNodePopUp();
-        callback(null);
+      if (agentData.agents.length > 1) {
+        modal = createDeleteAgentModal(true);
+        modal.show();
+      } else {
+        modal = createDeleteLastAgentModal(true);
+        modal.show();
+        callback();
+      }
+    } else {
+      modal = createDeleteNodeModal(true);
+      modal.show();
     }
-    const nodes_data = {
-        size: 50,
-        scaling: {
-            min: 10,
-            max: 30,
+  }
+  async function confirmDeletingOfAgent(event) {
+    event.preventDefault();
+    let data = new FormData(event.target);
+    let node_id = network.getSelectedNodes()[0];
+    let node = networkData.nodes.get(node_id);
+
+    if (data.get("ip") == node.address) {
+      const defaultAgentId = data.get("defaultAgent");
+
+      const resp = await fetch("/api/object/delete_object", {
+        method: "DELETE",
+        body: JSON.stringify({
+          ip: node.address,
+          default_agent: defaultAgentId,
+        }),
+        headers: {
+          "Content-Type": "application/json",
         },
-        font: {
-            size: 12,
-            face: "Tahoma",
+      });
+      setDefaultAgent(defaultAgentId);
+      modal.hide();
+      update_agent_bar();
+      deletionAgentCallback(deletionAgentData);
+    }
+  }
+  async function confirmDeletingOfNode(event) {
+    event.preventDefault();
+    resp = await fetch("/api/object/delete_object", {
+      method: "DELETE",
+      body: JSON.stringify({ ip }),
+    });
+    modal.hide();
+    get_nodes_and_edges();
+    callback(data);
+  }
+
+  function demoteAgent() {
+    document.getElementById("node-cancelButton").onclick = function () {};
+    let node = networkData.nodes.get(network.getSelectedNodes()[0]);
+    let _agent = agentData.agents.filter((ag) => ag.id == node.agent)[0];
+    let elem = document.getElementById("agent_bar3");
+    let result = `<select name="defaultAgent"  class='form-select'>`;
+    for (const agent of agentData.agents) {
+      if (agent.id != _agent.id) {
+        result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`;
+      }
+    }
+    result += "</select>";
+    elem.innerHTML = result;
+  }
+  async function demoteAgentInDatabase(data, callback) {
+    node = networkData.nodes.get(data.nodes[0]);
+    ip = node.label;
+    let nodeIsAgent = false;
+
+    for (let i = 0; i < agentData.agents.length; i++) {
+      if (node.label == agentData.agents[i].ip) {
+        nodeIsAgent = true;
+        break;
+      }
+    }
+    if (nodeIsAgent) {
+      deletionAgentData = data;
+      deletionAgentCallback = callback;
+
+      if (agentData.agents.length > 1) {
+        modal = createDemoteAgentModal(true);
+        modal.show();
+      } else {
+        modal = createDeleteLastAgentModal(true);
+        modal.show();
+        callback();
+      }
+    }
+  }
+  async function confirmDemoteOfAgent(event) {
+    event.preventDefault();
+    let data = new FormData(event.target);
+    let node_id = network.getSelectedNodes()[0];
+    let node = networkData.nodes.get(node_id);
+
+    if (data.get("ip") == node.label) {
+      const defaultAgentId = data.get("defaultAgent");
+
+      const resp = await fetch("/api/object/demote_object", {
+        method: "DELETE",
+        body: JSON.stringify({ ip: node.label, default_agent: defaultAgentId }),
+        headers: {
+          "Content-Type": "application/json",
         },
+      });
+      setDefaultAgent(defaultAgentId);
+      update_agent_bar();
+      document.getElementById("node-cancelButton").click();
+      get_nodes_and_edges();
     }
-    function saveNodeData(data, callback, create) {
-        data.id = get_id_for_next_node();
-        data.label = document.getElementById("node-label").value
-        mac = document.getElementById("node-mac").value;
-        if (mac) {
-            data.mac = mac
-        }
-        os = document.getElementById("node-os").value;
-        if (os) {
-            data.os = os
-        }
-        else {
-            data.os = null
-        }
-        vendor = document.getElementById("node-vendor").value;
-        if (vendor) {
-            data.vendor = vendor
-        }
-        else {
-            data.vendor = null
-        }
-        domain = document.getElementById("node-domain").value;
-        if (domain) {
-            data.domain = domain
-        }
-        else {
-            data.domain = null
-        }
-        mask = document.getElementById("node-mask").value;
-        if (mask) {
-            data.mask = mask
-        }
-        else {
-            data.mask = null
-        }
-        data.value = 1
-        data.shape = 'dot'
-        data.group = create_group_for_node(data.label)
-        modal.hide()
-        clearNodePopUp();
-        if (create) {
-            prom = saveNodeInDatabase(data)
-        }
-        else {
-            prom = editNodeInDatabase(data)
-        }
+  }
 
-
-        prom.then((response) => {
-            if (response.status == 200) {
-                obj_id = null
-                response.json().then((value) => {
-                    data.id = value.object_id
-                    callback(data)
-                    createNodeInformation(data.id)
-                    get_nodes_and_edges()
-                })
-            }
-        })
+  async function deleteEdgeInDatabase(data, callback) {
+    edge = networkData.edges.get(data.edges[0]);
+    first = networkData.nodes.get(edge.from).label;
+    second = networkData.nodes.get(edge.to).label;
+    data = {
+      first_ip: first,
+      second_ip: second,
+      agent_id: agentData.default_agent,
+    };
+    resp = await fetch("/api/route/delete_edge", {
+      method: "DELETE",
+      body: JSON.stringify(data),
+    });
+  }
+  async function createEdgeInDatabase(data, callback) {
+    nodes = networkData.nodes;
+    first = nodes.get(data.from).label;
+    second = nodes.get(data.to).label;
+    data = {
+      first_ip: first,
+      second_ip: second,
+      agent_id: agentData.default_agent,
+    };
+    // send request for getting agent for node with ip=first.ip
+    resp = await fetch("/api/route/vis_add_edges", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+  async function editNode(data, cancelAction, callback, create) {
+    params = { ip_id: JSON.stringify(data.id) };
+    url_address = "/api/pivot/node_info?" + new URLSearchParams(params);
+    resp = await fetch(url_address, { method: "GET" });
+    json = await resp.json();
+    if (json.ip) {
+      document.getElementById("node-label").value = json.ip;
     }
-    async function saveNodeInDatabase(data) {
-        resp = await fetch('/api/object/create_object', { method: 'PUT', body: JSON.stringify(data) })
-        return resp
+    if (json.mac) {
+      document.getElementById("node-mac").value = json.mac;
+    }
+    if (json.domain) {
+      document.getElementById("node-domain").value = json.domain;
+    }
+    if (json.os) {
+      document.getElementById("node-os").value = json.os;
+    }
+    if (json.vendor) {
+      document.getElementById("node-vendor").value = json.vendor;
+    }
+    document.getElementById("node-saveButton").onclick = saveNodeData.bind(
+      this,
+      data,
+      callback,
+      create
+    );
+    document.getElementById("node-cancelButton").onclick = cancelAction.bind(
+      this,
+      callback
+    );
+  }
+
+  // Callback passed as parameter is ignored
+  function clearNodePopUp() {
+    document.getElementById("node-saveButton").onclick = null;
+    document.getElementById("node-cancelButton").onclick = null;
+    document.getElementById("node-popUp").style.display = "none";
+    document.getElementById("node-label").value = "";
+    document.getElementById("node-mac").value = "";
+    document.getElementById("node-vendor").value = "";
+    document.getElementById("node-domain").value = "";
+    document.getElementById("node-os").value = "";
+    document.getElementById("node-mask").value = "";
+  }
+
+  function cancelNodeEdit(callback) {
+    clearNodePopUp();
+    callback(null);
+  }
+  const nodes_data = {
+    size: 50,
+    scaling: {
+      min: 10,
+      max: 30,
+    },
+    font: {
+      size: 12,
+      face: "Tahoma",
+    },
+  };
+  function saveNodeData(data, callback, create) {
+    data.id = get_id_for_next_node();
+    data.label = document.getElementById("node-label").value;
+    mac = document.getElementById("node-mac").value;
+    if (mac) {
+      data.mac = mac;
+    }
+    os = document.getElementById("node-os").value;
+    if (os) {
+      data.os = os;
+    } else {
+      data.os = null;
+    }
+    vendor = document.getElementById("node-vendor").value;
+    if (vendor) {
+      data.vendor = vendor;
+    } else {
+      data.vendor = null;
+    }
+    domain = document.getElementById("node-domain").value;
+    if (domain) {
+      data.domain = domain;
+    } else {
+      data.domain = null;
+    }
+    mask = document.getElementById("node-mask").value;
+    if (mask) {
+      data.mask = mask;
+    } else {
+      data.mask = null;
+    }
+    data.value = 1;
+    data.shape = "dot";
+    data.group = create_group_for_node(data.label);
+    modal.hide();
+    clearNodePopUp();
+    if (create) {
+      prom = saveNodeInDatabase(data);
+    } else {
+      prom = editNodeInDatabase(data);
     }
 
-    async function editNodeInDatabase(data) {
-        body = JSON.stringify(data)
-        resp = await fetch('/api/object/update_object', { method: 'PUT', body: body })
-        return resp
+    prom.then((response) => {
+      if (response.status == 200) {
+        obj_id = null;
+        response.json().then((value) => {
+          data.id = value.object_id;
+          callback(data);
+          createNodeInformation(data.id);
+          get_nodes_and_edges();
+        });
+      }
+    });
+  }
+  async function saveNodeInDatabase(data) {
+    resp = await fetch("/api/object/create_object", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return resp;
+  }
+
+  async function editNodeInDatabase(data) {
+    body = JSON.stringify(data);
+    resp = await fetch("/api/object/update_object", {
+      method: "PUT",
+      body: body,
+    });
+    return resp;
+  }
+
+  function createCreateNodeModal(editing) {
+    let text, action_button;
+    if (editing) {
+      text = i18next.t("Editing node");
+      action_button = i18next.t("Edit");
+    } else {
+      text = i18next.t("Add node info");
+      action_button = i18next.t("Create");
     }
 
-    function createCreateNodeModal(editing) {
-        let text, action_button;
-        if (editing) {
-            text = i18next.t('Editing node');
-            action_button = i18next.t('Edit')
-        }
-        else {
-            text = i18next.t('Add node info')
-            action_button = i18next.t('Create')
-        }
-
-        var modal_elem = document.getElementById('ModalCreateNode')
-        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    var modal_elem = document.getElementById("ModalCreateNode");
+    modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -793,56 +1055,69 @@
                                 <table style="margin: auto">
                                 <tbody>
                                     <tr>
-                                        <td >${i18next.t('ip')}</td>
+                                        <td >${i18next.t("ip")}</td>
                                         <td><input id="node-label" name="node-label" class="form-control" value="" required></td>
-                                        <td id="invalid-ip" class="invalid-feedback">${i18next.t('Please, type correct ip')}</td>
+                                        <td id="invalid-ip" class="invalid-feedback">${i18next.t(
+                                          "Please, type correct ip"
+                                        )}</td>
                                     </tr>
                                     <tr>
-                                        <td>${i18next.t('mac')}</td>
+                                        <td>${i18next.t("mac")}</td>
                                         <td><input id="node-mac" name="node-mac" class="form-control" value="" required></td>
-                                        <td id="invalid-mac" class="invalid-feedback">${i18next.t('Please, type correct mac')}</td>
+                                        <td id="invalid-mac" class="invalid-feedback">${i18next.t(
+                                          "Please, type correct mac"
+                                        )}</td>
                                     </tr>
                                     <tr>
-                                        <td>${i18next.t('domain')}</td>
+                                        <td>${i18next.t("domain")}</td>
                                         <td><input id="node-domain" name="node-domain" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
-                                        <td>${i18next.t('os')}</td>
+                                        <td>${i18next.t("os")}</td>
                                         <td><input id="node-os" name="node-os" class="form-control" value=""></td>
                                     </tr>
                                     <tr>
-                                        <td>${i18next.t('vendor')}</td>
+                                        <td>${i18next.t("vendor")}</td>
                                         <td><input id="node-vendor" name="node-vendor" class="form-control" value=""></td>
                                     </tr>
-                                    ${!editing ? 
-                                        `<tr>
-                                            <td>${i18next.t('mask')}</td>
+                                    ${
+                                      !editing
+                                        ? `<tr>
+                                            <td>${i18next.t("mask")}</td>
                                             <td><input id="node-mask" name="node-mask" class="form-control" value=""></td>
-                                        </tr>` : ``}
+                                        </tr>`
+                                        : ``
+                                    }
                                 </tbody></table>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t(
+                          "Close"
+                        )}</button>
                         <button id="node-saveButton" type="button" class="btn btn-primary">${action_button}</button>
                     </div>
                 </div>
             </div>
         </div>
-        `
-        var modal = new bootstrap.Modal(modal_elem.children[0])
-        var maskMAC = new Inputmask("ip").mask(document.getElementById('node-label'))
-        var maskMAC = new Inputmask("mac").mask(document.getElementById('node-mac'))
-        return modal
-    };
+        `;
+    var modal = new bootstrap.Modal(modal_elem.children[0]);
+    var maskMAC = new Inputmask("ip").mask(
+      document.getElementById("node-label")
+    );
+    var maskMAC = new Inputmask("mac").mask(
+      document.getElementById("node-mac")
+    );
+    return modal;
+  }
   function createDeleteAgentModal(editing) {
-        if (editing) {
-            text = i18next.t('Are you sure you want to remove the agent?');
-            action_button = i18next.t('Remove');
-        }
-        var modal_elem = document.getElementById('ModalDeleteAgent')
-        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    if (editing) {
+      text = i18next.t("Are you sure you want to remove the agent?");
+      action_button = i18next.t("Remove");
+    }
+    var modal_elem = document.getElementById("ModalDeleteAgent");
+    modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -858,46 +1133,52 @@
                                 </div>
 
                                    <div class="mt-3" id="agent_interface_bar">
-                                    <td> ${i18next.t('agent_id of all edges will be transferred to the selected agent')}</td>
+                                    <td> ${i18next.t(
+                                      "agent_id of all edges will be transferred to the selected agent"
+                                    )}</td>
                                     <select name="defaultAgent" id="agent_bar2" class='form-select'>
                                     </select>
                                 </div>
                             
                         </div>
                         <div class="modal-footer">
-                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                            <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t(
+                              "Close"
+                            )}</button>
                             <button id="node-deleteButton" type="submit" class="btn btn-primary">${action_button}</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        `
-        
-        document.getElementById('node-cancelButton').onclick = function () {
-        modal_elem.innerHTML = '';
-        deletionAgentCallback()
-        };
-        let elem = document.getElementById('agent_bar2')
-        let result = ''
-        for (const agent of agentData.agents){
-            if (agent.id != node.id){
-                result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`
-            }
-        }
-        elem.innerHTML = result
+        `;
 
-        var modal = new bootstrap.Modal(modal_elem.children[0])
-        var maskMAC = new Inputmask("ip").mask(document.getElementById('agent-label'))
-        return modal
-    };  
-    function createDeleteNodeModal(editing) {
-        if (editing) {
-            text = i18next.t('Are you sure you want to remove the node?');
-            action_button = i18next.t('Remove');
-        }
-        var modal_elem = document.getElementById('ModalDeleteNode')
-        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    document.getElementById("node-cancelButton").onclick = function () {
+      modal_elem.innerHTML = "";
+      deletionAgentCallback();
+    };
+    let elem = document.getElementById("agent_bar2");
+    let result = "";
+    for (const agent of agentData.agents) {
+      if (agent.id != node.id) {
+        result += `<option value='${agent.id}'>${agent.id} - ${agent.ip}</option>`;
+      }
+    }
+    elem.innerHTML = result;
+
+    var modal = new bootstrap.Modal(modal_elem.children[0]);
+    var maskMAC = new Inputmask("ip").mask(
+      document.getElementById("agent-label")
+    );
+    return modal;
+  }
+  function createDeleteNodeModal(editing) {
+    if (editing) {
+      text = i18next.t("Are you sure you want to remove the node?");
+      action_button = i18next.t("Remove");
+    }
+    var modal_elem = document.getElementById("ModalDeleteNode");
+    modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -913,21 +1194,21 @@
                 </div>
             </div>
         </div>
-        `
-        
-        document.getElementById('node-cancelButton').onclick = function () {
-        modal_elem.innerHTML = '';
-        deletionAgentCallback()
-        };
-        var modal = new bootstrap.Modal(modal_elem.children[0])
-        return modal
-    };  
-    function createDeleteLastAgentModal(editing) {
-        if (editing) {
-            text = 'Error'
-        }
-        var modal_elem = document.getElementById('ModalDeleteLastAgent')
-        modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        `;
+
+    document.getElementById("node-cancelButton").onclick = function () {
+      modal_elem.innerHTML = "";
+      deletionAgentCallback();
+    };
+    var modal = new bootstrap.Modal(modal_elem.children[0]);
+    return modal;
+  }
+  function createDeleteLastAgentModal(editing) {
+    if (editing) {
+      text = "Error";
+    }
+    var modal_elem = document.getElementById("ModalDeleteLastAgent");
+    modal_elem.innerHTML = `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -940,7 +1221,9 @@
                                 <table style="margin: auto">
                                 <tbody>
                                     <tr>
-                                        <td >${i18next.t('You cannot remove the last agent')}</td>
+                                        <td >${i18next.t(
+                                          "You cannot remove the last agent"
+                                        )}</td>
 
                                     </tr>
                                 </tbody></table>
@@ -948,148 +1231,177 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                        <button id="node-cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t(
+                          "Close"
+                        )}</button>
                     </div>
                 </div>
             </div>
         </div>
-        `
-        var modal = new bootstrap.Modal(modal_elem.children[0])
-        return modal
-    };
+        `;
+    var modal = new bootstrap.Modal(modal_elem.children[0]);
+    return modal;
+  }
 
-    async function createAgent() {
-        name = document.getElementById('agent-name').value
-        desc = document.getElementById('agent-description').value
-        let node = networkData.nodes.get(network.getSelectedNodes()[0]);
-        // node_id = node.id
-        ip = node.label
-        color = document.getElementById('agent-color').value
-        agent = hexToRgb(color)
-        agent.name = name
-        agent.description = desc
-        agent.ip = ip
-        resp = await fetch('/api/agent/create', { method: 'post', body: JSON.stringify(agent) })
-        if (resp.ok) {
-            close_button = document.getElementById('close-create-agent')
-            close_button.click()
-            get_nodes_and_edges()
-            update_agent_bar()
-        }else {
-            console.log(`Error on create agent, response status ${resp.status}`)
-            close_button = document.getElementById('close-create-agent')
-            close_button.click()
-            text = await resp.text()
-            create_toast('Error on create agent', text, 'error')
-        }
-    }  
-    redrawAll("network_topology", true)
-    function redrawAll(elem_name, to_update_data) {
-        var network_topology = document.getElementById("network_topology")
-        var container = document.getElementById(elem_name);
-        container.style.cssText = `height: 80vh; width:100%;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`
-        var options = {
-            nodes: nodes_data,
-            edges: {
-                color: { inherit: true },
-                width: 0.15,
-                length: 500,  // длина грани
-                hoverWidth: 3, // ширина грани при наведении
-                smooth: {
-                    type: "dynamic",
-                },
-            },
-            interaction: {
-                hideEdgesOnDrag: false,
-                tooltipDelay: 100,
-                hover: true,
-                navigationButtons: true,
-                keyboard: false,
-                selectConnectedEdges: false
-            },
-            physics: {
-                enabled: true,
-                barnesHut: {
-                    gravitationalConstant: -50000,
-                    centralGravity: 0.1,
-                    springLength: 100,
-                    springConstant: 0.07,
-                    // damping: 0.1,
-                },
-                stabilization: {
-                    enabled: true,
-                    iterations: 50,
-                    updateInterval: 10,
-                },
-                timestep: 0.6,
-                adaptiveTimestep: false,
-                
-            },
-            /* !Редактирование карты, нужно изменить! */
-        //      manipulation: {
-        //       addNode: function (data, callback) {
-        //         // filling in the popup DOM elements
-        //         modal = createCreateNodeModal(false)
-        //         modal.show()
-        //         editNode(data, clearNodePopUp, callback, true);
-        //         modal.hide()
-        //       },
-        //       editNode: function (data, callback) {
-        //         // filling in the popup DOM elements
-        //         modal = createCreateNodeModal(true)
-        //         modal.show()
-        //         editNode(data, cancelNodeEdit, callback, false);
-        //         modal.hide()
-        //       },
-        //       addEdge: function (data, callback) {
-        //           createEdgeInDatabase(data, callback)
-        //           callback(data)
-        //       },
-        //       deleteNode: function (data, callback) {
-        //         deleteNodeInDatabase(data, callback)
-        //       },
-        //       deleteEdge: function (data, callback) {
-        //           deleteEdgeInDatabase(data, callback)
-        //           callback(data)
-        //       },
-        //       editEdge: {
-        //         editWithoutDrag: function (data, callback) {
-        //           document.getElementById("edge-operation").innerText =
-        //             "Edit Edge";
-        //           saveEdgeData(data, callback);
-        //         }
-        //       }, 
-        //     },
-        };
-
-        if (to_update_data == true) {
-            get_nodes_and_edges().then(() => {cluster_by_netmask();})
-        }
-        network = new vis.Network(container, networkData, options);
-    };
-    network.on("doubleClick", function (params) {
-        if (params.nodes.length == 1) {
-            if (network.isCluster(params.nodes[0]) == true) {
-                network.openCluster(params.nodes[0]);
-                let cluster_status = false;
-                for (const [key, node] of Object.entries(network.body.nodes))
-                {
-                    if (network.isCluster(key) == true)
-                    {
-                        cluster_status = true;
-                    }
-                }
-                cluster = cluster_status;
-                if (!cluster_status) { document.getElementById("cluster_nodes").textContent = 'Cluster'; }
-                    
-                // if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
-            }
-            else {
-                network.moveTo({ position: network.getPosition(params.nodes[0]), scale: 2 })
-            }
-        }
+  async function createAgent() {
+    name = document.getElementById("agent-name").value;
+    desc = document.getElementById("agent-description").value;
+    let node = networkData.nodes.get(network.getSelectedNodes()[0]);
+    // node_id = node.id
+    ip = node.label;
+    color = document.getElementById("agent-color").value;
+    agent = hexToRgb(color);
+    agent.name = name;
+    agent.description = desc;
+    agent.ip = ip;
+    resp = await fetch("/api/agent/create", {
+      method: "post",
+      body: JSON.stringify(agent),
     });
-    /*
+    if (resp.ok) {
+      close_button = document.getElementById("close-create-agent");
+      close_button.click();
+      get_nodes_and_edges();
+      update_agent_bar();
+    } else {
+      console.log(`Error on create agent, response status ${resp.status}`);
+      close_button = document.getElementById("close-create-agent");
+      close_button.click();
+      text = await resp.text();
+      create_toast("Error on create agent", text, "error");
+    }
+  }
+  redrawAll("network_topology", true);
+  function redrawAll(elem_name, to_update_data) {
+    var network_topology = document.getElementById("network_topology");
+    var container = document.getElementById(elem_name);
+    container.style.cssText = `height: 80vh; width:100%;background-color: #ffffff;border: 1px solid lightgray;position: relative;float: left;`;
+    var options = {
+      nodes: nodes_data,
+      edges: {
+        color: { inherit: true },
+        width: 0.15,
+        length: 500, // длина грани
+        hoverWidth: 3, // ширина грани при наведении
+        smooth: {
+          type: "dynamic",
+        },
+      },
+      interaction: {
+        hideEdgesOnDrag: false,
+        tooltipDelay: 100,
+        hover: true,
+        navigationButtons: true,
+        keyboard: false,
+        selectConnectedEdges: false,
+      },
+      physics: {
+        enabled: true,
+        barnesHut: {
+          gravitationalConstant: -50000,
+          centralGravity: 0.1,
+          springLength: 100,
+          springConstant: 0.07,
+          // damping: 0.1,
+        },
+        stabilization: {
+          enabled: true,
+          iterations: 50,
+          updateInterval: 10,
+        },
+        timestep: 0.6,
+        adaptiveTimestep: false,
+      },
+      /* !Редактирование карты, нужно изменить! */
+      //      manipulation: {
+      //       addNode: function (data, callback) {
+      //         // filling in the popup DOM elements
+      //         modal = createCreateNodeModal(false)
+      //         modal.show()
+      //         editNode(data, clearNodePopUp, callback, true);
+      //         modal.hide()
+      //       },
+      //       editNode: function (data, callback) {
+      //         // filling in the popup DOM elements
+      //         modal = createCreateNodeModal(true)
+      //         modal.show()
+      //         editNode(data, cancelNodeEdit, callback, false);
+      //         modal.hide()
+      //       },
+      //       addEdge: function (data, callback) {
+      //           createEdgeInDatabase(data, callback)
+      //           callback(data)
+      //       },
+      //       deleteNode: function (data, callback) {
+      //         deleteNodeInDatabase(data, callback)
+      //       },
+      //       deleteEdge: function (data, callback) {
+      //           deleteEdgeInDatabase(data, callback)
+      //           callback(data)
+      //       },
+      //       editEdge: {
+      //         editWithoutDrag: function (data, callback) {
+      //           document.getElementById("edge-operation").innerText =
+      //             "Edit Edge";
+      //           saveEdgeData(data, callback);
+      //         }
+      //       },
+      //     },
+    };
+
+    if (to_update_data == true) {
+      get_nodes_and_edges().then(() => {
+        cluster_by_netmask();
+      });
+    }
+    network = new vis.Network(container, networkData, options);
+  }
+async function decluster_by_netmask(clusterKey) {
+    let containedNodes = network.body.nodes[clusterKey].containedNodes;
+    let nodesToRecolor = Object.values(containedNodes);
+    
+    // Открываем кластер
+    network.openCluster(clusterKey);
+    
+    // Если операции синхронные, но нужно дать контроль потоку
+    for (const node of nodesToRecolor) {
+        const nodeWithStandartData = networkData.nodes.get(node.id);
+        nodeWithStandartData.color = caclculateColor(nodeWithStandartData);
+        networkData.nodes.update(nodeWithStandartData);
+        
+        // Даем браузеру возможность обработать другие события
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    
+    return true;
+}
+  network.on("doubleClick", function (params) {
+    if (params.nodes.length == 1) {
+      if (network.isCluster(params.nodes[0]) == true) {
+        clusterKey = params.nodes[0];
+        decluster_by_netmask(clusterKey)
+        
+        let cluster_status = false;
+        for (const [key, node] of Object.entries(network.body.nodes)) {
+          if (network.isCluster(key) == true) {
+            cluster_status = true;
+          }
+        }
+        cluster = cluster_status;
+        if (!cluster_status) {
+          document.getElementById("cluster_nodes").textContent = "Cluster";
+        }
+
+        // if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
+      } else {
+        network.moveTo({
+          position: network.getPosition(params.nodes[0]),
+          scale: 2,
+        });
+      }
+    }
+  });
+  /*
     network.on("click", function (params) {
         if (params.nodes.length == 1) {
             createNodeInformation(params.nodes[0])
@@ -1107,270 +1419,320 @@
                 networkData.nodes.update(node)
             })
         }
-    });*/   // убрал, чтобы не крашилось
-    function cluster_by_netmask() {
-        if (cluster != true) {
-            var unique_groups = [...new Set(networkData.nodes.map(item => item.group))];
-            for (const group of unique_groups) {
-                let cluster_options_by_data = {
-                    joinCondition: function (childOptions) {
-                        return childOptions.group == group;
-                    },
-                    processProperties: function (
-                        clusterOptions,
-                        childNodes,
-                        childEdges
-                    ) {
-                        var totalMass = 0;
-                        for (var i = 0; i < childNodes.length; i++) {
-                            totalMass += childNodes[i].mass || 1;
+    });*/ // убрал, чтобы не крашилось
+  function cluster_by_netmask() {
+    if (cluster != true) {
+        var unique_groups = [
+            ...new Set(networkData.nodes.map((item) => item.group)),
+        ];
+        
+        for (const group of unique_groups) {
+            let cluster_options_by_data = {
+                joinCondition: function (childOptions) {
+                    return childOptions.group == group;
+                },
+                processProperties: function (clusterOptions, childNodes, childEdges) {
+                    var totalMass = 0;
+                    
+                    var allAgents = [];
+                    for (var i = 0; i < childNodes.length; i++) {
+                        totalMass += childNodes[i].mass || 1;
+                        
+                        if (childNodes[i].agents && Array.isArray(childNodes[i].agents)) {
+                            childNodes[i].agents.forEach(agentId => {
+                                if (!allAgents.includes(agentId)) {
+                                    allAgents.push(agentId);
+                                }
+                            });
                         }
-                        clusterOptions.mass = 1 + totalMass / 10;
-                        return clusterOptions;
-                    },
-                    clusterNodeProperties: {
-                        id: group,
-                        borderWidth: 3,
-                        shape: "dot",
-                        label: group,
                     }
                     
-                }
-                network.clustering.cluster(cluster_options_by_data);
-            }
-            cluster = true
-        } else {
-            for (const [key, node] of Object.entries(network.body.nodes)) {
-                if (network.isCluster(key) == true) {
-                    network.openCluster(key)
-                }
-            }
-            cluster = false
-        }
-        // if (status_search_nodes) { document.getElementById("button_search_nodes").click() }
-    };
-    network.on('oncontext', function (params) {
-        let node = network.getNodeAt(params.pointer.DOM)
-        if (node != undefined) {
-            network.selectNodes([node])
-            node_obj = network.body.nodes[node]
-            node_is_agent = node_obj.options.agent
-            if (node_is_agent == null)  { 
-            node_menu = document.getElementById('nodeDropdownMenu')
-            node_menu.style.position = 'absolute'
-            node_menu.style.top = `${params.event.clientY - 5}px`
-            node_menu.style.left = `${params.event.clientX - 5}px`
-            node_menu.style.zIndex = 1000
-            $('#nodeDropdownMenu').show()
-            }else{
-            agent_menu = document.getElementById('agentDropdownMenu')
-            agent_menu.style.position = 'absolute'
-            agent_menu.style.top = `${params.event.clientY - 5}px`
-            agent_menu.style.left = `${params.event.clientX - 5}px`
-            agent_menu.style.zIndex = 1000
-            $('#agentDropdownMenu').show()
-            }
-        };
-    });
-    network.on('click',function(params){
-        var dd_div = document.getElementById('nodeDropdownMenu')
-        var ddd_div = document.getElementById('agentDropdownMenu')
-        ddd_div.style.display = 'none'
-        dd_div.style.display = 'none'
-        let node = network.getNodeAt(params.pointer.DOM)
-        if (node == undefined){
-            return
-        }
-        let obj = networkData.nodes.get(node)
-        createNodeInformation(obj)
-    })
-    function create_node_table(ports_data) {
-        function generateTableHead(table, data) {
-            let thead = table.createTHead();
-            let row = thead.insertRow();
-            for (let key of data) {
-                let th = document.createElement("th");
-                let text = document.createTextNode(key);
-                th.appendChild(text);
-                row.appendChild(th);
-            };
-        };
-        function generateTable(table, data) {
-            tbody = table.createTBody();
-            for (let element of data) {
-                let row = tbody.insertRow();
-                for (key of element) {
-                    let cell = row.insertCell();
-                    let text = document.createTextNode(key);
-                    cell.appendChild(text);
-                };
-            };
-        };
-        let table = document.getElementById("node_info");
-        generateTableHead(table, ports_data.headers);
-        generateTable(table, ports_data.data);
-    }
-    function export_to_svg() {
-        var networkContainer = network.body.container;
-        var ctx = new C2S({ width: networkContainer.clientWidth, height: networkContainer.clientWidth, embedImages: true });
-        var canvasProto = network.canvas.__proto__;
-        var currentGetContext = canvasProto.getContext;
-        canvasProto.getContext = function () {
-            return ctx;
-        }
-        var svgOptions = {
-            nodes: {
-                shapeProperties: {
-                    interpolation: false //so images are not scaled svg will get full image
+                    var tempNodeForColorCalc = {
+                        agents: allAgents
+                    };
+                    
+                    var color = caclculateColor(tempNodeForColorCalc);
+                    
+                    clusterOptions.mass = 1 + totalMass / 10;
+                    clusterOptions.color = {
+                        background: color,
+                        border: color,
+                    };
+                    return clusterOptions;
                 },
-                scaling: { label: { drawThreshold: 0 } },
-                font: { color: '#000000' }
-            },
-            edges: {
-                scaling: { label: { drawThreshold: 0 } }
+                clusterNodeProperties: {
+                    id: group,
+                    borderWidth: 3,
+                    shape: "dot",
+                    label: group,
+                },
+            };
+            network.clustering.cluster(cluster_options_by_data);
+        }
+        cluster = true;
+    } else {
+        for (const [key, node] of Object.entries(network.body.nodes)) {
+            if (network.isCluster(key) == true) {
+                decluster_by_netmask(key);
             }
-        };
-        network.setOptions(svgOptions);
-        network.redraw();
-        canvasProto.getContext = currentGetContext;
-        ctx.waitForComplete(function () {
-            var svg = ctx.getSerializedSvg();
-            showSvg(svg);
-        });
+        }
+        cluster = false;
+    }
+}
+  network.on("oncontext", function (params) {
+    let node = network.getNodeAt(params.pointer.DOM);
+    if (node != undefined) {
+      network.selectNodes([node]);
+      node_obj = network.body.nodes[node];
+      node_is_agent = node_obj.options.agent;
+      if (node_is_agent == null) {
+        node_menu = document.getElementById("nodeDropdownMenu");
+        node_menu.style.position = "absolute";
+        node_menu.style.top = `${params.event.clientY - 5}px`;
+        node_menu.style.left = `${params.event.clientX - 5}px`;
+        node_menu.style.zIndex = 1000;
+        $("#nodeDropdownMenu").show();
+      } else {
+        agent_menu = document.getElementById("agentDropdownMenu");
+        agent_menu.style.position = "absolute";
+        agent_menu.style.top = `${params.event.clientY - 5}px`;
+        agent_menu.style.left = `${params.event.clientX - 5}px`;
+        agent_menu.style.zIndex = 1000;
+        $("#agentDropdownMenu").show();
+      }
+    }
+  });
+  network.on("click", function (params) {
+    var dd_div = document.getElementById("nodeDropdownMenu");
+    var ddd_div = document.getElementById("agentDropdownMenu");
+    ddd_div.style.display = "none";
+    dd_div.style.display = "none";
+    let node = network.getNodeAt(params.pointer.DOM);
+    if (node == undefined) {
+      return;
+    }
+    let obj = networkData.nodes.get(node);
+    createNodeInformation(obj);
+  });
+  function create_node_table(ports_data) {
+    function generateTableHead(table, data) {
+      let thead = table.createTHead();
+      let row = thead.insertRow();
+      for (let key of data) {
+        let th = document.createElement("th");
+        let text = document.createTextNode(key);
+        th.appendChild(text);
+        row.appendChild(th);
+      }
+    }
+    function generateTable(table, data) {
+      tbody = table.createTBody();
+      for (let element of data) {
+        let row = tbody.insertRow();
+        for (key of element) {
+          let cell = row.insertCell();
+          let text = document.createTextNode(key);
+          cell.appendChild(text);
+        }
+      }
+    }
+    let table = document.getElementById("node_info");
+    generateTableHead(table, ports_data.headers);
+    generateTable(table, ports_data.data);
+  }
+  function export_to_svg() {
+    var networkContainer = network.body.container;
+    var ctx = new C2S({
+      width: networkContainer.clientWidth,
+      height: networkContainer.clientWidth,
+      embedImages: true,
+    });
+    var canvasProto = network.canvas.__proto__;
+    var currentGetContext = canvasProto.getContext;
+    canvasProto.getContext = function () {
+      return ctx;
     };
-    function showSvg(svg) {
-        var svgBlob = new Blob([svg], { type: 'image/svg+xml' });
-        openBlob(svgBlob, "network.svg");
+    var svgOptions = {
+      nodes: {
+        shapeProperties: {
+          interpolation: false, //so images are not scaled svg will get full image
+        },
+        scaling: { label: { drawThreshold: 0 } },
+        font: { color: "#000000" },
+      },
+      edges: {
+        scaling: { label: { drawThreshold: 0 } },
+      },
+    };
+    network.setOptions(svgOptions);
+    network.redraw();
+    canvasProto.getContext = currentGetContext;
+    ctx.waitForComplete(function () {
+      var svg = ctx.getSerializedSvg();
+      showSvg(svg);
+    });
+  }
+  function showSvg(svg) {
+    var svgBlob = new Blob([svg], { type: "image/svg+xml" });
+    openBlob(svgBlob, "network.svg");
+  }
+  function openBlob(blob, fileName) {
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      //blobToDataURL(blob, function(dataurl){window.open(dataurl);});
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+    } else {
+      var a = document.getElementById("blobLink");
+      if (!a) {
+        a = document.createElement("a");
+        document.body.appendChild(a);
+        a.setAttribute("id", "blobLink");
+        a.style = "display: none";
+      }
+      var data = window.URL.createObjectURL(blob);
+      a.href = data;
+      a.download = fileName;
+      a.click();
+      setTimeout(function () {
+        window.URL.revokeObjectURL(data);
+      }, 100);
     }
-    function openBlob(blob, fileName) {
-        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+  }
+  function exportNetwork() {
+    var nodes = [];
+    Object.values(network.body.nodes).forEach((element) =>
+      nodes.push(element.options)
+    );
+    var edges = [];
+    Object.values(network.body.edges).forEach((element) =>
+      edges.push(element.options)
+    );
+    var exportValue = JSON.stringify(
+      { data: { nodes: nodes, edges: edges } },
+      undefined,
+      4
+    );
+    download(exportValue, "network.json", "text/plain");
+  }
+  function importNetwork(inputValue) {
+    var inputData = JSON.parse(inputValue);
+    networkData.nodes.clear();
+    networkData.edges.clear();
+    networkData.nodes.add(inputData.data.nodes);
+    networkData.edges.add(inputData.data.edges);
+  }
+  function download(content, fileName, contentType) {
+    var a = document.createElement("a");
+    if (contentType === "image/png") {
+      a.href = content;
+    } else {
+      var file = new Blob([content], { type: contentType });
+      a.href = URL.createObjectURL(file);
+    }
+    a.download = fileName;
+    a.click();
+  }
+  function openFile() {
+    document.getElementById("inp").click();
+  }
+  function readFile(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
 
-            //blobToDataURL(blob, function(dataurl){window.open(dataurl);});
-            window.navigator.msSaveOrOpenBlob(blob, fileName);
-        }
-        else {
-            var a = document.getElementById("blobLink");
-            if (!a) {
-                a = document.createElement("a");
-                document.body.appendChild(a);
-                a.setAttribute("id", "blobLink");
-                a.style = "display: none";
-            }
-            var data = window.URL.createObjectURL(blob);
-            a.href = data;
-            a.download = fileName;
-            a.click();
-            setTimeout(function () {
-                window.URL.revokeObjectURL(data);
-            }
-                , 100);
-        }
-    }
-    function exportNetwork() {
-        var nodes = []
-        Object.values(network.body.nodes).forEach(element => nodes.push(element.options))
-        var edges = []
-        Object.values(network.body.edges).forEach(element => edges.push(element.options))
-        var exportValue = JSON.stringify({ data: { nodes: nodes, edges: edges } }, undefined, 4);
-        download(exportValue, 'network.json', 'text/plain')
-    }
-    function importNetwork(inputValue) {
-        var inputData = JSON.parse(inputValue);
-        networkData.nodes.clear()
-        networkData.edges.clear()
-        networkData.nodes.add(inputData.data.nodes)
-        networkData.edges.add(inputData.data.edges)
-    }
-    function download(content, fileName, contentType) {
-        var a = document.createElement("a");
-        if (contentType === 'image/png') {
-            a.href = content
-        } else {
-            var file = new Blob([content], { type: contentType });
-            a.href = URL.createObjectURL(file);
-        }
-        a.download = fileName;
-        a.click();
-    }
-    function openFile() {
-        document.getElementById('inp').click();
-    }
-    function readFile(e) {
-        var file = e.target.files[0];
-        if (!file) return;
-        var reader = new FileReader();
+    reader.onload = function (e) {
+      importNetwork(e.target.result);
+    };
+    reader.readAsText(file);
+  }
+  function exportToPNG() {
+    download(
+      network.canvas.getContext().canvas.toDataURL(),
+      "network.png",
+      "image/png"
+    );
+  }
+  network.on("selectEdge", function (params) {
+    const edgeId = params.edges[0];
+    if (edgeId) {
+      const connectedNodes = network.getConnectedNodes(edgeId);
+      axios
+        .get(
+          `/api/v1/vis/speed_test_result/?ip_id_from=${connectedNodes[0]}&ip_id_to=${connectedNodes[1]}`
+        )
+        .then((response) => {
+          const speedTestData = response.data;
 
-        reader.onload = function (e) {
-            importNetwork(e.target.result)
-        }
-        reader.readAsText(file)
-    }
-    function exportToPNG() {
-        download(network.canvas.getContext().canvas.toDataURL(), 'network.png', 'image/png');
-    }
-    network.on("selectEdge", function (params) {
-        const edgeId = params.edges[0];
-        if (edgeId) {
-            const connectedNodes = network.getConnectedNodes(edgeId);
-            axios.get(`/api/v1/vis/speed_test_result/?ip_id_from=${connectedNodes[0]}&ip_id_to=${connectedNodes[1]}`).then(response => {
-            const speedTestData = response.data;
-
-            if (speedTestData.length > 0) {
-            source_table = document.getElementById('div_node_info')
+          if (speedTestData.length > 0) {
+            source_table = document.getElementById("div_node_info");
             html_text = `<div>
-                <h5>${i18next.t('Edge')}</h5>
+                <h5>${i18next.t("Edge")}</h5>
                 <ul class="nav nav-pills mb-3" id="edge-info-tabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="edge-tab" data-bs-toggle="pill" data-bs-target="#edge-info" type="button" role="tab">${i18next.t('Speed test')}</button>
+                        <button class="nav-link active" id="edge-tab" data-bs-toggle="pill" data-bs-target="#edge-info" type="button" role="tab">${i18next.t(
+                          "Speed test"
+                        )}</button>
                     </li>
                 </ul>
                 <div class="tab-content" id="edge-info-tabs-content">
                     <div class="tab-pane fade show active" id="edge-info" role="tabpanel">
                         <table class="table table-bordered table-hover">
                             <tr>
-                                <th scope="col">${i18next.t('Speed')}</th>
-                                <th scope="col">${i18next.t('Port')}</th>
-                                <th scope="col">${i18next.t('Protocol')}</th>
+                                <th scope="col">${i18next.t("Speed")}</th>
+                                <th scope="col">${i18next.t("Port")}</th>
+                                <th scope="col">${i18next.t("Protocol")}</th>
                             </tr>`;
-                            for (let row of response.data) {
-                                html_text += `<tr>
-                                    <td>${row.speed.toFixed(2)} ${i18next.t('mbps')}</td>
+            for (let row of response.data) {
+              html_text += `<tr>
+                                    <td>${row.speed.toFixed(2)} ${i18next.t(
+                "mbps"
+              )}</td>
                                     <td>${row.port}</td>
                                     <td>${row.protocol}</td>
-                                </tr>`}
+                                </tr>`;
+            }
 
-                                html_text += `</table>
+            html_text += `</table>
                     </div>
                 </div>
             `;
             source_table.innerHTML = html_text;
-        }})
-    }});
-    let nodeForComment
-    async function createNodeInformation(node) {
+          }
+        });
+    }
+  });
+  let nodeForComment;
+  async function createNodeInformation(node) {
     if (node.agent == null) {
-        params = { ip_id: node.id }
-        ip = node.label
-        url_address = '/api/v1/vis/node_info/' + node.id
-        resp = await fetch(url_address, { method: 'GET' })
-        json = await resp.json()
-        source_table = document.getElementById('div_node_info')
-        
-        html_text = `
+      params = { ip_id: node.id };
+      ip = node.label;
+      url_address = "/api/v1/vis/node_info/" + node.id;
+      resp = await fetch(url_address, { method: "GET" });
+      json = await resp.json();
+      source_table = document.getElementById("div_node_info");
+
+      html_text = `
         <div>
-            <h5>${i18next.t('Node')} ${node.label}</h5>
+            <h5>${i18next.t("Node")} ${node.label}</h5>
             <ul class="nav nav-pills mb-3" id="node-info-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="node-tab" data-bs-toggle="pill" data-bs-target="#node-info" type="button" role="tab">${i18next.t('Node Info')}</button>
+                    <button class="nav-link active" id="node-tab" data-bs-toggle="pill" data-bs-target="#node-info" type="button" role="tab">${i18next.t(
+                      "Node Info"
+                    )}</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="ports-tab" data-bs-toggle="pill" data-bs-target="#ports-info" type="button" role="tab">${i18next.t('Ports')}</button>
+                    <button class="nav-link" id="ports-tab" data-bs-toggle="pill" data-bs-target="#ports-info" type="button" role="tab">${i18next.t(
+                      "Ports"
+                    )}</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="comments-tab" data-bs-toggle="pill" data-bs-target="#comments-info" type="button" role="tab">${i18next.t('Comments')}</button>
+                    <button class="nav-link" id="comments-tab" data-bs-toggle="pill" data-bs-target="#comments-info" type="button" role="tab">${i18next.t(
+                      "Comments"
+                    )}</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="credentials-tab" data-bs-toggle="pill" data-bs-target="#credentials-info" type="button" role="tab">${i18next.t('Credentials')}</button>
+                    <button class="nav-link" id="credentials-tab" data-bs-toggle="pill" data-bs-target="#credentials-info" type="button" role="tab">${i18next.t(
+                      "Credentials"
+                    )}</button>
                 </li>
             </ul>
             
@@ -1380,132 +1742,148 @@
                     <table class="table table-bordered table-hover">
         `;
 
-        nodeForComment = node
-        if (json.ip) {
-            html_text += `
+      nodeForComment = node;
+      if (json.ip) {
+        html_text += `
                     <tr>
-                        <td> ${i18next.t('ip')} </td>
+                        <td> ${i18next.t("ip")} </td>
                         <td>${json.ip}</td>
                         <td></td>
-                    </tr>`
-        }
-        html_text += `<tr">
-                            <td>${i18next.t('domain')}</td>
+                    </tr>`;
+      }
+      html_text += `<tr">
+                            <td>${i18next.t("domain")}</td>
                             <td>
                                 <form id="domainForm" onsubmit="event.preventDefault(); addDomain(params, nodeForComment);">
-                                    <input type="text" class="form-control" id="domainInput" placeholder="${i18next.t('Enter domain')}" required>
+                                    <input type="text" class="form-control" id="domainInput" placeholder="${i18next.t(
+                                      "Enter domain"
+                                    )}" required>
                                 </form>
                             </td>
                             <td>
                             <button form="domainForm" class="btn btn-sm btn-success w-100" type="submit">
-                                    ${i18next.t('Add')}
+                                    ${i18next.t("Add")}
                             </button>
                             </td>
-                        </tr>`
-        json.domain.forEach((domain, index) => {
-            if (domain.deleted_at == null) {
-
-            html_text += `
+                        </tr>`;
+      json.domain.forEach((domain, index) => {
+        if (domain.deleted_at == null) {
+          html_text += `
                 <tr data-domain-id="${domain.id}">
                     <td></td>
-                   <td style="word-break: break-all; white-space: normal; max-width: 150px;">${domain.domain}</td>
+                   <td style="word-break: break-all; white-space: normal; max-width: 150px;">${
+                     domain.domain
+                   }</td>
                     <td style="white-space: nowrap;">
                     <button class="btn btn-sm btn-primary me-1" type="button" 
-                                onclick="edit_domain('${domain.id}', nodeForComment)">
-                                ${i18next.t('Edit')}
+                                onclick="edit_domain('${
+                                  domain.id
+                                }', nodeForComment)">
+                                ${i18next.t("Edit")}
                             </button>
                         <button class="btn btn-sm btn-danger" type="button" 
-                            onclick="delete_domain('${domain.id}', nodeForComment)">
-                            ${i18next.t('Delete')}
+                            onclick="delete_domain('${
+                              domain.id
+                            }', nodeForComment)">
+                            ${i18next.t("Delete")}
                         </button>
                     </td>
                 </tr>`;
-            }});
-        if (json.mac) {
-            html_text += `
+        }
+      });
+      if (json.mac) {
+        html_text += `
                     <tr>
-                        <td> ${i18next.t('mac')} </td>
+                        <td> ${i18next.t("mac")} </td>
                         <td> ${json.mac} </td>
                         <td>  </td>
-                    </tr>`
-        }
-        if (json.os) {
-            html_text += `
+                    </tr>`;
+      }
+      if (json.os) {
+        html_text += `
                     <tr>
-                        <td> ${i18next.t('os')} </td>
+                        <td> ${i18next.t("os")} </td>
                         <td> ${json.os} </td>
                         <td>  </td>
-                    </tr>`
-        }
-        if (json.vendor) {
-            html_text += `
+                    </tr>`;
+      }
+      if (json.vendor) {
+        html_text += `
                     <tr>
-                        <td> ${i18next.t('vendor')} </td>
+                        <td> ${i18next.t("vendor")} </td>
                         <td> ${json.vendor} </td>
                         <td>  </td>
-                    </tr>`
-        }
-        if (json.network) {
-            network_mask_data = json.network
-            html_text += `
+                    </tr>`;
+      }
+      if (json.network) {
+        network_mask_data = json.network;
+        html_text += `
                     <tr>
-                        <td> ${i18next.t('network mask')} </td>
+                        <td> ${i18next.t("network mask")} </td>
                         <td> ${json.network} </td>
-                        <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">${i18next.t('Union')}</button>
-                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t('Divide')}</button></td>
-                    </tr>`
-        }
-        
-        html_text += `</table></div>`;
-        
-        if (json.ports.length) {
-            html_text += `
+                        <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">${i18next.t(
+                          "Union"
+                        )}</button>
+                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t(
+                          "Divide"
+                        )}</button></td>
+                    </tr>`;
+      }
+
+      html_text += `</table></div>`;
+
+      if (json.ports.length) {
+        html_text += `
                 <div class="tab-pane fade" id="ports-info" role="tabpanel">
                     <div style="overflow-y: auto; max-height: 400px;">
                         <table class="table table-bordered table-hover align-middle">
                             <tr>
-                                <td> ${i18next.t('Port')} </td>
-                                <td> ${i18next.t('Protocol')} </td>
-                                <td> ${i18next.t('State')} </td>
-                                <td> ${i18next.t('Software')} </td>
+                                <td> ${i18next.t("Port")} </td>
+                                <td> ${i18next.t("Protocol")} </td>
+                                <td> ${i18next.t("State")} </td>
+                                <td> ${i18next.t("Software")} </td>
                             </tr>`;
 
-            json.ports.forEach((port) => {
-                html_text += `
+        json.ports.forEach((port) => {
+          html_text += `
                     <tr>
                         <td> ${port.port} </td>
                         <td> ${port.protocol} </td>
                         <td> ${port.state} </td>
                         <td> ${port.software} </td>
-                    </tr>`
-            });
-            
-            html_text += `</table></div></div>`;
-        } else {
-            html_text += `
-                <div class="tab-pane fade" id="ports-info" role="tabpanel">
-                    <p>${i18next.t('No ports information available')}</p>
-                </div>`;
-        }
+                    </tr>`;
+        });
 
-        // table Credentials on node
-        html_text +=`<div class="tab-pane fade" id="credentials-info" role="tabpanel">
+        html_text += `</table></div></div>`;
+      } else {
+        html_text += `
+                <div class="tab-pane fade" id="ports-info" role="tabpanel">
+                    <p>${i18next.t("No ports information available")}</p>
+                </div>`;
+      }
+
+      // table Credentials on node
+      html_text += `<div class="tab-pane fade" id="credentials-info" role="tabpanel">
                         <div style="overflow-y: auto; max-height: 400px;">`;
-        await axios.get(`/api/v1/vis/credentials/${params.ip_id}`).then(response => {
-            html_text += `  <table class="table table-bordered table-hover align-middle" id="credentials-table">`
-            if (response.data.length > 0) {
-                html_text += `
+      await axios
+        .get(`/api/v1/vis/credentials/${params.ip_id}`)
+        .then((response) => {
+          html_text += `  <table class="table table-bordered table-hover align-middle" id="credentials-table">`;
+          if (response.data.length > 0) {
+            html_text += `
                                 <tr>
-                                    <td> ${i18next.t('Port')} </td>
-                                    <td> ${i18next.t('Protocol')} </td>
-                                    <td> ${i18next.t('Login')} </td>
-                                    <td> ${i18next.t('Password')} </td>
-                                    <td> ${i18next.t('Need authorization')} </td>
-                                    <td> ${i18next.t('Permissions')} </td>
-                                    <td> ${i18next.t('Parameters')} </td>
-                                </tr>`
-                for (let row of response.data) {
-                    html_text += `<tr>
+                                    <td> ${i18next.t("Port")} </td>
+                                    <td> ${i18next.t("Protocol")} </td>
+                                    <td> ${i18next.t("Login")} </td>
+                                    <td> ${i18next.t("Password")} </td>
+                                    <td> ${i18next.t(
+                                      "Need authorization"
+                                    )} </td>
+                                    <td> ${i18next.t("Permissions")} </td>
+                                    <td> ${i18next.t("Parameters")} </td>
+                                </tr>`;
+            for (let row of response.data) {
+              html_text += `<tr>
                                     <td>${row.port}</td>
                                     <td>${row.protocol}</td>
                                     <td>${sanitize(row.login)}</td>
@@ -1513,145 +1891,208 @@
                                     <td>${row.need_auth}</td>
                                     <td>${row.permissions}</td>
                                     <td>${sanitize(row.parameters)}</td>
-                                </tr>`
-                }
-            } else {
-                html_text += `<p>${i18next.t('No credentials available')}</p>`;
+                                </tr>`;
             }
-            html_text += `</table>`;
+          } else {
+            html_text += `<p>${i18next.t("No credentials available")}</p>`;
+          }
+          html_text += `</table>`;
         });
-        html_text += `</div>`;
-        if (json.ports.length > 0)
-            html_text += `<button class="btn btn-primary" onclick="addCredentials()" style="margin-top: 1rem;"> ${i18next.t('Add credentials')} </button>`;
-        html_text += `</div>`;
+      html_text += `</div>`;
+      if (json.ports.length > 0)
+        html_text += `<button class="btn btn-primary" onclick="addCredentials()" style="margin-top: 1rem;"> ${i18next.t(
+          "Add credentials"
+        )} </button>`;
+      html_text += `</div>`;
 
-        let html_all_comments = '';
-        let html_child_comments = '';
-        
-        all_comments_response = await axios.get(`/api/v1/vis/comment/${params.ip_id}`).then(response => {
-            response.data.forEach(comment => {
-                let createdAt
-                if (comment.updated_at == null){
-                    createdAt = new Date(comment.created_at);
-                } else {
-                    createdAt = new Date(comment.updated_at);
-                }
-                let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
-                if (comment.deleted_at == null) {
-                html_all_comments += `
-                        <div id="commentContainer-${comment.id}" class="comment" data-deleted="false">
-                            <h5 style="margin-bottom: 0; word-break: break-all;  white-space: pre-wrap;">${sanitize(comment.text)}</h5>
+      let html_all_comments = "";
+      let html_child_comments = "";
+
+      all_comments_response = await axios
+        .get(`/api/v1/vis/comment/${params.ip_id}`)
+        .then((response) => {
+          response.data.forEach((comment) => {
+            let createdAt;
+            if (comment.updated_at == null) {
+              createdAt = new Date(comment.created_at);
+            } else {
+              createdAt = new Date(comment.updated_at);
+            }
+            let formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+            if (comment.deleted_at == null) {
+              html_all_comments += `
+                        <div id="commentContainer-${
+                          comment.id
+                        }" class="comment" data-deleted="false">
+                            <h5 style="margin-bottom: 0; word-break: break-all;  white-space: pre-wrap;">${sanitize(
+                              comment.text
+                            )}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${
+                                          comment.login
+                                        }</span>
                                         <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
                                     </div>
-                                    <div style="display: flex; gap: 10px;">`
-                                        if ("{{ role.name }}" == "owner" || "{{ user_id }}" == comment.user_id ) {
-                                        html_all_comments += `<div class="column">
-                                            <button class="btn btn-outline-danger btn-xs h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${comment.id}')">${i18next.t('Delete')}</button>
+                                    <div style="display: flex; gap: 10px;">`;
+              if (
+                "{{ role.name }}" == "owner" ||
+                "{{ user_id }}" == comment.user_id
+              ) {
+                html_all_comments +=
+                  `<div class="column">
+                                            <button class="btn btn-outline-danger btn-xs h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${
+                                              comment.id
+                                            }')">${i18next.t("Delete")}</button>
                                         </div>
                                         <div class="column">
-                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="editToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Edit')}</button>
-                                        </div>` + ``
-                                        }
-                                        html_all_comments += `<div class="column">
-                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${comment.id}" onclick="replyToComment('${comment.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Reply')}</button>
+                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${
+                                              comment.id
+                                            }" onclick="editToComment('${
+                    comment.id
+                  }')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t(
+                    "Edit"
+                  )}</button>
+                                        </div>` + ``;
+              }
+              html_all_comments += `<div class="column">
+                                            <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${
+                                              comment.id
+                                            }" onclick="replyToComment('${
+                comment.id
+              }')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t(
+                "Reply"
+              )}</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <hr class="comment-hr" data-deleted="false">`;}
-                        else {
-                            html_all_comments += `
-                        <div id="commentContainer-${comment.id}" class="comment" data-deleted="true">
+                        <hr class="comment-hr" data-deleted="false">`;
+            } else {
+              html_all_comments += `
+                        <div id="commentContainer-${
+                          comment.id
+                        }" class="comment" data-deleted="true">
 
-                            <h5 style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(comment.text)}</h5>
+                            <h5 style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(
+                              comment.text
+                            )}</h5>
                             <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${comment.login}</span>
+                                        <span class="text-muted small" style="word-break: break-all; font-size: 0.8em">${
+                                          comment.login
+                                        }</span>
                                         <span class="text-muted small" style="font-size: 0.8em">${formattedDate}</span>
                                     </div>
                                     <div style="display: flex; gap: 10px;">
                                         <div class="column">
-                                        <span class="text-muted small" style="font-size: 0.8em">${i18next.t('Deleted')}</span>
+                                        <span class="text-muted small" style="font-size: 0.8em">${i18next.t(
+                                          "Deleted"
+                                        )}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <hr class="comment-hr" data-deleted="true">`;
-                        }
-                        comment.child_comments.forEach(child =>{
-                            let createdAt
-                            if (child.updated_at == null){
-                                createdAt = new Date(child.created_at);
-                            } else {
-                                createdAt = new Date(child.updated_at);
-                            }
-                            const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
-                            if (child.deleted_at == null) {
-                            html_all_comments += `
-                                <div id="commentContainer-${child.id}" class="comment" data-deleted="false" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(child.text)}</p>
+            }
+            comment.child_comments.forEach((child) => {
+              let createdAt;
+              if (child.updated_at == null) {
+                createdAt = new Date(child.created_at);
+              } else {
+                createdAt = new Date(child.updated_at);
+              }
+              const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+              if (child.deleted_at == null) {
+                html_all_comments += `
+                                <div id="commentContainer-${
+                                  child.id
+                                }" class="comment" data-deleted="false" style="margin-left: 1rem">
+                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(
+                                      child.text
+                                    )}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                <span class="text-muted small" style="word-break: break-all">${
+                                                  child.login
+                                                }</span>
                                                 <span class="text-muted small">${formattedDate}</span>
                                             </div>
-                                            <div style="display: flex; gap: 10px;">`
-                                                if ("{{ role.name }}" == "owner" || "{{ user_id }}" == child.user_id ) {
-                                                    html_all_comments += `<div class="column">
-                                                    <button class="btn btn-outline-danger btn-sm h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${child.id}')">${i18next.t('Delete')}</button>
+                                            <div style="display: flex; gap: 10px;">`;
+                if (
+                  "{{ role.name }}" == "owner" ||
+                  "{{ user_id }}" == child.user_id
+                ) {
+                  html_all_comments += `<div class="column">
+                                                    <button class="btn btn-outline-danger btn-sm h-100" style="padding: 5px 10px; font-size: 14px; cursor: pointer;" onclick="deleteComment('${
+                                                      child.id
+                                                    }')">${i18next.t(
+                    "Delete"
+                  )}</button>
                                                 </div>
                                                 <div class="column">
-                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${child.id}" onclick="editToComment('${child.id}')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t('Edit')}</button>
-                                                </div>`
-                                            }
-                                            html_all_comments += `</div>
+                                                    <button class="btn btn-outline-primary btn-xs h-100" id="reply-btn-${
+                                                      child.id
+                                                    }" onclick="editToComment('${
+                    child.id
+                  }')" style="padding: 5px 10px; font-size: 14px; cursor: pointer;">${i18next.t(
+                    "Edit"
+                  )}</button>
+                                                </div>`;
+                }
+                html_all_comments += `</div>
                                         </div>
                                     </div>
                                 </div>
-                                <hr class="comment-hr" data-deleted="false">`
-                                ;}
-                                else {
-                                    html_all_comments += `
-                                <div id="commentContainer-${child.id}" class="comment" data-deleted="true" style="margin-left: 1rem">
-                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(child.text)}</p>
+                                <hr class="comment-hr" data-deleted="false">`;
+              } else {
+                html_all_comments += `
+                                <div id="commentContainer-${
+                                  child.id
+                                }" class="comment" data-deleted="true" style="margin-left: 1rem">
+                                    <p style="margin-bottom: 0; word-break: break-all; white-space: pre-wrap;">${sanitize(
+                                      child.text
+                                    )}</p>
                                     <div class="d-flex justify-content: space-between; align-items: center; width: 100%;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div class="column" style="display: flex; flex-direction: column; gap: 0px;">
-                                                <span class="text-muted small" style="word-break: break-all">${child.login}</span>
+                                                <span class="text-muted small" style="word-break: break-all">${
+                                                  child.login
+                                                }</span>
                                                 <span class="text-muted small">${formattedDate}</span>
                                             </div>
                                             <div style="display: flex; gap: 10px;">
                                                 <div class="column">
-                                                <span class="text-muted small" style="font-size: 0.8em">${i18next.t('Deleted')}</span>
+                                                <span class="text-muted small" style="font-size: 0.8em">${i18next.t(
+                                                  "Deleted"
+                                                )}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <hr class="comment-hr" data-deleted="true">`
-                                ;
-                                }
-                        });
+                                <hr class="comment-hr" data-deleted="true">`;
+              }
             });
+          });
         });
-        
-        const hideDeletedKey = `hideDeletedComments_${node.id}`;
-        const isChecked = localStorage.getItem(hideDeletedKey) === 'true';
-        
-        html_text += `
+
+      const hideDeletedKey = `hideDeletedComments_${node.id}`;
+      const isChecked = localStorage.getItem(hideDeletedKey) === "true";
+
+      html_text += `
                 <div class="tab-pane fade" id="comments-info" role="tabpanel">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${isChecked ? 'checked' : ''}>
+                        <input class="form-check-input" type="checkbox" id="hideDeletedComments" ${
+                          isChecked ? "checked" : ""
+                        }>
                         <label class="form-check-label" for="hideDeletedComments">
-                            ${i18next.t('Hide deleted comments')}
+                            ${i18next.t("Hide deleted comments")}
                         </label>
                     </div>
                     <div id="commentsContainer" style="overflow-y: auto; max-height: 300px; margin-top: 10px;">
@@ -1659,113 +2100,134 @@
                     </div>
                     <form id="addCommentForm" name="addCommentFormName" class="mt-3">
                         <div class="form-group w-100">
-                            <label for="AddCommentForm">${i18next.t('New comment')}</label>
+                            <label for="AddCommentForm">${i18next.t(
+                              "New comment"
+                            )}</label>
                             <textarea class="form-control" id="AddCommentForm" rows="3" required></textarea>
                         </div>
-                        <button class="btn btn-primary w-100" style="margin-top: 0.5rem" type="submit">${i18next.t('Send')}</button>
+                        <button class="btn btn-primary w-100" style="margin-top: 0.5rem" type="submit">${i18next.t(
+                          "Send"
+                        )}</button>
                     </form>
                 </div>
             </div>
         </div>`;
-        
-        source_table.innerHTML = html_text;
-        
-        const hideDeletedCheckbox = document.getElementById('hideDeletedComments');
-        function toggleDeletedComments() {
-            const hideDeleted = hideDeletedCheckbox.checked;
-            localStorage.setItem(hideDeletedKey, hideDeleted);
-            
-            const comments = document.querySelectorAll('.comment');
-            const hrElements = document.querySelectorAll('.comment-hr');
-            
-            comments.forEach(comment => {
-                if (comment.getAttribute('data-deleted') === 'true') {
-                    comment.style.display = hideDeleted ? 'none' : 'block';
-                }
-            });
-            
-            hrElements.forEach(hr => {
-                if (hr.getAttribute('data-deleted') === 'true') {
-                    hr.style.display = hideDeleted ? 'none' : 'block';
-                }
-            });
-        }
-        
-        if (isChecked) {
-            toggleDeletedComments();
-        }
-        
-        hideDeletedCheckbox.addEventListener('change', toggleDeletedComments);
-        
-        document.getElementById('addCommentForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const commentText = document.getElementById('AddCommentForm').value;
-            
-            try {
-                await axios.post('/api/v1/vis/comment', { 
-                    text: commentText, 
-                    ip_id: params.ip_id 
-                }, {
-                    headers: { 'Content-Type': 'application/json' }
-                });
 
-                document.getElementById('AddCommentForm').value = '';
+      source_table.innerHTML = html_text;
 
-                await createNodeInformation(node);
-                
-                const commentsTab = document.getElementById('comments-tab');
-                const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
-                tabInstance.show();
+      const hideDeletedCheckbox = document.getElementById(
+        "hideDeletedComments"
+      );
+      function toggleDeletedComments() {
+        const hideDeleted = hideDeletedCheckbox.checked;
+        localStorage.setItem(hideDeletedKey, hideDeleted);
 
-                addTableNodesWithComments();
-            } catch (error) {
-                console.error('Error:', error);
-            }
+        const comments = document.querySelectorAll(".comment");
+        const hrElements = document.querySelectorAll(".comment-hr");
+
+        comments.forEach((comment) => {
+          if (comment.getAttribute("data-deleted") === "true") {
+            comment.style.display = hideDeleted ? "none" : "block";
+          }
         });
-    }
-    else {
-        document.getElementById('div_node_info').innerHTML = ``;
-    }
-}
 
-    function addCredentials() {
-        let modal_context = document.getElementById("ModalAddCredentials")
-        let context = `
+        hrElements.forEach((hr) => {
+          if (hr.getAttribute("data-deleted") === "true") {
+            hr.style.display = hideDeleted ? "none" : "block";
+          }
+        });
+      }
+
+      if (isChecked) {
+        toggleDeletedComments();
+      }
+
+      hideDeletedCheckbox.addEventListener("change", toggleDeletedComments);
+
+      document
+        .getElementById("addCommentForm")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
+          const commentText = document.getElementById("AddCommentForm").value;
+
+          try {
+            await axios.post(
+              "/api/v1/vis/comment",
+              {
+                text: commentText,
+                ip_id: params.ip_id,
+              },
+              {
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+
+            document.getElementById("AddCommentForm").value = "";
+
+            await createNodeInformation(node);
+
+            const commentsTab = document.getElementById("comments-tab");
+            const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+            tabInstance.show();
+
+            addTableNodesWithComments();
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        });
+    } else {
+      document.getElementById("div_node_info").innerHTML = ``;
+    }
+  }
+
+  function addCredentials() {
+    let modal_context = document.getElementById("ModalAddCredentials");
+    let context = `
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5> ${i18next.t('Add credentials')} </h5>
+                        <h5> ${i18next.t("Add credentials")} </h5>
                     </div>
                     <form id="id_formAddCred" name="AddCredentialsFormName" onsubmit="submitAddCredentials(event)">
-                        <div class="modal-body">`
-            context += `
+                        <div class="modal-body">`;
+    context += `
                             <div class="form-group">
-                                <label for="portSelect">${i18next.t('Port')}:</label>
-                                <select class="form-control" id="portSelect" name="port_id" required>`
-        for (let port of json.ports) {
-            context += `
-                                    <option value=${port.port_id}>${port.port} - ${port.protocol}</option>`
-        }
-        context += `
+                                <label for="portSelect">${i18next.t(
+                                  "Port"
+                                )}:</label>
+                                <select class="form-control" id="portSelect" name="port_id" required>`;
+    for (let port of json.ports) {
+      context += `
+                                    <option value=${port.port_id}>${port.port} - ${port.protocol}</option>`;
+    }
+    context += `
                                 </select>
-                            </div>`
-        context += `
+                            </div>`;
+    context += `
                             <div class="form-group">
-                                <label for="login">${i18next.t('Login')}:</label>
+                                <label for="login">${i18next.t(
+                                  "Login"
+                                )}:</label>
                                 <input type="text" class="form-control" id="login" name="login" required>
                             </div>
                             <div class="form-group">
-                                <label for="password">${i18next.t('Password')}:</label>
+                                <label for="password">${i18next.t(
+                                  "Password"
+                                )}:</label>
                                 <input class="form-control" id="password" name="password">
                             </div>
                             <div class="form-group">
-                                <label for="need_auth">${i18next.t('Need authorization')}:</label>
+                                <label for="need_auth">${i18next.t(
+                                  "Need authorization"
+                                )}:</label>
                                 <input type="hidden" name="need_auth" value=0>
                                 <input type="checkbox" class="form-check-input" id="need_auth" name="need_auth" value=1>
                             </div>
                             <div class="form-group">
-                                <label for="permissions">${i18next.t('Permissions')}:</label>
+                                <label for="permissions">${i18next.t(
+                                  "Permissions"
+                                )}:</label>
                                 <select class="form-control" id="permissionsSelect" name="permissions" required>
                                     <option value=0>no permissions</option>
                                     <option value=1>read</option>
@@ -1774,49 +2236,55 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="Parameters">${i18next.t('Parameters')}:</label>
+                                <label for="Parameters">${i18next.t(
+                                  "Parameters"
+                                )}:</label>
                                 <input type="text" class="form-control" id="parameters" name="parameters">
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
-                            <button type="submit" class="btn btn-primary">${i18next.t('Add')}</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t(
+                              "Close"
+                            )}</button>
+                            <button type="submit" class="btn btn-primary">${i18next.t(
+                              "Add"
+                            )}</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        `
-        modal_context.innerHTML = context;
-        let modal = new bootstrap.Modal(modal_context.children[0]);
-        modal.show();
-    }
+        `;
+    modal_context.innerHTML = context;
+    let modal = new bootstrap.Modal(modal_context.children[0]);
+    modal.show();
+  }
 
-    async function submitAddCredentials(event) {
-        event.preventDefault();
-        let formData = new FormData(event.target);
-        let params = JSON.stringify(Object.fromEntries(formData));
-        try {
-            let new_credo = await axios.post('/api/v1/vis/credentials', params, {
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const credentialsTable = document.getElementById('credentials-table');
-            if (credentialsTable.rows.length === 0) {
-                const newHat = credentialsTable.insertRow();
-                newHat.innerHTML = `
+  async function submitAddCredentials(event) {
+    event.preventDefault();
+    let formData = new FormData(event.target);
+    let params = JSON.stringify(Object.fromEntries(formData));
+    try {
+      let new_credo = await axios.post("/api/v1/vis/credentials", params, {
+        headers: { "Content-Type": "application/json" },
+      });
+      const credentialsTable = document.getElementById("credentials-table");
+      if (credentialsTable.rows.length === 0) {
+        const newHat = credentialsTable.insertRow();
+        newHat.innerHTML = `
                     <tr>
-                        <td> ${i18next.t('Port')} </td>
-                        <td> ${i18next.t('Protocol')} </td>
-                        <td> ${i18next.t('Login')} </td>
-                        <td> ${i18next.t('Password')} </td>
-                        <td> ${i18next.t('Need authorization')} </td>
-                        <td> ${i18next.t('Permissions')} </td>
-                        <td> ${i18next.t('Parameters')} </td>
-                    </tr>`
-            }
+                        <td> ${i18next.t("Port")} </td>
+                        <td> ${i18next.t("Protocol")} </td>
+                        <td> ${i18next.t("Login")} </td>
+                        <td> ${i18next.t("Password")} </td>
+                        <td> ${i18next.t("Need authorization")} </td>
+                        <td> ${i18next.t("Permissions")} </td>
+                        <td> ${i18next.t("Parameters")} </td>
+                    </tr>`;
+      }
 
-            const newRow = credentialsTable.insertRow();
-            newRow.innerHTML = `
+      const newRow = credentialsTable.insertRow();
+      newRow.innerHTML = `
                 <td>${new_credo.data.port}</td>
                 <td>${new_credo.data.protocol}</td>
                 <td>${sanitize(new_credo.data.login)}</td>
@@ -1825,474 +2293,543 @@
                 <td>${new_credo.data.permissions}</td>
                 <td>${sanitize(new_credo.data.parameters)}</td>
             `;
-            event.target.reset();
-            let modal = bootstrap.Modal.getInstance(document.getElementById("ModalAddCredentials").children[0]);
-            modal.hide();
-        } catch (error) {
-            console.error('Error submitting credentials:', error);
-        }
+      event.target.reset();
+      let modal = bootstrap.Modal.getInstance(
+        document.getElementById("ModalAddCredentials").children[0]
+      );
+      modal.hide();
+    } catch (error) {
+      console.error("Error submitting credentials:", error);
     }
+  }
 
-
-    function editToComment(commentId) {
-    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
-    const commentText = commentContainer.querySelector('h5, p');
+  function editToComment(commentId) {
+    const commentContainer = document.getElementById(
+      `commentContainer-${commentId}`
+    );
+    const commentText = commentContainer.querySelector("h5, p");
     const editBtn = document.getElementById(`reply-btn-${commentId}`);
-    const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
-    const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
+    const deleteBtn = commentContainer.querySelector(".btn-outline-danger");
+    const replyBtn = commentContainer.querySelector(
+      '[onclick^="replyToComment"]'
+    );
 
     const originalContent = commentText.innerHTML;
-    
-    const textarea = document.createElement('textarea');
-    textarea.className = 'form-control';
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "form-control";
     textarea.value = commentText.textContent;
     textarea.rows = 3;
-    textarea.setAttribute('data-original-content', originalContent);
-    textarea.setAttribute('data-original-tag', commentText.tagName.toLowerCase());
-    
+    textarea.setAttribute("data-original-content", originalContent);
+    textarea.setAttribute(
+      "data-original-tag",
+      commentText.tagName.toLowerCase()
+    );
+
     commentText.replaceWith(textarea);
-    
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.style.display = 'flex';
-    buttonsContainer.style.gap = '10px';
-    buttonsContainer.style.marginTop = '5px';
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-outline-secondary btn-sm';
-    cancelBtn.textContent = i18next.t('Cancel');
+
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.style.display = "flex";
+    buttonsContainer.style.gap = "10px";
+    buttonsContainer.style.marginTop = "5px";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-outline-secondary btn-sm";
+    cancelBtn.textContent = i18next.t("Cancel");
     cancelBtn.onclick = () => cancelCommentEdit(commentId);
 
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn btn-outline-success btn-sm';
-    confirmBtn.textContent = i18next.t('Confirm');
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "btn btn-outline-success btn-sm";
+    confirmBtn.textContent = i18next.t("Confirm");
     confirmBtn.onclick = () => confirmCommentEdit(commentId);
 
     buttonsContainer.appendChild(cancelBtn);
     buttonsContainer.appendChild(confirmBtn);
 
-    textarea.insertAdjacentElement('afterend', buttonsContainer);
-    
-    if (editBtn) editBtn.style.display = 'none';
-    if (deleteBtn) deleteBtn.style.display = 'none';
-    if (replyBtn) replyBtn.style.display = 'none';
-}
+    textarea.insertAdjacentElement("afterend", buttonsContainer);
 
-function cancelCommentEdit(commentId) {
-    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
-    const textarea = commentContainer.querySelector('textarea');
-    const originalContent = textarea.getAttribute('data-original-content');
-    const originalTag = textarea.getAttribute('data-original-tag');
+    if (editBtn) editBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (replyBtn) replyBtn.style.display = "none";
+  }
+
+  function cancelCommentEdit(commentId) {
+    const commentContainer = document.getElementById(
+      `commentContainer-${commentId}`
+    );
+    const textarea = commentContainer.querySelector("textarea");
+    const originalContent = textarea.getAttribute("data-original-content");
+    const originalTag = textarea.getAttribute("data-original-tag");
     const buttonsContainer = textarea.nextElementSibling;
-    
+
     const textElement = document.createElement(originalTag);
-    textElement.style.marginBottom = '0';
-    textElement.style.wordBreak = 'break-all';
-    textElement.style.whiteSpace = 'pre-wrap';
+    textElement.style.marginBottom = "0";
+    textElement.style.wordBreak = "break-all";
+    textElement.style.whiteSpace = "pre-wrap";
     textElement.innerHTML = originalContent;
-    
+
     textarea.replaceWith(textElement);
     buttonsContainer.remove();
-    
+
     const editBtn = document.getElementById(`reply-btn-${commentId}`);
-    const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
-    const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
-    
-    if (editBtn) editBtn.style.display = 'inline-block';
-    if (deleteBtn) deleteBtn.style.display = 'inline-block';
-    if (replyBtn) replyBtn.style.display = 'inline-block';
-}
+    const deleteBtn = commentContainer.querySelector(".btn-outline-danger");
+    const replyBtn = commentContainer.querySelector(
+      '[onclick^="replyToComment"]'
+    );
 
-async function confirmCommentEdit(commentId) {
-    const commentContainer = document.getElementById(`commentContainer-${commentId}`);
-    const textarea = commentContainer.querySelector('textarea');
+    if (editBtn) editBtn.style.display = "inline-block";
+    if (deleteBtn) deleteBtn.style.display = "inline-block";
+    if (replyBtn) replyBtn.style.display = "inline-block";
+  }
+
+  async function confirmCommentEdit(commentId) {
+    const commentContainer = document.getElementById(
+      `commentContainer-${commentId}`
+    );
+    const textarea = commentContainer.querySelector("textarea");
     const newText = textarea.value;
-    const originalTag = textarea.getAttribute('data-original-tag');
+    const originalTag = textarea.getAttribute("data-original-tag");
     const buttonsContainer = textarea.nextElementSibling;
-    
+
     try {
-        await axios.put(
-            `/api/v1/vis/comment/${commentId}?comment_text=${encodeURIComponent(newText)}`,
-            null, 
-            {
-                headers: { 'Content-Type': 'application/json' }
-            }
-        );
-        
-        const textElement = document.createElement(originalTag);
-        textElement.style.marginBottom = '0';
-        textElement.style.wordBreak = 'break-all';
-        textElement.style.whiteSpace = 'pre-wrap';
-        textElement.textContent = newText;
-        
-        textarea.replaceWith(textElement);
-        buttonsContainer.remove();
-        
-        const editBtn = document.getElementById(`reply-btn-${commentId}`);
-        const deleteBtn = commentContainer.querySelector('.btn-outline-danger');
-        const replyBtn = commentContainer.querySelector('[onclick^="replyToComment"]');
-        
-        if (editBtn) editBtn.style.display = 'inline-block';
-        if (deleteBtn) deleteBtn.style.display = 'inline-block';
-        if (replyBtn) replyBtn.style.display = 'inline-block';
-
-        addTableNodesWithComments();
-        
-    } catch (error) {
-        console.error('Error updating comment:', error);
-        cancelCommentEdit(commentId);
-    }
-}
-    async function deleteComment(commentId) {
-        await axios.delete(`/api/v1/vis/comment/${commentId}`)
-            await createNodeInformation(nodeForComment);
-
-            const commentsTab = document.getElementById('comments-tab');
-            const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
-            tabInstance.show();
-
-            addTableNodesWithComments();
-            };
-
-    function replyToComment(commentId) {
-
-        let replyFormId = document.getElementById(`replyForm-${commentId}`)
-
-        if(replyFormId){
-            replyFormId.remove()
-            return;
+      await axios.put(
+        `/api/v1/vis/comment/${commentId}?comment_text=${encodeURIComponent(
+          newText
+        )}`,
+        null,
+        {
+          headers: { "Content-Type": "application/json" },
         }
+      );
 
-        const replyForm = document.createElement('form');
-        replyForm.id = `replyForm-${commentId}`;
-        replyForm.classList.add('mt-2');
-        replyForm.innerHTML = `
+      const textElement = document.createElement(originalTag);
+      textElement.style.marginBottom = "0";
+      textElement.style.wordBreak = "break-all";
+      textElement.style.whiteSpace = "pre-wrap";
+      textElement.textContent = newText;
+
+      textarea.replaceWith(textElement);
+      buttonsContainer.remove();
+
+      const editBtn = document.getElementById(`reply-btn-${commentId}`);
+      const deleteBtn = commentContainer.querySelector(".btn-outline-danger");
+      const replyBtn = commentContainer.querySelector(
+        '[onclick^="replyToComment"]'
+      );
+
+      if (editBtn) editBtn.style.display = "inline-block";
+      if (deleteBtn) deleteBtn.style.display = "inline-block";
+      if (replyBtn) replyBtn.style.display = "inline-block";
+
+      addTableNodesWithComments();
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      cancelCommentEdit(commentId);
+    }
+  }
+  async function deleteComment(commentId) {
+    await axios.delete(`/api/v1/vis/comment/${commentId}`);
+    await createNodeInformation(nodeForComment);
+
+    const commentsTab = document.getElementById("comments-tab");
+    const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+    tabInstance.show();
+
+    addTableNodesWithComments();
+  }
+
+  function replyToComment(commentId) {
+    let replyFormId = document.getElementById(`replyForm-${commentId}`);
+
+    if (replyFormId) {
+      replyFormId.remove();
+      return;
+    }
+
+    const replyForm = document.createElement("form");
+    replyForm.id = `replyForm-${commentId}`;
+    replyForm.classList.add("mt-2");
+    replyForm.innerHTML = `
             <div class="form-group">
-                <textarea class="form-control" id="replyText-${commentId}" rows="2" placeholder="${i18next.t('Write a reply...')}" required></textarea>
+                <textarea class="form-control" id="replyText-${commentId}" rows="2" placeholder="${i18next.t(
+      "Write a reply..."
+    )}" required></textarea>
             </div>
             <div class="d-flex justify-content-sm-end">
-            <button class="btn btn-success btn-sm m-1" type="submit">${i18next.t('Send Reply')}</button>
+            <button class="btn btn-success btn-sm m-1" type="submit">${i18next.t(
+              "Send Reply"
+            )}</button>
             </div>
         `;
 
-        replyForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const replyText = document.getElementById(`replyText-${commentId}`).value;
-            try {
-            axios.post('/api/v1/vis/comment', {
-                text: replyText,
-                parent_comment_id: commentId,
-                ip_id: params.ip_id
-            }, {
-                headers: { 'Content-Type': 'application/json' }
-            })
-            document.getElementById('AddCommentForm').value = '';
+    replyForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const replyText = document.getElementById(`replyText-${commentId}`).value;
+      try {
+        axios.post(
+          "/api/v1/vis/comment",
+          {
+            text: replyText,
+            parent_comment_id: commentId,
+            ip_id: params.ip_id,
+          },
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+        document.getElementById("AddCommentForm").value = "";
 
-            await createNodeInformation(nodeForComment);
+        await createNodeInformation(nodeForComment);
 
-            const commentsTab = document.getElementById('comments-tab');
-            const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
-            tabInstance.show();
-        } catch (error) {
-                console.error('Error:', error);
-            }
+        const commentsTab = document.getElementById("comments-tab");
+        const tabInstance = bootstrap.Tab.getOrCreateInstance(commentsTab);
+        tabInstance.show();
+      } catch (error) {
+        console.error("Error:", error);
+      }
     });
 
-    const commentElement = document.getElementById(`commentContainer-${commentId}`);
+    const commentElement = document.getElementById(
+      `commentContainer-${commentId}`
+    );
     if (commentElement) {
-        commentElement.appendChild(replyForm);
+      commentElement.appendChild(replyForm);
     } else {
-        console.error(`not found commentId: ${commentId}`);
+      console.error(`not found commentId: ${commentId}`);
     }
-}
+  }
 
+  const DEFAULT_COLOR = "#2B7CE9";
 
-    const DEFAULT_COLOR = '#2B7CE9'
-
-    function caclculateColor(node) {
-        agents = []
-        if (node.agent) {
-            if (!node.agents.includes(node.agent)) {
-                node.agents.push(node.agent)
-            }
-        }
-
-        node.agents.forEach((agent_id) => {
-            agent = agentData.agents.find((i) => i.id == agent_id)
-            if (agent) {
-                agents.push(agent)
-            }
-        })
-
-        if (agents) {
-            r = 0;
-            g = 0;
-            b = 0;
-            agents.forEach((agent) => {
-                r += agent.red;
-                g += agent.green;
-                b += agent.blue;
-            })
-            color = rgbToHex(parseInt(r / agents.length), parseInt(g / agents.length), parseInt(b / agents.length));
-            return color;
-        }
-        else {
-            return DEFAULT_COLOR
-        }
+  function caclculateColor(node) {
+    agents = [];
+    if (node.agent) {
+      if (!node.agents.includes(node.agent)) {
+        node.agents.push(node.agent);
+      }
     }
 
-    function caclculateNodeColor(node) {
-        node.color = caclculateColor(node)
+    node.agents.forEach((agent_id) => {
+      agent = agentData.agents.find((i) => i.id == agent_id);
+      if (agent) {
+        agents.push(agent);
+      }
+    });
+
+    if (agents) {
+      r = 0;
+      g = 0;
+      b = 0;
+      agents.forEach((agent) => {
+        r += agent.red;
+        g += agent.green;
+        b += agent.blue;
+      });
+      color = rgbToHex(
+        parseInt(r / agents.length),
+        parseInt(g / agents.length),
+        parseInt(b / agents.length)
+      );
+      return color;
+    } else {
+      return DEFAULT_COLOR;
     }
+  }
 
-    /* Окрашивает ноду*/
-    function colorizeNode(node, color) {
-        if (node.icon) {
-            node.icon.color = color
-        }
-        else {
-            node.color = color
-        }
-        networkData.nodes.update(node)
+  function caclculateNodeColor(node) {
+    node.color = caclculateColor(node);
+  }
+
+  /* Окрашивает ноду*/
+  function colorizeNode(node, color) {
+    if (node.icon) {
+      node.icon.color = color;
+    } else {
+      node.color = color;
     }
+    networkData.nodes.update(node);
+  }
 
-    const GRAY_COLOR = '#888888'
+  const GRAY_COLOR = "#888888";
 
-    /* Функция, которая бежит по нодам и окрашивает их в цвет агента, иначе делает серыми */
-    function drowAgentNodes(agent) {
-        agent_color = rgbToHex(agent.red, agent.green, agent.blue)
-        networkData.nodes.forEach((node) => {
-            if (node.agents.includes(agent.id) | node.agent == agent.id) {
-                colorizeNode(node, agent_color)
-            }
-            else {
-                colorizeNode(node, GRAY_COLOR)
-            }
-        })
+  /* Функция, которая бежит по нодам и окрашивает их в цвет агента, иначе делает серыми */
+  function drowAgentNodes(agent) {
+    agent_color = rgbToHex(agent.red, agent.green, agent.blue);
+    networkData.nodes.forEach((node) => {
+      if (node.agents.includes(agent.id) | (node.agent == agent.id)) {
+        colorizeNode(node, agent_color);
+      } else {
+        colorizeNode(node, GRAY_COLOR);
+      }
+    });
+  }
+
+  function addDomain(ip_id, node) {
+    let domainInput = document.getElementById("domainInput");
+    let domain = domainInput.value.trim();
+
+    let id = ip_id.ip_id;
+
+    axios
+      .post(`/api/v1/domain/${id}/add_domain`, {
+        domain: domain,
+      })
+      .then((response) => {
+        create_toast("Success", "Domain was added", "success");
+        createNodeInformation(node);
+        domainInput.value = "";
+      })
+      .catch((error) => {
+        const errorMsg = error.response?.data?.error || "Failed to add domain";
+        create_toast("Error", errorMsg, "error");
+      });
+  }
+  function delete_domain(id, node) {
+    axios
+      .delete(`/api/v1/domain/${id}/delete_domain`)
+      .then((response) => {
+        create_toast("Success", "Domain was deleted", "success");
+        createNodeInformation(node);
+      })
+      .catch((error) => {
+        const errorMsg =
+          error.response?.data?.error || "Failed to delete domain";
+        create_toast("Error", errorMsg, "error");
+      });
+  }
+  function delete_domain(id, node) {
+    axios
+      .delete(`/api/v1/domain/${id}/delete_domain`)
+      .then((response) => {
+        create_toast("Success", "Domain was deleted", "success");
+        createNodeInformation(node);
+      })
+      .catch((error) => {
+        const errorMsg =
+          error.response?.data?.error || "Failed to delete domain";
+        create_toast("Error", errorMsg, "error");
+      });
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function waitForAgentData() {
+    while (typeof agentData == "undefined") {
+      await sleep(100);
     }
+  }
 
-    function addDomain(ip_id, node) {
-        let domainInput = document.getElementById('domainInput');
-        let domain = domainInput.value.trim();
-
-        let id = ip_id.ip_id;
-        
-        axios.post(`/api/v1/domain/${id}/add_domain`, {
-            domain: domain,
-        })
-        .then(response => {
-            create_toast('Success', 'Domain was added', 'success');
-            createNodeInformation(node);
-            domainInput.value = '';
-        })
-        .catch(error => {
-            const errorMsg = error.response?.data?.error || 'Failed to add domain';
-            create_toast('Error', errorMsg, 'error');
-        });
+  class AgentIcon {
+    constructor(
+      color = "#2B7CE9",
+      size = 65,
+      face = '"bootstrap-icons"',
+      code = "\uF5C2"
+    ) {
+      this.color = color;
+      this.size = size;
+      this.face = face;
+      this.code = code;
     }
-    function delete_domain(id, node) {
-        axios.delete(`/api/v1/domain/${id}/delete_domain`)
-        .then(response => {
-            create_toast('Success', 'Domain was deleted', 'success');
-            createNodeInformation(node);
-        })
-        .catch(error => {
-            const errorMsg = error.response?.data?.error || 'Failed to delete domain';
-            create_toast('Error', errorMsg, 'error');
-        });
+  }
+
+  class ServerIcon {
+    constructor(
+      color = "#2B7CE9",
+      size = 100,
+      face = '"bootstrap-icons"',
+      code = "\uF67A"
+    ) {
+      this.color = color;
+      this.size = size;
+      this.face = face;
+      this.code = code;
     }
-    function delete_domain(id, node) {
-        axios.delete(`/api/v1/domain/${id}/delete_domain`)
-        .then(response => {
-            create_toast('Success', 'Domain was deleted', 'success');
-            createNodeInformation(node);
-        })
-        .catch(error => {
-            const errorMsg = error.response?.data?.error || 'Failed to delete domain';
-            create_toast('Error', errorMsg, 'error');
-        });
+  }
+
+  class InterfaceIcon {
+    constructor(
+      color = "#2B7CE9",
+      size = 50,
+      face = '"bootstrap-icons"',
+      code = "\uF432"
+    ) {
+      this.color = color;
+      this.size = size;
+      this.face = face;
+      this.code = code;
     }
+  }
 
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+  class CommentNodeIcon {
+    constructor(
+      color = "#2B7CE9",
+      size = 65,
+      face = '"bootstrap-icons"',
+      code = "\uF332"
+    ) {
+      this.color = color;
+      this.size = size;
+      this.face = face;
+      this.code = code;
     }
+  }
 
-    async function waitForAgentData() {
-        while (typeof agentData == "undefined") {
-            await sleep(100)
-        }
-    }
+  async function fillAcunetixInstances(acunetix_id) {
+    resp = await fetch("/api/v1/acunetix/config");
+    data = await resp.json();
 
-    class AgentIcon {
-
-        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF5C2') {
-            this.color = color
-            this.size = size
-            this.face = face
-            this.code = code
-        }
-    }
-
-    class ServerIcon {
-
-        constructor(color = '#2B7CE9', size = 100, face = '"bootstrap-icons"', code = '\uF67A') {
-            this.color = color
-            this.size = size
-            this.face = face
-            this.code = code
-        }
-    }
-
-    class CommentNodeIcon {
-
-        constructor(color = '#2B7CE9', size = 65, face = '"bootstrap-icons"', code = '\uF332') {
-            this.color = color
-            this.size = size
-            this.face = face
-            this.code = code
-        }
-    }
-
-    
-    async function fillAcunetixInstances(acunetix_id){
-        resp = await fetch("/api/v1/acunetix/config")
-        data = await resp.json()
-
-        let parent = `<div class="col-4">
-                            <label for="acunetix_scan_instances" class="col-form-label">${i18next.t('Acunetix Name')}</label>
+    let parent = `<div class="col-4">
+                            <label for="acunetix_scan_instances" class="col-form-label">${i18next.t(
+                              "Acunetix Name"
+                            )}</label>
                         </div>
                         <div class="col-6" id="acunetix_scan_instances">
-                        </div>`
+                        </div>`;
 
-        document.getElementById('acunetix_scan_instances_parent').innerHTML = parent
+    document.getElementById("acunetix_scan_instances_parent").innerHTML =
+      parent;
 
-        result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
-            <option value=''>${i18next.t('Acunetix Name')}</option>`
-        for (const instance of data){
-            result += `<option value='${instance.id}'>${instance.name}</option>`
-        }
-        result += "</select>"
-        document.getElementById(acunetix_id).innerHTML = result;
+    result = `<select name='acunetix_name' onchange="currentAcunetixName=event.target.value" required class='form-select'>
+            <option value=''>${i18next.t("Acunetix Name")}</option>`;
+    for (const instance of data) {
+      result += `<option value='${instance.id}'>${instance.name}</option>`;
     }
-    function update_agent_bar() {
-        createAgentBar('agent_bar')
-        getAgentData().then((data) => {
-            agentData = data
-            fillAgentBar('agent_bar')
-        })
-    }
+    result += "</select>";
+    document.getElementById(acunetix_id).innerHTML = result;
+  }
+  function update_agent_bar() {
+    createAgentBar("agent_bar");
+    getAgentData().then((data) => {
+      agentData = data;
+      fillAgentBar("agent_bar");
+    });
+  }
 
+  function edit_domain(domainId, nodeForComment) {
+    const domainRow = document
+      .querySelector(
+        `button[onclick="edit_domain('${domainId}', nodeForComment)"]`
+      )
+      .closest("tr");
+    const domainCell = domainRow.querySelector("td:nth-child(2)");
+    const buttonsCell = domainRow.querySelector("td:last-child");
 
-    function edit_domain(domainId, nodeForComment) {
-    const domainRow = document.querySelector(`button[onclick="edit_domain('${domainId}', nodeForComment)"]`).closest('tr');
-    const domainCell = domainRow.querySelector('td:nth-child(2)');
-    const buttonsCell = domainRow.querySelector('td:last-child');
-    
     const originalDomain = domainCell.textContent;
-    domainCell.setAttribute('data-original', originalDomain);
-    
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'form-control';
+    domainCell.setAttribute("data-original", originalDomain);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-control";
     input.value = originalDomain;
-    domainCell.innerHTML = '';
+    domainCell.innerHTML = "";
     domainCell.appendChild(input);
-    
+
     const originalButtons = buttonsCell.innerHTML;
-    buttonsCell.setAttribute('data-original', originalButtons);
-    
-    buttonsCell.innerHTML = '';
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-sm btn-secondary me-1';
-    cancelBtn.textContent = i18next.t('Cancel');
+    buttonsCell.setAttribute("data-original", originalButtons);
+
+    buttonsCell.innerHTML = "";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-sm btn-secondary me-1";
+    cancelBtn.textContent = i18next.t("Cancel");
     cancelBtn.onclick = () => cancelDomainEdit(domainId);
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn btn-sm btn-success';
-    confirmBtn.textContent = i18next.t('Save');
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "btn btn-sm btn-success";
+    confirmBtn.textContent = i18next.t("Save");
     confirmBtn.onclick = () => confirmDomainEdit(domainId, nodeForComment);
-    
+
     buttonsCell.appendChild(cancelBtn);
     buttonsCell.appendChild(confirmBtn);
-    
+
     input.focus();
-}
+  }
 
-function cancelDomainEdit(domainId) {
-    const domainRow = document.querySelector(`tr[data-domain-id="${domainId}"]`);
-    const domainCell = domainRow.querySelector('td:nth-child(2)');
-    const buttonsCell = domainRow.querySelector('td:last-child');
-    
-    const originalDomain = domainCell.getAttribute('data-original');
+  function cancelDomainEdit(domainId) {
+    const domainRow = document.querySelector(
+      `tr[data-domain-id="${domainId}"]`
+    );
+    const domainCell = domainRow.querySelector("td:nth-child(2)");
+    const buttonsCell = domainRow.querySelector("td:last-child");
+
+    const originalDomain = domainCell.getAttribute("data-original");
     domainCell.innerHTML = originalDomain;
-    
-    const originalButtons = buttonsCell.getAttribute('data-original');
+
+    const originalButtons = buttonsCell.getAttribute("data-original");
     buttonsCell.innerHTML = originalButtons;
-}
+  }
 
-async function confirmDomainEdit(domainId, node) {
-    const domainRow = document.querySelector(`tr[data-domain-id="${domainId}"]`);
-    const domainCell = domainRow.querySelector('td:nth-child(2)');
-    const input = domainCell.querySelector('input');
+  async function confirmDomainEdit(domainId, node) {
+    const domainRow = document.querySelector(
+      `tr[data-domain-id="${domainId}"]`
+    );
+    const domainCell = domainRow.querySelector("td:nth-child(2)");
+    const input = domainCell.querySelector("input");
     const newDomain = input.value.trim();
-    
+
     if (!newDomain) {
-        create_toast('Error', 'Please enter a domain', 'error')
-        input.focus();
-        return;
+      create_toast("Error", "Please enter a domain", "error");
+      input.focus();
+      return;
     }
-    await axios.patch(`/api/v1/domain/${domainId}`, {domain: newDomain});
+    await axios.patch(`/api/v1/domain/${domainId}`, { domain: newDomain });
     createNodeInformation(node);
-}
+  }
 
-
-async function addTableNodesWithComments() {
+  async function addTableNodesWithComments() {
     const scans = currentScans;
-    const params = scans.map(id => `scans=${encodeURIComponent(id)}`).join('&');
-    const url = `/api/v1/vis/comments_for_all_nodes${params ? '?' + params : ''}`;
-    axios.get(url).then(response => {
-        const nodes_with_comments_info = response.data;
-        const source_table = document.getElementById('node_with_comments');
+    const params = scans
+      .map((id) => `scans=${encodeURIComponent(id)}`)
+      .join("&");
+    const url = `/api/v1/vis/comments_for_all_nodes${
+      params ? "?" + params : ""
+    }`;
+    axios.get(url).then((response) => {
+      const nodes_with_comments_info = response.data;
+      const source_table = document.getElementById("node_with_comments");
 
-        if (nodes_with_comments_info.length > 0) {
+      if (nodes_with_comments_info.length > 0) {
+        const rowsCount = nodes_with_comments_info.length;
 
-            const rowsCount = nodes_with_comments_info.length;
+        const scrollStyle =
+          rowsCount > 10 ? "max-height: 400px; overflow-y: auto;" : "";
 
-            const scrollStyle = rowsCount > 10 ? 'max-height: 400px; overflow-y: auto;' : '';
-
-            html_text = `<div>
-                <h5>${i18next.t('Nodes with comment')}</h5>
+        html_text = `<div>
+                <h5>${i18next.t("Nodes with comment")}</h5>
                 <div class="tab-content" id="edge-info-tabs-content">
                     <div class="tab-pane fade show active" id="edge-info" role="tabpanel" style="${scrollStyle}">
                         <table class="table table-bordered table-hover">
                             <thead>
                                 <tr>
-                                    <th>${i18next.t('ip')}</th>
-                                    <th>${i18next.t('Comment')}</th>
+                                    <th>${i18next.t("ip")}</th>
+                                    <th>${i18next.t("Comment")}</th>
                                 </tr>
                             </thead>
                             <tbody>`;
 
-                            for (let row of nodes_with_comments_info) {
-                                let truncatedText = row.text.length > 17 ? row.text.slice(0, 17) + '…' : row.text;
+        for (let row of nodes_with_comments_info) {
+          let truncatedText =
+            row.text.length > 17 ? row.text.slice(0, 17) + "…" : row.text;
 
-                                html_text += `<tr>
+          html_text += `<tr>
                                     <td><button class="btn btn-sm btn-success d-flex" onclick="findSingleNodeByIP('${row.ip_id}')">${row.ip}</button></td>
                                     <td>${truncatedText}</td>
-                                </tr>`}
+                                </tr>`;
+        }
 
-                                html_text += `</tbody>
+        html_text += `</tbody>
                         </table>
                     </div>
                 </div>
             </div>`;
         source_table.innerHTML = html_text;
-        }
-        else source_table.innerHTML = '';
+      } else source_table.innerHTML = "";
     });
-}
-addTableNodesWithComments()
-
+  }
+  addTableNodesWithComments();
 </script>
 
 {% endmacro %}

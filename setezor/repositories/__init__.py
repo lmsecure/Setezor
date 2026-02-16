@@ -43,4 +43,3 @@ from .l4_software_vulnerability_screenshots_repository import L4SoftwareVulnerab
 from .setting_repository import SettingRepository
 from .agent_in_project_repository import AgentInProjectRepository
 from .network_speed_test_repository import NetworkSpeedTestRepository
-from .screenshot_repository import ScreenshotRepository

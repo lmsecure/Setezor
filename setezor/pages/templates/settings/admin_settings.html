@@ -1,4 +1,3 @@
-
 {% block content %}
 <!DOCTYPE html>
 <html>
@@ -20,6 +19,9 @@
 <script src="/static/js/libs/axios.min.js"></script>
 <script src="/static/js/libs/i18next.min.js"></script>
 <script src="/static/js/src/translate_i18n.js"></script>
+<script src="/static/js/src/interfaces.js"></script>
+<script src="/static/js/src/scripts.js"></script>
+<script src="/static/js/src/agents.js"></script>
 
 </head>
 <body>
@@ -107,6 +109,12 @@
                         </div>
                     </div>
 
+                    <button type="button" class="btn btn-outline-info" data-bs-toggle="offcanvas"
+						style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
+						data-bs-target="#offcanvasNotifications">
+						<i class="bi bi-bell" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Notifications"></i>
+					</button>
+
 
 					<button class="btn btn-outline-danger" onclick="window.location.href='/projects'"
 					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
@@ -117,65 +125,6 @@
 			</div>
 			</div>
 		</nav>
-
-<script>
-    var levels = {info: "#0d6efd", error: "#dc3545", warning: "#ffc107",success:"#198754"};
-    function create_toast(title, message, level = "info", position = "bottom-0 end-0") {
-        var now = new Date();
-        var year = now.getFullYear();
-        var month = now.getMonth() + 1;
-        var day = now.getDate();
-        var hours = now.getHours();
-        var minutes = now.getMinutes();
-        var seconds = now.getSeconds();
-
-        var dateString = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
-        var timeString = `${hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-        var dateTimeString = `${dateString} ${timeString}`;
-
-        var toast_holder = document.getElementById("toast_holder");
-
-        toast_holder.className = "position-fixed " + position + " p-3";
-
-        const max_toasts = 5;
-        if (toast_holder.children.length >= max_toasts) {
-            toast_holder.removeChild(toast_holder.firstChild);
-        }
-
-        var toast = document.createElement("div");
-        toast.classList.add("toast", "fade");
-        toast.innerHTML = create_html_toast(title, message, dateTimeString, levels[level]);
-        var toast_instance = new bootstrap.Toast(toast);
-        toast_holder.append(toast);
-        toast_instance.show();
-
-        var notification_toast = document.createElement("div");
-        notification_toast.classList.add("toast", "fade");
-        notification_toast.innerHTML = create_html_toast(title, message, dateTimeString, levels[level]);
-        notification_toast.setAttribute("data-bs-autohide", false);
-        var notification_toast_instance = new bootstrap.Toast(notification_toast);
-        notification_toast_instance.show();
-    };
-    function create_html_toast(title, message, time, level) {
-        return `
-                <div class="toast-header">
-                    <svg width="25" height="25">
-                        <rect fill=${level} y="3" width="20" height="20" rx="3" />
-                    </svg>
-                    <strong class="me-auto">${title}</strong>
-                    <small class="text-muted">${time}</small>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body">
-                    ${message}
-                </div>`
-    };
-			const logoutFromProfile = async () => {
-				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
-					window.location.href = "/login"
-				})
-			}
-		</script>
 	</header>
 
     <div class="d-flex flex-row justify-content-between">
@@ -213,7 +162,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <table style="margin: auto">
+                    <table style="width: 95%; margin-left: 1.25rem;">
                         <tbody>
                             <tr>
                                 <td data-i18n="Agent name"></td>
@@ -242,38 +191,148 @@
         </div>
     </div>
     
+    <div class="modal fade" id="editAgentModal" tabindex="-1" aria-labelledby="editAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAgentModalLabel" data-i18n="Edit agent"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table style="width: 95%; margin-left: 1.25rem;">
+                <tbody>
+                    <tr>
+                    <td data-i18n="Agent name"></td>
+                    <td><input id="edit-agent-name" name="edit-agent-name" class="form-control" value="" required></td>
+                    </tr>
+                    <tr>
+                    <td data-i18n="Agent description"></td>
+                    <td><textarea class="form-control" id="edit-agent-description" rows="3"></textarea></td>
+                    </tr>
+                    <tr>
+                    <td data-i18n="Agent REST URL"></td>
+                    <td><input id="edit-agent-rest-url" name="edit-agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                <button type="button" class="btn btn-primary" onclick="editAgent()" data-i18n="Save changes"></button>
+            </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="parentAgentsModal">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="parentagentModalLabel" data-i18n="Parent agents"></h5>
+                    <h5 class="modal-title parent-agents-modal-title" data-i18n="Parent agents"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="parentAgentsList">
+                <div class="modal-body parent-agents-list-container">
                 </div>
                 <div class="modal-footer">
-                    <button id="closeParentAgentsModal" type="button" class="btn btn-secondary"
+                    <button type="button" class="btn btn-secondary parent-agents-close-btn"
                         data-bs-dismiss="modal" data-i18n="Close"></button>
-                    <button type="button" class="btn btn-primary" onclick="saveParentAgents()" data-i18n="Save changes"></button>
+                    <button type="button" class="btn btn-primary parent-agents-save-btn" onclick="saveParentAgents()" data-i18n="Save changes" disabled></button>
                 </div>
             </div>
         </div>
     </div>
-    <div class="modal fade" id="editAgentInterfaces" tabindex="-1" aria-hidden="true">
+
+    <div class="modal fade" id="selectParentAgentsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Add agent interfaces"></h5>
+                    <h5 class="modal-title parent-agents-modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span data-i18n="Parent agents required"></span>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="interfaces_list_container">
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <span data-i18n="Please select at least one parent agent before connecting"></span>
+                    </div>
+                    <div class="parent-agents-list-container">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="close-create-agent" type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal" data-i18n="Close"></button>
-                    <button type="button" class="btn btn-primary" onclick="saveInterfaces()" data-i18n="Save changes"></button>
+                    <button type="button" class="btn btn-secondary parent-agents-close-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>
+                        <span data-i18n="Cancel"></span>
+                    </button>
+                    <button type="button" class="btn btn-success parent-agents-save-btn" onclick="saveParentAgentsAndConnect()" disabled>
+                        <i class="bi bi-check-circle me-1"></i>
+                        <span data-i18n="Confirm"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<form onsubmit="saveSynthInterface(event)" name="saveSynthInterfaceFormName">
+					<div class="modal-header">
+						<h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div class="mb-2">
+							<label for="synthAgentInterfaceName" class="form-label" data-i18n="Interface name"></label>
+							<input class="form-control" type="text" id="synthAgentInterfaceName" required name="name">
+						</div>
+						<div class="mb-2">
+							<label for="synthAgentInterfaceIP" class="form-label" data-i18n="Interface ip"></label>
+							<input class="form-control" type="text" id="synthAgentInterfaceIP" required name="ip">
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button id="close-create-agent" type="button" class="btn btn-secondary"
+							data-bs-dismiss="modal" data-i18n="Close"></button>
+						<button type="submit" class="btn btn-primary" data-i18n="Save changes"></button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+    <div class="modal fade" id="agentInterfacesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="Agent Interfaces"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 data-i18n="Interfaces"></h6>
+                    <div id="config_interfaces_container"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" class="btn btn-primary" onclick="saveAgentInterfaces()" data-i18n="Save changes"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="agentModulesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="Agent Modules"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 data-i18n="Modules"></h6>
+                    <div id="config_modules_container"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" class="btn btn-primary" onclick="saveAgentModules()" data-i18n="Save changes"></button>
                 </div>
             </div>
         </div>
@@ -282,38 +341,79 @@
     <div id="OpenReg" class="container mt-4" style="margin-left: 2.5rem;"></div>
     <button class="btn btn-success" onclick="saveSettingsOpenRegParams()" style="margin-left: 4.5rem;" data-i18n="Save settings"></button>
     {% endif %}
-    <div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form onsubmit="saveSynthInterface(event)" name="saveSynthInterfaceFormName">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-2">
-                            <label for="synthAgentInterfaceName" class="form-label" data-i18n="Interface name"></label>
-                            <input class="form-control" name="synth_agent_interface_name" type="text" id="synthAgentInterfaceName" required name="name">
+    <div class="modal fade" id="deleteAgentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger border-3 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAgentModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span data-i18n="Removing an agent"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger mb-3" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-octagon-fill fs-3 me-3 flex-shrink-0"></i>
+                            <div>
+                                <h5 class="alert-heading mb-2" data-i18n="Warning!"></h5>
+                                <p class="mb-0" id="warningText" data-i18n="You are about to delete this agent."></p>
+                            </div>
                         </div>
-                        <div class="mb-2">
-                            <label for="synthAgentInterfaceIP" class="form-label" data-i18n="Interface ip"></label>
-                            <input class="form-control" name="synth_agent_interface_ip" type="text" id="synthAgentInterfaceIP" required name="ip">
+                    </div>
+    
+                    <div id="agentsToDeleteList" class="mb-3">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-danger" role="status">
+                                <span class="visually-hidden" data-i18n="Loading..."></span>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button id="close-create-agent" type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal" data-i18n="Close"></button>
-                        <button type="submit" class="btn btn-primary" data-i18n="Save changes"></button>
+    
+                    <div class="alert alert-info mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle-fill fs-5 me-2 flex-shrink-0"></i>
+                            <small data-i18n="After deletion, all deleted agents in projects will become synthetic agents."></small>
+                        </div>
                     </div>
-                </form>
+    
+                    <div class="form-check p-3">
+                        <input class="form-check-input" type="checkbox" id="confirmDelete">
+                        <label class="form-check-label text-danger fw-bold" for="confirmDelete">
+                            <span data-i18n="I understand that this action cannot be undone"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>
+                        <span data-i18n="Cancel"></span>
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled onclick="confirmDeleteAgent()">
+                        <i class="bi bi-trash-fill me-1"></i>
+                        <span data-i18n="Delete Agent"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
   <div id="toast_holder"></div>
 </div>
-
+    	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
+		aria-labelledby="offcanvasNotificationsLabel">
+		<div class="offcanvas-header">
+			<h5 class="offcanvas-title" id="offcanvasNotificationsLabel" data-i18n="Notifications"></h5>
+			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body" id="notifications_body">
+		</div>
+	</div>
+	<footer class="footer fixed-bottom">
+	</footer>
     <script>
+        var message_sock = create_websocket(`/api/v1/project/ws/users/` + '{{user_id}}', '{{ user_id }}')
+
             $(document).ready(function(){
             $('#agent-rest-url').inputmask({
                 mask: 'https\\://9{1,3}.9{1,3}.9{1,3}.9{1,3}:9{1,5}',
@@ -323,6 +423,12 @@
                         cardinality: 1
                     }
                 },
+                placeholder: ' ',
+                clearIncomplete: true
+            });
+            $('#edit-agent-rest-url').inputmask({
+                mask: 'https\\://9{1,3}.9{1,3}.9{1,3}.9{1,3}:9{1,3}',
+                definitions: {'9': {validator: '[0-9]', cardinality: 1}},
                 placeholder: ' ',
                 clearIncomplete: true
             });
@@ -397,17 +503,6 @@
                 let response = await axios.patch(`/api/v1/settings/admin/${settingId}`, payload);
         }
 
-        /* Agent create callback */
-        async function fillParentAgents() {
-            let resp = await fetch("/api/v1/agents")
-            let agents = await resp.json()
-            let _select = document.getElementById("parent-agent-id")
-            let result = ""
-            for (const agent of agents) {
-                result += `<option value=${agent.id}>${agent.name}</option>`
-            }
-            _select.innerHTML = result
-        }
         function sanitize(string) {
 			const map = {
 				'&': '&amp;',
@@ -424,6 +519,13 @@
 				return ""
 			}
 		}
+
+        function resetAgentModal() {
+            document.getElementById('agent-name').value = '';
+            document.getElementById('agent-description').value = '';
+            document.getElementById('agent-rest-url').value = '';
+        }
+
         async function createAgent() {
             name = sanitize(document.getElementById('agent-name').value)
             desc = sanitize(document.getElementById('agent-description').value)
@@ -442,6 +544,7 @@
                 }
             )
             if (resp.ok) {
+                resetAgentModal();
                 location.reload()
             }
             else {
@@ -452,64 +555,9 @@
                 create_toast('Error on create agent', text, 'error')
             }
         }
-        async function saveInterfaces(){
-            let el = document.getElementById("interfaces_list_container")
-            let result = []
-            for (const children of el.children){
-                for (const sub_child of children.children){
-                    if (sub_child.tagName == "INPUT"){
-                        if (sub_child.checked){
-                            let new_interface = new Object()
-                            new_interface.mac = sub_child.attributes.mac.value
-                            new_interface.ip = sub_child.attributes.ip.value
-                            new_interface.name = sub_child.attributes.name.value
-                            result.push(new_interface)
-                        }
-                    }
-                }
-            }
-            let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
-            { method: 'PATCH',
-            headers: {"Content-Type": "application/json",},
-            body: JSON.stringify(result) 
-            }
-            )
-            getAgentData().then((data) => {
-                agentData = data
-                fillAgentBar("agent_tools");
-                fillAgentBar("agent_net_map");
-                fillAgentBar("agent_nmap");
-                fillAgentBar("agent_scapy");
-                fillAgentBar("agent_masscan");
-                fillAgentBar("agent_snmp");
-                fillAgentBar("agent_recon");
-                fillAgentBar("agent_cert");
-                fillAgentBar("agent_whois");
-                fillAgentBar("agent_acunetix");
-                fillAgentBar("agent_screenshoter");
-                fillAgentBar("agent_wappalyzer");
-                fillAgentBar("agent_cpeguess");
-                fillAgentBar("agent_searchvulns");
-                getInterfaceData(agentData.default_agent).then((data) => {
-                    interfaceData = data
-                    fillInterfaceBar("interface_tools");
-                    fillInterfaceBar("interface_net_map");
-                    fillInterfaceBar("interface_nmap");
-                    fillInterfaceBar("interface_scapy");
-                    fillInterfaceBar("interface_masscan");
-                    fillInterfaceBar("interface_snmp");
-                    fillInterfaceBar("interface_recon");
-                    fillInterfaceBar("interface_cert");
-                    fillInterfaceBar("interface_whois");
-                    fillInterfaceBar("interface_acunetix");
-                    fillInterfaceBar("interface_screenshoter");
-                    fillInterfaceBar("interface_wappalyzer");
-                    fillInterfaceBar("interface_cpeguess");
-                    fillInterfaceBar("interface_searchvulns");
-                })
-            })
-            $('#editAgentInterfaces').modal('hide');
-        }
+        
+        document.getElementById('agentModal').addEventListener('hidden.bs.modal', resetAgentModal);
+
         async function saveSynthInterface(event){
             event.preventDefault()
             let data = new FormData(event.target)
@@ -527,10 +575,7 @@
             )
             $('#editAgentInterfacesWhichDoesNotExist').modal('hide');
         }
-    </script>
-    
-    <script>
-    
+
         var headerMenu = function () {
             var menu = [];
             var columns = this.getColumns();
@@ -563,164 +608,579 @@
             }
             return menu;
         }
-    
-        /* color functions */
-        function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-      }
-    
-    
-    
-        function hexToRgb(hex) {
-            result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : null;
-        }
-    
-        function componentToHex(color) {
-            hex = color.toString(16);
-            return hex.length == 1 ? "0" + hex : hex;
-        }
-        function rgbToHex(r, g, b) {
-            return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
-        }
-    
-        /* change color callback */
-        async function changeAgentData(agent_id) {
-            element = document.getElementById(`agent-${agent_id}`)
-            value = element.value
-            body = { color: value }
-            resp = await fetch(
-                '/api/v1/agents/' + agent_id + '/update_color', 
-                { method: 'PATCH',
-                headers: {"Content-Type": "application/json",},
-                body: JSON.stringify(body) })
-            if (resp.ok) {
-                console.log(`Agent ${agent_id} successfuly updated with color <${JSON.stringify(value)}>`)
-            }
-            else {
-                console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
-            }
-        }
-    
-        /* color input creater */
-        function formatColor(cell, formatterParams, onRendered) {
-            agent_id = cell.getRow().getData().id
-            value = cell.getValue()
-            return `<input id="agent-${agent_id}" name="agent-${agent_id}" type="color" value="${value}" onchange="changeAgentData('${agent_id}')"/>`; //return the contents of the cell;
-        }
-    
-        /* default cell edit callback */
-        async function editCell(cell) {
-            agent_id = cell.getRow().getCells()[0].getValue()
-            value = cell.getValue()
-            field = cell.getField()
-            body = { id: agent_id, field: field, value: value }
-            resp = await fetch('/api/agent/update', { method: 'put', body: JSON.stringify(body) })
-            text = await resp.text()
-            if (resp.ok) {
-                console.log(`Agent ${agent_id} successfuly updated with value ${field}: <${value}>`)
-            }
-            else {
-                console.log(`Can not update agent ${agent_id} with value ${field}: <${value}>`)
-                create_toast('Error on edit cell', text, 'error')
-                cell.restoreOldValue();
-            }
-        }
-    
-        let currentAgent = 0
+
         function configureAgentFormatter(cell) {
             agent_id = cell.getRow().getData().id
+            agent_name = cell.getRow().getData().name
+            agent_url = cell.getRow().getData().rest_url
+            
             if (cell.getRow().getData().parent_agent_name == ""){
                 return ''
             }
+            
             return `<div class="d-flex justify-content-start align-items-center">
-                        ${cell.getRow().getData().is_connected == false && !cell.getRow().getData().flag ? `<div class="ms-1 btn btn-success btn-sm" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
-                            ${i18next.t('Connect')}
-                        </div>`:""}    
-                        ${cell.getRow().getData().secret_key != "" ? `<div class="ms-1 btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';showParentAgents('${cell.getRow().getData().name}',currentAgent)">
-                            ${i18next.t('Parent agents')}
-                        </div>`:""}
-                    </div>
-                    `
+                        ${!cell.getRow().getData().is_connected && !cell.getRow().getData().online && cell.getRow().getData().name !== "Server" ?
+                            `<div class="ms-1 btn btn-warning btn-sm" data-bs-toggle="tooltip" data-i18n-title="Edit" 
+                            onclick="openEditAgentModal('${agent_id}')">
+                            <i class="bi bi-pencil"></i>
+                            </div>` : ""}
+                        ${cell.getRow().getData().is_connected == false && !cell.getRow().getData().flag ? 
+                            ` <div class="ms-1 btn btn-success btn-sm" data-bs-toggle="tooltip" data-i18n-title="Connect" onclick="currentAgent='${agent_id}';connectAgent(currentAgent)">
+                                <i class="bi bi-plugin"></i>
+                            </div>` : ""}                                 
+                        ${cell.getRow().getData().secret_key != "" ? 
+                            `<div class="ms-1 btn btn-primary btn-sm" data-bs-toggle="tooltip" data-i18n-title="Parent agents" onclick="currentAgent='${agent_id}';showParentAgents('${sanitize(cell.getRow().getData().name)}',currentAgent, 'parentAgentsModal')">
+                                <i class="bi bi-person-fill-gear"></i>
+                                </div>` : ""}
+                        ${cell.getRow().getData().nat ? 
+                            `<button class="btn btn-sm btn-success" onclick="requestAgentInterfaces('${agent_id}', '${cell.getRow().getData().object_id}')">  ${i18next.t('Request interfaces')}</button>` : ""}
+                        ${cell.getRow().getData().secret_key != "" && cell.getRow().getData().is_connected && cell.getRow().getData().online ?
+                            `<div class="ms-1 btn btn-primary btn-sm" onclick="openAgentInterfaces('${agent_id}')">
+                                <i class="bi bi-hdd-network"></i>
+                                </div>
+                                <div class="ms-1 btn btn-primary btn-sm" onclick="openAgentModules('${agent_id}')">
+                                <i class="bi bi-puzzle"></i>
+                            </div>` : ``}
+                        ${cell.getRow().getData().name != "Server" ? 
+                            `<div class="ms-1 btn btn-danger btn-sm" data-bs-toggle="tooltip" data-i18n-title="Delete" onclick="currentAgent='${agent_id}';showDeleteAgentModal('${sanitize(agent_name)}', currentAgent, '${agent_url}')">
+                                <i class="bi bi-trash"></i>
+                            </div>` : ""}
+                    </div>`
         }
-        let currentAgentInterfaces = []
-        async function showParentAgents(name, agent_id) {
+        async function showDeleteAgentModal(agentName, agentId, agentUrl) {
+    currentAgent = agentId;
+    
+    deleteAgentModalLabel = document.getElementById('deleteAgentModalLabel')
+    deleteAgentModalLabel.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i>${i18next.t('Removing an agent')} `;
+    deleteAgentModalLabel.innerHTML += `<br><small class="fw-normal">${i18next.t('Name')}: ${agentName} | ${i18next.t('URL')}: ${agentUrl}</small>`;
+    
+    document.getElementById('confirmDelete').checked = false;
+    document.getElementById('confirmDeleteBtn').disabled = true;
+    
+    document.getElementById('agentsToDeleteList').innerHTML = 
+        `<div class="text-center py-4">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">${i18next.t('Loading...')}</span>
+            </div>
+        </div>`;
+    
+    let deleteModal = new bootstrap.Modal(document.getElementById('deleteAgentModal'));
+    deleteModal.show();
+
+    document.getElementById('confirmDelete').onchange = function() {
+        document.getElementById('confirmDeleteBtn').disabled = !this.checked;
+    };
+    
+    try {
+        const response = await fetch(`/api/v1/agents/${agentId}/heirs`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const agentsToDelete = await response.json();
+        
+        // Изменяем текст предупреждения в зависимости от количества агентов
+        const warningText = document.getElementById('warningText');
+        let agentsListHTML = '';
+        
+        if (agentsToDelete && agentsToDelete.length > 0) {
+            // Множественное удаление
+            warningText.textContent = i18next.t('You are about to delete this agent and all its dependent agents. This is an irreversible action!');
+            
+            agentsListHTML += `
+                <div class="card border-danger">
+                    <div class="list-group list-group-flush">`;
+            
+            // Добавляем текущего агента
+            agentsListHTML += `
+                <div class="list-group-item list-group-item-danger d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-arrow-right-circle-fill text-danger me-2"></i>
+                        <strong>${agentName}</strong>
+                        <small class="text-muted ms-2">(${i18next.t('main agent')})</small>
+                    </span>
+                    <span class="badge bg-danger rounded-pill">${agentId}</span>
+                </div>`;
+            
+            // Добавляем зависимых агентов
+            agentsToDelete.forEach(agent => {
+                agentsListHTML += `
+                    <div class="list-group-item list-group-item-danger d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-link-45deg text-danger me-2"></i>
+                            <strong>${sanitize(agent.name)}</strong>
+                            <small class="text-muted ms-2">(${i18next.t('dependent')})</small>
+                        </span>
+                        <span class="badge bg-danger rounded-pill">${agent.id}</span>
+                    </div>`;
+            });
+        } else {
+            // Одиночное удаление
+            warningText.textContent = i18next.t('Please note this agent will be permanently deleted.');
+            
+            agentsListHTML = `
+                <div class="card border-danger">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item list-group-item-danger d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="bi bi-arrow-right-circle-fill text-danger me-2"></i>
+                                <strong>${agentName}</strong>
+                            </span>
+                            <span class="badge bg-danger rounded-pill">${agentId}</span>
+                        </div>
+                    </div>
+                </div>`;
+        }
+        
+        document.getElementById('agentsToDeleteList').innerHTML = agentsListHTML;
+        
+    } catch (error) {
+        console.error('Error fetching dependent agents:', error);
+        document.getElementById('agentsToDeleteList').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                <span data-i18n="Error loading dependent agents list:"></span> ${error.message}
+            </div>`;
+    }
+}
+    async function confirmDeleteAgent() {
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const cancelBtn = document.querySelector('#deleteAgentModal .btn-secondary');
+        
+        
+        try {
+            const response = await fetch(`/api/v1/agents/${currentAgent}/heirs`);
+            const agentsToDelete = await response.json();
+            
+            const allAgentIds = [(currentAgent)];
+            
+            if (agentsToDelete && agentsToDelete.length > 0) {
+                agentsToDelete.forEach(agent => {
+                    allAgentIds.push(agent.id);
+                });
+            }
+            
+            const deleteResponse = await fetch(`/api/v1/agents/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(allAgentIds)
+            });
+            
+            if (deleteResponse.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteAgentModal')).hide();
+                
+                create_toast(
+                    i18next.t('Success'),
+                    i18next.t('Agents successfully deleted'),
+                    'success'
+                );
+                
+                setTimeout(() => {
+                    agent_table.replaceData();
+                }, 1000);
+                
+            } else {
+                const errorData = await deleteResponse.json();
+                throw new Error(errorData.detail || `HTTP error! status: ${deleteResponse.status}`);
+            }
+            
+        } catch (error) {
+            console.error('Error deleting agents:', error);
+            
+                create_toast(
+                i18next.t('Error'),
+                i18next.t('Failed to delete agents:') + ' ' + error.message,
+                'error'
+            );
+        }
+    }
+
+    function areInterfacesEqual(arr1, arr2) {
+        if (arr1.length !== arr2.length) return false;
+        const normalize = arr => arr
+            .map(i => `${i.name}|${i.ip}|${i.mac}`)
+            .sort()
+            .join('|');
+        return normalize(arr1) === normalize(arr2);
+    }
+
+    function areModulesEqual(arr1, arr2) {
+        if (arr1.length !== arr2.length) return false;
+        const normalize = arr => [...arr].sort().join('|');
+        return normalize(arr1) === normalize(arr2);
+    }
+
+    async function saveAgentInterfaces() {
+        try {
+            const interfaces = Array.from(
+                document.querySelectorAll('#config_interfaces_container input[type=checkbox]')
+            )
+            .filter(inp => inp.checked)
+            .map(inp => ({
+                name: inp.name,
+                ip: inp.getAttribute('ip'),
+                mac: inp.getAttribute('mac')
+            }));
+
+            if (!areInterfacesEqual(interfaces, originalActiveInterfaces)) {
+                const resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(interfaces)
+                });
+                if (!resp.ok) throw new Error("Failed to save interfaces");
+                create_toast("Success", "Interfaces saved", "success");
+            } else {
+                create_toast("Info", "No interface changes", "info");
+            }
+            bootstrap.Modal.getInstance(document.getElementById('agentInterfacesModal')).hide();
+        } catch (err) {
+            console.error(err);
+            create_toast("Error", err.message || "Failed to save interfaces", "error");
+        }
+    }
+
+    async function saveAgentModules() {
+        try {
+            const modules = Array.from(
+                document.querySelectorAll('.config-module-checkbox:checked')
+            ).map(cb => cb.value);
+
+            if (!areModulesEqual(modules, originalInstalledModules)) {
+                const resp = await fetch(`/api/v1/task/push_module`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ agent_id: currentAgent, module_names: modules })
+                });
+                if (!resp.ok) throw new Error("Failed to install modules");
+                create_toast("Success", "Modules saved", "success");
+            } else {
+                create_toast("Info", "No module changes", "info");
+            }
+            bootstrap.Modal.getInstance(document.getElementById('agentModulesModal')).hide();
+        } catch (err) {
+            console.error(err);
+            create_toast("Error", err.message || "Failed to save modules", "error");
+        }
+    }
+
+    function fillConfigInterfaces() {
+        const el = document.getElementById("config_interfaces_container");
+        if (!currentAgentInterfaces?.length) {
+            el.innerHTML = `<div class="alert alert-info mb-0" data-i18n="No interfaces found"></div>`;
+            return;
+        }
+        
+        let listContent = `<div class="list-group list-group-flush">`;
+        currentAgentInterfaces.forEach((iface, index) => {
+            const id = `config-iface-${index}`;
+            const checked = iface.is_already_enabled ? "checked" : "";
+            const disabled = iface.is_already_enabled ? "disabled" : "";
+            const badge = iface.is_already_enabled ? 
+            `<span class="badge bg-success ms-2" data-i18n="Active"></span>` : "";
+            
+            listContent += `
+            <div class="list-group-item py-2" ${!disabled ? 'style="cursor:pointer;"' : ''} >
+                <div class="form-check mb-0 d-flex align-items-center">
+                <input class="form-check-input me-2" type="checkbox" id="${id}"
+                    mac="${iface.mac}" ip="${iface.ip}" name="${iface.name}"
+                    ${checked} ${disabled}>
+                <label class="form-check-label flex-grow-1 mb-0">
+                    <div class="d-flex justify-content-between">
+                    <span class="fw-medium">${iface.ip || "—"}</span>
+                    <small class="text-muted">${iface.name || "—"}</small>
+                    </div>
+                    ${badge}
+                </label>
+                </div>
+            </div>`;
+        });
+        listContent += `</div>`;
+        el.innerHTML = `<div style="max-height: 230px; overflow-y: auto; overscroll-behavior: contain;">${listContent}</div>`;
+
+        el.querySelectorAll(".list-group-item:not([style*='cursor:default'])").forEach(item => {
+            item.addEventListener("click", (e) => {
+                if (e.target.closest('input[type="checkbox"]')) return;
+                const checkbox = item.querySelector("input[type='checkbox']:not(:disabled)");
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event("change"));
+                }
+            });
+        });
+    }
+
+    function fillConfigModules(modules) {
+        const el = document.getElementById("config_modules_container");
+        
+        const cardHTML = `
+            <label class="card bg-light mb-3 shadow-sm">
+            <div class="card-body py-2">
+                <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="configSelectAll">
+                <label class="form-check-label" for="configSelectAll">${i18next.t('Select all')}</label>
+                </div>
+            </div>
+            </label>
+        `;
+        
+        let listHTML = `<div class="list-group list-group-flush">`;
+        modules.forEach(m => {
+            const disabled = m.module_is_installed ? "disabled" : "";
+            const checked = m.module_is_installed ? "checked" : "";
+            const badge = m.module_is_installed ? 
+            `<span class="badge bg-primary ms-2" data-i18n="Installed"></span>` : "";
+            
+            listHTML += `
+            <div class="list-group-item py-2" ${!disabled ? 'style="cursor:pointer;"' : ''}>
+                <div class="form-check mb-0 d-flex align-items-center">
+                <input class="form-check-input config-module-checkbox me-2" type="checkbox"
+                    value="${m.module_name}" id="cfg_mod_${m.module_name}"
+                    ${checked} ${disabled}>
+                <label class="form-check-label flex-grow-1 mb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-medium">${m.module_name}</span>
+                    ${badge}
+                    </div>
+                </label>
+                </div>
+            </div>`;
+        });
+        listHTML += `</div>`;
+        
+        const scrollWrapper = `<div style="max-height: 230px; overflow-y: auto; overscroll-behavior: contain;">${listHTML}</div>`;
+        
+        el.innerHTML = cardHTML + scrollWrapper;
+
+        const selectAll = document.getElementById("configSelectAll");
+        const checkboxes = Array.from(document.querySelectorAll(".config-module-checkbox:not(:disabled)"));
+
+        selectAll.disabled = checkboxes.length === 0;
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        
+        el.querySelectorAll(".list-group-item:not([style*='cursor:default'])").forEach(item => {
+            item.addEventListener("click", (e) => {
+                if (e.target.closest('input[type="checkbox"]')) return;
+                const checkbox = item.querySelector(".config-module-checkbox:not(:disabled)");
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event("change"));
+                }
+            });
+        });
+
+        selectAll.addEventListener("change", () => {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        });
+        checkboxes.forEach(cb => {
+            cb.addEventListener("change", () => {
+                const allChecked = checkboxes.every(c => c.checked);
+                const someChecked = checkboxes.some(c => c.checked);
+                selectAll.checked = allChecked;
+                selectAll.indeterminate = !allChecked && someChecked;
+            });
+        });
+    }
+
+    async function openAgentInterfaces(agentId) {
+        currentAgent = agentId;
+        originalActiveInterfaces = [];
+        const ifaceResp = await fetch(`/api/v1/agents/${agentId}/remote_interfaces`);
+        if (ifaceResp.ok) {
+            currentAgentInterfaces = await ifaceResp.json();
+            originalActiveInterfaces = currentAgentInterfaces
+                .filter(i => i.is_already_enabled)
+                .map(i => ({ name: i.name, ip: i.ip, mac: i.mac }));
+            fillConfigInterfaces();
+        } else {
+            currentAgentInterfaces = [];
+            document.getElementById("config_interfaces_container").innerHTML = 
+                `<p class="text-danger" data-i18n="Failed to load interfaces"></p>`;
+        }
+
+        new bootstrap.Modal(document.getElementById('agentInterfacesModal')).show();
+    }
+
+    async function openAgentModules(agentId) {
+        currentAgent = agentId;
+        originalInstalledModules = [];
+        const modResp = await fetch(`/api/v1/agents/show_available_modules/${agentId}`);
+        if (modResp.ok) {
+            const modules = await modResp.json();
+            originalInstalledModules = modules
+                .filter(m => m.module_is_installed)
+                .map(m => m.module_name);
+            fillConfigModules(modules);
+        } else {
+            document.getElementById("config_modules_container").innerHTML = 
+                `<p class="text-danger" data-i18n="Failed to load modules"></p>`;
+        }
+        new bootstrap.Modal(document.getElementById('agentModulesModal')).show();
+    }
+
+
+        async function showParentAgents(name, agent_id, modalId = 'parentAgentsModal') {
             resp = await fetch(`/api/v1/agents/${agent_id}/parents`)
             if (resp.ok) {
                 let data = await resp.json()
-                let el = document.getElementById("parentAgentsList")
+                
+                let modal = document.getElementById(modalId)
+                let el = modal.querySelector(".parent-agents-list-container")
+                
                 result = ``
                 for (const agent of data){
                     result += `
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" 
-                            id="agent_${agent.id}" ${agent.is_parent ? "checked":""} agent_id=${agent.id}>
-                            <label class="form-check-label" for="agent_${agent.id}">
+                            <input class="form-check-input parent-agent-checkbox" type="checkbox" value="" 
+                            id="agent_${agent.id}_${modalId}" ${agent.is_parent ? "checked disabled":""} agent_id=${agent.id}>
+                            <label class="form-check-label" for="agent_${agent.id}_${modalId}">
                                 ${agent.name}
                             </label>
                         </div>
                     `
                 }
-                document.getElementById("parentagentModalLabel").innerHTML = ` ${i18next.t('Parent agents of')} ${sanitize(name)}`
+                
+                let titleElement = modal.querySelector(".parent-agents-modal-title")
+                if (modalId === 'selectParentAgentsModal') {
+                    titleElement.innerHTML = `${i18next.t('Parent agents of')} ${sanitize(name)}`
+                } else {
+                    titleElement.innerHTML = `${i18next.t('Parent agents of')} ${sanitize(name)}`
+                }
+                
                 el.innerHTML = result
-                let myModal = new bootstrap.Modal(document.getElementById('parentAgentsModal'));
+                
+                let myModal = new bootstrap.Modal(modal);
                 myModal.show();
+                setupCheckboxListeners();
+                updateParentAgentSaveButtonState();
             }
         }
+
+        function setupCheckboxListeners() {
+            const checkboxes = document.querySelectorAll('.parent-agent-checkbox')
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateParentAgentSaveButtonState)
+            })
+        }
+
+        function updateParentAgentSaveButtonState() {
+            const checkboxes = document.querySelectorAll('.parent-agent-checkbox');
+            const saveParentsButtons = document.querySelectorAll('.parent-agents-save-btn')
+
+            const hasCheckedCheckbox = Array.from(checkboxes).some(checkbox => checkbox.checked);
+            
+            saveParentsButtons.forEach(button => {
+                button.disabled = !hasCheckedCheckbox;
+            })
+        }
+
+
         async function saveParentAgents() {
-            let el = document.getElementById("parentAgentsList")
-            let parents = new Object({parents: new Object()})
-            for (const check of el.children){
-                for (const elem of check.children){
-                    if (elem.localName != "input"){
-                        continue
+            let modal;
+            try {
+                // Находим список в обычной модалке
+                modal = document.getElementById("parentAgentsModal");
+                let el = modal.querySelector(".parent-agents-list-container")
+                
+                let parents = {parents: {}}
+                for (const check of el.children){
+                    for (const elem of check.children){
+                        if (elem.localName != "input"){
+                            continue
+                        }
+                        parents.parents[elem.attributes.agent_id.nodeValue] = elem.checked
                     }
-                    parents.parents[elem.attributes.agent_id.nodeValue] = elem.checked
+                }
+                let req = await fetch(`/api/v1/agents/${currentAgent}/parents`, {
+                    method: "PATCH",
+                    headers: { "Content-type": "application/json" },
+                    body: JSON.stringify(parents)
+                })
+                if (req.ok) {
+                    create_toast("Success", "Parent agents successfully saved", "success");
+                }
+            } catch (error) {
+                create_toast("Error", "Error on saving parent agents", "error");
+                console.error("Error:", error);
+            } finally {
+                if (modal) {
+                    const closeBtn = modal.querySelector(".parent-agents-close-btn");
+                    if (closeBtn) closeBtn.click();
                 }
             }
-            let req = await fetch(`/api/v1/agents/${currentAgent}/parents`, {
-				method: "PATCH",
-				headers: { "Content-type": "application/json" },
-				body: JSON.stringify(parents)
-			})
-            let close_el = document.getElementById("closeParentAgentsModal")
-            close_el.click()
+        }
+
+        async function saveParentAgentsAndConnect() {
+            try {
+                // Находим список в модалке для connect
+                let modal = document.getElementById("selectParentAgentsModal")
+                let el = modal.querySelector(".parent-agents-list-container")
+                
+                let parents = {parents: {}}
+                for (const check of el.children){
+                    for (const elem of check.children){
+                        if (elem.localName != "input"){
+                            continue
+                        }
+                        parents.parents[elem.attributes.agent_id.nodeValue] = elem.checked
+                    }
+                }
+                let req = await fetch(`/api/v1/agents/${currentAgent}/parents`, {
+                    method: "PATCH",
+                    headers: { "Content-type": "application/json" },
+                    body: JSON.stringify(parents)
+                })
+                if (req.ok) {
+                    create_toast("Success", "Parent agents successfully saved", "success");
+                    
+                    // Закрываем модальное окно
+                    let close_el = modal.querySelector(".parent-agents-close-btn")
+                    close_el.click()
+                    
+                    // Вызываем connect
+                    setTimeout(async () => {
+                        const connectResp = await fetch(`/api/v1/agents/${currentAgent}/connect`, { method: "POST" });
+                        
+                        if (!connectResp.ok) {
+                            const answer = await connectResp.json();
+                            create_toast("Error", answer.detail, "error");
+                            return;
+                        }
+                        
+                        create_toast("Info", "Successful connect", "success");
+                        agent_table.replaceData();
+                    }, 500);
+                }
+            } catch (error) {
+                create_toast("Error", "Error on saving parent agents", "error");
+                console.error("Error:", error);
+            }
         }
 
         async function connectAgent(id) {
             let resp = await fetch(`/api/v1/agents/${id}/connect`, {method:"POST"})
             if (!resp.ok){
                 let answer = await resp.json()
+                
+                if (resp.status === 400 && answer.detail && answer.detail.includes("Parent agents have not been set")) {
+                    const agentData = agent_table.getData().find(agent => agent.id === id);
+                    const agentName = agentData?.name || "Agent";
+                    await showParentAgents(agentName, id, 'selectParentAgentsModal');
+                    return;
+                }
+                
                 create_toast("Error", answer.detail, "error")
                 return
             }
             create_toast("Info", "Successful connect", "success")
+            agent_table.replaceData();
         }
 
-        /* delete row callback */
-        async function delteRowCallback(element) {
-            attributes = element.attributes
-            agent_id = attributes['agent_id'].value
-            row_id = attributes['row_id'].value
-            body = JSON.stringify({ id: agent_id })
-            resp = await fetch(`/api/agent/`, { method: 'delete', body: body })
-            if (resp.ok) {
-                agent_table.getRow(row_id).delete()
-                console.log(`Successfuly delete agent ${agent_id}`)
-            }
-            else {
-                console.log(`Error on deleting agent ${agent_id}`)
-            }
-        }
         function agentNameAndOnline(cell) {
             let agent_id = cell.getRow().getData().id
             let online = cell.getRow().getData().online
@@ -764,6 +1224,68 @@
                 { title: 'LOGIN', field: 'login', headerMenu: headerMenu }
             ]
         })
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                    el.title = i18next.t(el.getAttribute('data-i18n-title'));
+                });
+            }, 1000);
+        });
+
+        let currentEditAgentId = null;
+
+        function openEditAgentModal(agentId) {
+            const agent = agent_table.getData().find(a => a.id == agentId);
+            if (!agent) return;
+            
+            document.getElementById('edit-agent-name').value = agent.name || '';
+            document.getElementById('edit-agent-description').value = agent.description || '';
+            document.getElementById('edit-agent-rest-url').value = agent.rest_url || '';
+            currentEditAgentId = agentId;
+            
+            new bootstrap.Modal(document.getElementById('editAgentModal')).show();
+        }
+
+        async function editAgent() {
+            const payload = {
+                name: sanitize(document.getElementById('edit-agent-name').value),
+                description: sanitize(document.getElementById('edit-agent-description').value),
+                rest_url: document.getElementById('edit-agent-rest-url').value
+            };
+
+            const resp = await fetch(`/api/v1/agents/${currentEditAgentId}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editAgentModal')).hide();
+                agent_table.replaceData();
+                create_toast('Success', 'Agent updated', 'success');
+            } else {
+                let errorData;
+                try {
+                    errorData = await resp.json();
+                } catch (e) {
+                    console.log('Error', 'Failed to parse error response', 'error');
+                    return;
+                }
+
+                if (errorData?.detail?.[0]?.msg === 'String should have at most 32 characters') {
+                    create_toast('Error', errorData.detail[0].msg, 'error');
+                } else {
+                    create_toast('Error', 'Failed to edit agent', 'error');
+                }
+            }
+        }
+
+        document.getElementById('editAgentModal').addEventListener('hidden.bs.modal', () => {
+            ['edit-agent-name', 'edit-agent-description', 'edit-agent-rest-url'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            currentEditAgentId = null;
+        });
     </script>
     <script defer src="static/js/src/update_language.js"></script>
 </body>

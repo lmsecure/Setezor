@@ -1,398 +1,396 @@
-{% from "modals/base_modal_framework.html" import tools_header_bar, target_scope_database_tabs, base_input, base_scope, base_database_content, base_modal %}
+{% import 'modals/tools_modal_constructor.html' as modal %}
 
-{# Специфичная логика для ip-info инструмента - основная часть #}
-{% macro ip_info_main_content() %}
-<div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="startIpInfoFind" 
-            onclick="processIpInfoTask()" data-i18n="Start"></button>
-</div>
-{% endmacro %}
+{{ modal.create_modal('ipInfoModalWindow', 'IP Info Tool', 'https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#ip-info') }}
 
-{# Форма ip-info инструмента #}
-{% macro ip_info_form() %}
-<form id="IpInfoForm" name="IpInfoFormName" class="needs-validation" novalidate>
-    {{ target_scope_database_tabs(
-        prefix='ip-info-',
-        simple_content=base_input(prefix='ip-info', placeholder_i18n='Enter the IP address'),
-        scope_content=base_scope(prefix='ip-info-'),
-        database_content=base_database_content(
-            prefix='ip-info-',
-            table_id='ipInfoDatabaseTargetsTable',
-            selected_targets_var='selectedIpInfoTargets'
-        )
-    ) }}
-    {{ ip_info_main_content() }}
-</form>
-{% endmacro %}
-
-{# Глобальные функции для ip-info tool #}
-{% macro ip_info_global_functions() %}
-window.show_ipInfoModalWindow = function() {
-    console.log('show_ipInfoModalWindow called');
-    resetIpInfoModal();
-    const myModal = new bootstrap.Modal(document.getElementById('ipInfoModalWindow'));
-    myModal.show();
-    
-    // Инициализируем таблицу при открытии модалки
-    setTimeout(() => {
-        initIpInfoDatabase();
-        // Загружаем список scope
-        get_scope_list('ip-info-');
-    }, 100);
-}
-
-window.close_ipInfoModalWindow = function() {
-    const myModal = bootstrap.Modal.getInstance(document.getElementById('ipInfoModalWindow'));
-    if (myModal) {
-        myModal.hide();
-    }
-}
-
-// Функция сброса для ip-info модального окна
-window.resetIpInfoModal = function() {
-    const ipInfoForm = document.getElementById('IpInfoForm');
-    if (ipInfoForm) ipInfoForm.reset();
-
-    const container = document.getElementById('ip-infoInputContainer');
-    if (container) container.innerHTML = '';
-
-    const originalInput = document.getElementById('ip-infoinput');
-    if (originalInput) originalInput.value = '';
-
-    const dropdownButton = document.getElementById('ip-info-ScopeDropdown');
-    if (dropdownButton) dropdownButton.textContent = 'Select scope';
-    
-    window.selectedScope_ip_info = '';
-    window.selectedIpInfoTargets = {};
-
-    // Сброс вкладок
-    const simpleTab = document.getElementById('ip-info-simple-tab');
-    const scopeTab = document.getElementById('ip-info-scope-tab');
-    const databaseTab = document.getElementById('ip-info-database-tab');
-    const simpleMode = document.getElementById('ip-info-simple-mode');
-    const scopeMode = document.getElementById('ip-info-scope-mode');
-    const databaseMode = document.getElementById('ip-info-database-mode');
-    
-    if (simpleTab && scopeTab && databaseTab && simpleMode && scopeMode && databaseMode) {
-        simpleTab.classList.add('active');
-        scopeTab.classList.remove('active');
-        databaseTab.classList.remove('active');
-        simpleMode.classList.add('show', 'active');
-        scopeMode.classList.remove('show', 'active');
-        databaseMode.classList.remove('show', 'active');
-    }
-    
-    // Очищаем выбор в таблице
-    if (window.ipInfoDatabaseTargetsTable && typeof window.ipInfoDatabaseTargetsTable.deselectRow === 'function') {
-        window.ipInfoDatabaseTargetsTable.deselectRow();
-    }
-}
-
-// Инициализация таблицы при открытии модалки
-window.initIpInfoDatabase = function() {
-    window.ipInfoDatabaseTargetsTable = initDatabaseTable(
-        'ipInfoDatabaseTargetsTable', 
-        'selectedIpInfoTargets', 
-        'ip-info-SelectedCount'
-    );
-    
-    // Добавляем обработчик для rowSelectionChanged
-    if (window.ipInfoDatabaseTargetsTable) {
-        window.ipInfoDatabaseTargetsTable.on("rowSelectionChanged", function(data, rows) {
-            console.log('Row selection changed:', rows.length, 'rows selected');
-            window.selectedIpInfoTargets = {};
-            
-            rows.forEach(row => {
-                const rowData = row.getData();
-                const uniqueKey = `${rowData.ipaddr}:${rowData.domain}`;
-                window.selectedIpInfoTargets[uniqueKey] = {
-                    ip: rowData.ipaddr,
-                    domain: rowData.domain,
-                    port: rowData.port
-                };
-            });
-            
-            console.log('Updated selectedIpInfoTargets:', window.selectedIpInfoTargets);
-        });
-    }
-}
-
-// Бизнес-логика ip-info инструмента
-window.sendIpInfoTask = function(params) {
-    console.log('Sending IP-INFO task:', params);
-    fetch('/api/v1/task/ip_info_task', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params)
-    }).then(response => {
-        console.log('IP-INFO task response:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+<script>
+const IpInfoUI = {
+  getStyles() {
+    return `
+      <style>
+        .ipinfo-tool-section {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 15px;
+          border: 1px solid #e9ecef;
         }
-        return response.json();
-    }).then(data => {
-        console.log('IP-INFO task success:', data);
-    }).catch(error => {
-        console.error('IP-INFO task error:', error);
-    });
-}
+      </style>
+    `;
+  },
 
-window.handleIpInfoSimpleMode = function(params) {
-    const targets = [];
-    const targetInputs = document.querySelectorAll('#IpInfoForm [id^="ip-infoinput"]');
+  buildParams(prefix) {
+    return this.getStyles();
+  }
+};
+
+const IpInfoHandlers = {
+  handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
     
-    for (const input of targetInputs) {
-        if (input.value.trim() !== '') {
-            targets.push(input.value.trim());
-        }
-    }
-
-    console.log('Processing simple mode targets:', targets);
-
-    for (const target of targets) {
-        const targetParams = {
-            ...params,
-            target: target,
-            agent_id: getAgent()
-        };
-
-        sendIpInfoTask(targetParams);
-    }
-}
-
-window.handleIpInfoScopeMode = function(params) {
-    // ИСПРАВЛЕНО: используем правильное имя переменной
-    if (!window['selectedScope_ip-info-'] || window['selectedScope_ip-info-'] === '') {
-        create_toast('Warning', 'Please select a scope first', 'warning');
-        return;
+    instance.reset();
+    
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = node.label || '';
     }
     
-    params['scope_id'] = window['selectedScope_ip-info-'];
-    params['agent_id'] = getAgent();
+    window[`show_${instance.modalId}`]();
+  },
 
-    console.log('Processing scope mode with scope ID:', window['selectedScope_ip-info-']);
-
-    sendIpInfoTask(params);
-}
-
-window.handleIpInfoDatabaseMode = function(params) {
-    // Проверяем, что есть выбранные цели
-    if (!window.selectedIpInfoTargets || Object.keys(window.selectedIpInfoTargets).length === 0) {
-        create_toast('Warning', 'Please select targets from database first', 'warning');
-        return;
+  handlePrefill(instance, rows = [], prefillParams = {}) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) {
+      const tab = new bootstrap.Tab(targetTab);
+      tab.show();
     }
     
-    const targets = Object.values(window.selectedIpInfoTargets);
-    
-    console.log('Processing database targets:', targets);
-    
-    // Собираем уникальные цели (домены или IP) из выбранных целей
-    const uniqueTargets = new Set();
-    
-    for (const target of targets) {
-        // Используем ip если есть, иначе domain
-        const targetValue = target.ip || target.domain;
-        if (targetValue && targetValue.trim() !== '') {
-            uniqueTargets.add(targetValue.trim());
-        }
-    }
-    
-    const targetsArray = Array.from(uniqueTargets);
-    console.log('Unique targets from database selection:', targetsArray);
-    
-    if (targetsArray.length === 0) {
-        create_toast('Error','No valid targets found in selected targets', 'error');
-        return;
-    }
-    
-    // Отправляем задачи для каждого уникального домена/IP
-    for (const target of targetsArray) {
-        const targetParams = {
-            ...params,
-            target: target,
-            agent_id: getAgent()
-        };
-
-        console.log('Sending IP-INFO task for target:', target, 'with params:', targetParams);
-        
-        sendIpInfoTask(targetParams);
-    }
-}
-
-window.processIpInfoTask = function() {
-    const params = {};
-    const agent_id = getAgent();
-    
-    if (!agent_id) {
-        create_toast('Warning','Please select an agent first', 'warning');
-        return;
-    }
-
-    params['agent_id'] = agent_id;
-
-    const simpleForm = document.getElementById('ip-info-simple-mode');
-    const scopeForm = document.getElementById('ip-info-scope-mode');
-    const databaseForm = document.getElementById('ip-info-database-mode');
-
-    console.log('Processing ip-info task with mode:', {
-        simple: simpleForm?.classList.contains('show') && simpleForm.classList.contains('active'),
-        scope: scopeForm?.classList.contains('show') && scopeForm.classList.contains('active'),
-        database: databaseForm?.classList.contains('show') && databaseForm.classList.contains('active'),
-        selectedIpInfoTargets: window.selectedIpInfoTargets,
-        selectedScope: window['selectedScope_ip-info-']
-    });
-
-    if (simpleForm && simpleForm.classList.contains('show') && simpleForm.classList.contains('active')) {
-        handleIpInfoSimpleMode(params);
-    } else if (scopeForm && scopeForm.classList.contains('show') && scopeForm.classList.contains('active')) {
-        handleIpInfoScopeMode(params);
-    } else if (databaseForm && databaseForm.classList.contains('show') && databaseForm.classList.contains('active')) {
-        handleIpInfoDatabaseMode(params);
-    } else {
-        console.error('No active tab found');
-        create_toast('Warning','Please select a target mode (Target/Scope/Database)', 'warning');
-        return;
-    }
-
-    close_ipInfoModalWindow();
-}
-
-// Вспомогательные функции для интеграции с другими частями системы
-window.ip_info_script_modal_to_node = function(ip) {
-    show_ipInfoModalWindow();
-    const inputTarget = document.getElementById('ip-infoinput');
-    if (inputTarget && ip) {
-        inputTarget.value = ip;
-    }
-}
-
-window.ip_info_script_modal_to_info_tabs = async function(rows) {
-    show_ipInfoModalWindow();
-    
-    // Ждем пока modal полностью откроется
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
-    // Получаем уникальные непустые цели (домены или IP)
-    const uniqueTargets = [...new Set(rows
-        .map(row => {
-            // Предпочитаем домен, если есть, иначе IP
-            return row.domain ? row.domain.trim() : (row.ipaddr ? row.ipaddr.trim() : '');
-        })
-        .filter(target => target !== '')
+    // Get unique IPs from rows
+    const uniqueIPs = [...new Set(
+      rows
+        .map(row => (row.ipaddr || row.ip || '').trim())
+        .filter(Boolean)
     )];
-    
-    console.log('Unique targets to process:', uniqueTargets);
-    
-    // Сбрасываем форму
-    const container = document.getElementById('ip-infoInputContainer');
-    if (container) {
-        container.innerHTML = '';
-    }
-    
-    const originalInput = document.getElementById('ip-infoinput');
-    if (originalInput) {
-        originalInput.value = '';
-    }
-    
-    // Заполняем поля ввода
-    for (let i = 0; i < uniqueTargets.length; i++) {
-        if (i === 0) {
-            // Первая цель в основное поле
-            const firstInput = document.getElementById('ip-infoinput');
-            if (firstInput) {
-                firstInput.value = uniqueTargets[i];
-            }
-        } else {
-            // Остальные цели в дополнительные поля
-            addNewInputForm('ip-info');
-            
-            // Ждем обновления DOM
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            // Находим все input'ы и заполняем последний
-            const allInputs = document.querySelectorAll('[id^="ip-infoinput"]');
-            const lastInput = allInputs[allInputs.length - 1];
-            if (lastInput) {
-                lastInput.value = uniqueTargets[i];
-            }
+
+    // Fill IP inputs
+    uniqueIPs.forEach((ip, index) => {
+      if (index === 0) {
+        const ipInput = document.getElementById(`${prefix}inputIP`);
+        if (ipInput) ipInput.value = ip;
+      } else {
+        instance.addInputField('ip_only');
+        
+        const container = document.getElementById(`${prefix}InputContainer`);
+        const lastGroup = container?.lastElementChild;
+        
+        if (lastGroup) {
+          const ipInput = lastGroup.querySelector('.ip');
+          if (ipInput) ipInput.value = ip;
         }
+      }
+    });
+
+    // Set agent override if provided
+    if (prefillParams?.agent_id) {
+      instance.state.overrides.agent_id = prefillParams.agent_id;
     }
+    
+    window[`show_${instance.modalId}`]();
+  }
+};
+
+class IpInfoScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
+
+  getBaseParams() {
+    const agentId = window.agentData?.default_agent;
+    const overrideAgent = this.instance?.state?.overrides?.agent_id;
+
+    const agent_id = overrideAgent || agentId;
+
+    if (!agent_id) {
+      throw new Error("Please select an Agent");
+    }
+
+    return {
+      agent_id: String(agent_id)
+    };
+  }
+
+  async infoTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const tasks = [];
+
+    for (const target of targets) {
+      let targetValue = '';
+      
+      if (typeof target === 'string') {
+        targetValue = target;
+      } else {
+        // Проверяем все возможные поля, где может быть IP
+        targetValue = target.ip || target.target || target.domain || '';
+      }
+      
+      if (!targetValue) continue;
+      
+      const payload = {
+        ...baseParams,
+        target: String(targetValue).trim()
+      };
+
+      tasks.push({
+        endpoint: '/api/v1/task/ip_info_task',
+        payload
+      });
+    }
+
+    if (tasks.length === 0) return [];
+
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null; // handled by executeToolTasks
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+
+    return result.responses;
+  }
+
+  async infoScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const payload = {
+      ...baseParams,
+      scope_id: String(scopeId)
+    };
+
+    const result = await window.executeToolTasks({
+      tasks: [{
+        endpoint: '/api/v1/task/ip_info_task',
+        payload
+      }],
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scope scan failed');
+    }
+
+    return result.responses[0];
+  }
 }
 
-// Функция для запуска ip-info задачи из database вкладки
-window.ip_info_script_modal_to_database = async function(rows) {
-    show_ipInfoModalWindow();
-    
-    // Ждем пока modal полностью откроется
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
-    // Переключаемся на database вкладку
-    const databaseTab = document.getElementById('ip-info-database-tab');
-    if (databaseTab) {
+ToolModalBuilder.register('ipInfoModalWindow', {
+  prefix: 'ip_info_',
+  
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'ip_only' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    //{ id: 'textarea', label: i18next.t('Textarea'), placeholder: '192.168.1.1' },
+  ],
+  
+  // Use IP only for database tab
+  databaseProcessor: 'ipOnly',
+  databaseOutputFormat: 'array',
+  
+  toolParams: (prefix) => IpInfoUI.buildParams(prefix),
+
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        }
+      ],
+      filter: [
+        { field: "ipaddr", type: "!=", value: "" }
+      ]
+    };
+  },
+
+  onInit(instance) {
+    const prefix = instance.prefix;
+
+    IpInfoScanner.prototype.instance = instance;
+
+    // Setup database tab initialization
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          instance.initDatabaseTable();
+          tableInitialized = true;
+          
+          setTimeout(() => {
+            if (instance.databaseTable) {
+              // Переопределяем обработчик выбора строк
+              instance.databaseTable.on("rowSelectionChanged", function(data, rows) {
+                const targets = {};
+                
+                rows.forEach((row) => {
+                  const rowData = row.getData();
+                  const ip = rowData.ipaddr;
+                  const domain = rowData.domain;
+                  
+                  if (!ip) return;
+                  
+                  // Используем IP как ключ для уникальности
+                  targets[ip] = {
+                    ip: ip,
+                    domain: domain || ''
+                  };
+                });
+                
+                instance.state.selectedDatabaseTargets = targets;
+              });
+            }
+          }, 100);
+        }
+      });
+    }
+
+    // Expose global functions for backward compatibility
+    window.ip_info_script_modal_to_node = (node) => {
+      IpInfoHandlers.handleNodeModal(instance, node);
+    };
+
+    window.ip_info_start_with_prefill = (rows, prefillParams) => {
+      IpInfoHandlers.handlePrefill(instance, rows, prefillParams);
+    };
+
+    window.ip_info_script_modal_to_info_tabs = async (rows) => {
+      IpInfoHandlers.handlePrefill(instance, rows);
+    };
+
+    window.ip_info_script_modal_to_database = async (rows) => {
+      const prefix = instance.prefix;
+      
+      instance.reset();
+      
+      const databaseTab = document.getElementById(`${prefix}database-tab`);
+      if (databaseTab) {
         databaseTab.click();
         
-        // Ждем переключения вкладки и инициализации таблицы
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    
-    // Очищаем текущий выбор в таблице
-    if (window.ipInfoDatabaseTargetsTable) {
-        window.ipInfoDatabaseTargetsTable.deselectRow();
-    }
-    
-    // Выбираем строки в таблице, соответствующие переданным rows
-    if (window.ipInfoDatabaseTargetsTable && rows && rows.length > 0) {
-        // Получаем текущие данные таблицы
-        const tableData = window.ipInfoDatabaseTargetsTable.getData();
-        console.log('Table data:', tableData);
-        console.log('Rows to select:', rows);
-        
-        // Создаем массив для выбора строк
-        const rowsToSelect = [];
-        
-        // Ищем соответствующие строки в таблице
-        for (const row of rows) {
-            const matchingRow = tableData.find(tableRow => {
-                // Сравниваем по IP и домену
-                const ipMatch = tableRow.ipaddr === row.ip;
-                const domainMatch = tableRow.domain === row.domain;
-                return ipMatch && domainMatch;
+        setTimeout(() => {
+          if (instance.databaseTable) {
+            instance.databaseTable.setData().then(() => {
+              setTimeout(() => {
+                const rowsToSelect = [];
+                const tableData = instance.databaseTable.getData();
+                
+                rows.forEach(row => {
+                  const match = tableData.find(tableRow => 
+                    tableRow.ipaddr === (row.ip || row.ipaddr)
+                  );
+                  if (match) rowsToSelect.push(match);
+                });
+                
+                if (rowsToSelect.length > 0) {
+                  instance.databaseTable.selectRow(rowsToSelect);
+                }
+              }, 200);
             });
-            
-            if (matchingRow) {
-                rowsToSelect.push(matchingRow);
-            }
-        }
-        
-        // Выбираем найденные строки
-        if (rowsToSelect.length > 0) {
-            window.ipInfoDatabaseTargetsTable.selectRow(rowsToSelect);
-            console.log('Selected rows in ip-info database table:', rowsToSelect.length);
-        } else {
-            console.warn('No matching rows found in table');
-        }
+          }
+        }, 300);
+      }
+      
+      window[`show_${instance.modalId}`]();
+    };
+  },
+
+  onReset(instance) {
+    const prefix = instance.prefix;
+
+    // Clear IP inputs
+    const container = document.getElementById(`${prefix}InputContainer`);
+    if (container) {
+      container.innerHTML = '';
     }
-}
-
-// Отладочная информация
-console.log('Ip-info tool global functions loaded');
-{% endmacro %}
-
-{# Главный макрос ip-info инструмента #}
-{% macro ip_info_tool_modal() %}
-    {% set modal_content = ip_info_form() %}
-    {% set global_functions = ip_info_global_functions() %}
     
-    {{ base_modal(
-        modal_id='ipInfoModalWindow',
-        modal_title='IP Info Tool',
-        help_url='https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#ip-info',
-        header_bar=tools_header_bar(prefix='ip_info_'),
-        content=modal_content,
-        reset_function='resetIpInfoModal',
-        custom_scripts=global_functions
-    ) }}
-{% endmacro %}
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = '';
+    }
+
+    // Clear overrides and database selections
+    instance.state.overrides = {};
+    instance.state.selectedDatabaseTargets = {};
+  },
+
+  getTargets() {
+    const tabId = this.getActiveTab();
+    if (!tabId) return [];
+
+    if (tabId === 'scope') {
+      return { scope_id: this.state.selectedScopeId };
+    }
+
+    if (tabId === 'database') {
+      const targets = [];
+      
+      // Используем state.selectedDatabaseTargets напрямую
+      Object.values(this.state.selectedDatabaseTargets || {}).forEach(item => {
+        if (item.ip) {
+          targets.push({
+            ip: item.ip,
+            domain: item.domain || '',
+            target: item.ip  // Добавляем поле target для совместимости
+          });
+        }
+      });
+      
+      return targets;
+    }
+
+    if (tabId === 'target') {
+      return this.getTargetsFromInputs();
+    }
+
+    if (tabId === 'textarea') {
+      return this.getTargetsFromTextarea();
+    }
+
+    return [];
+  },
+
+  async onStart(instance) {
+    const scanner = new IpInfoScanner(instance.prefix);
+    scanner.instance = instance;
+
+    try {
+      const tabId = instance.getActiveTab();
+      let result;
+
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          create_toast('Warning', i18next.t('Please select a scope'), 'warning');
+          return;
+        }
+        result = await scanner.infoScope(instance.state.selectedScopeId);
+      } else {
+        const targets = instance.getTargets();
+        if (!targets.length) {
+          create_toast('Warning', i18next.t('No targets found'), 'warning');
+          return;
+        }
+        result = await scanner.infoTargets(targets);
+      }
+
+      if (result !== null) {
+        window[`close_${instance.modalId}`]();
+      }
+    } catch (error) {
+      console.error('Failed to start IP info scan:', error);
+      create_toast('Error', error.message || i18next.t('Failed to start scan'), 'error');
+    }
+  }
+});
+</script>

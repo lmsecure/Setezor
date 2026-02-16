@@ -108,6 +108,7 @@
         for (const task of tasks) {
             result += `
     <tr>
+        ${status == "STARTED" || status == "REGISTERED" ? `<td style="text-align: center;"><input type="checkbox" class="task-checkbox" value="${task.id}"></td>` : ``}
         <td ">${task.id}</td>
         <td ">${task.created_by}</td>
         <td ">${formatDateTime(task.created_at)}</td>
@@ -115,23 +116,18 @@
         <td colspan="2"><textarea class="form-control" disabled rows="3">${task.params}</textarea></td>
         <td style="text-align: center; vertical-align: middle;">
             ${task.is_log
-                ? task.created_by === "ScapySniffTask"
-                    ? (status === "FINISHED" || status === "FAILED")
-                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
-                            <span class="bi bi-download text-success"></span>
-                        </button>`
-                        : ``
-                    : task.created_by === "ScapyLogsTask"
-                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadTaskFile('${task.id}')">
-                            <span class="bi bi-download text-success"></span>
-                        </button>`
-                        : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLog('${task.id}')">
-                            <span class="bi bi-file-earmark-text"></span>
-                        </button>`
+                ? `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLogsMenu('${task.id}')">
+                    <span class="bi bi-list-ul"></span> ${i18next.t('Logs')}
+                </button>` 
                 : ``}
         </td>
-        <td style="text-align: center;vertical-align: middle;">
-            ${status == "STARTED" 
+        ${status === "FAILED"
+            ? `<td style="text-align: center; vertical-align: middle;">
+                 <textarea class="form-control" disabled rows="3">${task.error}</textarea>
+               </td>`
+            : ``}
+        <td style="text-align: center; vertical-align: middle;">
+            ${status === "STARTED"
                 ? `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>` 
@@ -141,12 +137,17 @@
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>` 
                 : ``}
-            ${status == "REGISTERED" 
-                ? `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
-                    <span class="bi bi-stop-circle-fill"></span>
-                </button>` 
+            ${(status === "FINISHED" || status === "FAILED" || status === "CANCELED") && 
+                ['NmapScanTask', 'MasscanScanTask', 'ScapySniffTask', 'SnmpBruteCommunityStringTask', 
+                'SpeedTestServerTask', 'CertTask', 'ParseSiteTask', 'DNSTask', 'IpInfoTask', 'RdapTask', 'WhoisShdwsTask', 'SdFindTask']
+                .includes(task.created_by)
+                ? `<button type="button" class="btn btn-sm btn-outline-primary repeat-task-btn"
+                        data-task-id="${task.id}"
+                        data-tool-name="${task.created_by}"
+                        data-params="${encodeURIComponent(task.params)}">
+                    <span class="bi bi-arrow-clockwise"></span> ${i18next.t('Repeat')}
+                </button>`
                 : ``}
-            ${status == "FAILED" ? `<textarea class="form-control" disabled rows="3">${task.error}</textarea>` : ``}
         </td>
     </tr>`;
         }
@@ -154,6 +155,7 @@
     <table class="table">
         <thead>
             <tr>
+                ${status == "STARTED" || status == "REGISTERED" ? `<th style="text-align: center;"><input type="checkbox" id="selectAllTasks"></th>` : ``}
                 <th>ID</th>
                 <th>${i18next.t('Created By')}</th>
                 <th>${i18next.t('Created At')}</th>
@@ -165,13 +167,50 @@
                 ${status == "REGISTERED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "STARTED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
                 ${status == "FAILED" ? `<th class="text-center">${i18next.t('Error')}</th>` : ''}
+                ${status == "FAILED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "CANCELED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
+                ${status == "FINISHED" ? `<th class="text-center">${i18next.t('Actions')}</th>` : ''}
             </tr>
         </thead>
         <tbody>
             ${result}
         </tbody>
     </table>
+    ${status == "STARTED" ? `
+    <div style="margin-top: 10px;">
+        <button type="button" class="btn btn-danger" onclick="stopSelectedTasks()">
+            <span class="bi bi-stop-circle-fill"></span> ${i18next.t('Stop Selected')}
+        </button>
+    </div>
+    ` : ''}
+    ${status == "REGISTERED" ? `
+    <div style="margin-top: 10px;">
+        <button type="button" class="btn btn-danger" onclick="deleteSelectedTasks()">
+            <span class="bi bi-stop-circle-fill"></span> ${i18next.t('Cancel Selected')}
+        </button>
+    </div>
+    ` : ''}
     `;
+
+        if (status === "STARTED" || status === "REGISTERED") {
+            const selectAllCheckbox = el.querySelector('#selectAllTasks');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const checkboxes = el.querySelectorAll('.task-checkbox');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
+            }
+        }
+
+        el.addEventListener('click', function(e) {
+            if (e.target.closest('.repeat-task-btn')) {
+                const btn = e.target.closest('.repeat-task-btn');
+                const taskId = btn.dataset.taskId;
+                const toolName = btn.dataset.toolName;
+                const params = decodeURIComponent(btn.dataset.params);
+                repeatTask(taskId, toolName, params);
+            }
+        });
     }
 
     async function startTask(id) {
@@ -186,7 +225,9 @@
         let data = await resp.json()
     }
 
-    async function stopTask(id) {
+    let isProcessingBulkStop = false;
+
+    async function stopTask(id, skipRefresh = false) {
         let resp = await fetch(`/api/v1/task/${id}/soft_stop`,
             {
                 method: "POST",
@@ -196,8 +237,39 @@
             }
         )
         let data = await resp.json()
+        
+        if (!skipRefresh && !isProcessingBulkStop) {
+            await getTasks('STARTED');
+        }
     }
-    async function deleteTask(id) {
+
+    async function stopSelectedTasks() {
+        const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+        const taskIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (taskIds.length === 0) {
+            create_toast(i18next.t('Warning'), i18next.t('No tasks selected'), "warning");
+            return;
+        }
+
+        isProcessingBulkStop = true;
+
+        for (const taskId of taskIds) {
+            try {
+                await stopTask(taskId, true);
+            } catch (error) {
+                console.error(`Failed to stop task ${taskId}:`, error);
+                create_toast(i18next.t('Error'), `${i18next.t('Failed to stop task')} ${taskId}`, "error");
+            }
+        }
+
+        isProcessingBulkStop = false;
+        await getTasks('STARTED');
+    }
+
+    let isProcessingBulkDelete = false;
+
+    async function deleteTask(id, skipRefresh = false) {
         let resp = await fetch(`/api/v1/task/${id}/cancel`,
             {
                 method: "POST",
@@ -207,10 +279,40 @@
             }
         )
         let data = await resp.json()
+        
+        if (!skipRefresh && !isProcessingBulkDelete) {
+            await getTasks('REGISTERED');
+        }
+    }
+
+    async function deleteSelectedTasks() {
+        const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+        const taskIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (taskIds.length === 0) {
+            create_toast(i18next.t('Warning'), i18next.t('No tasks selected'), "warning");
+            return;
+        }
+
+        isProcessingBulkDelete = true;
+
+        for (const taskId of taskIds) {
+            try {
+                await deleteTask(taskId, true);
+            } catch (error) {
+                console.error(`Failed to cancel task ${taskId}:`, error);
+                create_toast(i18next.t('Error'), `${i18next.t('Failed to cancel task')} ${taskId}`, "error");
+            }
+        }
+
+        isProcessingBulkDelete = false;
+        await getTasks('REGISTERED');
     }
 
     let taskLogModal = null;
     let taskLogModalInstance = null;
+    let imageModal = null;
+    let imageModalInstance = null;
 
     async function showTaskLog(taskId) {
         try {
@@ -299,10 +401,460 @@
             console.error('Log fetch error:', error);
         }
     }
+
+    function repeatTask(taskId, toolName, paramsJson) {
+        try {
+            const params = JSON.parse(paramsJson);
+
+            let ipsSource;
+            if (['NmapTask', 'NmapScanTask'].includes(toolName)) {
+                ipsSource = params.targetIP;
+            } else {
+                ipsSource = params.ip;
+            }
+
+            let rows = [];
+            if (ipsSource) {
+                const ips = Array.isArray(ipsSource) ? ipsSource : [ipsSource];
+                for (const ip of ips) {
+                    rows.push({
+                        ipaddr: ip,
+                        port: params.port || null,
+                        domain: params.domain || null,
+                        mac: params.mac || null,
+                    });
+                }
+            }
+
+            switch (toolName) {
+                case 'NmapScanTask':
+                    nmap_start_with_prefill(rows, params);
+                    break;
+                case 'MasscanScanTask':
+                    masscan_start_with_prefill(rows, params, 'full_masscan');
+                    break;
+                case 'ScapySniffTask':
+                    startScapyWithPrefill(params.agent_id, params.iface);
+                    break;
+                case 'SnmpBruteCommunityStringTask':
+                    snmp_start_with_prefill(rows, params);
+                    break;
+                case 'SpeedTestServerTask':
+                    speed_test_start_with_prefill(params, '');
+                    break;
+                case 'CertTask':
+                    cert_start_with_prefill(rows, params);
+                    break;
+                case 'ParseSiteTask':
+                    web_grabber_start_with_prefill(rows, params);
+                    break;
+                case 'DNSTask':
+                    lookup_start_with_prefill(rows, params);
+                    break;
+                case 'SdFindTask':
+                    brute_start_with_prefill(rows, params);
+                    break;
+                case 'IpInfoTask':
+                    ip_info_start_with_prefill(rows, params);
+                    break;
+                case 'RdapTask':
+                    whois_start_with_prefill(rows, params);
+                    break;   
+                case 'WhoisShdwsTask':
+                    whois_start_with_prefill(rows, params);
+                    break;
+                default:
+                    create_toast("Error", `Unsupported task type: ${toolName}`, "error");
+                    return;
+            }
+
+            // const tasksModal = bootstrap.Modal.getInstance(document.getElementById("tasksListManager"));
+            // if (tasksModal) tasksModal.hide();
+
+        } catch (e) {
+            console.error("Failed to repeat task:", e);
+            create_toast("Error", i18next.t("Failed to parse task parameters"), "error");
+        }
+    }
+
+    let taskLogsMenuModal = null;
+    let taskLogsMenuModalInstance = null;
+
+    function initTaskLogsMenuModal() {
+        if (taskLogsMenuModal) return;
+        
+        document.body.insertAdjacentHTML('beforeend', `
+            <div class="modal fade" id="taskLogsMenuModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">${i18next.t('Task Logs')}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="logsMenuContainer" style="max-height:60vh; overflow-y:auto;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                </div>
+                </div>
+            </div>
+            </div>
+        `);
+        
+        taskLogsMenuModal = document.getElementById('taskLogsMenuModal');
+        taskLogsMenuModalInstance = new bootstrap.Modal(taskLogsMenuModal);
+        
+        document.getElementById('logsMenuContainer').addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            
+            e.preventDefault();
+            const action = btn.dataset.action;
+            const logIndex = parseInt(btn.dataset.index);
+            const logs = JSON.parse(taskLogsMenuModal.dataset.logs || '[]');
+            const log = logs[logIndex];
+            
+            if (!log) return;
+            try {
+                if (action === 'download') await handleDownloadLog(log);
+                if (action === 'view') handleViewLog(log);
+            } catch (err) {
+                create_toast("Error", err.message || "Operation failed", "error");
+                console.error('Log action failed:', err);
+            }
+        });
+    }
+
+    async function showTaskLogsMenu(taskId) {
+        initTaskLogsMenuModal();
+        
+        try {
+            const resp = await fetch(`/api/v1/task/raw_log/${taskId}`);
+            if (!resp.ok) throw new Error((await resp.json())?.detail || "Failed to load logs");
+            
+            let logs = await resp.json();
+            if (!Array.isArray(logs)) logs = [logs];
+            
+            if (!logs.length) return create_toast("Info", "No logs available", "info");
+            
+            taskLogsMenuModal.dataset.taskId = taskId;
+            taskLogsMenuModal.dataset.logs = JSON.stringify(logs);
+            
+            const container = document.getElementById('logsMenuContainer');
+            container.innerHTML = logs.map((log, i) => {
+            const typeLabel = (log.type || 'Log').replace(/_/g, ' ');
+            const isUrl = typeof log.file_data === 'string' && /^https?:\/\//.test(log.file_data);
+            const logType = (log.type || '').toLowerCase();
+            const isScreenshot = logType.includes('screenshot') || logType === 'screenshots';
+            const showViewButton = isScreenshot || (!isUrl && (typeof log.file_data === 'string' || typeof log.file_data === 'object'));
+            
+            return `
+                <div class="card mb-2">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">${typeLabel}</div>
+                        <div class="text-muted small">${log.file_name || '—'}</div>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" 
+                                data-action="download" 
+                                data-index="${i}"
+                                title="${i18next.t('Download')}">
+                        <span class="bi bi-download"></span>
+                        </button>
+                        ${showViewButton ? `
+                        <button class="btn btn-outline-info" 
+                                data-action="view" 
+                                data-index="${i}"
+                                title="${i18next.t('View')}">
+                        <span class="bi bi-eye"></span>
+                        </button>` : ''}
+                    </div>
+                    </div>
+                </div>
+                </div>
+            `;
+            }).join('');
+            
+            taskLogsMenuModalInstance.show();
+        } catch (e) {
+            create_toast("Error", `Logs load failed: ${e.message}`, "error");
+        }
+    }
+
+    async function handleDownloadLog(log) {
+        const filename = log.file_name || 'download';
+        
+        if (typeof log.file_data === 'string' && 
+                (log.file_data.startsWith('/') || /^https?:\/\//.test(log.file_data))) {
+            
+            let pathOnly = log.file_data;
+            
+            if (/^https?:\/\//.test(log.file_data)) {
+                try {
+                const url = new URL(log.file_data);
+                pathOnly = url.pathname + url.search;
+                } catch (e) {
+                if (!log.file_data.startsWith('/')) {
+                    console.warn('Invalid URL, using as-is:', log.file_data);
+                }
+                }
+            }
+
+            const a = document.createElement('a');
+            a.href = pathOnly;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            return;
+        }
+
+        if (typeof log.file_data === 'string') {
+            const cleanBase64 = log.file_data.trim()
+            .replace(/^["']|["']$/g, '')
+            .replace(/\s/g, '');
+            const binaryString = atob(cleanBase64);
+            const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return;
+        }
+
+        if (typeof log.file_data === 'object') {
+            const blob = new Blob([JSON.stringify(log.file_data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename.toLowerCase().endsWith('.json') ? filename : `${filename}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return;
+        }
+
+        throw new Error('Unsupported log data format');
+    }
+
+    function handleViewLog(log) {
+        const logType = (log.type || '').toLowerCase();
+        const isScreenshot = logType.includes('screenshot');
+        
+        if (isScreenshot && typeof log.file_data === 'string') {
+            showImageModal(log);
+            return;
+        }
+
+        let content = '';
+        if (typeof log.file_data === 'object') {
+            content = JSON.stringify(log.file_data, null, 2);
+        } else if (typeof log.file_data === 'string' && !/^https?:\/\//.test(log.file_data)) {
+            try {
+            const clean = log.file_data.trim().replace(/^["']|["']$/g, '').replace(/\s/g, '');
+            const bin = atob(clean);
+            const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+            content = new TextDecoder('utf-8').decode(bytes);
+            } catch (e) { content = log.file_data; }
+        } else {
+            content = "Binary content or external link (use Download button)";
+        }
+        
+        if (!taskLogModal) {
+            document.body.insertAdjacentHTML('beforeend', `
+            <div class="modal fade" id="taskLogViewerModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title">${i18next.t('Log Content')} — ${log.file_name || log.type}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                    <textarea class="form-control" readonly rows="20" style="font-family:monospace;font-size:0.9em;resize:none;border:none;width:100%;padding:0.1rem;background:transparent;"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18next.t('Close')}</button>
+                    </div>
+                </div>
+                </div>
+            </div>
+            `);
+            taskLogModal = document.getElementById('taskLogViewerModal');
+            taskLogModalInstance = new bootstrap.Modal(taskLogModal);
+        }
+        
+        taskLogModal.querySelector('textarea').value = content;
+        taskLogModal.querySelector('.modal-title').textContent = 
+            `${i18next.t('Log Content')} — ${log.file_name || log.type}`;
+        taskLogModalInstance.show();
+    }
+
+    function normalizeImageUrl(url) {
+        if (typeof url !== 'string') return url;
+        if (/^https?:\/\/0\.0\.0\.0/.test(url)) {
+            try {
+                const u = new URL(url);
+                return `${window.location.origin}${u.pathname}${u.search}`;
+            } catch (e) {
+                console.warn('Invalid URL:', url);
+                return url;
+            }
+        }
+        return url;
+    }
+
+    function showImageModal(log) {
+        if (!imageModal) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-image me-2"></i>
+                                    ${i18next.t('Screenshot')} — <span id="image-modal-filename">${log.file_name || log.type}</span>
+                                    <small class="text-muted ms-2" id="image-modal-counter"></small>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${i18next.t('Close')}"></button>
+                            </div>
+                            <div class="modal-body p-0 bg-dark text-center">
+                                <div id="image-container" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+                                    <div class="spinner-border text-primary" role="status" id="image-loading-spinner">
+                                        <span class="visually-hidden">${i18next.t('Loading')}...</span>
+                                    </div>
+                                    <img id="image-viewer-content" 
+                                        class="img-fluid d-none" 
+                                        alt="${i18next.t('Screenshot')}"
+                                        onclick="if(this.src && !this.src.startsWith('data:image/svg+xml')) window.open(this.src, '_blank')">
+                                </div>
+                            </div>
+                            <div class="modal-footer d-flex justify-content-between">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="bi bi-keyboard me-1"></i>
+                                    ${i18next.t('Click image to open in new tab')}
+                                </small>
+                                <div>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="bi bi-x-lg"></i> ${i18next.t('Close')}
+                                    </button>
+                                    <button type="button" class="btn btn-primary ms-2" id="image-download-btn">
+                                        <i class="bi bi-download"></i> ${i18next.t('Download')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            imageModal = document.getElementById('imageViewerModal');
+            imageModalInstance = new bootstrap.Modal(imageModal);
+            
+            imageModal.addEventListener('hidden.bs.modal', () => {
+                const img = imageModal.querySelector('#image-viewer-content');
+                const spinner = imageModal.querySelector('#image-loading-spinner');
+                const errorPlaceholder = imageModal.querySelector('#image-error-placeholder');
+                
+                img.classList.add('d-none');
+                spinner.classList.remove('d-none');
+                img.src = '';
+                
+                if (errorPlaceholder) {
+                    errorPlaceholder.remove();
+                }
+            });
+        }
+
+        imageModal.querySelector('#image-modal-filename').textContent = log.file_name || log.type;
+        
+        const img = imageModal.querySelector('#image-viewer-content');
+        const spinner = imageModal.querySelector('#image-loading-spinner');
+        const container = imageModal.querySelector('#image-container');
+        
+        img.classList.add('d-none');
+        img.onerror = null;
+        img.onload = null;
+        
+        let src = normalizeImageUrl(log.file_data);
+
+        if (typeof log.file_data === 'string' && /^https?:\/\//.test(log.file_data)) {
+            try {
+                const url = new URL(log.file_data);
+                if (url.origin === window.location.origin) {
+                    src = url.pathname + url.search;
+                }
+            } catch (e) {
+                console.warn('Invalid URL in log.file_data:', log.file_data);
+            }
+        }
+        else if (typeof log.file_data === 'string' && !log.file_data.startsWith('/')) {
+            let cleanBase64 = log.file_data.trim()
+                .replace(/^["']|["']$/g, '')
+                .replace(/\s/g, '');
+            if (cleanBase64) {
+                let mime = 'image/png';
+                if (log.file_name) {
+                    const ext = log.file_name.toLowerCase().split('.').pop();
+                    if (['jpg', 'jpeg'].includes(ext)) mime = 'image/jpeg';
+                    else if (ext === 'gif') mime = 'image/gif';
+                    else if (ext === 'webp') mime = 'image/webp';
+                }
+                src = `data:${mime};base64,${cleanBase64}`;
+            } else {
+                src = '';
+            }
+        }
+        
+        img.onload = () => {
+            spinner.classList.add('d-none');
+            img.classList.remove('d-none');
+        };
+        img.onerror = () => {
+            spinner.classList.add('d-none');
+            img.classList.add('d-none');
+            
+            const errorPlaceholder = container.querySelector('#image-error-placeholder') || 
+                (() => {
+                    const el = document.createElement('div');
+                    el.id = 'image-error-placeholder';
+                    el.classList.add('text-center', 'py-5');
+                    container.appendChild(el);
+                    return el;
+                })();
+
+            errorPlaceholder.innerHTML = ``;
+        };
+        
+        img.src = src;
+        if (img.complete) {
+            img.naturalWidth === 0 ? img.onerror() : img.onload();
+        }
+        const downloadBtn = imageModal.querySelector('#image-download-btn');
+        downloadBtn.onclick = async () => {
+            try {
+                await handleDownloadLog(log);
+            } catch (err) {
+                create_toast("Error", err.message || i18next.t('Download failed'), "error");
+            }
+        };
+        
+        imageModalInstance.show();
+    }
 </script>
 <style>
     #tableTasksContainer thead tr th {
         width: 1px;
+    }
+    #image-container {
+        max-height: 80vh;
+        overflow: auto;
     }
 </style>
 {% endmacro %}

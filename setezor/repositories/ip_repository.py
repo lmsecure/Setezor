@@ -1,7 +1,7 @@
 import ipaddress
 from typing import List
 from sqlalchemy import Select, collate
-from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type, ASN, WhoIsIP
+from setezor.models import IP, MAC, Agent, Network, RouteList, Route, Object, ObjectType, Port, DNS, Domain, AgentInProject, DNS_Type, ASN, WhoIsDomain
 from setezor.models.node_comment import NodeComment
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import case, select, func, or_, and_
@@ -47,16 +47,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
         result_obj = result.first()
         return result_obj
 
-
-    async def vis_nodes_and_interfaces(self, project_id: str, scans: list[str]):
-        stmt_for_get_agents_for_interfaces = select(IP.id.label("ip_id"), AgentInProject.id.label("agent_id")).select_from(IP)\
-            .join(MAC, IP.mac_id == MAC.id)\
-            .join(Object, Object.id == MAC.object_id)\
-            .join(AgentInProject, Object.agent_id == AgentInProject.id)\
-            .filter(IP.project_id == project_id)
-        # addition = [IP.scan_id == scan_id for scan_id in scans]
-        # addition.append(IP.scan_id == None)
-        # stmt_for_get_agents_for_interfaces = stmt_for_get_agents_for_interfaces.filter(or_(*addition))
+    async def vis_nodes(self, project_id: str, scans: list[str]):
         stmt_for_get_nodes_from = select(RouteList.ip_id_from.label("ip_id"), Route.agent_id.label("agent_id")).select_from(RouteList)\
             .join(Route, RouteList.route_id == Route.id).filter(RouteList.project_id == project_id)
         stmt_for_get_nodes_to = select(RouteList.ip_id_to.label("ip_id"), Route.agent_id.label("agent_id")).select_from(RouteList)\
@@ -65,9 +56,9 @@ class IPRepository(SQLAlchemyRepository[IP]):
         addition.append(RouteList.scan_id == None)
         stmt_for_get_nodes_from = stmt_for_get_nodes_from.filter(or_(*addition))
         stmt_for_get_nodes_to = stmt_for_get_nodes_to.filter(or_(*addition))
-        stmt_for_get_agents_for_nodes = stmt_for_get_agents_for_interfaces.union(stmt_for_get_nodes_from, stmt_for_get_nodes_to)
-        return await self._session.exec(stmt_for_get_agents_for_nodes)
-
+        stmt_for_get_agents_for_nodes = stmt_for_get_nodes_from.union(stmt_for_get_nodes_to)
+        result = await self._session.exec(stmt_for_get_agents_for_nodes)
+        return result.all()
 
     async def get_nodes(self, project_id: str, scans: list[str]) -> list:
         stmt_for_get_nodes = select(IP.id, IP.ip, Network.start_ip, Network.mask, MAC.mac, ObjectType.name)\
@@ -133,27 +124,66 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                if (field == 'port'):
-                    value = int(value)
                 
                 if field in field_mapping and value is not None:
+                    if field == "port":
+                        try:
+                            if isinstance(value, list):
+                                value = [int(v) for v in value]
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            continue
+
                     column = field_mapping[field]
                     
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        if field != "port":
-                            stmt = stmt.filter(column.ilike(f"%{value}%"))
+
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
         
         if sort_params:
             order_clauses = []
@@ -239,26 +269,66 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                if (field == 'port'):
-                    value = int(value)
                 
                 if field in field_mapping and value is not None:
+                    if field == "port":
+                        try:
+                            if isinstance(value, list):
+                                value = [int(v) for v in value]
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            continue
+
                     column = field_mapping[field]
                     
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
+                        elif type_op == "like":
+                            if field == "port":
+                                continue
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
         
         if sort_params:
             order_clauses = []
@@ -309,11 +379,9 @@ class IPRepository(SQLAlchemyRepository[IP]):
             ASN.name.label("AS-name"),
             ASN.number.label("AS-number"),
             ASN.org.label("org-name"),
-            WhoIsIP.data.label("data")
         ).select_from(IP)\
             .join(Network, Network.id == IP.network_id)\
             .join(ASN, ASN.id == Network.asn_id)\
-            .join(WhoIsIP, WhoIsIP.ip_id == IP.id, isouter=True)\
         .filter(IP.project_id == project_id, or_(*addition))
 
         field_mapping = {
@@ -329,20 +397,46 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 value = filter_item.get("value")
                 if field in field_mapping and value is not None:
                     column = field_mapping.get(field)
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
+
+                    if isinstance(value, list):
+                        if type_op == "=" and value:
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=" and value:
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like" and value:
+                            conditions = [
+                                column.ilike(f"%{v}%") 
+                                for v in value 
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                        continue
+                    else:
+                        if type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == "like":
+                            stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
         if sort_params:
             order_clauses = []
             for sort_item in sort_params:
@@ -366,6 +460,101 @@ class IPRepository(SQLAlchemyRepository[IP]):
         result = await self._session.exec(paginated_query)
         return total, result.all()
 
+
+    async def get_domain_info_tabulator_data(
+        self,
+        project_id: str,
+        scans: List[str],
+        page: int,
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ) -> tuple[int, list]:
+        addition = [WhoIsDomain.scan_id == scan_id for scan_id in scans]
+        stmt = select(
+            WhoIsDomain.domain_crt.label("domain"),
+            WhoIsDomain.org_name.label("org-name"),
+            WhoIsDomain.data.label("data")
+        ).select_from(WhoIsDomain)\
+        .filter(WhoIsDomain.project_id == project_id, or_(*addition))
+
+        field_mapping = {
+            "domain": WhoIsDomain.domain_crt,
+            "org-name": WhoIsDomain.org_name
+        }
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+                if field in field_mapping and value is not None:
+                    column = field_mapping[field]
+
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "like":
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        elif type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
+        if sort_params:
+            order_clauses = []
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                if field in field_mapping:
+                    column = field_mapping.get(field)
+                    sorted_column = func.coalesce(column, "")
+                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                        sorted_column = collate(sorted_column, 'C')
+                    if direction == "desc":
+                        order_clauses.append(sorted_column.desc())
+                    else:
+                        order_clauses.append(sorted_column.asc())
+            if order_clauses:
+                stmt = stmt.order_by(*order_clauses)
+        count_query = select(func.count()).select_from(stmt.alias())
+        offset = (page - 1) * size
+        paginated_query = stmt.offset(offset).limit(size)
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+        return total, result.all()
+    
 
     async def get_ip_data(self, project_id: str, last_scan_id: str):
         row_number_column = func.row_number().over(

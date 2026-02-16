@@ -5,7 +5,7 @@ from setezor.restructors.sd_find_scan_task_restructor import Sd_Scan_Task_Restru
 
 class SdFindTask(BaseJob):
     restructor = Sd_Scan_Task_Restructor
-
+    logs_folder = "brute_logs"
 
     @classmethod
     def clean_payload(cls, version: str, payload: dict):

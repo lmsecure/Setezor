@@ -103,7 +103,6 @@ class PortRepository(SQLAlchemyRepository[Port]):
         result = await self._session.exec(stmt)
         return result.all()
 
-
     async def vulnerabilities(self, l4_id: str, project_id: str):
         stmt = select(L4SoftwareVulnerability.id.label("abc"), 
                       L4SoftwareVulnerability.confirmed.label("confirmed"),

@@ -1,702 +1,847 @@
-{% macro masscan_ip(prefix) %}
+{% import 'modals/tools_modal_constructor.html' as modal %}
 
-<div id="{{ prefix }}MasscanInputContainer"></div>
-<div class="input-group" id="{{ prefix }}masscanIpTarget">
-    <span class="input-group-text"  style="margin-bottom: 0.5rem;" id="{{ prefix }}basic-addon1">IP</span>
-    <datalist id="{{ prefix }}IpList"></datalist>
-    <input type="text" list="IpList" class="form-control ip" id='{{ prefix }}masscanInputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
-        aria-label="IP" aria-describedby="basic-addon1" required name="target">
-    <span class="input-group-text" style="margin-bottom: 0.5rem;" id="{{ prefix }}basic-addon1" data-i18n="PORT"></span>
-    <input type="text" class="form-control port" id='{{ prefix }}inputPortMasscan' placeholder="--ping" aria-label="Port" style="margin-bottom: 0.5rem;"
-        aria-describedby="basic-addon1" required name="Port">
-    <button id="{{ prefix }}add_new_masscan_form" onclick="addNewMasscanForm('{{ prefix }}')" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
-</div>
+{{ modal.create_modal('masscanModalWindow', 'Masscan', 'https://help.setezor.net/Инструменты.html#masscan') }}
+
 <script>
-      function addNewMasscanForm(prefix) {
-        const original = document.getElementById(prefix + 'masscanIpTarget');
-        const clone = original.cloneNode(true);
-        const newInputIP = clone.querySelector('[id^="' + prefix + 'masscanInputIP"]');
-        newInputIP.id = prefix + 'masscanInputIP_' + Date.now();
-        const newInputPort = clone.querySelector('[id^="' + prefix + 'inputPortMasscan"]');
-        newInputPort.id = prefix + 'inputPortMasscan_' + Date.now();
-        const originalInputIP = document.getElementById(prefix + 'masscanInputIP');
-        const originalInputPort = document.getElementById(prefix + 'inputPortMasscan');
-        newInputIP.value = originalInputIP.value;
-        newInputPort.value = originalInputPort.value;
-        originalInputIP.value = ''
-        originalInputPort.value = ''
+const MasscanUI = {
 
-        const existingMinusButton = clone.querySelector('.btn-danger');
-        if (existingMinusButton) {
-            existingMinusButton.remove();
+  getStyles() {
+    return `
+      <style>
+        .masscan-tool-section {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 15px;
+          border: 1px solid #e9ecef;
         }
-
-        const removeButton = document.createElement('button');
-        removeButton.textContent = '-';
-        removeButton.type = 'button';
-        removeButton.className = 'btn btn-danger';
-        removeButton.style.width = '3rem';
-        removeButton.style.marginBottom = '0.5rem';
-        removeButton.onclick = () => {
-            clone.remove();
-        };
-
-        clone.appendChild(removeButton);
-
-        const addButton = clone.querySelector('#' + prefix + 'add_new_masscan_form');
-        if (addButton) {
-            addButton.remove();
+        .masscan-tool-section h6 {
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #6c757d;
+          margin-bottom: 10px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
         }
-
-        document.getElementById(prefix + 'MasscanInputContainer').appendChild(clone);
-    }
-</script>
-{% endmacro %}
-{% macro masscan_main(prefix) %}
-
-<div class="d-flex justify-content-between py-2">
-    <div class="form-check form-switch" id="{{ prefix }}masscanPortSwitch">
-        <input class="form-check-input" type="checkbox" id="{{ prefix }}masscanPortsScan">
-        <label class="form-check-label" for="masscanPortsScan" data-i18n="Ports"></label>
-    </div>
-
-    <div class="w-50" id="{{ prefix }}masscanPortsSelectorDiv">
-        <datalist id="{{ prefix }}masscanPortsSelectorList">
-            <option hidden disabled value="1"></option>
-            <option value="80,443,8080,8443" data-i18n="web ports"></option>
-            <option value="25,465,587,110,143,993,995" data-i18n="email ports"></option>
-            <option value="0-65535" data-i18n="All"></option>
-        </datalist>
-        <input type="text" list="{{ prefix }}masscanPortsSelectorList" id="{{ prefix }}masscanPortsSelector" name="ports" class="form-control"
-        data-i18n-placeholder="Ports" disabled />
-    </div>
-</div>
-<script>
-    $(document).ready(function () {
-        const defaultPlaceholder = '--ping';
-        const $selector = $('#{{ prefix }}masscanPortsSelector');
-        const $switch = $('#{{ prefix }}masscanPortsScan');
-        function updatePlaceholders(newPlaceholder) {
-            $("input.form-control.port[id^='{{ prefix }}']").each(function () {
-                $(this).attr('placeholder', newPlaceholder);
-            });
+        .masscan-tool-section h6 i { 
+          margin-right: 8px; 
         }
-        $selector.on('input', function () {
-            const newPlaceholder = $(this).val().trim() || defaultPlaceholder;
-            updatePlaceholders(newPlaceholder);
-        });
-        $switch.on('change', function () {
-            const isChecked = $(this).is(':checked');
-            $selector.prop('disabled', !isChecked);
-            const newPlaceholder = isChecked
-                ? ($selector.val().trim() || defaultPlaceholder)
-                : defaultPlaceholder;
-            updatePlaceholders(newPlaceholder);
-        });
-    });
-</script>
-<div class="d-flex justify-content-between py-2">
-    <div class="form-check form-switch" id="{{ prefix }}sourcePortSwitch">
-        <input class="form-check-input" type="checkbox" id="{{ prefix }}sourcePortScan">
-        <label class="form-check-label" for="sourcePortScan" data-i18n="Source Port"></label>
-    </div>
+        .masscan-switch-row {
+          margin-bottom: 8px;
+          padding: 6px 0;
+          border-bottom: 1px solid #e9ecef;
+        }
+        .masscan-switch-row:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        .masscan-row-sections {
+          display: flex;
+          gap: 15px;
+        }
+        .masscan-row-sections > * {
+          flex: 1;
+        }
+      </style>
+    `;
+  },
 
-    <div class="w-50" id="{{ prefix }}masscanSourcePortSelectorDiv">
-        <input type="text" id="{{ prefix }}masscanSourcePortSelector" name="source_port" class="form-control"
-        data-i18n-placeholder="Source Port" disabled />
-    </div>
-</div>
-<div class="d-flex justify-content-between py-2">
-    <div class="form-check form-switch" id="{{ prefix }}maxRateSwitch">
-        <input class="form-check-input" type="checkbox" id="{{ prefix }}maxRate">
-        <label class="form-check-label" for="maxRate" data-i18n="maxRate"></label>
-    </div>
+  buildParams(prefix) {
+    return `
+      ${this.getStyles()}
+      ${this.buildSwitchOptions(prefix)}
+      ${this.buildProtocolAndFormatRow(prefix)}
+      ${this.buildWaitSlider(prefix)}
+      ${this.buildParseButton(prefix)}
+    `;
+  },
 
-    <div class="w-50" id="{{ prefix }}masscanMaxRateSelectorDiv">
-        <input type="text" id="{{ prefix }}masscanMaxRateSelector" name="max_rate" class="form-control"
-        data-i18n-placeholder="maxRate" disabled />
-    </div>
-</div>
-<div class="invalid-feedback" data-i18n="Please select a valid tag."></div>
-<div class="mb-3" id="{{ prefix }}protocolGroup">
-  <label class="form-label d-block" data-i18n="Protocol"></label>
-
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="radio"
-           name="{{ prefix }}protocol"
-           id="{{ prefix }}protocolTcp"
-           value="tcp"
-           checked>
-    <label class="form-check-label" for="{{ prefix }}protocolTcp">TCP</label>
-  </div>
-
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="radio"
-           name="{{ prefix }}protocol"
-           id="{{ prefix }}protocolUdp"
-           value="udp">
-    <label class="form-check-label" for="{{ prefix }}protocolUdp">UDP</label>
-  </div>
-</div>
-<div class="my-2">
-    <div class="d-flex justify-content-between" id="{{ prefix }}masscanOutputGroup">
-        <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-            <div class="form-check" style="padding-left: 0;" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="List format">
-                <input class="btn-check" type="radio" name="format" id="{{ prefix }}ol" value="oL" autocomplete="off">
-                <label class="btn btn-outline-primary" for="{{ prefix }}ol">List</label>
-            </div>
-            <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="XML format">
-                <input class="btn-check" type="radio" name="format" id="{{ prefix }}ox" value="oX" autocomplete="off">
-                <label class="btn btn-outline-primary" for="{{ prefix }}ox">XML</label>
-            </div>
-            <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="Json format">
-                <input class="btn-check" type="radio" name="format" id="{{ prefix }}oj" value="oJ" autocomplete="off" checked>
-                <label class="btn btn-outline-primary" for="{{ prefix }}oj">JSON</label>
-            </div>
+  buildSwitchOptions(prefix) {
+    return `
+      <div class="masscan-tool-section">
+        <h6><i class="bi bi-gear-fill"></i> ${i18next.t("Scan Options")}</h6>
+        
+        <!-- Порты -->
+        <div class="masscan-switch-row d-flex justify-content-between align-items-center">
+          <div class="form-check form-switch" style="flex: 1">
+            <input class="form-check-input" type="checkbox" id="${prefix}masscanPortsScan">
+            <label class="form-check-label" for="${prefix}masscanPortsScan">
+              ${i18next.t('Ports')}
+            </label>
+          </div>
+          <div style="width: 55%">
+            <datalist id="${prefix}masscanPortsSelectorList">
+              <option hidden disabled value="1"></option>
+              <option value="80,443,8080,8443" data-i18n="web ports"></option>
+              <option value="25,465,587,110,143,993,995" data-i18n="email ports"></option>
+              <option value="0-65535" data-i18n="All"></option>
+            </datalist>
+            <input type="text" 
+                   list="${prefix}masscanPortsSelectorList" 
+                   id="${prefix}masscanPortsSelector" 
+                   name="ports" 
+                   class="form-control form-control-sm" 
+                   data-i18n-placeholder="Ports" 
+                   disabled />
+          </div>
         </div>
-    </div>
-</div>
-<div class="my-2">
-    <div class="d-flex justify-content-between">
-        <label for="masscanWaitRange" class="form-label" data-i18n="Wait after scan"></label>
-        <input type="range" class="form-range" name="wait" min="0" max="20" step="1" id="{{ prefix }}masscanWaitRange">
-    </div>
-</div>
-<div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="{{ prefix }}startMasscanScanBtn" onclick="
-    const isTargetTabActive = document.getElementById('{{ prefix }}masscan-simple-tab').classList.contains('active');
-    var params = Object.fromEntries(new FormData(document.getElementById('{{ prefix }}masscanScanForm')).entries());
-    const protocol = document.querySelector(`input[name='{{ prefix }}protocol']:checked`)?.value;
 
-    let ping;
-    let search_udp_port = (protocol === 'udp');
+        <!-- Source Port -->
+        <div class="masscan-switch-row d-flex justify-content-between align-items-center">
+          <div class="form-check form-switch" style="flex: 1">
+            <input class="form-check-input" type="checkbox" id="${prefix}sourcePortScan">
+            <label class="form-check-label" for="${prefix}sourcePortScan">
+              ${i18next.t('Source Port')}
+            </label>
+          </div>
+          <div style="width: 55%">
+            <input type="text" 
+                   id="${prefix}masscanSourcePortSelector" 
+                   name="source_port" 
+                   class="form-control form-control-sm"
+                   data-i18n-placeholder="Source Port" 
+                   disabled />
+          </div>
+        </div>
 
-    const {
-        ports = null,
-        format = null,
-        wait = null,
-        source_port = null,
-        max_rate = null,
-    } = params;
+        <!-- Max Rate -->
+        <div class="masscan-switch-row d-flex justify-content-between align-items-center">
+          <div class="form-check form-switch" style="flex: 1">
+            <input class="form-check-input" type="checkbox" id="${prefix}maxRate">
+            <label class="form-check-label" for="${prefix}maxRate">
+              ${i18next.t('maxRate')}
+            </label>
+          </div>
+          <div style="width: 55%">
+            <input type="text" 
+                   id="${prefix}masscanMaxRateSelector" 
+                   name="max_rate" 
+                   class="form-control form-control-sm"
+                   data-i18n-placeholder="maxRate" 
+                   disabled />
+          </div>
+        </div>
+      </div>
+    `;
+  },
 
-    if (isTargetTabActive) {
-        const ipPortPairs = [];
-        const onlyIps = [];
+  buildProtocolAndFormatRow(prefix) {
+    return `
+      <div class="masscan-row-sections">
+        <!-- Протокол -->
+        <div class="masscan-tool-section">
+          <h6><i class="bi bi-wifi"></i> ${i18next.t('Protocol')}</h6>
+          <div class="d-flex justify-content-center">
+            <div class="btn-group w-100" role="group">
+              <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="TCP Protocol">
+                <input class="btn-check" type="radio"
+                       name="${prefix}protocol"
+                       id="${prefix}protocolTcp"
+                       value="tcp"
+                       checked>
+                <label class="btn btn-outline-primary" for="${prefix}protocolTcp">TCP</label>
+              </div>
+              <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" title="UDP Protocol">
+                <input class="btn-check" type="radio"
+                       name="${prefix}protocol"
+                       id="${prefix}protocolUdp"
+                       value="udp">
+                <label class="btn btn-outline-primary" for="${prefix}protocolUdp">UDP</label>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        const ipElements = document.getElementById('{{ prefix }}MasscanInputContainer').getElementsByClassName('form-control ip');
-        const portElements = document.getElementById('{{ prefix }}MasscanInputContainer').getElementsByClassName('form-control port');
+        <!-- Формат вывода -->
+        <div class="masscan-tool-section">
+          <h6><i class="bi bi-file-earmark-text"></i> ${i18next.t('Output Format')}</h6>
+          <div class="d-flex justify-content-center">
+            <div class="btn-group w-100" role="group">
+              <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="List format">
+                <input class="btn-check" type="radio" name="${prefix}format" id="${prefix}ol" value="oL" autocomplete="off">
+                <label class="btn btn-outline-primary" for="${prefix}ol">List</label>
+              </div>
+              <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="XML format">
+                <input class="btn-check" type="radio" name="${prefix}format" id="${prefix}ox" value="oX" autocomplete="off">
+                <label class="btn btn-outline-primary" for="${prefix}ox">XML</label>
+              </div>
+              <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="Json format">
+                <input class="btn-check" type="radio" name="${prefix}format" id="${prefix}oj" value="oJ" autocomplete="off" checked>
+                <label class="btn btn-outline-primary" for="${prefix}oj">JSON</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
 
-        for (let i = 0; i < ipElements.length; i++) {
-            if (ipElements[i].value && portElements[i].value) {
-                ipPortPairs.push({
-                    ip: ipElements[i].value,
-                    port: portElements[i].value
-                });
-            } else if (ipElements[i].value && !portElements[i].value) {
-                onlyIps.push({
-                    ip: ipElements[i].value
-                });
-            }
-        }
+  buildWaitSlider(prefix) {
+    return `
+      <div class="masscan-tool-section">
+        <h6><i class="bi bi-clock"></i> ${i18next.t('Wait after scan')}</h6>
+        <div class="px-2">
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">0s</small>
+            <small class="text-muted">10s</small>
+            <small class="text-muted">20s</small>
+          </div>
+          <input type="range" class="form-range" name="${prefix}wait" 
+                 min="0" max="20" step="1" id="${prefix}masscanWaitRange" value="10">
+          <div class="text-center mt-2">
+            <span class="badge bg-secondary" id="${prefix}waitValue">10</span>
+            <small class="text-muted ms-2">seconds</small>
+          </div>
+        </div>
+      </div>
+    `;
+  },
 
-        let mainIp = document.getElementById('{{ prefix }}masscanInputIP').value;
-        let mainPort = document.getElementById('{{ prefix }}inputPortMasscan').value;
+  buildParseButton(prefix) {
+    return `
+        <button class="btn btn-primary w-100 shadow-sm" id="${prefix}parseLogsBtn">
+          <i class="bi bi-file-earmark-arrow-down me-2"></i>${i18next.t('Parse logs')}
+        </button>
+    `;
+  }
+};
 
-        if (mainIp && mainPort) {
-            ipPortPairs.push({
-                ip: mainIp,
-                port: mainPort
-            });
-        } else if (mainIp && !mainPort) {
-            onlyIps.push({
-                ip: mainIp
-            });
-        }
+const MasscanSwitches = {
 
-        const executeMasscanRequest = (target, ports = '') => {
-            if (!ports) {
-                ping = true;
-            } else {
-                ping = false;
-            }
-            return fetch('/api/v1/task/masscan_scan_task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    interface_ip_id: getIface().ip_id,
-                    interface: getIface().name,
-                    agent_id: getAgent(),
-                    format,
-                    wait,
-                    target: target,
-                    search_udp_port,
-                    source_port,
-                    max_rate,
-                    ports: ports,
-                    ping,
-                    scope_id: ''
-                })
-            });
-        };
+  setupAll(prefix, instance) {
+    this.setupPortsSwitch(prefix, instance);
+    this.setupSourcePortSwitch(prefix);
+    this.setupMaxRateSwitch(prefix);
+    this.setupWaitSlider(prefix);
+  },
 
-        for (const pair of ipPortPairs) {
-            executeMasscanRequest(pair.ip, pair.port)
-                .then(response => {
-                    if (response.status !== 201) {
-                        response.json().then(data => {
-                            let errorMessage = data.detail[0].msg || 'Create task error';
-                            create_toast('Error', errorMessage, 'error');
-                        });
-                    } else {
-                    var myModal = bootstrap.Modal.getInstance(document.getElementById('{{ prefix }}masscanModalWindow'));
-                    if (myModal) {
-                        myModal.hide();
-                    }
-                }})
-                .catch(error => {
-                    create_toast('Error', 'An error occurred while sending the request', 'error');
-                    console.error('Error:', error);
-                });
-        }
-
-        for (const ip of onlyIps) {
-            executeMasscanRequest(ip.ip, params.ports)
-                .then(response => {
-                    if (response.status !== 201) {
-                        response.json().then(data => {
-                            let errorMessage = data.detail[0].msg || 'Create task error';
-                            create_toast('Error', errorMessage, 'error');
-                        });
-                    }  else {
-                    var myModal = bootstrap.Modal.getInstance(document.getElementById('{{ prefix }}masscanModalWindow'));
-                    if (myModal) {
-                        myModal.hide();
-                    } 
-                }})
-                .catch(error => {
-                    create_toast('Error', 'An error occurred while sending the request', 'error');
-                    console.error('Error:', error);
-                });
-        }
-    } else {
-        if (selectedScopeForMasscan) {
-            if (params.ports === undefined) {
-                ping = true;
-            } else {
-                ping = false;
-            }
-            fetch('/api/v1/task/masscan_scan_task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    interface_ip_id: getIface().ip_id,
-                    interface: getIface().name,
-                    agent_id: getAgent(),
-                    format,
-                    wait,
-                    target: null,
-                    search_udp_port,
-                    source_port,
-                    max_rate,
-                    ports,
-                    ping,
-                    scope_id: selectedScopeForMasscan
-                })
-            }).then(response => {
-                if (response.status !== 201) {
-                    response.json().then(data => {
-                        const errorMessage = data.detail[0].msg || 'Create task error';
-                        create_toast('Error', errorMessage, 'error');
-                    });
-                } else {
-                    var myModal = bootstrap.Modal.getInstance(document.getElementById('{{ prefix }}masscanModalWindow'));
-                    if (myModal) {
-                        myModal.hide();
-                    }
-                }
-            }).catch(error => {
-                create_toast('Error', 'An error occurred while sending the request', 'error');
-                console.error('Error:', error);
-            });
-        } else {
-            create_toast('Error', 'Please select a scope', 'error');
-            return;
-        }
-    }
-" data-i18n="Start scan"></button>
-</div>
-<script>
-function resetMasscanModal(prefix) {
-    const modal = document.getElementById(prefix + 'masscanModalWindow');
+  setupPortsSwitch(prefix, instance) {
+    const portSwitch = document.getElementById(`${prefix}masscanPortsScan`);
+    const portSelector = document.getElementById(`${prefix}masscanPortsSelector`);
     
-    modal.querySelectorAll('form').forEach(form => form.reset());
-    
-    const container = document.getElementById(prefix + 'MasscanInputContainer');
-    if (container) container.innerHTML = '';
-    
-    const inputIP = document.getElementById(prefix + 'masscanInputIP');
-    const inputPort = document.getElementById(prefix + 'inputPortMasscan');
-    if (inputIP) inputIP.value = '';
-    if (inputPort) {
-        inputPort.value = '';
-        inputPort.placeholder = '--ping';
-    }
+    if (!portSwitch || !portSelector) return;
 
-    const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
-    if (portsSelector) {
-        portsSelector.value = '';
-        portsSelector.disabled = true;
-    }
-    const portsSwitch = document.getElementById(prefix + 'masscanPortsScan');
-    if (portsSwitch) portsSwitch.checked = false;
+    const updatePlaceholders = (isEnabled) => {
+      const portValue = portSelector.value.trim();
+      const newPlaceholder = isEnabled && portValue ? portValue : '--ping';
+      
+      const portInputs = document.querySelectorAll(
+        `#${instance.modalId}_body .form-control.port`
+      );
+      portInputs.forEach(input => {
+        input.placeholder = newPlaceholder;
+      });
+    };
 
-    const sourcePortInput = document.getElementById(prefix + 'masscanSourcePortSelector');
-    if (sourcePortInput) {
-        sourcePortInput.value = '';
-        sourcePortInput.disabled = true;
-    }
-    const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
-    if (sourcePortSwitch) sourcePortSwitch.checked = false;
+    FormHelpers.linkSwitchToInput(portSwitch, portSelector, updatePlaceholders);
     
-    const maxRateInput = document.getElementById(prefix + 'masscanMaxRateSelector');
-    if (maxRateInput) {
-        maxRateInput.value = '';
-        maxRateInput.disabled = true;
-    }
-    const maxRateSwitch = document.getElementById(prefix + 'maxRate');
-    if (maxRateSwitch) maxRateSwitch.checked = false;
-    
-    const tcpRadio = document.getElementById(prefix + 'protocolTcp');
-    const udpRadio = document.getElementById(prefix + 'protocolUdp');
-
-    if (tcpRadio) tcpRadio.checked = true;
-    if (udpRadio) udpRadio.checked = false;
-    
-    const olRadio = document.getElementById(prefix + 'ol');
-    const oxRadio = document.getElementById(prefix + 'ox');
-    const ojRadio = document.getElementById(prefix + 'oj');
-    if (olRadio) olRadio.checked = false;
-    if (oxRadio) oxRadio.checked = false;
-    if (ojRadio) ojRadio.checked = true;
-    
-    const waitSlider = document.getElementById(prefix + 'masscanWaitRange');
-    if (waitSlider) waitSlider.value = '10';
-    
-    const scopeButton = document.getElementById(prefix + 'masscanScopeDropdown');
-    if (scopeButton) {
-        scopeButton.textContent = scopeButton.getAttribute('data-i18n') || 'Select scope';
-    }
-    if (typeof selectedScopeForMasscan !== 'undefined') {
-        selectedScopeForMasscan = '';
-    }
-    
-    const targetTab = document.getElementById(prefix + 'masscan-simple-tab');
-    const scopeTab = document.getElementById(prefix + 'masscan-scope-tab');
-    const targetPane = document.getElementById(prefix + 'masscan-simple-mode');
-    const scopePane = document.getElementById(prefix + 'masscan-scope-mode');
-    
-    if (targetTab && scopeTab && targetPane && scopePane) {
-        targetTab.classList.add('active');
-        scopeTab.classList.remove('active');
-        targetPane.classList.add('show', 'active');
-        scopePane.classList.remove('show', 'active');
-    }
-    
-    document.querySelectorAll("input.form-control.port[id^='" + prefix + "']").forEach(function (input) {
-        input.placeholder = '--ping';
+    portSelector.addEventListener('input', () => {
+      if (portSwitch.checked) {
+        updatePlaceholders(true);
+      }
     });
-}
+  },
 
-function setupMasscanSwitchers(prefix) {
-    const portSwitch = document.getElementById(prefix + 'masscanPortsScan');
-    const portsSelector = document.getElementById(prefix + 'masscanPortsSelector');
-    
-    if (portSwitch && portsSelector) {
-        const handlePortSwitchChange = function(event) {
-            portsSelector.disabled = !event.target.checked;
-        };
-        
-        portSwitch.removeEventListener('change', handlePortSwitchChange);
-        portSwitch.addEventListener('change', handlePortSwitchChange);
-        
-        portsSelector.disabled = !portSwitch.checked;
-    }
-    
-    const sourcePortSwitch = document.getElementById(prefix + 'sourcePortScan');
-    const sourcePortSelector = document.getElementById(prefix + 'masscanSourcePortSelector');
+  setupSourcePortSwitch(prefix) {
+    const sourcePortSwitch = document.getElementById(`${prefix}sourcePortScan`);
+    const sourcePortSelector = document.getElementById(`${prefix}masscanSourcePortSelector`);
     
     if (sourcePortSwitch && sourcePortSelector) {
-        const handleSourcePortSwitchChange = function(event) {
-            sourcePortSelector.disabled = !event.target.checked;
-        };
-        
-        sourcePortSwitch.removeEventListener('change', handleSourcePortSwitchChange);
-        sourcePortSwitch.addEventListener('change', handleSourcePortSwitchChange);
-        
-        sourcePortSelector.disabled = !sourcePortSwitch.checked;
+      FormHelpers.linkSwitchToInput(sourcePortSwitch, sourcePortSelector);
     }
-    
-    const maxRateSwitch = document.getElementById(prefix + 'maxRate');
-    const maxRateSelector = document.getElementById(prefix + 'masscanMaxRateSelector');
+  },
+
+  setupMaxRateSwitch(prefix) {
+    const maxRateSwitch = document.getElementById(`${prefix}maxRate`);
+    const maxRateSelector = document.getElementById(`${prefix}masscanMaxRateSelector`);
     
     if (maxRateSwitch && maxRateSelector) {
-        const handleMaxRateSwitchChange = function(event) {
-            maxRateSelector.disabled = !event.target.checked;
-        };
-        
-        maxRateSwitch.removeEventListener('change', handleMaxRateSwitchChange);
-        maxRateSwitch.addEventListener('change', handleMaxRateSwitchChange);
-        
-        maxRateSelector.disabled = !maxRateSwitch.checked;
+      FormHelpers.linkSwitchToInput(maxRateSwitch, maxRateSelector);
     }
-}
+  },
 
-</script>
-{% endmacro %}
-
-
-{% macro masscan_parse(prefix) %}
-
-<button class="btn btn-primary w-100" type="button" onclick="
-                                var input = document.createElement('input');
-                                input.type = 'file';
-                                input.multiple = true;
-                                input.accept = '.xml,.list,.json'
-                                input.onchange = e => { 
-                                    for (var file of e.target.files)
-                                    {
-                                        var reader = new FileReader();
-                                        reader.onload = (function (file) {
-                                            return async function (e) {                
-                                                iface = getIface()
-                                                data = {file: e.target.result, filename: file.name, interface_ip_id: iface.ip_id, ip: iface.ip, mac: iface.mac, agent_id: agentData.default_agent}
-                                                await fetch('/api/v1/task/masscan_log_task', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify(data)});
-                                            }
-                                        })(file)
-                                        reader.onerror = (function (file){
-                                            return function (e){
-                                                create_toast('Error', `Not enough permissions. Check file owner`, 'error')
-                                            }
-                                        })(file)
-                                        reader.readAsDataURL(file);            
-                                    }
-                                }
-                                input.click();
-                                var myModal = bootstrap.Modal.getInstance(document.getElementById('{{ prefix }}masscanModalWindow'));
-                                    if (myModal) {
-                                        myModal.hide();
-                                    }
-                                " data-i18n="Parse logs"></button>
-
-{% endmacro %}
-
-{% macro masscan_modal_to_info_tabs(prefix) %}
-<script>
-async function masscan_script_modal_to_info_tabs(rows, prefix) {
-    resetMasscanModal(prefix);
-    setupMasscanSwitchers(prefix);
+  setupWaitSlider(prefix) {
+    const waitSlider = document.getElementById(`${prefix}masscanWaitRange`);
+    const waitValue = document.getElementById(`${prefix}waitValue`);
     
-    const modalEl = document.getElementById(prefix + 'masscanModalWindow');
-    const myModal = new bootstrap.Modal(modalEl);
+    if (waitSlider && waitValue) {
+      waitSlider.addEventListener('input', (e) => {
+        waitValue.textContent = e.target.value;
+      });
+    }
+  },
 
-    if (rows && rows.length > 0) {
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            
-            if (i > 0) {
-                addNewMasscanForm(prefix);
-            }
-            
-            const inputForms = document.querySelectorAll('[id^="' + prefix + 'masscanIpTarget"]');
-            const currentForm = inputForms[i];
-            
-            if (currentForm) {
-                const inputIP = currentForm.querySelector('[id^="' + prefix + 'masscanInputIP"]');
-                const inputPort = currentForm.querySelector('[id^="' + prefix + 'inputPortMasscan"]');
-                
-                if (inputIP && row.ipaddr) {
-                    inputIP.value = row.ipaddr;
-                }
-                
-                if (inputPort && row.port) {
-                    const uniquePorts = [...new Set(
-                        row.port.split(',').map(p => p.trim()).filter(p => p)
-                    )];
-                    inputPort.value = uniquePorts.join(',');
-                }
-            }
+  resetAll(prefix) {
+    const portSwitch = document.getElementById(`${prefix}masscanPortsScan`);
+    const portSelector = document.getElementById(`${prefix}masscanPortsSelector`);
+    if (portSwitch && portSelector) {
+      portSwitch.checked = false;
+      portSelector.value = '';
+      portSelector.disabled = true;
+    }
+    
+    const sourcePortSwitch = document.getElementById(`${prefix}sourcePortScan`);
+    const sourcePortSelector = document.getElementById(`${prefix}masscanSourcePortSelector`);
+    if (sourcePortSwitch && sourcePortSelector) {
+      sourcePortSwitch.checked = false;
+      sourcePortSelector.value = '';
+      sourcePortSelector.disabled = true;
+    }
+    
+    const maxRateSwitch = document.getElementById(`${prefix}maxRate`);
+    const maxRateSelector = document.getElementById(`${prefix}masscanMaxRateSelector`);
+    if (maxRateSwitch && maxRateSelector) {
+      maxRateSwitch.checked = false;
+      maxRateSelector.value = '';
+      maxRateSelector.disabled = true;
+    }
+  }
+};
+
+const MasscanHandlers = {
+
+  async handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = node.label || node.name || node.ip || node.domain || node.id || '';
+    }
+
+    if (node.id && node.id !== 'undefined') {
+      try {
+        const response = await fetch(`/api/v1/vis/node_info/${node.id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+        const portInput = document.getElementById(`${prefix}inputPort`);
+        
+        if (data.ports && portInput) {
+          const ports = [...new Set(data.ports.map(p => p.port))].join(',');
+          portInput.value = ports || '--ping';
+        }
+      } catch (error) {
+        console.error('Failed to load node ports:', error);
+        const portInput = document.getElementById(`${prefix}inputPort`);
+        if (portInput) {
+          portInput.value = '--ping';
+        }
+      }
+    } else {
+      const portInput = document.getElementById(`${prefix}inputPort`);
+      if (portInput) {
+        portInput.value = '--ping';
+      }
     }
-
-    myModal.show();
-}
-</script>
-{% endmacro %}
-
-{% macro masscan_full_modal(prefix) %}
-<div id="{{ prefix }}masscanModalWindow" class="modal fade" tabindex="-1" aria-labelledby="masscanModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="{{ prefix }}masscanModalLabel">Masscan</h5>
-                <a href="https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#masscan" target="_blank" style="margin-top: 0.3rem; margin-left: 0.2rem;">
-                    <i class="bi bi-question-circle fs-4" style="font-family: 'Times New Roman', Times, serif"></i>
-                </a>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex mb-2" id="agent_interface_bar_masscan">
-                    <div data-agent-bar="agent_masscan"></div>
-                    <div data-interface-bar="interface_masscan" class="ms-3"></div>
-                    <div id="scans_bar_masscan" class="ms-3"></div>
-                </div>
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="{{ prefix }}dsa" style="padding-top: 7px;">
-                        <div class="nav nav-tabs me-3 mb-3" id="{{ prefix }}masscan-tab" role="tablist">
-                            <button class="nav-link active" id="{{ prefix }}masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#{{ prefix }}masscan-simple-mode"
-                                type="button" role="tab" aria-controls="{{ prefix }}masscan-simple-mode" aria-selected="true" data-i18n="Target"></button>
-                            <button class="nav-link" id="{{ prefix }}masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#{{ prefix }}masscan-scope-mode"
-                                type="button" role="tab" aria-controls="{{ prefix }}masscan-scope-mode" aria-selected="false" data-i18n="Scope"></button>
-                        </div>
-                        <div class="tab-pane fade show active" id="{{ prefix }}masscan-simple-mode" role="tabpanel" aria-labelledby="{{ prefix }}masscan-simple-tab">
-                            <form id="{{ prefix }}masscanScanForm" name="masscanScanFormName" class="needs-validation" style="padding-top: 7px;" novalidate>
-                                {{ masscan_ip(prefix) }}
-                        </div>
-                        <div class="tab-pane fade" id="{{ prefix }}masscan-scope-mode" role="tabpanel" aria-labelledby="{{ prefix }}masscan-scope-tab">
-                            <form id="{{ prefix }}masscanScanScopeForm" name="masscanScanScopeFormName" class="needs-validation" novalidate>
-                                {{ masscan_scope(prefix) }}
-                        </div>
-                            {{ masscan_main(prefix) }}
-                        </form>
-                        {{ masscan_parse(prefix) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-   function masscan_full_modal_window(prefix) {
-    resetMasscanModal(prefix);
-    setupMasscanSwitchers(prefix);
     
-    const modalId = prefix + 'masscanModalWindow';
-    const modalEl = document.getElementById(modalId);
-    const myModal = new bootstrap.Modal(modalEl);
-    
-    myModal.show();
-}
+    window[`show_${instance.modalId}`]();
+  },
 
-</script>
-{% endmacro %}
+  async handleLogParsing(instance) {
+    const agentId = window.agentData?.default_agent;
+    const iface = window.interfaceData?.default_interface;
 
-{% macro masscan_script_modal_to_node(prefix) %}
-<script>
-async function masscan_script_modal_to_node(node, prefix) {
-    resetMasscanModal(prefix);
-    setupMasscanSwitchers(prefix);
-    
-    const modalId = prefix + 'masscanModalWindow';
-    const modalEl = document.getElementById(modalId);
-    const myModal = new bootstrap.Modal(modalEl);
-
-    const inputIP = document.getElementById(prefix + 'masscanInputIP');
-    const portField = document.getElementById(prefix + 'inputPortMasscan');
-    const ip = node.label;
-    
-    if (inputIP) inputIP.value = ip;
+    if (!agentId) {
+      return create_toast('Info', 'Please select an Agent', 'info');
+    }
+    if (!iface) {
+      return create_toast('Info', 'Please select an Interface', 'info');
+    }
 
     try {
-        const url = '/api/v1/vis/node_info/' + node.id;
-        const resp = await fetch(url, { method: 'GET' });
-        const json = await resp.json();
+      const files = await FormHelpers.selectAndReadFiles('.txt,.xml,.json,.list', true);
+      
+      for (const { content, filename } of files) {
+        const payload = {
+          file: content,
+          filename: filename,
+          agent_id: String(agentId),
+          interface_ip_id: String(iface.ip_id || iface.id),
+          ip: String(iface.ip || ""),
+          mac: String(iface.mac || "")
+        };
 
-        if (json.ports && json.ports.length && portField) {
-            const ports = [...new Set(json.ports.map(p => p.port))].join(',');
-            portField.value = ports;
-        } else {
-            if (portField) portField.value = '';
-        }
-    } catch (err) {
-        console.error('Ошибка при получении портов узла:', err);
+        await fetch('/api/v1/task/masscan_parse_task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      
+      window[`close_${instance.modalId}`]();
+    } catch (error) {
+      console.error('Failed to parse Masscan logs:', error);
+      create_toast('Error', 'Error reading or uploading files', 'error');
+    }
+  },
+
+  handlePrefill(instance, rows = [], prefillParams = {}) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) {
+      const tab = new bootstrap.Tab(targetTab);
+      tab.show();
+    }
+    
+    if (rows.length === 0 && prefillParams.target) {
+      const ipInput = document.getElementById(`${prefix}inputIP`);
+      const portInput = document.getElementById(`${prefix}inputPort`);
+      
+      if (ipInput) ipInput.value = prefillParams.target;
+      if (portInput) {
+        portInput.value = prefillParams.ports ? prefillParams.ports : '--ping';
+      }
     }
 
-    myModal.show();
+    if (rows.length > 0) {
+      const ipMap = new Map();
+      
+      rows.forEach(row => {
+        const ip = (row.ipaddr || '').trim();
+        const port = String(row.port || '').trim();
+        
+        if (!ip) return;
+        
+        const existing = ipMap.get(ip) || '';
+        const combined = existing ? `${existing},${port}` : port;
+        const uniquePorts = [...new Set(combined.split(',').filter(Boolean))].join(',');
+        
+        ipMap.set(ip, uniquePorts);
+      });
+
+      Array.from(ipMap.entries()).forEach(([ip, ports], index) => {
+        if (index === 0) {
+          const ipInput = document.getElementById(`${prefix}inputIP`);
+          const portInput = document.getElementById(`${prefix}inputPort`);
+          
+          if (ipInput) ipInput.value = ip;
+          if (portInput) portInput.value = ports;
+        } else {
+          instance.addInputField('ip_port');
+          
+          const container = document.getElementById(`${prefix}InputContainer`);
+          const lastGroup = container?.lastElementChild;
+          
+          if (lastGroup) {
+            const ipInput = lastGroup.querySelector('.ip');
+            const portInput = lastGroup.querySelector('.port');
+            
+            if (ipInput) ipInput.value = ip;
+            if (portInput) portInput.value = ports;
+          }
+        }
+      });
+    }
+
+    if (Object.keys(prefillParams).length > 0) {
+      this.applyPrefillParams(prefix, prefillParams);
+    }
+
+    window[`show_${instance.modalId}`]();
+  },
+
+  applyPrefillParams(prefix, params) {
+    if (params.protocol) {
+      const protocolRadio = document.getElementById(
+        `${prefix}protocol${params.protocol.charAt(0).toUpperCase() + params.protocol.slice(1)}`
+      );
+      if (protocolRadio) {
+        protocolRadio.checked = true;
+      }
+    }
+
+    if (params.format) {
+      const formatRadio = document.getElementById(`${prefix}${params.format.toLowerCase()}`);
+      if (formatRadio) {
+        formatRadio.checked = true;
+      }
+    }
+    /*if (params.ports != null && params.ports !== '' && params.ports !== 'null') {
+      const portSwitch = document.getElementById(`${prefix}masscanPortsScan`);
+      const portSelector = document.getElementById(`${prefix}masscanPortsSelector`);
+      
+      if (portSwitch && portSelector) {
+        portSelector.value = String(params.ports);
+        portSwitch.checked = true;
+        portSelector.disabled = false;
+      }
+    }*/
+
+    if (params.wait !== null && params.wait !== '' && params.wait !== 'null') {
+      const waitSlider = document.getElementById(`${prefix}masscanWaitRange`);
+      if (waitSlider) {
+        const waitVal = Math.max(0, Math.min(20, parseInt(params.wait, 10) || 10));
+        waitSlider.value = waitVal;
+        const waitValue = document.getElementById(`${prefix}waitValue`);
+        if (waitValue) {
+          waitValue.textContent = waitVal;
+        }
+      }
+    }
+
+    if (params.source_port !== null && params.source_port !== '' && params.source_port !== 'null') {
+      const srcPortSwitch = document.getElementById(`${prefix}sourcePortScan`);
+      const srcPortSelector = document.getElementById(`${prefix}masscanSourcePortSelector`);
+      
+      if (srcPortSwitch && srcPortSelector) {
+        srcPortSelector.value = String(params.source_port);
+        srcPortSwitch.checked = true;
+        srcPortSelector.disabled = false;
+      }
+    }
+
+    if (params.max_rate !== null && params.max_rate !== '' && params.max_rate !== 'null') {
+      const maxRateSwitch = document.getElementById(`${prefix}maxRate`);
+      const maxRateSelector = document.getElementById(`${prefix}masscanMaxRateSelector`);
+      
+      if (maxRateSwitch && maxRateSelector) {
+        maxRateSelector.value = String(params.max_rate);
+        maxRateSwitch.checked = true;
+        maxRateSelector.disabled = false;
+      }
+    }
+  },
+
+  // Получение конфигурации таблицы базы данных
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        },
+        { 
+          title: "Port", 
+          field: "port", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search port..." 
+        }
+      ],
+      filter: [
+        { field: "ipaddr", type: "!=", value: "" }
+      ]
+    };
+  }
+};
+
+class MasscanScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
+
+  getBaseParams() {
+    const agentId = window.agentData?.default_agent;
+    const ifaceObj = window.interfaceData?.default_interface;
+
+    if (!agentId) {
+      throw new Error("Please select an Agent");
+    }
+    if (!ifaceObj) {
+      throw new Error("Please select an Interface");
+    }
+
+    const params = {
+      interface_ip_id: String(ifaceObj.ip_id || ifaceObj.id),
+      interface: String(ifaceObj.name),
+      agent_id: String(agentId),
+      search_udp_port: document.querySelector(`input[name="${this.prefix}protocol"]:checked`)?.value === 'udp',
+      format: document.querySelector(`input[name="${this.prefix}format"]:checked`)?.value || 'oJ',
+      wait: document.getElementById(`${this.prefix}masscanWaitRange`)?.value || '10',
+      source_port: null,
+      max_rate: null,
+      ports: null,
+      ping: true,
+      scope_id: ""
+    };
+
+    const portSwitch = document.getElementById(`${this.prefix}masscanPortsScan`);
+    if (portSwitch?.checked) {
+      const portValue = document.getElementById(`${this.prefix}masscanPortsSelector`)?.value?.trim();
+      if (portValue) {
+        params.ports = portValue;
+        params.ping = false;
+      }
+    }
+
+    const sourcePortSwitch = document.getElementById(`${this.prefix}sourcePortScan`);
+    if (sourcePortSwitch?.checked) {
+      const sourcePortValue = document.getElementById(`${this.prefix}masscanSourcePortSelector`)?.value?.trim();
+      if (sourcePortValue) {
+        params.source_port = sourcePortValue;
+      }
+    }
+
+    const maxRateSwitch = document.getElementById(`${this.prefix}maxRate`);
+    if (maxRateSwitch?.checked) {
+      const maxRateValue = document.getElementById(`${this.prefix}masscanMaxRateSelector`)?.value?.trim();
+      if (maxRateValue) {
+        params.max_rate = maxRateValue;
+      }
+    }
+
+    return params;
+  }
+
+  async scanScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const payload = { ...baseParams, scope_id: String(scopeId) };
+
+    const result = await window.executeToolTasks({
+      tasks: [{ endpoint: '/api/v1/task/masscan_scan_task', payload }],
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+
+    return result.responses[0];
+  }
+
+  async scanTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const tasks = [];
+
+    for (const target of targets) {
+      const payload = { ...baseParams };
+      const ip = String(target.ip || target.domain || target.url || target);
+      
+      if (target.port && target.port.trim()) {
+        const portsArray = target.port.split(',')
+          .map(p => p.trim())
+          .filter(p => p && p !== 'null' && p !== 'undefined' && p !== '');
+        
+        if (portsArray.length > 0) {
+          payload.ports = portsArray.join(',');
+          payload.ping = false;
+          payload.target = ip;
+        } else {
+          payload.target = ip;
+          payload.ping = true;
+        }
+      } else {
+        payload.target = ip;
+        payload.ping = true;
+      }
+
+      tasks.push({ endpoint: '/api/v1/task/masscan_scan_task', payload });
+    }
+
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+
+    return result.responses;
+  }
 }
 
+ToolModalBuilder.register('masscanModalWindow', {
+  prefix: 'masscan_',
+  
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'ip_port' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    //{ id: 'textarea', label: i18next.t('Textarea'), placeholder: '192.168.1.1:80, 10.0.0.0/24' },
+  ],
+  
+  toolParams: (prefix) => MasscanUI.buildParams(prefix),
 
-</script>
-{% endmacro %}
+  // Добавляем метод для получения конфигурации таблицы базы данных
+  getDatabaseTableConfig() {
+    return MasscanHandlers.getDatabaseTableConfig();
+  },
 
+  onInit(instance) {
+    const prefix = instance.prefix;
 
+    MasscanSwitches.setupAll(prefix, instance);
 
-
-{% macro masscan_scope(prefix) %}
-<div class="dropdown w-100 mt-2">
-    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
-     type="button" id="{{ prefix }}masscanScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
-    </button>
-    <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="{{ prefix }}dropdownMenuForScopeMasscanData">
-    </ul>
-</div>
-<script>
-
-function get_masscan_scope_list(prefix) {
-    axios.get('/api/v1/scope').then(resp => {
-        const dropdownMenu = document.getElementById(prefix + 'dropdownMenuForScopeMasscanData');
-        const dropdownButton = document.getElementById(prefix + 'masscanScopeDropdown');
-        dropdownMenu.innerHTML = '';
-
-            resp.data.forEach((item, index) => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.classList.add('dropdown-item');
-                a.href = '#';
-                a.textContent = `${item.name}`;
-
-                a.addEventListener('click', () => {
-                    dropdownButton.textContent = `${item.name}`;
-                    selectedScopeForMasscan = item.id;
-                });
-
-                li.appendChild(a);
-                dropdownMenu.appendChild(li);
-            });
-        })
+    const parseBtn = document.getElementById(`${prefix}parseLogsBtn`);
+    if (parseBtn) {
+      parseBtn.addEventListener('click', () => {
+        MasscanHandlers.handleLogParsing(instance);
+      });
     }
 
-get_masscan_scope_list('{{ prefix }}')
+    // Инициализация таблицы базы данных при переключении на вкладку database
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          // Используем метод initDatabaseTable из экземпляра
+          instance.initDatabaseTable();
+          tableInitialized = true;
+          
+          // Настраиваем обработчик выбора строк в таблице
+          setTimeout(() => {
+            if (instance.databaseTable) {
+              const originalRowSelectionChanged = instance.databaseTable.options.rowSelectionChanged;
+              
+              instance.databaseTable.options.rowSelectionChanged = function(data, rows) {
+                const ipMap = new Map();
+                
+                rows.forEach((row) => {
+                  const rowData = row.getData();
+                  const ip = rowData.ipaddr;
+                  const port = rowData.port;
+                  const domain = rowData.domain;
+                  
+                  if (!ip) return;
+                  
+                  if (ipMap.has(ip)) {
+                    const existing = ipMap.get(ip);
+                    if (port && port !== 'null' && port !== 'undefined' && port !== '') {
+                      existing.ports.add(port.toString());
+                    }
+                  } else {
+                    const portsSet = new Set();
+                    if (port && port !== 'null' && port !== 'undefined' && port !== '') {
+                      portsSet.add(port.toString());
+                    }
+                    ipMap.set(ip, {
+                      ip: ip,
+                      domain: domain || '',
+                      ports: portsSet
+                    });
+                  }
+                });
+                
+                instance.state.selectedDatabaseTargets = {};
+                ipMap.forEach((value, key) => {
+                  instance.state.selectedDatabaseTargets[key] = value;
+                });
+              };
+            }
+          }, 100);
+        }
+      });
+    }
+
+    window.masscan_script_modal_to_node = (node) => {
+      MasscanHandlers.handleNodeModal(instance, node);
+    };
+
+    window.masscan_start_with_prefill = (rows = [], prefillParams = {}) => {
+      MasscanHandlers.handlePrefill(instance, rows, prefillParams);
+    };
+  },
+
+  onReset(instance) {
+    const prefix = instance.prefix;
+
+    MasscanSwitches.resetAll(prefix);
+
+    const tcpRadio = document.getElementById(`${prefix}protocolTcp`);
+    if (tcpRadio) {
+      tcpRadio.checked = true;
+    }
+
+    const jsonFormat = document.getElementById(`${prefix}oj`);
+    if (jsonFormat) {
+      jsonFormat.checked = true;
+    }
+
+    const waitSlider = document.getElementById(`${prefix}masscanWaitRange`);
+    if (waitSlider) {
+      waitSlider.value = '10';
+      const waitValue = document.getElementById(`${prefix}waitValue`);
+      if (waitValue) {
+        waitValue.textContent = '10';
+      }
+    }
+
+    const portInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.port`);
+    portInputs.forEach(input => {
+      input.placeholder = '--ping';
+    });
+
+    // Сбрасываем выбранные цели из базы данных
+    instance.state.selectedDatabaseTargets = {};
+  },
+
+  async onStart(instance) {
+    const scanner = new MasscanScanner(instance.prefix);
+    
+    try {
+      const tabId = instance.getActiveTab();
+      let result;
+
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          return create_toast('Warning', 'Select scope', 'warning');
+        }
+        result = await scanner.scanScope(instance.state.selectedScopeId);
+      } else if (tabId === 'database') {
+        // Обработка целей из базы данных
+        const targets = [];
+        
+        Object.values(instance.state.selectedDatabaseTargets || {}).forEach(item => {
+          const portsArray = Array.from(item.ports || [])
+            .filter(p => p && p !== 'null' && p !== 'undefined' && p !== '');
+          
+          targets.push({
+            ip: item.ip,
+            domain: item.domain || '',
+            port: portsArray.join(','),
+            target: item.ip
+          });
+        });
+        
+        if (!targets.length) {
+          return create_toast('Warning', 'No targets selected from database', 'warning');
+        }
+        result = await scanner.scanTargets(targets);
+      } else {
+        const targets = instance.getTargets();
+        
+        if (!targets.length) {
+          return create_toast('Warning', 'No targets found', 'warning');
+        }
+        result = await scanner.scanTargets(targets);
+      }
+
+      if (result !== null) {
+        window[`close_${instance.modalId}`]();
+      }
+    } catch (error) {
+      console.error('Failed to start Masscan scan:', error);
+      create_toast('Warning', 'Failed to start scan', 'warning');
+    }
+  }
+});
 </script>
-{% endmacro %}
-
-{% macro show(prefix) %}
-<div id="scans_bar_masscan_manager"></div>
-<div class="d-flex flex-column">
-    <div class="tab-content" id="{{ prefix }}dsa" style="width: 440px; padding-top: 7px;">
-        <div class="nav nav-tabs me-3 mb-3" id="{{ prefix }}masscan-tab" role="tablist">
-            <button class="nav-link active" id="{{ prefix }}masscan-simple-tab" data-bs-toggle="tab" data-bs-target="#{{ prefix }}masscan-simple-mode"
-                type="button" role="tab" aria-controls="{{ prefix }}masscan-simple-mode" aria-selected="true" data-i18n="Target"></button>
-            <button class="nav-link" id="{{ prefix }}masscan-scope-tab" data-bs-toggle="tab" data-bs-target="#{{ prefix }}masscan-scope-mode"
-                type="button" role="tab" aria-controls="{{ prefix }}masscan-scope-mode" aria-selected="false" data-i18n="Scope"></button>
-        </div>
-
-        <div class="tab-pane fade show active" id="{{ prefix }}masscan-simple-mode" role="tabpanel" aria-labelledby="{{ prefix }}masscan-simple-tab">
-            <form id="{{ prefix }}masscanScanForm" name="masscanScanFormName" class="needs-validation" style="padding-top: 7px;" novalidate>
-                {{ masscan_ip(prefix) }}
-        </div>
-
-        <div class="tab-pane fade" id="{{ prefix }}masscan-scope-mode" role="tabpanel" aria-labelledby="{{ prefix }}masscan-scope-tab">
-            <form id="{{ prefix }}masscanScanScopeForm" name="masscanScanScopeFormName" class="needs-validation" novalidate>
-                {{ masscan_scope(prefix) }}
-        </div>
-            {{ masscan_main(prefix) }}
-        </form>
-    {{ masscan_parse(prefix) }}
-    </div>
-</div>
-{% endmacro %}

@@ -1,9 +1,15 @@
 import asyncio
+import base64
+import os
 import traceback
 from abc import abstractmethod
 from aiojobs._job import Job
-from setezor.schemas.task import TaskStatus
+from fastapi import HTTPException
+
+from setezor.models import Task
+from setezor.schemas.task import TaskLog, TaskStatus
 from setezor.logger import logger
+from setezor.settings import PATH_PREFIX
 
 
 class BaseJob(Job):
@@ -29,16 +35,23 @@ class BaseJob(Job):
         pass
 
     @classmethod
+    @logger.not_implemented
     def clean_payload(cls, version: str, payload: dict):
+        pass
+
+    @classmethod
+    async def prepare_module(cls, module_path: str, agent_info: dict, *args, **kwargs):
         pass
 
     @abstractmethod
     async def run(self, *args, **kwargs):
         pass
 
+    @logger.not_implemented
     async def soft_stop(self):
         pass
 
+    @logger.not_implemented
     async def hard_stop(self):
         pass
 
@@ -49,6 +62,7 @@ class BaseJob(Job):
             self.closed(): 'finished'
         }[True]
 
+    @logger.not_implemented
     async def get_progress(self):
         pass
 
@@ -91,12 +105,37 @@ class BaseJob(Job):
             return result
         return wrapped
 
+    @classmethod
+    def get_task_logs(cls, task: Task, **kwargs) -> list[TaskLog]:
+        task_class = BaseJob.get_task_by_class_name(task.created_by)
+        if not task_class.logs_folder:
+            raise HTTPException(status_code=404, detail="Log file not found")
+        file_path = os.path.join(PATH_PREFIX, "projects", task.project_id, task.scan_id, task_class.logs_folder)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Log file not found")
+        files = os.listdir(file_path)
+        file_data = b''
+        file_name = ""
+        for file_n in files:
+            if task.id in file_n:
+                with open(os.path.join(file_path, file_n), 'rb') as f:
+                    file_name = f"{task.id}.{file_n.rpartition('.')[-1]}"
+                    file_data = f.read()
+                break
+        else:
+            raise HTTPException(status_code=404, detail="Log file not found")
+        if not file_data:
+            raise HTTPException(status_code=400, detail="Log file is empty")
+
+        return [TaskLog(type=cls.logs_folder, file_name=file_name, file_data=base64.b64encode(file_data))]
+
     @staticmethod
     def local_task_notifier(func):
         async def wrapped(self, *args, **kwargs):
             task_id = self.task_id
             scan_id = self.scan_id
             project_id = self.project_id
+            agent_id = self.agent_id
             task_status_data = {
                 "signal": "task_status",
                 "task_id": task_id,
@@ -104,7 +143,7 @@ class BaseJob(Job):
                 "type": "success",
                 "traceback": ""
             }
-            await self.task_manager.task_status_changer_for_local_job(data=task_status_data, project_id=project_id)
+            await self.task_manager.task_status_changer_for_local_job(data=task_status_data, agent_id=agent_id)
             logger.debug(
                 f"STARTED TASK {func.__qualname__}. {task_status_data}")
             try:
@@ -113,7 +152,7 @@ class BaseJob(Job):
                 task_status_data["status"] = TaskStatus.failed
                 task_status_data["traceback"] = str(e)
                 task_status_data["type"] = "error"
-                await self.task_manager.task_status_changer_for_local_job(data=task_status_data, project_id=project_id)
+                await self.task_manager.task_status_changer_for_local_job(data=task_status_data, agent_id=agent_id)
                 logger.error(
                     f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return

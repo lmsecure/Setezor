@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from setezor.services.base_service import BaseService
 from setezor.unit_of_work import UnitOfWork
 import orjson
-
+from datetime import datetime
 
 class AnalyticsService(BaseService):
     async def get_last_scan_id(self, project_id: str):
@@ -365,7 +365,8 @@ class AnalyticsService(BaseService):
     ) -> tuple[int, list]:
         sort_params = json.loads(sort)
         filter_params = json.loads(filter)
-        
+
+
         async with self._uow:
             if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
                 scans.append(last_scan.id)
@@ -377,11 +378,9 @@ class AnalyticsService(BaseService):
                 sort_params=sort_params,
                 filter_params=filter_params
             )
-        
         tabulator_transform_dashboard_data = []
         for index, row in enumerate(screenshots_data, start=(page - 1) * size + 1):
             dns_a_screenshot_id, created_at, domain, ip, screenshot_path = row
-            
             tabulator_transform_dashboard_data.append({
                 "id": index,
                 "domain": domain,
@@ -389,7 +388,6 @@ class AnalyticsService(BaseService):
                 "screenshot_path": screenshot_path,
                 "created_at": created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else "",
             })
-
         return total, tabulator_transform_dashboard_data
 
 
@@ -418,17 +416,128 @@ class AnalyticsService(BaseService):
             )
         tabulator_transform_ip_info_data = []
         for index, row in enumerate(ip_info_data, start=(page - 1) * size + 1):
-            ipaddr, start_ip, mask, AS_name, AS_number, org_name, data = row
+            ipaddr, start_ip, mask, AS_name, AS_number, org_name = row
             tabulator_transform_ip_info_data.append({
                 "id": index,
                 "ipaddr": ipaddr,
                 "range_ip": f"{start_ip}/{mask}",
                 "AS": AS_name,
                 "AS-number": AS_number,
-                "org-name": org_name,
-                "data": data
+                "org-name": org_name
             })
         return total, tabulator_transform_ip_info_data
+    
+
+    async def get_domain_info_tabulator_data(
+        self,
+        project_id: str,
+        scans: list[str],
+        page: int,
+        size: int,
+        sort: str = "[]",
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        sort_params = json.loads(sort)
+        filter_params = json.loads(filter)
+
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            total, domain_info_data = await self._uow.ip.get_domain_info_tabulator_data(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params,
+                filter_params=filter_params
+            )
+        tabulator_transform_domain_info_data = []
+        for index, row in enumerate(domain_info_data, start=(page - 1) * size + 1):
+            domain, org_name, data_json = row
+            
+            try:
+                data = json.loads(data_json) if isinstance(data_json, str) else data_json
+            except:
+                data = {}
+
+            domain_name = data.get("ldhName", domain)
+
+            entities = data.get("entities", {})
+            registrant = entities.get("registrant", [])
+            organization, address, country, email, phone = "", "", "", "", ""
+            contact_str = ""
+
+            if registrant:
+                first = registrant[0]
+                
+                org = first.get("org", "")
+                name_dict = first.get("name", {})
+                name = ""
+                if isinstance(name_dict, dict):
+                    name = name_dict.get("default") or name_dict.get("en") or name_dict.get("ru", "")
+                elif isinstance(name_dict, str):
+                    name = name_dict
+
+                organization = org or name
+                if not organization.strip():
+                    organization = "Organization hidden"
+
+                taxpayer_id = first.get("taxpayer_id", "")
+                if taxpayer_id:
+                    organization += f" (ИНН: {taxpayer_id})"
+
+                address = first.get("address", "")
+                country = first.get("country", "")
+                email = first.get("email", "")
+                phone = first.get("phone", "")
+
+                contact_info = []
+                if email:
+                    contact_info.append(f"Email: {email}")
+                if phone:
+                    contact_info.append(f"Phone: {phone}")
+                if address or country:
+                    addr = f"{address}, {country}".strip(", ")
+                    contact_info.append(f"Address: {addr}")
+                contact_str = "; ".join(contact_info) if contact_info else "Contact information hidden"
+            
+            def safe_parse_date(date_str):
+                if not date_str:
+                    return ""
+                try:
+                    dt = datetime.fromisoformat(
+                        date_str.replace("Z", "+00:00")
+                                .replace(" ", "T")
+                    )
+                    return dt.strftime("%Y-%m-%d")
+                except:
+                    return str(date_str)
+                
+            created = safe_parse_date(data.get("registration"))
+            expires = safe_parse_date(data.get("expiration") or data.get("registrar_expiration"))
+
+            nameservers_list = []
+            if isinstance(data.get("nameservers"), list):
+                nameservers_list = [
+                    ns.get("ldhName", "") for ns in data["nameservers"]
+                    if isinstance(ns, dict) and ns.get("ldhName")
+                ]
+            nameservers_str = ", ".join(nameservers_list)
+
+            record = {
+                "id": index,
+                "domain": domain_name,
+                "org-name": organization,
+                "country": country,
+                "contacts": contact_str if contact_str else "",
+                "created": created,
+                "expires": expires,
+                "nameservers": nameservers_str,
+                "data": data_json
+            }
+            tabulator_transform_domain_info_data.append(record)
+
+        return total, tabulator_transform_domain_info_data
 
 
     async def get_cve_tabulator_data(
@@ -497,12 +606,17 @@ class AnalyticsService(BaseService):
                 scans=scans,
                 port_ids=port_ids
             )
+
+            vulns = await self._uow.vulnerability.get_count_vulns_by_port_ids(
+                project_id=project_id, port_ids=port_ids, scans=scans
+            )
             
             tabulator_transform_web_data = []
 
             for index, row in enumerate(rows, start=(page - 1) * size + 1):
                 port_id = row[5]
                 port_links = all_links.get(port_id, [])
+                vulns_count = vulns.get(port_id, 0)
                 links_str = ", ".join(port_links) if port_links else ""
 
                 row_data = {
@@ -511,6 +625,7 @@ class AnalyticsService(BaseService):
                     "domain": row[1],
                     "port": row[2],
                     "product": row[3],
+                    "vulns_count": vulns_count,
                     "ip_id": row[4],
                     "port_id": row[5],
                     "link": links_str,
@@ -520,6 +635,37 @@ class AnalyticsService(BaseService):
                 tabulator_transform_web_data.append(row_data)
 
             return total, tabulator_transform_web_data
+
+    async def get_web_archives_tabulator_data(
+            self,
+            project_id: str,
+            scans: list[str],
+            page: int,
+            size: int,
+            sort: str = "[]",
+            filter: str = "[]"
+    ) -> tuple[int, list]:
+        try:
+            sort_params = json.loads(sort) if sort != "[]" else []
+            filter_params = json.loads(filter) if filter != "[]" else []
+        except json.JSONDecodeError:
+            sort_params = []
+            filter_params = []
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            total, rows = await self._uow.web_archive.get_web_archive_data(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params or [],
+                filter_params=filter_params or [])
+        keys = ["id", "archive_id", "domain", "url"]
+        tabulator = [
+            dict(zip(keys, [i] + list(row))) for i, row in enumerate(rows, 1)
+        ]
+        return total, tabulator
 
         
     @classmethod
@@ -664,8 +810,21 @@ class AnalyticsService(BaseService):
             {'field': 'range_ip', 'title': 'Range IP'},
             {'field': 'AS', 'title': 'AS', "headerFilter": "input", "headerFilterPlaceholder": "Search AS..."},
             {'field': 'AS-number', 'title': 'AS number', "headerFilter": "input", "headerFilterPlaceholder": "Search AS number..."},
-            {'field': 'org-name', 'title': 'Org-name', "headerFilter": "input", "headerFilterPlaceholder": "Search org..."},
-            {'field': 'data', 'title': 'Data'},
+            {'field': 'org-name', 'title': 'Org-name', "headerFilter": "input", "headerFilterPlaceholder": "Search org..."}
+        ]
+    
+    @classmethod
+    def get_domain_info_columns_tabulator_data(cls) -> list:
+        return [
+            {'field': 'id', 'title': 'ID','width': 100},
+            {'field': 'domain', 'title': 'Domain', "headerFilter": "input", "headerFilterPlaceholder": "Search domain...",'width': 160, 'tooltip': True},
+            {'field': 'contacts', 'title': 'Contacts', 'tooltip': True},
+            {'field': 'org-name', 'title': 'Org-name', 'tooltip': True},
+            {'field': 'country', 'title': 'Country','width': 140},
+            {'field': 'created', 'title': 'Created','width': 150},
+            {'field': 'expires', 'title': 'Expires','width': 150},
+            {'field': 'nameservers', 'title': 'Nameservers', 'tooltip': True},
+            {'field': 'data', 'title': 'Data','width': 140},
         ]
     
     @classmethod
@@ -710,17 +869,17 @@ class AnalyticsService(BaseService):
             {'field': 'vulns_btn', 'title': 'Vulnerabilities'},
             {'field': 'comments', 'title': 'Comments'},
         ]
-    
+
     @classmethod
     def get_web_screenshot_columns_tabulator_data(cls) -> list:
         return [
             {'field': 'id', 'title': 'ID','width': 100},
             {'field': 'domain', 'title': 'DOMAIN', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
             {'field': 'ip', 'title': 'IP', "headerFilter": "input", "headerFilterPlaceholder": "Search IP..."},
-            {'field': 'screenshot_path', 'title': 'SCREENSHOT_PATH'},
-            {'field': 'created_at', 'title': 'CREATED_AT', "headerFilter": "input", "headerFilterPlaceholder": "Search date..."},
+            {'field': 'screenshot_path', 'title': 'SCREENSHOT'},
+            {'field': 'created_at', 'title': 'CREATED_AT', "headerFilter": "input", "headerFilterPlaceholder": "Search date..."}
         ]
-    
+
     @classmethod
     def get_cve_columns_tabulator_data(cls) -> list:
         return [
@@ -749,3 +908,10 @@ class AnalyticsService(BaseService):
             {'field': 'parameters', 'title': 'PARAMETERS', "headerFilter": "input", "headerFilterPlaceholder": "Search parameters..."},
         ]
 
+    @classmethod
+    def web_archive_headers(cls) -> list:
+        return [
+            {'field': 'archive_id', 'title': 'ID','width': 100},
+            {'field': 'domain', 'title': 'Domain', "headerFilter": "input", "headerFilterPlaceholder": "Search domain..."},
+            {'field': 'url', 'title': 'Url', "headerFilter": "input", "headerFilterPlaceholder": "Search url..."}
+        ]

@@ -10,17 +10,13 @@ from setezor.tools.ip_tools import get_network
 from setezor.db.entities import DNSTypes
 
 try:
-    # from exceptions.loggers import get_logger
     from network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 except ImportError:
-    # from ...exceptions.loggers import get_logger
     from ...network_structures import IPv4Struct, PortStruct, SoftwareStruct, RouteStruct
 
 from cpeguess.cpeguess import CPEGuess
 
 from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS, Domain
-
-# logger = get_logger(__package__, handlers=[])
 
 
 

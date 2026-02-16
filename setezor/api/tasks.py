@@ -1,13 +1,15 @@
-from typing import Annotated, List, Literal
+from typing import Annotated, Literal
 from fastapi import APIRouter, Depends
 
-from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required
+from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required, get_user_id
 from setezor.models import Task
 from setezor.schemas.task import DNSTaskPayload, \
     MasscanScanTaskPayload, \
-    NmapParseTaskPayload, \
-    ScapySniffTaskPayload, TaskStatus, \
-    WHOISTaskPayload, \
+    NmapParseTaskPayload, PushModuleTaskPayload, \
+    ScapySniffTaskPayload, \
+    TaskLog, WHOISTaskPayload, \
+    WHOISShdwsTaskPayload, \
+    RDAPTaskPayload, \
     DomainTaskPayload, \
     NmapScanTaskPayload, \
     WappalyzerParseTaskPayload, \
@@ -16,14 +18,17 @@ from setezor.schemas.task import DNSTaskPayload, \
     MasscanLogTaskPayload, \
     SnmpBruteCommunityStringPayload, \
     SpeedTestTaskPayload, \
-    DNSAScreenshotTaskPayload, \
-    IPInfoTaskPayload
+    IPInfoTaskPayload, ParseSiteTaskPayload
 from setezor.services import TasksService
-from setezor.managers import TaskManager
+from setezor.managers.task_manager import TaskManager
+from setezor.managers.module_manager import ModuleManager
 from setezor.services.project_service import ProjectService
 from setezor.services.software import SoftwareService
 from setezor.tasks.dns_task import DNSTask
+from setezor.tasks.parse_site_task import ParseSiteTask
 from setezor.tasks.whois_task import WhoisTask
+from setezor.tasks.whois_shdws_task import WhoisShdwsTask
+from setezor.tasks.rdap_task import RdapTask
 from setezor.tasks.domain_task import SdFindTask
 from setezor.tasks.nmap_parse_task import NmapParseTask
 from setezor.tasks.masscan_scan_task import MasscanScanTask
@@ -35,8 +40,7 @@ from setezor.tasks.scapy_logs_task import ScapyLogsTask
 from setezor.tasks.wappalyzer_logs_task import WappalyzerLogsTask
 from setezor.tasks.cve_refresh_task import CVERefresher
 from setezor.tasks.snmp_brute_community_string_task import SnmpBruteCommunityStringTask
-from setezor.tasks.speed_test_task import SpeedTestClientTask, SpeedTestServerTask
-from setezor.tasks.dns_a_screenshot_task import DNS_A_ScreenshotTask
+from setezor.tasks.speed_test_task import SpeedTestServerTask
 from setezor.tasks.ip_info_task import IpInfoTask
 from setezor.schemas.roles import Roles
 
@@ -52,7 +56,7 @@ async def list_tasks(
     tasks_service: Annotated[TasksService, Depends(TasksService.new_instance)],
     status: Literal["STARTED", "REGISTERED", "IN QUEUE", "FINISHED", "FAILED", "CREATED", "CANCELED"],
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+    _: str | None = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
 ) -> list[dict]:
     tasks = await tasks_service.list(project_id=project_id, status=status)
     return tasks
@@ -63,10 +67,13 @@ async def get_task_raw_log(
     task_id: str,
     tasks_service: Annotated[TasksService, Depends(TasksService.new_instance)],
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> dict:
-    file_name, file_data =  await tasks_service.get_task_raw_log(project_id=project_id, task_id=task_id)
-    return {"file_name": file_name, "file_data": file_data}
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> list[TaskLog]:
+    return await tasks_service.get_task_raw_logs(
+        project_id=project_id,
+        task_id=task_id,
+        user_id=user_id
+    )
 
 
 @router.post("/{id}/soft_stop")
@@ -74,7 +81,7 @@ async def soft_stop_task(
     task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
     id: str,
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> bool:
     return await task_manager.soft_stop_task(id=id, project_id=project_id)
 
@@ -83,7 +90,7 @@ async def soft_stop_task(
     task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
     id: str,
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> bool:
     return await task_manager.cancel_task(id=id, project_id=project_id)
 
@@ -94,10 +101,11 @@ async def create_dns_task(
     dns_task_payload: DNSTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=DNSTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **dns_task_payload.model_dump()
@@ -110,10 +118,11 @@ async def create_sd_find(
     domain_task_payload: DomainTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=SdFindTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **domain_task_payload.model_dump()
@@ -126,13 +135,46 @@ async def create_whois_task(
     whois_task_payload: WHOISTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=WhoisTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **whois_task_payload.model_dump()
+    )
+
+@router.post("/whois_shdws_task", status_code=201)
+async def create_whois_shdws_task(
+    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
+    whois_shdws_task_payload: WHOISShdwsTaskPayload,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
+) -> None:
+    await task_manager.create_job(
+        job=WhoisShdwsTask,
+        user_id=user_id,
+        project_id=project_id,
+        scan_id=scan_id,
+        **whois_shdws_task_payload.model_dump()
+    )
+
+@router.post("/rdap_task", status_code=201)
+async def create_rdap_task(
+    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
+    rdap_task_payload: RDAPTaskPayload,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
+) -> None:
+    await task_manager.create_job(
+        job=RdapTask,
+        user_id=user_id,
+        project_id=project_id,
+        scan_id=scan_id,
+        **rdap_task_payload.model_dump()
     )
 
 
@@ -142,10 +184,11 @@ async def create_masscan_scan_task(
     masscan_scan_task_payload: MasscanScanTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=MasscanScanTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **masscan_scan_task_payload.model_dump()
@@ -158,10 +201,11 @@ async def create_masscan_log_task(
     masscan_log_task_payload: MasscanLogTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_local_job(
         job=MasscanLogTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **masscan_log_task_payload.model_dump()
@@ -174,10 +218,11 @@ async def create_nmap_scan_task(
     nmap_scan_task_payload: NmapScanTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     task: Task = await task_manager.create_job(
         job=NmapScanTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **nmap_scan_task_payload.model_dump()
@@ -190,10 +235,11 @@ async def create_nmap_parse_task(
     nmap_parse_task_payload: NmapParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     task: Task = await task_manager.create_local_job(
         job=NmapParseTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **nmap_parse_task_payload.model_dump()
@@ -206,10 +252,11 @@ async def create_cert_info_task(
     cert_info_task_payload: CertInfoTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=CertTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **cert_info_task_payload.model_dump()
@@ -222,10 +269,11 @@ async def create_scapy_sniff_task(
     scapy_sniff_task_payload: ScapySniffTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=ScapySniffTask,
+        user_id=user_id,
         project_id=project_id,
         scan_id=scan_id,
         **scapy_sniff_task_payload.model_dump()
@@ -238,10 +286,11 @@ async def create_scapy_parse_task(
     scapy_parse_task_payload: ScapyParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_local_job(
         job=ScapyLogsTask,
+        user_id=user_id,
         scan_id=scan_id,
         project_id=project_id,
         **scapy_parse_task_payload.model_dump()
@@ -254,10 +303,11 @@ async def create_wappalyzer_parse_task(
     wappalyzer_parse_task_payload: WappalyzerParseTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_local_job(
         job=WappalyzerLogsTask,
+        user_id=user_id,
         scan_id=scan_id,
         project_id=project_id,
         **wappalyzer_parse_task_payload.model_dump()
@@ -271,12 +321,13 @@ async def cve_refresh_task(
     software_service: Annotated[SoftwareService, Depends(SoftwareService.new_instance)],
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_local_job(
         job=CVERefresher,
-        scan_id=scan_id,
+        user_id=user_id,
         project_id=project_id,
+        scan_id=scan_id,
         project_service=project_service,
         software_service=software_service,
     )
@@ -288,14 +339,15 @@ async def create_snmp_brute_task(
     payload: SnmpBruteCommunityStringPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=SnmpBruteCommunityStringTask,
-        scan_id=scan_id,
+        user_id=user_id,
         project_id=project_id,
+        scan_id=scan_id,
         **payload.model_dump()
     )
-
 
 
 @router.post("/speed_test_task", status_code=201)
@@ -304,28 +356,14 @@ async def create_speed_test_task(
     payload: SpeedTestTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
     project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=SpeedTestServerTask,
-        scan_id=scan_id,
+        user_id=user_id,
         project_id=project_id,
+        scan_id=scan_id,
         **payload.model_dump()
-    )
-
-
-@router.post("/dns_a_screenshot_task", status_code=201)
-async def create_dns_a_screenshot_task(
-    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
-    dns_a_screenshot_task_payload: DNSAScreenshotTaskPayload,
-    scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project),
-    _: bool = Depends(role_required([Roles.owner, Roles.executor]))
-) -> None:
-    await task_manager.create_job(
-        job=DNS_A_ScreenshotTask,
-        project_id=project_id,
-        scan_id=scan_id,
-        **dns_a_screenshot_task_payload.model_dump()
     )
 
 
@@ -334,11 +372,43 @@ async def create_ip_info_task(
     task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
     payload: IPInfoTaskPayload,
     scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project)
+    project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
 ) -> None:
     await task_manager.create_job(
         job=IpInfoTask,
-        scan_id=scan_id,
+        user_id=user_id,
         project_id=project_id,
+        scan_id=scan_id,
         **payload.model_dump()
+    )
+
+
+@router.post("/parse_site", status_code=201)
+async def parse_site_task(
+    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
+    payload: ParseSiteTaskPayload,
+    scan_id: str = Depends(get_current_scan_id),
+    project_id: str = Depends(get_current_project),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
+):
+    await task_manager.create_job(
+        job=ParseSiteTask,
+        user_id=user_id,
+        project_id=project_id,
+        scan_id=scan_id,
+        **payload.model_dump(),
+    )
+
+
+@router.post("/push_module", status_code=201)
+async def push_agent_module(
+    module_manager: Annotated[ModuleManager, Depends(ModuleManager.new_instance)],
+    payload: PushModuleTaskPayload,
+    user_id: str = Depends(get_user_id),
+):
+    await module_manager.install_modules(
+        user_id=user_id,
+        agent_id=payload.agent_id,
+        modules=payload.module_names
     )

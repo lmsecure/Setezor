@@ -1,724 +1,663 @@
-{% macro nmap_ip() %}
-<div id="NmapInputContainer"></div>
-<div class="input-group" id="ipTarget">
-    <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1">IP</span>
-    <datalist id="IpList"></datalist>
-    <input type="text" list="IpList" class="form-control ip" id='inputIP' data-i18n-placeholder="IP address or netmask" style="margin-bottom: 0.5rem;"
-        aria-label="IP" aria-describedby="basic-addon1" required name="targetIP">
-    <span class="input-group-text" style="margin-bottom: 0.5rem;" id="basic-addon1" data-i18n="PORT"></span>
-    <input type="text" class="form-control port" id='inputPortNmap' data-i18n-placeholder="Port" aria-label="Port" style="margin-bottom: 0.5rem;"
-    aria-describedby="basic-addon1" required name="Port">
-    <button id="add_new_nmap_form" onclick="addNewNmapForm()" type="button" class="btn btn-success" style="width: 3rem; margin-bottom: 0.5rem;">+</button>
-</div>
+{% import 'modals/tools_modal_constructor.html' as modal %}
+
+{{ modal.create_modal('nmapModalWindow', 'Nmap', 'https://help.setezor.net/nmap') }}
 
 <script>
-    function addNewNmapForm() {
-        const original = document.getElementById('ipTarget');
-        const clone = original.cloneNode(true);
-        const newInputIP = clone.querySelector('[id^="inputIP"]');
-        newInputIP.id = 'inputIP_' + Date.now();
-        const newInputPort = clone.querySelector('[id^="inputPortNmap"]');
-        newInputPort.id = 'inputPortNmap_' + Date.now();
-        const originalInputIP = document.getElementById('inputIP');
-        const originalInputPort = document.getElementById('inputPortNmap');
-        newInputIP.value = originalInputIP.value;
-        newInputPort.value = originalInputPort.value;
-        originalInputIP.value = ''
-        originalInputPort.value = ''
-        
+const NmapDescriptions = {
+  scanTechniques: {
+    '-sS': 'TCP SYN scan',
+    '-sT': 'TCP Connect() scan',
+    '-sA': 'TCP ACK scan',
+    '-sW': 'TCP Window scan',
+    '-sM': 'TCP Maimon scan',
+    '-sU': 'UDP Scan',
+    '-sP': 'Ping Scan'
+  },
+  
+  discovery: {
+    '-PA': 'TCP ACK discovery to given ports',
+    '-PS': 'TCP SYN discovery to given ports',
+    '-PU': 'UDP discovery to given ports',
+    '-PY': 'SCTP discovery to given ports'
+  },
+  
+  icmp: {
+    '-PE': 'ICMP echo request discovery probes',
+    '-PP': 'ICMP timestamp request discovery probes',
+    '-PM': 'ICMP netmask request discovery probes'
+  }
+};
 
-        const existingMinusButton = clone.querySelector('.btn-danger');
-        if (existingMinusButton) {
-            existingMinusButton.remove();
+const NmapUI = {
+
+  getStyles() {
+    return `
+      <style>
+        .nmap-tool-section {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 15px;
+          border: 1px solid #e9ecef;
         }
+        .nmap-tool-section h6 {
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #6c757d;
+          margin-bottom: 10px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+        }
+        .nmap-tool-section h6 i { 
+          margin-right: 8px; 
+        }
+      </style>
+    `;
+  },
 
-        const removeButton = document.createElement('button');
-        removeButton.textContent = '-';
-        removeButton.type = 'button';
-        removeButton.className = 'btn btn-danger';
-        removeButton.style.width = '3rem';
-        removeButton.style.marginBottom = '0.5rem';
-        removeButton.onclick = () => {
-            clone.remove();
+  createRadioGroup(prefix, name, values, descriptions) {
+    return values.map(v => `
+      <input type="radio" class="btn-check" 
+             name="${prefix}${name}" 
+             value="${v}" 
+             id="${prefix}${v.replace('-','')}" 
+             autocomplete="off">
+      <label class="btn btn-outline-primary" 
+             for="${prefix}${v.replace('-','')}" 
+             title="${descriptions[v]}" 
+             data-bs-toggle="tooltip">
+        ${v.replace('-','')}
+      </label>
+    `).join('');
+  },
+
+  buildParams(prefix) {
+    return `
+      ${this.getStyles()}
+      ${this.buildGeneralOptions(prefix)}
+      ${this.buildScanTechniques(prefix)}
+      ${this.buildDiscoveryOptions(prefix)}
+      ${this.buildParseButton(prefix)}
+    `;
+  },
+
+  buildGeneralOptions(prefix) {
+    return `
+      <div class="nmap-tool-section">
+        <h6><i class="bi bi-gear-fill"></i> ${i18next.t("General Options & Ports")}</h6>
+        
+        <div class="row g-3 align-items-center">
+          <div class="col-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="${prefix}portsScan">
+              <label class="form-check-label" for="${prefix}portsScan">
+                ${i18next.t("Ports")}
+              </label>
+            </div>
+          </div>
+          <div class="col-6">
+            <input type="text" 
+                   list="${prefix}portsSelectorList" 
+                   id="${prefix}portsSelector" 
+                   class="form-control" 
+                   placeholder="${i18next.t("Ports")}" 
+                   disabled>
+            <datalist id="${prefix}portsSelectorList">
+              <option value="--top-ports 1000">${i18next.t("top-1000")}</option>
+              <option value="--top-ports 100">${i18next.t("top-100")}</option>
+              <option value="-p 80,443,8080,8443">${i18next.t("web ports")}</option>
+              <option value="-p-">${i18next.t("All")}</option>
+            </datalist>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-6">
+            <div class="form-check form-switch" 
+                 title="${i18next.t("Trace hop path to each host")}" 
+                 data-bs-toggle="tooltip">
+              <input class="form-check-input" type="checkbox" id="${prefix}trace" checked>
+              <label class="form-check-label" for="${prefix}trace">
+                ${i18next.t("TraceRoute")}
+              </label>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-check form-switch" 
+                 title="${i18next.t("Attempts to determine the version of the service running on port")}" 
+                 data-bs-toggle="tooltip">
+              <input class="form-check-input" type="checkbox" id="${prefix}service">
+              <label class="form-check-label" for="${prefix}service">
+                ${i18next.t("Service Version")}
+              </label>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-check form-switch" 
+                 title="${i18next.t("OS detection")}" 
+                 data-bs-toggle="tooltip">
+              <input class="form-check-input" type="checkbox" id="${prefix}stealth">
+              <label class="form-check-label" for="${prefix}stealth">
+                ${i18next.t("OS detection")}
+              </label>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-check form-switch" 
+                 title="${i18next.t("Disable host discovery. Port scan only.")}" 
+                 data-bs-toggle="tooltip">
+              <input class="form-check-input" type="checkbox" id="${prefix}pn">
+              <label class="form-check-label" for="${prefix}pn">
+                ${i18next.t("Skip discovery")}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  buildScanTechniques(prefix) {
+    const techniques = ['-sS','-sT','-sA','-sW','-sM','-sU','-sP'];
+    return `
+      <div class="nmap-tool-section">
+        <h6><i class="bi bi-search"></i> ${i18next.t("Scan Techniques")}</h6>
+        <div class="btn-group w-100" role="group">
+          ${this.createRadioGroup(prefix, 'scanTechniques', techniques, NmapDescriptions.scanTechniques)}
+        </div>
+      </div>
+    `;
+  },
+
+  buildDiscoveryOptions(prefix) {
+    const tcpUdp = ['-PA','-PS','-PU','-PY'];
+    const icmp = ['-PE','-PP','-PM'];
+    
+    return `
+      <div class="row g-2">
+        <div class="col-md-7">
+          <div class="nmap-tool-section h-100">
+            <h6><i class="bi bi-broadcast"></i> ${i18next.t("TCP/UDP discovery")}</h6>
+            <div class="btn-group w-100" role="group">
+              ${this.createRadioGroup(prefix, 'portsDiscovery', tcpUdp, NmapDescriptions.discovery)}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="nmap-tool-section h-100">
+            <h6><i class="bi bi-shield-check"></i> ${i18next.t("ICMP request discovery")}</h6>
+            <div class="btn-group w-100" role="group">
+              ${this.createRadioGroup(prefix, 'requestDiscovery', icmp, NmapDescriptions.icmp)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  buildParseButton(prefix) {
+    return `
+      <button class="btn btn-primary w-100 mt-3 shadow-sm" id="${prefix}parseXmlBtn">
+        <i class="bi bi-file-earmark-code me-2"></i>${i18next.t("Parse xml logs")}
+      </button>
+    `;
+  }
+};
+
+const NmapHandlers = {
+
+  setupPortSwitch(prefix) {
+    const portSwitch = document.getElementById(`${prefix}portsScan`);
+    const portInput = document.getElementById(`${prefix}portsSelector`);
+    
+    if (portSwitch && portInput) {
+      FormHelpers.linkSwitchToInput(portSwitch, portInput);
+    }
+  },
+
+  setupToggleableRadios(prefix) {
+    const radios = document.querySelectorAll(`input[type="radio"][id^="${prefix}"]`);
+    FormHelpers.makeRadiosToggleable(radios);
+  },
+
+  async handleXmlParsing(instance) {
+    const agentId = window.agentData?.default_agent;
+    const iface = window.interfaceData?.default_interface;
+
+    if (!agentId || !iface) {
+      return;
+    }
+
+    try {
+      const files = await FormHelpers.selectAndReadFiles('.xml', true);
+      
+      for (const { content, filename } of files) {
+        const payload = {
+          file: content,
+          filename: filename,
+          agent_id: String(agentId),
+          interface_ip_id: String(iface.ip_id || iface.id),
+          ip: String(iface.ip || ""),
+          mac: String(iface.mac || "")
         };
 
-        clone.appendChild(removeButton);
-
-        const addButton = clone.querySelector('#add_new_nmap_form');
-        if (addButton) {
-            addButton.remove();
-        }
-
-        document.getElementById('NmapInputContainer').appendChild(clone);
+        await fetch('/api/v1/task/nmap_parse_task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      
+      window[`close_${instance.modalId}`]();
+    } catch (error) {
+      console.error('Failed to parse XML files:', error);
     }
-</script>
-{% endmacro %}
+  },
 
-{% macro nmap_scope() %}
-<div class="dropdown w-100 mt-2">
-    <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de; --bs-btn-hover-border-color: #d4d9de; --bs-btn-active-border-color: #d4d9de"
-        type="button" id="nmapScopeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-i18n="Select scope">
-    </button>
-    <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton1" id="dropdownMenuForScopeNmapData">
-    </ul>
-</div>
-<script>
-    let selectedScopeForNmap = '';
-    function get_nmap_scope_list() {
-        axios.get('/api/v1/scope').then(resp => {
-            const dropdownMenu = document.getElementById('dropdownMenuForScopeNmapData');
-            const dropdownButton = document.getElementById('nmapScopeDropdown');
-            dropdownMenu.innerHTML = '';
-
-            resp.data.forEach((item, index) => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.classList.add('dropdown-item');
-                a.href = '#';
-                a.textContent = `${item.name}`;
-
-                a.addEventListener('click', () => {
-                    dropdownButton.textContent = `${item.name}`;
-                    selectedScopeForNmap = item.id;
-                });
-
-                li.appendChild(a);
-                dropdownMenu.appendChild(li);
-            });
-        })
+  async handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = node.label || '';
     }
 
-    get_nmap_scope_list('')
-</script>
-{% endmacro %}
+    try {
+      const response = await fetch(`/api/v1/vis/node_info/${node.id}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const portInput = document.getElementById(`${prefix}inputPort`);
+      
+      if (data.ports && portInput) {
+        const ports = [...new Set(data.ports.map(p => p.port))].join(',');
+        portInput.value = ports;
+      }
+    } catch (error) {
+      console.error('Failed to load node ports:', error);
+    }
+    
+    window[`show_${instance.modalId}`]();
+  },
 
+  handlePrefill(instance, rows = [], params = {}) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) {
+      const tab = new bootstrap.Tab(targetTab);
+      tab.show();
+    }
+    
+    if (params.targetPorts) {
+      const portSwitch = document.getElementById(`${prefix}portsScan`);
+      const portInput = document.getElementById(`${prefix}portsSelector`);
+      
+      if (portSwitch && portInput) {
+        portSwitch.checked = true;
+        portInput.disabled = false;
+        
+        let cleanValue = params.targetPorts.trim();
+        if (cleanValue.startsWith('-p ')) cleanValue = cleanValue.slice(3);
+        else if (cleanValue.startsWith('-p')) cleanValue = cleanValue.slice(2);
+        
+        portInput.value = cleanValue;
+      }
+    }
 
-{% macro nmap_main() %}
-<div class="d-flex justify-content-between py-2">
-    <div class="form-check form-switch" id="portSwitch" >
-        <input class="form-check-input" type="checkbox" id="portsScan">
-        <label class="form-check-label" for="portsScan" data-i18n="Ports"></label>
-    </div>
-    <div class="w-50" id="portsSelectorDiv" >
-        <datalist id="portsSelectorList">
-            <option hidden disabled value="1" data-i18n="Choose a ports..."></option>
-            <option value="--top-ports 1000" data-i18n="top-1000"></option>
-            <option value="--top-ports 100" data-i18n="top-100"></option>
-            <option value="-p 80,443,8080,8443" data-i18n="web ports"></option>
-            <option value="-p 25,465,587,110,143,993,995" data-i18n="email ports"></option>
-            <option value="-p-" data-i18n="All"></option>
-        </datalist>
-        <input type="text" list="portsSelectorList" id="portsSelector" name="targetPorts" class="form-control"
-        data-i18n-placeholder="Ports" disabled>
-    </div>
-</div>
+    const ipMap = new Map();
+    rows.forEach(row => {
+      const ip = (row.ipaddr || '').trim();
+      const port = String(row.port || '').trim();
+      
+      if (!ip) return;
+      
+      const existing = ipMap.get(ip) || '';
+      const combined = existing ? `${existing},${port}` : port;
+      const uniquePorts = [...new Set(combined.split(',').filter(Boolean))].join(',');
+      
+      ipMap.set(ip, uniquePorts);
+    });
 
-<div class="invalid-feedback" data-i18n="Please select a valid tag."></div>
-<div class="d-flex justify-content-between py-1">
-    <div class="form-check form-switch  pe-2" id="traceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="Trace hop path to each host">
-        <input class="form-check-input" type="checkbox" id="trace" name="traceroute" value="--traceroute" checked>
-        <label class="form-check-label" for="trace" data-i18n="TraceRoute"></label>
-    </div>
-    <div class="form-check form-switch" id="serviceSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-    data-i18n-title="Attempts to determine the version of the service running on port">
-        <input class="form-check-input" type="checkbox" id="service" name="serviceVersion" value="-sV">
-        <label class="form-check-label" for="service" data-i18n="Service Version"></label>
-    </div>
-</div>
-<div class="d-flex justify-content-between py-1">
-    <div class="form-check form-switch pe-2" id="stealthSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-    data-i18n-title="OS detection">
-        <input class="form-check-input" type="checkbox" id="stealth" name="stealthScan" value="-O">
-        <label class="form-check-label" for="stealth" data-i18n="OS detection"></label>
-    </div>
-    <div class="form-check form-switch" id="pnSwitch" data-bs-toggle="tooltip" data-bs-placement="top"
-    data-i18n-title="Disable host discovery. Port scan only.">
-        <input class="form-check-input" type="checkbox" id="pn" name="skipDiscovery" value="-Pn">
-        <label class="form-check-label" for="pn" data-i18n="Skip discovery"></label>
-    </div>
-</div>
-
-<div class="my-2">
-    <div align="center">
-        <h6><b data-i18n="Scan Techniques"></b></h6>
-    </div>
-    <div class="d-flex justify-content-between" id="p3Group">
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP SYN scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="ss" value="-sS">
-            <label class="form-check-label" for="ss">sS</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Connect() scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="st" value="-sT">
-            <label class="form-check-label" for="st">sT</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP ACK scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="sa" value="-sA">
-            <label class="form-check-label" for="sa">sA</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Window scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="sw" value="-sW">
-            <label class="form-check-label" for="sw">sW</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="TCP Maimon scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="sm" value="-sM">
-            <label class="form-check-label" for="sm">sM</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="UDP Scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="su" value="-sU">
-            <label class="form-check-label" for="su">sU</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="Ping Scan">
-            <input class="form-check-input" type="radio" name="scanTechniques" id="sp" value="-sP">
-            <label class="form-check-label" for="sp">sP</label>
-        </div>
-    </div>
-</div>
-
-<div class="my-2">
-    <div align="center">
-        <h6><b data-i18n="TCP/UDP discovery"></b></h6>
-    </div>
-    <div class="d-flex justify-content-between" id="p1Group">
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="TCP ACK discovery to given ports">
-            <input class="form-check-input" type="radio" name="portsDiscovery" id="pa" value="-PA">
-            <label class="form-check-label" for="pa">PA</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="TCP SYN discovery to given ports">
-            <input class="form-check-input" type="radio" name="portsDiscovery" id="ps" value="-PS">
-            <label class="form-check-label" for="ps">PS</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="UDP discovery to given ports">
-            <input class="form-check-input" type="radio" name="portsDiscovery" id="pu" value="-PU">
-            <label class="form-check-label" for="pu">PU</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top" data-i18n-title="SCTP discovery to given ports">
-            <input class="form-check-input" type="radio" name="portsDiscovery" id="py" value="-PY">
-            <label class="form-check-label" for="py">PY</label>
-        </div>
-    </div>
-</div>
-
-<div class="my-2">
-    <div align="center">
-        <h6><b data-i18n="ICMP request discovery"></b></h6>
-    </div>
-    <div class="d-flex justify-content-between" id="p2Group">
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="ICMP echo request discovery probes">
-            <input class="form-check-input" type="radio" name="requestDiscovery" id="pe" value="-PE">
-            <label class="form-check-label" for="pe">PE</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="ICMP timestamp request discovery probes">
-            <input class="form-check-input" type="radio" name="requestDiscovery" id="pp" value="-PP">
-            <label class="form-check-label" for="pp">PP</label>
-        </div>
-        <div class="form-check" data-bs-toggle="tooltip" data-bs-placement="top"
-        data-i18n-title="ICMP netmask request discovery probes">
-            <input class="form-check-input" type="radio" name="requestDiscovery" id="pm" value="-PM">
-            <label class="form-check-label" for="pm">PM</label>
-        </div>
-    </div>
-</div>
-
-<div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="startScanSimpleBtn" onclick="
-                        let params = {};
-
-                        params['traceroute'] = document.getElementById('trace').checked;
-                        params['serviceVersion'] = document.getElementById('service').checked;
-                        params['stealthScan'] = document.getElementById('stealth').checked;
-                        params['skipDiscovery'] = document.getElementById('pn').checked;
-
-                        if (!params['scanTechniques']) { params['scanTechniques'] = ''; }
-                        if (!params['portsDiscovery']) { params['portsDiscovery'] = ''; }
-                        if (!params['requestDiscovery']) { params['requestDiscovery'] = ''; }
-
-                        params['scanTechniques'] = '';
-                        for (let eee of document.getElementById('p3Group').children) {
-                            if (eee.children[0].checked)
-                                params['scanTechniques'] = eee.children[0].value;
-                        }
-
-                        params['portsDiscovery'] = '';
-                        for (let eee of document.getElementById('p1Group').children) {
-                            if (eee.children[0].checked)
-                                params['portsDiscovery'] = eee.children[0].value;
-                        }
-
-                        params['requestDiscovery'] = '';
-                        for (let eee of document.getElementById('p2Group').children) {
-                            if (eee.children[0].checked)
-                                params['requestDiscovery'] = eee.children[0].value;
-                        }
-                        
-                        params['targetPorts'] = document.getElementById('portsSelector').value;
-                        if (params['targetPorts'] === undefined || params['targetPorts'] === '') {
-                            params['targetPorts'] = '-sn';
-                        }
-                        if (params.targetPorts[0] != '-') {
-                            params['targetPorts'] = '-p ' + params.targetPorts;
-                        }
-
-                        params['agent_id'] = getAgent();
-                        params['interface'] = getIface().name;
-                        params['interface_ip_id'] = getIface().ip_id;
-
-
-                        let isTargetTabActive = document.getElementById('nmap-simple-tab').classList.contains('active');
-
-                        if (isTargetTabActive) {
-                                let ipPortPairs = [];
-                                let onlyIp = []
-                                let ipElements = document.getElementById('NmapInputContainer').getElementsByClassName('form-control ip');
-                                let portElements = document.getElementById('NmapInputContainer').getElementsByClassName('form-control port');
-
-                                for (let i = 0; i < ipElements.length; i++){
-                                    if(ipElements[i].value && portElements[i].value){
-                                        ipPortPairs.push({
-                                            ip: ipElements[i].value,
-                                            port: portElements[i].value
-                                        })
-                                    } else if (ipElements[i].value && !portElements[i].value) {
-                                        onlyIp.push({
-                                            ip: ipElements[i].value})
-                                    }
-                                }
-                                let mainIp = document.getElementById('inputIP').value;
-                                let mainPort = document.getElementById('inputPortNmap').value;
-                                if (mainIp && mainPort) {
-                                    ipPortPairs.push({
-                                        ip: mainIp,
-                                        port: mainPort
-                                    });
-                                } else if (mainIp && !mainPort) {
-                                    onlyIp.push({
-                                        ip: mainIp})
-                                }
-                                for (let pair of ipPortPairs) {
-                                    let IpParams = {
-                                        ...params,
-                                        targetPorts: '-p ' + pair.port,
-                                        targetIP: pair.ip
-                                    };
-                                fetch('/api/v1/task/nmap_scan_task', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify(IpParams)
-                                }).then(response => {
-                                    if (response.status !== 201) {
-                                        response.json().then(data => {
-                                            let errorMessage = data.detail[0].msg || 'Create task error';
-                                            create_toast('Error', errorMessage, 'error');
-                                        });
-                                    } else {
-                                        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
-                                        if (myModal) {
-                                            myModal.hide();
-                                        }
-                                    }
-                                }).catch(error => {
-                                    create_toast('Error', 'An error occurred while sending the request', 'error');
-                                    console.error('Error:', error);
-                                });
-                            } for (let ips of onlyIp) {
-                                    let IpParams = {
-                                        ...params,
-                                        targetIP: ips.ip
-                                    };
-                                fetch('/api/v1/task/nmap_scan_task', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify(IpParams)
-                                }).then(response => {
-                                    if (response.status !== 201) {
-                                        response.json().then(data => {
-                                            let errorMessage = data.detail[0].msg || 'Create task error';
-                                            create_toast('Error', errorMessage, 'error');
-                                        });
-                                    } else {
-                                        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
-                                        if (myModal) {
-                                            myModal.hide();
-                                        }
-                                    }
-                                }).catch(error => {
-                                    create_toast('Error', 'An error occurred while sending the request', 'error');
-                                    console.error('Error:', error);
-                                });}
-                        } else {
-                            if (selectedScopeForNmap != '') {
-                                params['targetIP'] = null;
-                                params['scope_id'] = selectedScopeForNmap;
-
-                                fetch('/api/v1/task/nmap_scan_task', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify(params)
-                                }).then(response => {
-                                    if (response.status !== 201) {
-                                        response.json().then(data => {
-                                            const errorMessage = data.detail[0].msg || 'Create task error';
-                                            create_toast('Error', errorMessage, 'error');
-                                        });
-                                    } else {
-                                        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
-                                        if (myModal) {
-                                            myModal.hide();
-                                        }
-                                    }
-                                }).catch(error => {
-                                    create_toast('Error', 'An error occurred while sending the request', 'error');
-                                    console.error('Error:', error);
-                                });
-                            } else {
-                                create_toast('Error', 'Please select a scope', 'error');
-                                return;
-                            }
-                        }
-                    " data-i18n="Start scan"></button>
-</div>
-<script>
-     $(document).ready(function () {
-        const defaultPlaceholder = '--ping';
-        const $selector = $('#portsSelector');
-        const $switch = $('#portsScan');
-        function updatePlaceholders(newPlaceholder) {
-            $("input.form-control.port[id^='inputPortNmap']").each(function () {
-                $(this).attr('placeholder', newPlaceholder);
-            });
+    Array.from(ipMap.entries()).forEach(([ip, ports], index) => {
+      if (index === 0) {
+        const ipInput = document.getElementById(`${prefix}inputIP`);
+        const portInput = document.getElementById(`${prefix}inputPort`);
+        
+        if (ipInput) ipInput.value = ip;
+        if (portInput) portInput.value = ports;
+      } else {
+        instance.addInputField('ip_port');
+        
+        const container = document.getElementById(`${prefix}InputContainer`);
+        const lastGroup = container?.lastElementChild;
+        
+        if (lastGroup) {
+          const ipInput = lastGroup.querySelector('.ip');
+          const portInput = lastGroup.querySelector('.port');
+          
+          if (ipInput) ipInput.value = ip;
+          if (portInput) portInput.value = ports;
         }
-        $selector.on('input', function () {
-            const newPlaceholder = $(this).val().trim() || defaultPlaceholder;
-            updatePlaceholders(newPlaceholder);
-        });
-        $switch.on('change', function () {
-            const isChecked = $(this).is(':checked');
-            $selector.prop('disabled', !isChecked);
-            const newPlaceholder = isChecked
-                ? ($selector.val().trim() || defaultPlaceholder)
-                : defaultPlaceholder;
-            updatePlaceholders(newPlaceholder);
-        });
+      }
     });
-let nmapModal = null;
-function initNmapModal() {
-    nmapModal = new bootstrap.Modal(document.getElementById('nmapModalWindow'), {
-        keyboard: false,
-        // backdrop: 'static'
-    });
+    
+    window[`show_${instance.modalId}`]();
+  }
+};
 
-    $('#nmapModalWindow').on('hidden.bs.modal', function () {
-        resetNmapModal();
-    });
+class NmapScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
 
-    document.querySelector('#nmapModalWindow .btn-close').onclick = function () {
-        nmapModal.hide();
+  getRadioValue(name) {
+    const radio = document.querySelector(`input[name="${this.prefix}${name}"]:checked`);
+    return radio?.value || "";
+  }
+
+  getGlobalPorts() {
+    const portSwitch = document.getElementById(`${this.prefix}portsScan`);
+    if (!portSwitch?.checked) return "";
+    
+    const portValue = document.getElementById(`${this.prefix}portsSelector`)?.value;
+    if (!portValue) return "";
+    
+    return portValue.startsWith('-') ? portValue : `-p ${portValue}`;
+  }
+
+  getBaseParams() {
+    const agentId = window.agentData?.default_agent;
+    const ifaceObj = window.interfaceData?.default_interface;
+
+    if (!agentId) {
+      throw new Error("Please select an Agent");
+    }
+    if (!ifaceObj) {
+      throw new Error("Please select an Interface");
+    }
+
+    return {
+      agent_id: String(agentId),
+      interface: String(ifaceObj.name),
+      interface_ip_id: String(ifaceObj.ip_id || ifaceObj.id),
+      traceroute: !!document.getElementById(`${this.prefix}trace`)?.checked,
+      serviceVersion: !!document.getElementById(`${this.prefix}service`)?.checked,
+      stealthScan: !!document.getElementById(`${this.prefix}stealth`)?.checked,
+      skipDiscovery: !!document.getElementById(`${this.prefix}pn`)?.checked,
+      scanTechniques: this.getRadioValue('scanTechniques'),
+      portsDiscovery: this.getRadioValue('portsDiscovery'),
+      requestDiscovery: this.getRadioValue('requestDiscovery'),
+      targetPorts: "",
+      targetIP: null,
+      scope_id: ""
+    };
+  }
+
+  async scanScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const globalPorts = this.getGlobalPorts();
+    
+    const payload = { 
+      ...baseParams, 
+      scope_id: String(scopeId),
+      targetPorts: globalPorts
     };
 
-}
-function portSwitcherForNmap() {
-    const portSwitch = document.querySelector('#portsScan');
-    const portsSelector = document.querySelector('#portsSelector');
-    
-    if (portSwitch && portsSelector) {
-        const handleSwitchChange = function(event) {
-            portsSelector.disabled = !event.target.checked;
-        };
-
-        portSwitch.removeEventListener('change', handleSwitchChange);
-        portSwitch.addEventListener('change', handleSwitchChange);
-        
-        portsSelector.disabled = !portSwitch.checked;
-    }
-}
-function resetNmapModal() {
-    const modal = document.getElementById('nmapModalWindow');
-    
-    modal.querySelectorAll('form').forEach(form => form.reset());
-    
-    document.getElementById('NmapInputContainer').innerHTML = '';
-    
-    const inputIP = document.getElementById('inputIP');
-    const inputPortNmap = document.getElementById('inputPortNmap');
-    if (inputIP) inputIP.value = '';
-    if (inputPortNmap) {
-        inputPortNmap.value = '';
-        inputPortNmap.placeholder = '--ping';
-    }
-    const portsSelector = document.getElementById('portsSelector');
-    if (portsSelector) {
-        portsSelector.value = '';
-        portsSelector.disabled = true;
-    }
-       
-    const portSwitch = document.getElementById('portsScan');
-    if (portSwitch) portSwitch.checked = false;
-    
-    const traceSwitch = document.getElementById('trace');
-    if (traceSwitch) traceSwitch.checked = true; // По умолчанию включено
-    
-    const serviceSwitch = document.getElementById('service');
-    if (serviceSwitch) serviceSwitch.checked = false;
-    
-    const stealthSwitch = document.getElementById('stealth');
-    if (stealthSwitch) stealthSwitch.checked = false;
-    
-    const pnSwitch = document.getElementById('pn');
-    if (pnSwitch) pnSwitch.checked = false;
-    
-    modal.querySelectorAll('input[type="radio"]').forEach(radio => {
-        radio.checked = false;
+    const result = await window.executeToolTasks({
+      tasks: [{ endpoint: '/api/v1/task/nmap_scan_task', payload }],
+      stopOnFirstFailure: true
     });
-    
-    const scopeButton = document.getElementById('nmapScopeDropdown');
-    if (scopeButton) {
-        scopeButton.textContent = scopeButton.getAttribute('data-i18n') || 'Select scope';
-    }
-    selectedScopeForNmap = '';
-    
-    const targetTab = document.getElementById('nmap-simple-tab');
-    const scopeTab = document.getElementById('nmap-scope-tab');
-    const targetPane = document.getElementById('nmap-simple-mode');
-    const scopePane = document.getElementById('nmap-scope-mode');
-    
-    if (targetTab && scopeTab && targetPane && scopePane) {
-        targetTab.classList.add('active');
-        scopeTab.classList.remove('active');
-        targetPane.classList.add('show', 'active');
-        scopePane.classList.remove('show', 'active');
-    }
-    
-    portSwitcherForNmap();
-}
-document.addEventListener('DOMContentLoaded', function () {
-    initNmapModal();
-});
-document.querySelectorAll('input[type="radio"]').forEach(radio => {
-  radio.addEventListener('click', function () {
-    const group = document.querySelectorAll(`input[type="radio"][name="${this.name}"]`);
-    if (this.checked && this.dataset.wasChecked === "true") {
-      this.checked = false;
-      this.dataset.wasChecked = "false";
-    } else {
-      group.forEach(r => r.dataset.wasChecked = "false");
-      this.dataset.wasChecked = "true";
-    }
-  });
-});
-</script>
-{% endmacro %}
 
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+    return result.responses[0];
+  }
 
-{% macro nmap_xml() %}
-<button class="btn btn-primary w-100" id="nmap-dropdownMenuButton2" onclick="
-        let input = document.createElement('input');
-        input.type = 'file';
-        input.multiple = true;
-        input.accept = '.xml'
-        input.onchange = e => { 
-            for (var file of e.target.files)
-            {
-                var reader = new FileReader();
-                reader.onload = (function (file) {
-                    return async function (e) {
-                        iface = getIface()
-                        data = {file: e.target.result, filename: file.name, interface_ip_id: iface.ip_id, ip: iface.ip, mac: iface.mac, agent_id: agentData.default_agent}
-                        resp = await fetch('/api/v1/task/nmap_parse_task', {method: 'POST', 
-                        headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                        body: JSON.stringify(data)});
-                    }
-                })(file)
-                reader.onerror = (function (file){
-                    return function (e){
-                        create_toast('Error', `Not enough permissions. Check file owner`, 'error')
-                    }
-                })(file)
-                reader.readAsDataURL(file);            
-            }
+  async scanTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const globalPorts = this.getGlobalPorts();
+    const tasks = [];
+
+    for (const target of targets) {
+      const payload = { ...baseParams };
+      payload.targetIP = String(target.ip || target.domain || target.url || target.target || target);
+      
+      const targetPort = target.port ? String(target.port).trim() : '';
+      const hasValidPort = targetPort && targetPort !== 'null' && targetPort !== 'undefined' && targetPort !== '';
+      
+      if (hasValidPort) {
+        const portsArray = targetPort.split(',')
+          .map(p => p.trim())
+          .filter(p => p && p !== 'null' && p !== 'undefined' && p !== '');
+        
+        if (portsArray.length > 0) {
+          payload.targetPorts = `-p ${portsArray.join(',')}`;
+        } else {
+          payload.targetPorts = globalPorts;
         }
-        input.click(); 
-        var myModal = bootstrap.Modal.getInstance(document.getElementById('nmapModalWindow'));
-        if (myModal) {
-            myModal.hide();
-        }" style="min-width: 310px;" data-i18n="Parse xml logs">
+      } else {
+        payload.targetPorts = globalPorts;
+      }
+
+      tasks.push({ endpoint: '/api/v1/task/nmap_scan_task', payload });
+    }
+
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+
+    return result.responses;
+  }
+}
+
+ToolModalBuilder.register('nmapModalWindow', {
+  prefix: 'nmap_',
+  
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'ip_port' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    //{ id: 'textarea', label: i18next.t('Textarea'), placeholder: '192.168.1.1:80' },
+  ],
+  
+  toolParams: (prefix) => NmapUI.buildParams(prefix),
+
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        },
+        { 
+          title: "Port", 
+          field: "port", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search port..." 
+        }
+      ],
+      filter: [
+        { field: "ipaddr", type: "!=", value: "" }
+      ]
+    };
+  },
+
+  onInit(instance) {
+    const prefix = instance.prefix;
+    NmapHandlers.setupPortSwitch(prefix);
+    NmapHandlers.setupToggleableRadios(prefix);
     
-</button>
-{% endmacro %}
+    const parseBtn = document.getElementById(`${prefix}parseXmlBtn`);
+    if (parseBtn) {
+      parseBtn.addEventListener('click', () => {
+        NmapHandlers.handleXmlParsing(instance);
+      });
+    }
 
-
-{% macro nmap_full_script_modal() %}
-<div id="nmapModalWindow" class="modal fade" tabindex="-1" aria-labelledby="nmapModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nmapModalLabel">Nmap</h5>
-                <a href="https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#nmap" target="_blank" style="margin-top: 0.3rem; margin-left: 0.2rem;">
-                    <i class="bi bi-question-circle fs-4" style="font-family: 'Times New Roman', Times, serif"></i>
-                </a>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex mb-2" id="agent_interface_bar_nmap">
-                    <div data-agent-bar="agent_nmap"></div>
-                    <div data-interface-bar="interface_nmap" class="ms-3"></div>
-                    <div id="scans_bar_nmap" class="ms-3"></div>
-                </div>
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa" style="padding-top: 7px;">
-                        <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
-                            <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab" data-bs-target="#nmap-simple-mode"
-                                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true" data-i18n="Target"></button>
-                            <button class="nav-link" id="nmap-scope-tab" data-bs-toggle="tab" data-bs-target="#nmap-scope-mode"
-                                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false" data-i18n="Scope"></button>
-                        </div>
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          instance.initDatabaseTable();
+          tableInitialized = true;
+          
+          setTimeout(() => {
+            if (instance.databaseTable) {
+              const originalRowSelectionChanged = instance.databaseTable.options.rowSelectionChanged;
+              
+              instance.databaseTable.options.rowSelectionChanged = function(data, rows) {
+                const ipMap = new Map();
                 
-                        <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
-                            <form id="nmapScanSimpleForm" name="nmapScanSimpleFormName" class="needs-validation" novalidate>
-                                {{ nmap_ip() }}
-                        </div>
+                rows.forEach((row) => {
+                  const rowData = row.getData();
+                  const ip = rowData.ipaddr;
+                  const port = rowData.port;
+                  const domain = rowData.domain;
+                  
+                  if (!ip) return;
+                  
+                  if (ipMap.has(ip)) {
+                    const existing = ipMap.get(ip);
+                    if (port && port !== 'null' && port !== 'undefined' && port !== '') {
+                      existing.ports.add(port.toString());
+                    }
+                  } else {
+                    const portsSet = new Set();
+                    if (port && port !== 'null' && port !== 'undefined' && port !== '') {
+                      portsSet.add(port.toString());
+                    }
+                    ipMap.set(ip, {
+                      ip: ip,
+                      domain: domain || '',
+                      ports: portsSet
+                    });
+                  }
+                });
                 
-                        <div class="tab-pane fade" id="nmap-scope-mode" role="tabpanel" aria-labelledby="nmap-scope-tab">
-                            <form id="nmapScanScopeForm" name="nmapScanScopeFormName" class="needs-validation" novalidate>
-                                {{ nmap_scope() }}
-                        </div>
-                        {{ nmap_main() }}
-                        </form>
-                        {{ nmap_xml() }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-function nmap_full_modal_window() {
-    resetNmapModal();
-    if (nmapModal) {
-        nmapModal.show();
-    }
-}
-
-</script>
-{% endmacro %}
-
-
-{% macro nmap_script_modal_to_node() %}
-<script>
-    async function nmap_script_modal_to_node(node) {
-        resetNmapModal();
-        
-        const inputIP = document.getElementById('inputIP');
-        if (inputIP) {
-            inputIP.value = node.label;
-        }
-        
-        try {
-            const url_address = '/api/v1/vis/node_info/' + node.id;
-            const resp = await fetch(url_address, { method: 'GET' });
-            const json = await resp.json();
-            
-            const portsSelector = document.getElementById('inputPortNmap');
-            
-            if (json.ports && json.ports.length > 0) {
-                if (portsSelector) {
-                    portsSelector.value = Array.from(new Set(json.ports.map(item => item.port))).join(',');
-                }
+                instance.state.selectedDatabaseTargets = {};
+                ipMap.forEach((value, key) => {
+                  instance.state.selectedDatabaseTargets[key] = value;
+                });
+              };
             }
-        } catch (error) {
-            console.error('Error fetching node info:', error);
+          }, 100);
         }
-        
-        if (nmapModal) {
-            nmapModal.show();
-        }
-    }
-</script>
-{% endmacro %}
-
-
-{% macro nmap_script_modal_to_info_tabs() %}
-<script>
-async function nmap_script_modal_to_info_tabs(rows) {
-    resetNmapModal();
-    
-    if (!rows || rows.length === 0) {
-        if (nmapModal) {
-            nmapModal.show();
-        }
-        return;
+      });
     }
     
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        
-        if (i > 0) {
-            addNewNmapForm();
-        }
-        
-        const inputForms = document.querySelectorAll('[id^="ipTarget"]');
-        const currentForm = inputForms[i];
-        
-        if (currentForm) {
-            const inputIP = currentForm.querySelector('[id^="inputIP"]');
-            const inputPort = currentForm.querySelector('[id^="inputPortNmap"]');
-            
-            if (inputIP && row.ipaddr) {
-                inputIP.value = row.ipaddr;
-            }
-            
-            if (inputPort && row.port) {
-                const uniquePorts = [...new Set(
-                        row.port.split(',').map(p => p.trim()).filter(p => p)
-                    )];
-                    inputPort.value = uniquePorts.join(',');
-            }
-        }
-    }
-    
-    if (nmapModal) {
-        nmapModal.show();
-    }
-}
+    window.nmap_script_modal_to_node = (node) => NmapHandlers.handleNodeModal(instance, node);
+    window.nmap_start_with_prefill = (rows, params = {}) => NmapHandlers.handlePrefill(instance, rows, params);
+  },
 
+  onReset(instance) {
+    const prefix = instance.prefix;
+    const trace = document.getElementById(`${prefix}trace`);
+    if (trace) trace.checked = true;
+    const stealth = document.getElementById(`${prefix}stealth`);
+    if (stealth) stealth.checked = false;
+    const portInput = document.getElementById(`${prefix}portsSelector`);
+    if (portInput) portInput.disabled = true;
+    instance.state.selectedDatabaseTargets = {};
+  },
+
+  getTargets() {
+    const tabId = this.getActiveTab();
+    if (!tabId) return [];
+
+    if (tabId === 'scope') {
+      return { scope_id: this.state.selectedScopeId };
+    }
+
+    if (tabId === 'database') {
+      const targets = [];
+      
+      Object.values(this.state.selectedDatabaseTargets).forEach(item => {
+        const portsArray = Array.from(item.ports || [])
+          .filter(p => p && p !== 'null' && p !== 'undefined' && p !== '');
+        
+        targets.push({
+          ip: item.ip,
+          domain: item.domain || '',
+          port: portsArray.join(','),
+          target: item.ip
+        });
+      });
+      
+      return targets;
+    }
+
+    if (tabId === 'target') {
+      return this.getTargetsFromInputs();
+    }
+
+    if (tabId === 'textarea') {
+      return this.getTargetsFromTextarea();
+    }
+
+    return [];
+  },
+
+  async onStart(instance) {
+    const scanner = new NmapScanner(instance.prefix);
+    try {
+      const tabId = instance.getActiveTab();
+      let result;
+
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          throw new Error('Please select a scope');
+        }
+        result = await scanner.scanScope(instance.state.selectedScopeId);
+      } else {
+        const targets = instance.getTargets();
+        if (!targets || targets.length === 0) {
+          throw new Error('Please enter at least one target');
+        }
+        result = await scanner.scanTargets(targets);
+      }
+
+      if (result !== null) {
+        window[`close_${instance.modalId}`]();
+      }
+    } catch (error) {
+      console.error('Nmap scan error:', error);
+      throw error;
+    }
+  }
+});
 </script>
-{% endmacro %}
-
-
-{% macro show() %}
-<div class="d-flex flex-column">
-    <div class="tab-content" id="dsa" style="width: 400px; padding-top: 7px;">
-        <div class="nav nav-tabs me-3 mb-3" id="nmap-tab" role="tablist">
-            <button class="nav-link active" id="nmap-simple-tab" data-bs-toggle="tab" data-bs-target="#nmap-simple-mode"
-                type="button" role="tab" aria-controls="nmap-simple-mode" aria-selected="true" data-i18n="Target"></button>
-            <button class="nav-link" id="nmap-scope-tab" data-bs-toggle="tab" data-bs-target="#nmap-scope-mode"
-                type="button" role="tab" aria-controls="nmap-scope-mode" aria-selected="false" data-i18n="Scope"></button>
-        </div>
-
-        <div class="tab-pane fade show active" id="nmap-simple-mode" role="tabpanel" aria-labelledby="nmap-simple-tab">
-            <form id="nmapScanSimpleForm" name="nmapScanSimpleFormName" class="needs-validation" novalidate>
-                {{ nmap_ip() }}
-        </div>
-
-        <div class="tab-pane fade" id="nmap-scope-mode" role="tabpanel" aria-labelledby="nmap-scope-tab">
-            <form id="nmapScanScopeForm" name="nmapScanScopeFormName" class="needs-validation" novalidate>
-                {{ nmap_scope() }}
-        </div>
-        {{ nmap_main() }}
-        </form>
-        {{ nmap_xml() }}
-    </div>
-</div>
-{% endmacro %}

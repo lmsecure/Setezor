@@ -1,8 +1,11 @@
 import os
 
+from fastapi import HTTPException
+from fastapi.responses import FileResponse
+
+from setezor.modules.site_parser.screenshoter import ScreenshotModule
 from setezor.services.base_service import BaseService
 from setezor.settings import PROJECTS_DIR_PATH
-
 
 
 class DNSAScreenshotService(BaseService):
@@ -18,16 +21,15 @@ class DNSAScreenshotService(BaseService):
             "created_at": screenshots_data.created_at,
         }
 
-    async def get_screenshot_file(self, project_id: str, scan_id: str, screenshot_id: str) -> bytes:
+    async def get_screenshot_file(self, project_id: str, user_id: str, task_id: str) -> FileResponse:
         """Получить файл скриншота по ID"""
         async with self._uow:
-            screenshot = await self._uow.screenshot.find_one(project_id=project_id, scan_id=scan_id, id=screenshot_id)
-        file_path = os.path.join(PROJECTS_DIR_PATH, project_id, scan_id, "screenshots", f"{screenshot_id}.png")
-        if not screenshot:
-            raise FileNotFoundError(f"Screenshot file not found for ID: {screenshot_id}")
-        if not screenshot.path or not os.path.exists(file_path):
-            file_path = os.path.join(PROJECTS_DIR_PATH, project_id, scan_id, "screenshots", screenshot.path.split('/')[-1])
-        if not screenshot.path or not os.path.exists(file_path):
-            raise FileNotFoundError(f"Screenshot file not found for ID: {screenshot_id}")
-        with open(file_path, "rb") as f:
-            return f.read()
+            task = await self._uow.task.find_one(id=task_id, user_id=user_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        screenshot_name = ScreenshotModule.get_file_name_by_task_id(
+            project_id=project_id, scan_id=task.scan_id, task_id=task_id
+        )
+        screenshot_path = os.path.join(PROJECTS_DIR_PATH, project_id, task.scan_id, 'screenshots', screenshot_name)
+        return FileResponse(path=screenshot_path, media_type='image/png', filename=screenshot_name)

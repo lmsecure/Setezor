@@ -72,6 +72,9 @@ async def check_availability(access_token: str):
 
 
 async def get_user_id(access_token: str = Depends(access_token_getter)):
+    if not access_token:
+        raise RequiresLoginException(
+            status_code=403, detail="No token provided")
     if JWT_Tool.is_expired(access_token):
         raise RequiresLoginException(
             status_code=403, detail="Token is expired")
@@ -99,12 +102,13 @@ async def check_role(required_roles: list[str], project_id: str, user_id: str):
         raise HTTPException(
             status_code=403, detail="Недостаточно прав для выполнения данного действия")
 
+    return user_id
+
 
 def role_required(required_roles: list[str]):
     async def role_checker(user_id: str = Depends(get_user_id),
                            project_id: str = Depends(get_current_project)):
-        await check_role(required_roles, project_id, user_id)
-        return True
+        return await check_role(required_roles, project_id, user_id)
     return role_checker
 
 

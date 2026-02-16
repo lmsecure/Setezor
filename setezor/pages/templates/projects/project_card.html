@@ -224,20 +224,22 @@ function chooseProject(projectId) {
 }
 
 async function exportProject(projectId) {
-    const url = '/api/v1/project/' + projectId + '/export'
-    const resp = await fetch(url)
-    const blob = await resp.blob()
-    const link = document.createElement('a')
-    const disp = resp.headers.get('Content-Disposition')
-    const filename = disp.split('filename=')[1].replace(/"/g, "")
-
-    link.href = URL.createObjectURL(blob)
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(link.href)
+    const url = '/api/v1/project/' + projectId + '/export';
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.href = url;
+    link.style.display = 'none';
+    
+    // Add the download attribute to force download
+    link.setAttribute('download', ''); // Browser will use the filename from Content-Disposition header
+    
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
+
 
 function deleteProject(projectId, projectName) {
     const modalContent = `

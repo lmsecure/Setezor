@@ -17,7 +17,6 @@ from .route import Route
 from .route_list import RouteList
 from .project import Project
 from .l4_software_vulnerability_screenshot import L4SoftwareVulnerabilityScreenshot
-from .screenshot import Screenshot
 from .d_vendor import Vendor
 from .d_software import Software
 from .d_software_type import SoftwareType
@@ -58,6 +57,7 @@ from .agent_in_project import AgentInProject
 from .agent_parent_agent import AgentParentAgent
 from .network_speed_test import NetworkSpeedTest
 from .dns_a_screenshot import DNS_A_Screenshot
+from .agent_network_interface import AgentInterface
 
 
 

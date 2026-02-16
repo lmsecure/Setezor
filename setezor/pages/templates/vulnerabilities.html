@@ -14,7 +14,7 @@ Vulnerabilities
 {{ modals.create_vulnerabilities_add_modal() }}
 <div class="container-fluid">
     <div class="d-flex flex-row">
-        <div id="filter-panel-container"></div>
+        <div id="filter-panel-container" class="mt-2"></div>
         <div>
         <button class="btn btn-primary btn mt-2 mb-2 ms-2" data-bs-toggle="modal" data-bs-target="#{{tab.name}}_scansPickModal" data-i18n="Pick scans"></button>
         </div>
@@ -244,7 +244,8 @@ Vulnerabilities
             { field: "{{ col.field }}", title: "{{ col.title }}" }{% if not loop.last %},{% endif %}
             {% endfor %}
         ],
-        containerId: 'filter-panel-container'
+        containerId: 'filter-panel-container',
+        allowMultipleFilters: true
     });
 
 

@@ -42,6 +42,7 @@ from setezor.repositories import SQLAlchemyRepository
 from sqlmodel.ext.asyncio.session import AsyncSession
 from setezor.logger import logger
 from setezor.repositories.agent_in_project_repository import AgentInProjectRepository
+from setezor.repositories.agent_interface_repository import AgentInterfaceRepository
 from setezor.repositories.agent_parent_agent_repository import AgentParentAgentRepository
 from setezor.repositories.employee_email_repository import EmployeeEmailRepository
 from setezor.repositories.employee_phone_repository import EmployeePhoneRepository
@@ -53,11 +54,11 @@ from setezor.repositories.organization_department_repository import Organization
 from setezor.repositories.organization_email_repository import OrganizationEmailRepository
 from setezor.repositories.organization_phone_repository import OrganizationPhoneRepository
 from setezor.repositories.organization_repository import OrganizationRepository
-from setezor.repositories.screenshot_repository import ScreenshotRepository
 from setezor.repositories.setting_repository import SettingRepository
 from setezor.repositories.software_type_repository import SoftwareTypeRepository
 from setezor.repositories.software_version_repository import SoftwareVersionRepository
 from setezor.repositories.dns_a_screenshot_repository import DNS_A_ScreenshotRepository
+from setezor.repositories.web_archive_repository import WebArchiveRepository
 from setezor.settings import DEV
 
 class UnitOfWork:
@@ -216,11 +217,11 @@ class UnitOfWork:
     def agent_parent_agent(self) -> AgentParentAgentRepository: return AgentParentAgentRepository(self.__session)
 
     @property
-    def network_speed_test(self) -> NetworkSpeedTestRepository: return NetworkSpeedTestRepository(self.__session)
-    
+    def agent_interface(self) -> AgentInterfaceRepository: return AgentInterfaceRepository(self.__session)
+
     @property
-    def screenshot(self) -> ScreenshotRepository: return ScreenshotRepository(self.__session)
-    
+    def network_speed_test(self) -> NetworkSpeedTestRepository: return NetworkSpeedTestRepository(self.__session)
+
     @property
     def dns_a_screenshot(self) -> DNS_A_ScreenshotRepository: return DNS_A_ScreenshotRepository(self.__session)
 
@@ -250,6 +251,9 @@ class UnitOfWork:
 
     @property
     def organization_department(self) -> OrganizationDepartmentRepository: return OrganizationDepartmentRepository(self.__session)
+
+    @property
+    def web_archive(self) -> WebArchiveRepository: return WebArchiveRepository(self.__session)
 
     def get_repo_by_model(self, model) -> SQLAlchemyRepository:
         for repository in SQLAlchemyRepository.__subclasses__():

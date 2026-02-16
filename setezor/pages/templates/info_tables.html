@@ -10,18 +10,9 @@
 <script src="/static/js/libs/xlsx.full.min.js"></script>
 <script src="/static/js/libs/jspdf.umd.min.js"></script>
 <script src="/static/js/libs/jspdf.plugin.autotable.min.js"></script>
+<script src="/static/js/src/filterPanel.js"></script>
 {% endblock %}
 {% block content %}
-
-{% import 'network/nmap.html' as nmap %} 
-{{ nmap.nmap_script_modal_to_info_tabs() }} 
-{% import 'network/masscan.html' as masscan%}
-{{ masscan.masscan_modal_to_info_tabs('full_masscan') }} 
-{% import'network/cert.html' as cert%}
-{{ cert.cert_script_modal_to_info_tabs() }} 
-{% import'network/dns_a_screenshot.html' as dns_a_screenshot%}
-{{dns_a_screenshot.dns_a_screenshot_script_modal_to_info_tabs() }}
-{{ dns_a_screenshot.dns_a_screenshot_full_modal() }}
 
 <script>
   let selectedScans = [];
@@ -62,8 +53,8 @@
           aria-labelledby="infotabs-{{name}}"
         >
           <div class="d-flex flex-row justify-content-between">
-            <div id="filter {{tab.name}}" class="d-flex flex-row py-2">
-              <div class="btn-group" style="padding-right: 0.3rem" role="group">
+            <div id="filter {{tab.name}}" class="d-flex flex-row pt-1">
+              <div class="btn-group" style="padding-right: 0.3rem; max-height: 34px;" role="group">
                 <button
                   class="btn btn-primary"
                   id="{{tab.name}}-reload-data"
@@ -75,104 +66,57 @@
                   ></i>
                 </button>
               </div>
-              <div class="me-1">
-                <select class="form-select h-100" id="filter-field-{{tab.name}}">
-                  {% for col in tab.columns %} 
-                  {% if col.title != "ID" and 
-                  col.title != "Vulnerabilities" and 
-                  col.title != "Comments"%}
-                  <option value="{{ col.field }}">{{ col.title }}</option>
-                  {% endif %} 
-                  {%endfor%}
-                </select>
-              </div>
-
-              <div class="me-1">
-                <select class="form-select" id="filter-type-{{tab.name}}" style="width: 80px;">
-                  <option value="=">=</option>
-                  <option value="<">&lt;</option>
-                  <option value="<=">&lt;=</option>
-                  <option value=">">&gt;</option>
-                  <option value=">=">&gt;=</option>
-                  <option value="!=">!=</option>
-                  <option value="like">like</option>
-                </select>
-              </div>
-                <input
-                  id="filter-value-{{tab.name}}"
-                  name="filter-value-{{tab.name}}"
-                  class="form-control me-1"
-                  type="text"
-                  data-i18n-placeholder="value1,value2,value3"
-                  style="width: 40%"
-                  title="Введите значения через запятую для множественного фильтра"
-                />
-
-              <button
-                id="filter-search-{{tab.name}}"
-                class="btn btn-primary me-1"
-                style="width: 5rem"
-                onclick="{{tab.name}}ApplyFilter()"
-                data-i18n="Search"
-              ></button>
-              <button
-                id="filter-clear-{{tab.name}}"
-                class="btn btn-danger me-1"
-                style="width: 7rem"
-                onclick="{{tab.name}}clearFilter()"
-                data-i18n="Clear"
-              ></button>
+              <div id="filter-panel-container-{{tab.name}}" class="me-1"></div>
 
               {% if tab.name == 'software' or tab.name == 'ip_mac_port' or tab.name == 'open_ports' %}
               <div class="me-1">
                 <select
                   class="form-select h-100"
-                  style="width: 12rem"
+                  style="width: 12rem; max-height: 34px;"
                   id="filter-tools-{{tab.name}}"
                 >
                   <option value="nmap">nmap</option>
                   <option value="masscan">masscan</option>
                   <option value="cert">cert</option>
                   <option value="whois">whois</option>
-                  <option value="brute">brute</option>
-                  <option value="ip-info">ip-info</option>
-                  <option value="resolve">resolve</option>
+                  <!-- <option value="brute">brute</option> -->
+                  <!-- <option value="ip-info">ip-info</option> -->
+                  <option value="lookup">lookup</option>
                 </select>
               </div>
               {% elif tab.name == 'auth_credentials' or tab.name == 'domain_ip' or tab.name == 'ip_domain'
-              or tab.name == 'dns_a_screenshot' or tab.name == 'web_screenshot' %}
+              or tab.name == 'web_grabber' or tab.name == 'web_screenshot' %}
               <div class="me-1">
                 <select
                   class="form-select h-100"
-                  style="width: 12rem"
+                  style="width: 12rem; max-height: 34px;"
                   id="filter-tools-{{tab.name}}"
                 >
                   <option value="nmap">nmap</option>
                   <option value="masscan">masscan</option>
                   <option value="cert">cert</option>
-                  <option value="recon">recon</option>
                   <option value="whois">whois</option>
                   <option value="brute">brute</option>
-                  <option value="ip-info">ip-info</option>
-                  <option value="resolve">resolve</option>
-                  <option value="dns_a_screenshot">dns_a_screenshot</option>
+                  <!-- <option value="ip-info">ip-info</option> -->
+                  <option value="lookup">lookup</option>
+                  <option value="web_grabber">web_grabber</option>
                 </select>
               </div>
               {% endif %} {% if tab.name == 'software' or tab.name ==
               'ip_mac_port' or tab.name == 'domain_ip' or tab.name ==
-              'auth_credentials' or tab.name == 'dns_a_screenshot' or 
+              'auth_credentials' or tab.name == 'web_grabber' or 
               tab.name == 'open_ports' or tab.name == 'ip_domain' or 
               tab.name == 'web_screenshot'%}
               <button
                 class="btn btn-success"
-                style="width: 7rem"
+                style="width: 7rem; max-height: 34px;"
                 onclick="{{tab.name}}open_modal_tools();"
                 data-i18n="Start"
               ></button>
               {% endif %}
               <div
                 class="btn-group me-1"
-                style="margin-left: 0.3rem"
+                style="margin-left: 0.3rem; max-height: 34px;"
                 role="group"
               >
                 <button
@@ -220,8 +164,8 @@
                 </ul>
               </div>
             </div>
-            <div class="d-flex mb-2 mt-2">
-                <div class="dropdown" style="width: 10rem;">
+            <div class="d-flex mt-2" style="max-height: 34px;">
+                <div class="dropdown mr-2" style="width: 10rem; margin-right: 7px;">
                     <button class="btn btn-light border dropdown-toggle w-100 text-start"
                             type="button"
                             data-bs-toggle="dropdown"
@@ -610,7 +554,8 @@
                 '["ipaddr", "port", "protocol"]' if tab.name in ['open_ports'] else
                 '["ipaddr", "domain"]' if tab.name in ['ip_domain'] else
                 '["ipaddr", "domain", "port"]' if tab.name in ['web', 'auth_credentials'] else
-                '["ip", "domain"]' if tab.name in ['web_screenshot']
+                '["ip", "domain"]' if tab.name in ['web_screenshot'] else
+                '["domain"]' if tab.name in ['domain_info']
                 ) | safe 
             }};
 
@@ -869,6 +814,7 @@
                 }
 
                 ip_info_table.setData(ip_info_table.getAjaxUrl(), {}, "GET");
+                domain_info_table.setData(domain_info_table.getAjaxUrl(), {}, "GET");
                 open_ports_table.setData(open_ports_table.getAjaxUrl(), {}, "GET");
                 ip_domain_table.setData(ip_domain_table.getAjaxUrl(), {}, "GET");
                 web_table.setData(web_table.getAjaxUrl(), {}, "GET");
@@ -886,64 +832,86 @@
                                         selected_id.push(Number(k.split('-')[2]));
                                 }
 
-                                let grouped = {};
-                                for (let i = 0; i < t_rows.length; i++) {
-                                    if (selected_id.includes(t_rows[i].id)) {
-                                        let ip = t_rows[i].ipaddr;
-                                        let portStr = t_rows[i].port != null ? t_rows[i].port.toString() : "";
+                                const KEY_FIELDS = (
+                                    {% if tab.name in ['web', 'auth_credentials'] %}
+                                        ["ipaddr", "domain", "port"]
+                                    {% elif tab.name == 'web_screenshot' %}
+                                        ["ip", "domain"]
+                                    {% elif tab.name in ['ip_domain'] %}
+                                        ["ipaddr", "domain"]
+                                    {% elif tab.name in ['open_ports'] %}
+                                        ["ipaddr", "port", "protocol"]
+                                    {% else %}
+                                        ["ipaddr"]
+                                    {% endif %}
+                                );
 
-                                        if (!grouped[ip]) {
-                                            grouped[ip] = { ...t_rows[i] };
-                                            grouped[ip].port = [portStr];
-                                        } else {
-                                            grouped[ip].port.push(portStr);
+                                let uniqueMap = new Map();
+
+                                for (let row of t_rows) {
+                                    if (!selected_id.includes(row.id)) continue;
+
+                                    let keyParts = KEY_FIELDS.map(field => {
+                                        let val = row[field];
+                                        return val != null ? String(val) : '';
+                                    });
+                                    let compositeKey = keyParts.join('|');
+
+                                    if (!uniqueMap.has(compositeKey)) {
+                                        let newRow = { ...row };
+                                        newRow.port = row.port != null ? [String(row.port)] : [];
+                                        uniqueMap.set(compositeKey, newRow);
+                                    } else {
+                                        let existing = uniqueMap.get(compositeKey);
+                                        let portStr = row.port != null ? String(row.port) : '';
+                                        if (portStr && !existing.port.includes(portStr)) {
+                                            existing.port.push(portStr);
                                         }
                                     }
                                 }
 
-                                let result = [];
-                                for (let ip in grouped) {
-                                    if (grouped.hasOwnProperty(ip)) {
-                                        let item = {...grouped[ip]};
+                                let result = Array.from(uniqueMap.values()).map(item => {
+                                    if (item.port && Array.isArray(item.port)) {
                                         item.port = item.port.join(',');
-                                        result.push(item);
                                     }
-                                }
+                                    return item;
+                                });
+
                                 return result;
                             }
                             function {{tab.name}}open_modal_tools()
                             {
                                 let tool = document.getElementById('filter-tools-{{tab.name}}').value.toString()
-                                rows = {{tab.name}}get_selected_rows();
+                                rows = {{tab.name}}_table.getData().filter(row => {
+                                    return Array.from({{tab.name}}_selected_row.entries())
+                                        .some(([k, v]) => v && Number(k.split('-')[2]) === row.id);
+                                });
 
                                 {
                                     switch (tool) {
                                     case "nmap":
-                                        nmap_script_modal_to_info_tabs(rows);
+                                        nmap_start_with_prefill(rows);
                                         break;
                                     case "masscan":
-                                        masscan_script_modal_to_info_tabs(rows, 'full_masscan');
+                                        masscan_start_with_prefill(rows);
                                         break;
-                                    case "recon":
-                                        window.recon_script_modal_to_info_tabs(rows);
+                                    case "lookup":
+                                        lookup_start_with_prefill(rows);
                                         break;
                                     case "cert":
-                                        cert_script_modal_to_info_tabs(rows)
+                                        cert_start_with_prefill(rows)
                                         break;
                                     case "whois":
-                                        window.whois_script_modal_to_info_tabs(rows)
+                                        whois_start_with_prefill(rows)
                                         break;
-                                    case "dns_a_screenshot":
-                                        dns_a_screenshot_script_modal_to_info_tabs(rows)
+                                    case "web_grabber":
+                                        web_grabber_start_with_prefill(rows)
                                         break;
                                     case "brute":
-                                        brute_script_modal_to_info_tabs(rows)
+                                        brute_start_with_prefill(rows)
                                         break;
                                     case "ip-info":
-                                        ip_info_script_modal_to_info_tabs(rows)
-                                        break;
-                                    case "resolve":
-                                        resolve_script_modal_to_info_tabs(rows)
+                                        ip_info_start_with_prefill(rows)
                                         break;
                                     default:
                                         break;
@@ -1294,18 +1262,18 @@
 
                             function vulnsBtnFormatter(cell) {
                                 const row = cell.getRow().getData();
-                                const ip = row.ipaddr || row.ip || '';
-                                const port = row.port || '';
-                                const domain = row.domain || '';
-                                const buttonText = `${i18next.t("Vulerabilities")}`;
-                                return `<button class="btn btn-sm btn-outline-danger vulns-btn"
-                                                onclick="showVulnsModal('${ip}', '${port}', '${domain}')">
+                                const port_id = row.port_id || '';
+                                const vulnsCount = parseInt(row.vulns_count, 10) || 0;
+                                const buttonText = `${i18next.t("Vulerabilities")} (${vulnsCount})`;
+                                const disabledAttr = vulnsCount === 0 ? 'disabled' : '';
+                                return `<button class="btn btn-sm btn-outline-danger vulns-btn" ${disabledAttr}
+                                                onclick="${vulnsCount > 0 ? `showVulnsModal('${port_id}')` : ''}">
                                         ${buttonText}
                                         </button>`;
                             }
 
-                            function showVulnsModal(ip, port, domain) {
-                                const url = `/api/v1/vulns?ip=${encodeURIComponent(ip)}${port ? '&port=' + encodeURIComponent(port) : ''}${domain ? '&domain=' + encodeURIComponent(domain) : ''}`;
+                            function showVulnsModal(port_id) {
+                                const url = `/api/v1/l4/${encodeURIComponent(port_id)}/vulnerabilities`;
 
                                 const modalEl = document.getElementById('vulnsModal');
                                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -1326,26 +1294,52 @@
                                         return r.json();
                                     })
                                     .then(data => {
-                                        if (!data || !data.vulnerabilities || data.vulnerabilities.length === 0) {
-                                            content.innerHTML = `<div class="alert alert-info" data-i18n="No vulnerabilities found"></div>`;
+                                        const vulns = Array.isArray(data) 
+                                            ? data 
+                                            : (data?.vulnerabilities || data?.results || []);
+                                        
+                                        if (!vulns.length) {
+                                            content.innerHTML = `<div class="alert alert-info">No vulnerabilities found</div>`;
                                             return;
                                         }
 
-                                        let html = `<div class="list-group">`;
-                                        data.vulnerabilities.forEach(vuln => {
-                                            html += `
-                                                <div class="list-group-item">
-                                                    <div class="d-flex justify-content-between">
-                                                        <strong>${vuln.cve || vuln.id || '—'}</strong>
-                                                        <small class="text-muted">${vuln.cvss_score ? 'CVSS: ' + vuln.cvss_score : ''}</small>
-                                                    </div>
-                                                    <p class="mb-1">${vuln.description || ''}</p>
-                                                    ${vuln.link ? `<a href="${vuln.link}" target="_blank" class="text-primary">${vuln.link}</a>` : ''}
-                                                </div>
-                                            `;
+                                        const counts = { critical: 0, high: 0, medium: 0, low: 0, informational: 0 };
+
+                                        vulns.forEach(vuln => {
+                                            const scoreStr = vuln.cvss3_score || vuln.cvss2_score || vuln.cvss_score || '0';
+                                            const score = parseFloat(scoreStr) || 0;
+
+                                            if (score >= 9.0) counts.critical++;
+                                            else if (score >= 7.0) counts.high++;
+                                            else if (score >= 4.0) counts.medium++;
+                                            else if (score > 0) counts.low++;
+                                            else counts.informational++;
                                         });
-                                        html += `</div>`;
-                                        content.innerHTML = html;
+
+                                        content.innerHTML = `
+                                            <div class="d-flex justify-content-around mb-3">
+                                                <div class="text-center">
+                                                    <span class="fs-3" style="color: #b12825;">${counts.critical}</span>
+                                                    <div class="text-muted mt-1">Critical</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <span class="fs-3" style="color: #b93c16;">${counts.high}</span>
+                                                    <div class="text-muted mt-1">High</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <span class="fs-3" style="color: #9f5620;">${counts.medium}</span>
+                                                    <div class="text-muted mt-1">Medium</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <span class="fs-3" style="color: #966406;">${counts.low}</span>
+                                                    <div class="text-muted mt-1">Low</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <span class="fs-3 text-primary">${counts.informational}</span>
+                                                    <div class="text-muted mt-1">Informational</div>
+                                                </div>
+                                            </div>
+                                        `;
                                     })
                                     .catch(err => {
                                         console.error("Vuln fetch error:", err);
@@ -1369,6 +1363,21 @@
                                     console.warn("Failed to parse 'data' field:", e);
                                 }
                                 return "";
+                            }
+
+                            function dataTextareaFormatter(cell) {
+                                const value = cell.getValue() || "";
+                                return `<textarea class="form-control" disabled rows="1">${value}</textarea>`;
+                            }
+
+                            function viewLogButtonFormatter(cell, formatterParams, onRendered) {
+                                const value = cell.getValue();
+                                if (!value) return "";
+                                const button = document.createElement("button");
+                                button.className = "btn btn-sm btn-outline-secondary";
+                                button.innerHTML = '<i class="bi bi-file-earmark-text"></i> ' + i18next.t('View Log');
+                                button.addEventListener("click", () => showLogContent(value));
+                                return button;
                             }
 
                             function commentsFormatter(cell) {
@@ -1785,6 +1794,7 @@
                                 paginationInitialPage: 1,
                                 paginationSizeSelector: [5, 10, 25, 50, 100, 250, 500],
                                 validationMode: 'highlight',
+                                rowHeight: "auto",
                                 columns: [
                                     {% if tab.name == 'open_ports' or tab.name == 'ip_domain' or tab.name == 'web_screenshot' or tab.name == 'auth_credentials'%}
                                         {
@@ -1829,22 +1839,22 @@
                                         tooltip: true {% endif %}
                                         {% if col.width %},
                                         width: "{{col.width}}"{% endif %}
-                                        {% if col.headerFilter %},
-                                        headerFilter: "{{col.headerFilter}}"{% endif %}
-                                        {% if col.headerFilterPlaceholder %},
-                                        headerFilterPlaceholder: i18next.t("{{col.headerFilterPlaceholder}}"){% endif %}
-                                        {% if col.headerFilterFunc %},
-                                        headerFilterFunc: "{{col.headerFilterFunc}}"{% endif %}
-                                        {% if col.headerFilterParams %},
-                                        headerFilterParams: {{ col.headerFilterParams | tojson }}{% endif %}
+                                        // {% if col.headerFilter %},
+                                        // headerFilter: "{{col.headerFilter}}"{% endif %}
+                                        // {% if col.headerFilterPlaceholder %},
+                                        // headerFilterPlaceholder: i18next.t("{{col.headerFilterPlaceholder}}"){% endif %}
+                                        // {% if col.headerFilterFunc %},
+                                        // headerFilterFunc: "{{col.headerFilterFunc}}"{% endif %}
+                                        // {% if col.headerFilterParams %},
+                                        // headerFilterParams: {{ col.headerFilterParams | tojson }}{% endif %}
                                         
                                         {% if col.field == 'screenshot_path' %},
                                         formatter: screenshots_formatter,
                                         headerSort: false,
                                         {% endif %}
                                         {% if col.field == 'data' %},
-                                        formatter: descrFormatter,
-                                        hozAlign: "left",
+                                        formatter: viewLogButtonFormatter,
+                                        hozAlign: "center",
                                         headerSort: false,
                                         {% endif %}
                                         {% if col.field == 'link' %},
@@ -1858,7 +1868,20 @@
                                         formatter: vulnsBtnFormatter,
                                         headerSort: false,
                                         {% endif %}
-                                        
+                                        {% if col.field == 'nameservers' %},
+                                        hozAlign: "left",
+                                        formatter: function(cell) {
+                                            const value = cell.getValue();
+                                            return value ? value.replace(/,\s*/g, ',<br>') : "";
+                                        },
+                                        {% endif %}
+                                        {% if col.field == 'contacts' %},
+                                        hozAlign: "left",
+                                        formatter: function(cell) {
+                                            const value = cell.getValue();
+                                            return value ? value.replace(/;\s*/g, ';<br>') : "";
+                                        },
+                                        {% endif %}
                                         {# Добавляем редакторы для API колонок #}
                                         {% if col.field == 'api_dir' or col.field == 'api_endpoint' or col.field == 'http_method' or col.field == 'body' %},
                                         editor: "input",
@@ -1873,11 +1896,18 @@
                                     ] })
                                 
                                 {{tab.name}}_table.on("tableBuilt", function() {
-                                    const filterInputs = {{tab.name}}_table.element.querySelectorAll(".tabulator-header-filter input");
-                                    filterInputs.forEach(input => {
-                                        if (input.placeholder && !input.title) {
-                                            input.title = input.placeholder;
-                                        }
+                                    initFilterPanelContainer({
+                                        tableId: "{{tab.name}}",
+                                        tableVar: {{tab.name}}_table,
+                                        fields: [
+                                            {% for col in tab.columns %}
+                                                {% if col.title not in ["ID", "Vulnerabilities", "Comments", "Range IP", "Data", "Country", "Created", "Expires", "Nameservers", "Contacts", "Org-name", "EXTRA_DATA", "SCREENSHOT"] %}
+                                                    { field: "{{ col.field }}", title: "{{ col.title }}" }{% if not loop.last %},{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        ],
+                                        containerId: "filter-panel-container-{{tab.name}}",
+                                        allowMultipleFilters: true
                                     });
                                 });
                                 {{tab.name}}_table.on('dataLoaded', () => {                              
@@ -1983,6 +2013,73 @@
                 });
             });
         });
+    </script>
+    <script>
+    let logViewerModal = null;
+    let logViewerModalInstance = null;
+
+    function showLogContent(logText) {
+        if (!logViewerModal) {
+            const modalHtml = `
+            <div class="modal fade" id="logViewerModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label=""></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <textarea
+                                class="form-control"
+                                readonly
+                                rows="30"
+                                style="
+                                    font-family: monospace;
+                                    font-size: 0.9em;
+                                    resize: none;
+                                    border: none;
+                                    width: 100%;
+                                    box-sizing: border-box;
+                                    padding: 0.1rem;
+                                    background: transparent;
+                                    outline: none;
+                                "
+                            ></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            logViewerModal = document.getElementById('logViewerModal');
+            logViewerModalInstance = new bootstrap.Modal(logViewerModal, {
+                backdrop: true,
+                keyboard: true
+            });
+        }
+
+        const titleEl = logViewerModal.querySelector('.modal-title');
+        const closeBtn = logViewerModal.querySelector('.btn-close');
+        const footerBtn = logViewerModal.querySelector('.modal-footer .btn');
+        titleEl.textContent = i18next.t('Log Content');
+        closeBtn.setAttribute('aria-label', i18next.t('Close'));
+        footerBtn.textContent = i18next.t('Close');
+
+        const textarea = logViewerModal.querySelector('textarea');
+
+        let displayText = logText || i18next.t('No log content');
+
+        try {
+            const parsed = typeof logText === 'string' ? JSON.parse(logText) : logText;
+            displayText = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+        }
+
+        textarea.value = displayText;
+        logViewerModalInstance.show();
+    }
     </script>
   {% endblock content %}
 </div>

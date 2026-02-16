@@ -1,305 +1,496 @@
-{% macro cert_input_ip() %}
+{% import 'modals/tools_modal_constructor.html' as modal %}
 
-<span class="input-group-text" id="basic-addon1" data-i18n="TARGET"></span>
-<datalist id="DomainsAndIp"></datalist>
-<input type="text" list="DomainsAndIp" class="form-control"  id='inputTargetTLS' data-i18n-placeholder="Domain name or IP"  style="width: 7rem;"
-    aria-label="TargetTLS" aria-describedby="basic-addon1" required name="TargetTLS">
-{% endmacro %}
-{% macro cert_input_port() %}
-<span class="input-group-text" id="basic-addon1" data-i18n="PORT"></span>
-<input type="text" class="form-control"  id='inputPort' placeholder="Port" aria-label="Port"
-    aria-describedby="basic-addon1" required name="Port" value="443">
-{% endmacro %}
-{% macro cert_plus_button() %}
-<button id="add_new_tls_form" onclick="addNewCertForm()" type="button" class="btn btn-success" style="width: 3rem">+</button>
-<script>
-    function addNewCertForm() {
-            const original = document.getElementById('TargetTLS');
-            const clone = original.cloneNode(true);
-            const newInputTarget = clone.querySelector('[id^="inputTargetTLS"]');
-            newInputTarget.id = 'inputTargetTLS_' + Date.now();
-            const newInputPort = clone.querySelector('[id^="inputPort"]');
-            newInputPort.id = 'inputPort_' + Date.now();
-            const originalInputTarget = document.getElementById('inputTargetTLS');
-            const originalInputPort = document.getElementById('inputPort');
-            newInputTarget.value = originalInputTarget.value;
-            newInputPort.value = originalInputPort.value;
-            originalInputTarget.value = ''
-            originalInputPort.value = 443
+{{ modal.create_modal('certModalWindow', 'TLS/SSL CERT', 'https://help.setezor.net/Инструменты.html#tls-ssl-cert') }}
 
-            let existingMinusButton = clone.querySelector('.btn-danger');
-            if (existingMinusButton) {
-                existingMinusButton.remove();
-            }
-        
-            let removeButton = document.createElement('button');
-            removeButton.textContent = '-';
-            removeButton.type = 'button';
-            removeButton.className = 'btn btn-danger';
-            removeButton.style.width = '3rem';
-            removeButton.onclick = () => {
-                clone.remove();
-            };
-        
-            clone.appendChild(removeButton);
-        
-            let addButton = clone.querySelector('#add_new_tls_form');
-            if (addButton) {
-                addButton.remove();
-            }
-        
-            document.getElementById('TLSInputContainer').appendChild(clone);
-        }
-</script>
 <script>
-    function resetCertModal() {
-        const certForm = document.getElementById('CertForm');
-        if (certForm) certForm.reset();
-        
-        const container = document.getElementById('TLSInputContainer');
-        if (container) container.innerHTML = '';
-        
-        const originalInput = document.getElementById('inputTargetTLS');
-        if (originalInput) originalInput.value = '';
-        
-        const originalInputPort = document.getElementById('inputPort');
-        if (originalInputPort) originalInputPort.value = '443';
-        
-        }
-</script>
-{% endmacro %}
-{% macro cert_start() %}
-<div class="btn-group d-flex my-2" role="group">
-    <input class="btn btn-outline-secondary w-50" name="reset_params" type="reset" data-i18n-value="Reset Params">
-    <button type="button" class="btn btn-primary w-50" id="startScanCert" onclick="startTlsScan()" data-i18n="Start">
-    </button>
-</div>
-<script>
-    function collectTlsFormData(form) {
-    const domains_tls = [];
-    const ports_tls = [];
+const CertHandlers = {
 
-    for (const element of form.elements) {
-        if (element.name === 'TargetTLS') {
-            domains_tls.push(element.value);
-        }
-        if (element.name === 'Port') {
-            ports_tls.push(element.value);
-        }
+  async handlePrefill(instance, rows = [], prefillParams = {}) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) {
+      const tab = new bootstrap.Tab(targetTab);
+      tab.show();
     }
 
-    return { domains_tls, ports_tls };
-}
+    if (rows.length > 0) {
+      const ipMap = new Map();
+      
+      rows.forEach(row => {
+        const ip = (row.ipaddr || row.domain || '').trim();
+        const port = String(row.port || '').trim();
+        
+        if (!ip) return;
+        
+        const existing = ipMap.get(ip) || '';
+        const combined = existing ? `${existing},${port}` : port;
+        const uniquePorts = [...new Set(combined.split(',').filter(Boolean))].join(',');
+        
+        ipMap.set(ip, uniquePorts);
+      });
 
-function prepareTlsParams(domains, ports) {
-    return domains.map((domain, index) => ({
-        target: domain,
-        port: ports[index] || null,
-        agent_id: getAgent(),
-    }));
-}
+      Array.from(ipMap.entries()).forEach(([target, ports], index) => {
+        if (index === 0) {
+          const targetInput = document.getElementById(`${prefix}inputTarget`);
+          const portInput = document.getElementById(`${prefix}inputPort`);
+          
+          if (targetInput) targetInput.value = target;
+          if (portInput) portInput.value = ports || '443';
+        } else {
+          instance.addInputField('target_port');
+          
+          const container = document.getElementById(`${prefix}InputContainer`);
+          const lastGroup = container?.lastElementChild;
+          
+          if (lastGroup) {
+            const targetInput = lastGroup.querySelector('.target');
+            const portInput = lastGroup.querySelector('.port');
+            
+            if (targetInput) targetInput.value = target;
+            if (portInput) portInput.value = ports || '443';
+          }
+        }
+      });
+    }
 
-function sendCertInfoTask(params) {
-    fetch('/api/v1/task/cert_info_task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
+    if (Object.keys(prefillParams).length > 0) {
+      this.applyPrefillParams(prefix, prefillParams);
+    }
+
+    window[`show_${instance.modalId}`]();
+  },
+
+  applyPrefillParams(prefix, params) {
+    if (params.target) {
+      const targetInput = document.getElementById(`${prefix}inputTarget`);
+      if (targetInput) {
+        targetInput.value = params.target;
+      }
+    }
+
+    if (params.port !== undefined) {
+      const portInput = document.getElementById(`${prefix}inputPort`);
+      if (portInput) {
+        portInput.value = String(params.port);
+      }
+    }
+
+    if (params.agent_id) {
+      if (typeof window.setAgent === 'function') {
+        window.setAgent(params.agent_id);
+      }
+    }
+  },
+
+  async handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const targetInput = document.getElementById(`${prefix}inputTarget`);
+    if (targetInput) {
+      let nodeName = '';
+      
+      if (typeof node === 'string') {
+        nodeName = node;
+      } else if (typeof node === 'object' && node !== null) {
+        nodeName = node.label || node.name || node.ip || node.domain || node.id || '';
+      }
+      
+      targetInput.value = nodeName;
+    }
+
+    const portInput = document.getElementById(`${prefix}inputPort`);
+    
+    if (typeof node === 'object' && node !== null) {
+      if (node.ports && Array.isArray(node.ports)) {
+        const ports = [...new Set(node.ports.map(p => p.port || p))].join(',');
+        if (portInput) {
+          portInput.value = ports || '443';
+        }
+      } else if (node.id && node.id !== 'undefined' && node.id !== undefined) {
+        try {
+          const response = await fetch(`/api/v1/vis/node_info/${node.id}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.ports && Array.isArray(data.ports)) {
+            const ports = [...new Set(data.ports.map(p => p.port))].join(',');
+            if (portInput) {
+              portInput.value = ports || '443';
+            }
+          } else {
+            if (portInput) {
+              portInput.value = '443';
+            }
+          }
+        } catch (error) {
+          console.error('[Cert] Failed to load node ports:', error);
+          if (portInput) {
+            portInput.value = '443';
+          }
+        }
+      } else {
+        if (portInput) {
+          portInput.value = '443';
+        }
+      }
+    } else {
+      if (portInput) {
+        portInput.value = '443';
+      }
+    }
+    
+    window[`show_${instance.modalId}`]();
+  }
+};
+
+class CertScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
+
+  getBaseParams() {
+    const agentId = window.agentData?.default_agent;
+
+    if (!agentId) {
+      throw new Error("Please select an Agent");
+    }
+
+    return {
+      agent_id: String(agentId)
+    };
+  }
+
+  async scanScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const payload = { ...baseParams, scope_id: String(scopeId) };
+
+    const result = await window.executeToolTasks({
+      tasks: [{
+        endpoint: '/api/v1/task/cert_info_task',
+        payload
+      }],
+      stopOnFirstFailure: true
     });
-}
 
-function hideCertModal() {
-    const modalElement = document.getElementById('certModalWindow');
-    if (modalElement) {
-        const myModal = bootstrap.Modal.getInstance(modalElement);
-        if (myModal) {
-            myModal.hide();
-        }
-    }
-}
-
-function startTlsScan() {
-    const form = document.getElementById('CertForm');
-
-    if (!form) {
-        console.error('Форма CertForm не найдена');
-        return;
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Certificate scope scan failed');
     }
 
-    const { domains_tls, ports_tls } = collectTlsFormData(form);
-    const combinedParams = prepareTlsParams(domains_tls, ports_tls);
+    return result.responses[0];
+  }
 
-    combinedParams.forEach(sendCertInfoTask);
+  async scanTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const tasks = [];
 
-    hideCertModal();
-}
-</script>
-{% endmacro %}
+    for (const target of targets) {
+      const targetValue = String(target.target || target.ip || target.domain || target.url || target).trim();
 
-{% macro cert_script_modal_to_info_tabs() %}
+      if (!targetValue) continue;
 
-<script>
-     async function cert_script_modal_to_info_tabs(rows) {
-        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
-        resetCertModal();
-        if (rows.length > 1) {
-            addNewCertForm();
-        }
+      let ports = ['443'];
+      if (target.port && target.port.trim()) {
+        ports = target.port
+          .split(',')
+          .map(p => p.trim())
+          .filter(p => p && !['null', 'undefined', ''].includes(p));
+        if (ports.length === 0) ports = ['443'];
+      }
 
-        let inputForms = document.querySelectorAll('[id^="TargetTLS"]');
-        
-        for (let row = 0; row < rows.length; row++) {
-            let currentForm = inputForms[row] || addNewCertForm();
-            
-            let inputIP = currentForm.querySelector('[id^="inputTargetTLS"]');
-            // let inputPort = currentForm.querySelector('[id^="inputPort"]');
-            
-            if (inputIP && rows[row].ipaddr) {
-                inputIP.value = rows[row].ipaddr;
-            }
-            
-            // if (inputPort && rows[row].port) {
-            //     inputPort.value = rows[row].port;
-            // }
-            
-            if (row < rows.length - 1 && row >= inputForms.length - 1) {
-                addNewCertForm();
-                inputForms = document.querySelectorAll('[id^="TargetTLS"]');
-            }
-        }
-        
-        myModal.show();
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
-            keyboard: false
+      for (const port of ports) {
+        tasks.push({
+          endpoint: '/api/v1/task/cert_info_task',
+          payload: {
+            ...baseParams,
+            target: targetValue,
+            port: port || '443'
+          }
         });
-
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("certModalWindow")) {
-                myModal.hide();
-            }
-        };
-    });
-</script>
-{% endmacro %}
-
-{% macro cert_full_modal() %}
-<div id="certModalWindow" class="modal fade" tabindex="-1" aria-labelledby="certModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="certModalLabel">TLS/SSL CERT</h5>
-                    <a href="https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#tls-ssl-cert" target="_blank" style="margin-top: 0.3rem; margin-left: 0.2rem;">
-                    <i class="bi bi-question-circle fs-4" style="font-family: 'Times New Roman', Times, serif"></i>
-                    </a>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex mb-2" id="agent_interface_bar_cert">
-                    <div data-agent-bar="agent_cert"></div>
-                    <div data-interface-bar="interface_cert" class="ms-3"></div>
-                    <div id="scans_bar_cert" class="ms-3"></div>
-                </div>
-                <div class="d-flex flex-column">
-                    <div class="tab-content" id="dsa">
-                        <form id="CertForm" name="CertFormName" class="needs-validation" novalidate>
-                            <div id="TLSInputContainer"></div>
-                            <div class="input-group" style="padding-top: 7px;" id="TargetTLS">
-                                {{cert_input_ip()}}
-                                {{cert_input_port()}}
-                                {{cert_plus_button()}}
-
-                            </div>
-                            {{cert_start()}}
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer"> 
-                <div class="d-flex flex-column w-100">
-
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-    async function get_cert_targets () {
-                    const response = await axios.get('api/v1/scope/cert_data');
-            };
-
-    function cert_full_modal_window() {
-        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
-        resetCertModal();
-        myModal.show();
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
-            keyboard: false
-        });
+    if (tasks.length === 0) return [];
 
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
-
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("certModalWindow")) {
-                myModal.hide();
-            }
-        };
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
     });
-</script>
-{% endmacro %}
-{% macro cert_script_modal_to_node() %}
-<script>
-    async function get_cert_targets () {
-                    const response = await axios.get('api/v1/scope/cert_data');
-            };
 
-    function cert_script_modal_to_node(ip) {
-        var myModal = new bootstrap.Modal(document.getElementById('certModalWindow'));
-        resetCertModal();
-        var inputIP = document.getElementById('inputTargetTLS')
-        inputIP.value = ip
-        myModal.show();
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Certificate targets scan failed');
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const myModal = new bootstrap.Modal(document.getElementById('certModalWindow'), {
-            keyboard: false
-        });
+    return result.responses;
+  }
+}
 
-        document.querySelector(".btn-close").onclick = function () {
-            myModal.hide();
-        };
+ToolModalBuilder.register('certModalWindow', {
+  prefix: 'cert_',
+  
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'target_port' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    //{ id: 'textarea', label: i18next.t('Textarea'), placeholder: 'example.com:443, 192.168.1.1:8443' },
+  ],
+  
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        },
+        { 
+          title: "Domain", 
+          field: "domain", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search domain..." 
+        },
+        { 
+          title: "Port", 
+          field: "port", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search port..." 
+        }
+      ],
+      // filter: [
+      //   { field: "is_ssl", type: "=", value: 1 },
+      // ]
+    };
+  },
+  
+  // Кастомный обработчик для database tab
+  customDatabaseTargetsHandler(selectedTargets) {
+    // selectedTargets уже должен быть массивом объектов с target и port
+    // из нашего измененного обработчика rowSelectionChanged
+    return selectedTargets || [];
+  },
+  
+  onInit(instance) {
+    const prefix = instance.prefix;
 
-        window.onclick = function (event) {
-            if (event.target === document.getElementById("certModalWindow")) {
-                myModal.hide();
-            }
-        };
+    if (instance.config.getTargets) {
+      instance.getTargets = instance.config.getTargets.bind(instance);
+    }
+
+    // Устанавливаем placeholder для портов
+    const portInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.port`);
+    portInputs.forEach(input => {
+      input.placeholder = '443';
     });
-</script>
-{% endmacro %}
 
-{% macro show() %}
-<div class="d-flex flex-column">
-    <div class="tab-content" id="dsa">
-        <form id="CertForm" name="CertFormName" class="needs-validation" novalidate>
-            <div id="TLSInputContainer"></div>
-            <div class="input-group" style="padding-top: 7px;" id="TargetTLS">
-                {{cert_input_ip()}}
-                {{cert_input_port()}}
-                {{cert_plus_button()}}
-            </div>
-            {{cert_start()}}
-        </form>
-    </div>
-</div>
-{% endmacro %}
+    // Initialize database tab functionality
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          instance.initDatabaseTable();
+          tableInitialized = true;
+        }
+      });
+    }
+
+    // Глобальные функции для внешнего вызова
+    window.cert_start_with_prefill = (rows = [], prefillParams = {}) => {
+      CertHandlers.handlePrefill(instance, rows, prefillParams);
+    };
+
+    window.cert_script_modal_to_node = (node) => {
+      CertHandlers.handleNodeModal(instance, node);
+    };
+
+    window.resetCertModal = () => {
+      instance.reset();
+    };
+
+    window.cert_full_modal_window = () => {
+      instance.reset();
+      window[`show_${instance.modalId}`]();
+    };
+  },
+
+  onReset(instance) {
+    const prefix = instance.prefix;
+
+    const portInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.port`);
+    portInputs.forEach(input => {
+      input.placeholder = '443';
+      if (input.id === `${prefix}inputPort`) {
+        input.value = '443';
+      }
+    });
+
+    const targetInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.target`);
+    targetInputs.forEach(input => {
+      input.value = '';
+    });
+    
+    // Сбрасываем выбранные цели из базы данных
+    instance.state.selectedDatabaseTargets = [];
+    
+    // Сбрасываем выделение в таблице, если она существует
+    if (instance.databaseTable && typeof instance.databaseTable.deselectRow === 'function') {
+      instance.databaseTable.deselectRow();
+    }
+  },
+
+  getTargets() {
+    const tabId = this.getActiveTab();
+    if (!tabId) return [];
+
+    switch (tabId) {
+      case 'scope':
+        return { scope_id: this.state.selectedScopeId };
+        
+      case 'database': {
+        if (!this.databaseTable) return [];
+        
+        return this.databaseTable.getSelectedRows().map(row => {
+          const d = row.getData();
+          const host = (d.domain || d.ipaddr || '').trim();
+          const port = (String(d.port || '').trim() || '443');
+          
+          if (!host) return null;
+          
+          return {
+            target: host,
+            port: port
+          };
+        }).filter(Boolean);
+      }
+
+        
+      case 'target': {
+        // Для target tab получаем значения из полей ввода
+        const targets = [];
+        
+        // Основные поля ввода
+        const mainTarget = document.getElementById(`${this.prefix}inputTarget`);
+        const mainPort = document.getElementById(`${this.prefix}inputPort`);
+        
+        if (mainTarget && mainTarget.value) {
+          targets.push({
+            target: mainTarget.value.trim(),
+            port: mainPort ? mainPort.value.trim() || '443' : '443'
+          });
+        }
+        
+        // Дополнительные поля из контейнера
+        const container = document.getElementById(`${this.prefix}InputContainer`);
+        if (container) {
+          const groups = container.querySelectorAll('.input-group');
+          groups.forEach(group => {
+            const targetInput = group.querySelector('.target');
+            const portInput = group.querySelector('.port');
+            if (targetInput && targetInput.value) {
+              targets.push({
+                target: targetInput.value.trim(),
+                port: portInput ? portInput.value.trim() || '443' : '443'
+              });
+            }
+          });
+        }
+        
+        return targets;
+      }
+        
+      case 'textarea': {
+        // Парсим textarea в формате "host:port"
+        const textarea = document.getElementById(`${this.prefix}textareaInput`);
+        if (textarea && textarea.value) {
+          return textarea.value.split('\n')
+            .map(line => line.trim())
+            .filter(line => line)
+            .map(line => {
+              let target, port = '443';
+              if (line.includes(':')) {
+                [target, port] = line.split(':').map(s => s.trim());
+              } else {
+                target = line;
+              }
+              return {
+                target: target,
+                port: port
+              };
+            });
+        }
+        return [];
+      }
+        
+      default:
+        return [];
+    }
+  },
+
+  async onStart(instance) {
+    const scanner = new CertScanner(instance.prefix);
+    
+    try {
+      const tabId = instance.getActiveTab();
+      const targets = instance.getTargets();
+      
+      console.log('[Cert] Active tab:', tabId);
+      console.log('[Cert] Targets to process:', targets);
+      
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          create_toast('Warning', i18next.t('Please select a scope'), 'warning');
+          return;
+        }
+        const result = await scanner.scanScope(instance.state.selectedScopeId);
+        if (result === null) return; 
+      } else {
+        const targets = instance.getTargets();
+        
+        if (!targets.length) {
+          create_toast('Warning', i18next.t('No targets found'), 'warning');
+          return;
+        }
+        const result = await scanner.scanTargets(targets);
+        if (result === null) return;
+      }
+      
+      // Закрываем модальное окно после успешного запуска
+      window[`close_${instance.modalId}`]();
+      
+      // Показываем уведомление об успешном запуске
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Scan started successfully', 'success');
+      }
+      
+    } catch (error) {
+      console.error('Failed to start Cert scan:', error);
+      create_toast('Error', error.message || i18next.t('Failed to start scan'), 'error');
+    }
+  }
+});
+</script>

@@ -23,10 +23,10 @@ Depends:
  ${misc:Depends},
  sudo,
  libcap2-bin,
- python3.12,
- python3.12-dev,
+ python3.13,
+ python3.13-dev,
  python3-pip,
- python3.12-venv,
+ python3.13-venv,
  ${python3:Depends},
 Description: Multitool for working with network
  .

@@ -87,6 +87,8 @@ Scopes
     let selectedRowsState = {};
     let targetTable;
     let selectedScans = [];
+    let currentFilters = { protocol: '', ip: '', domain: '', port: '' };
+    let filterDebounceTimer = null;
 
     document.getElementById('scopeAddModal').addEventListener('hidden.bs.modal', function () {
         this.querySelector('form[name="addScopeFormName"]').reset();
@@ -258,7 +260,7 @@ Scopes
         if (selectedLink) {
             selectedLink.classList.add('active');
         }
-
+        currentFilters = { protocol: '', ip: '', domain: '', port: '' };
         getScopeTargets(scopeId);
     }
 
@@ -296,7 +298,39 @@ Scopes
 				return ""
 			}
 		}
+    
+    function debounceFilter(input, field) {
+        currentFilters[field] = input.value.trim();
+        clearTimeout(filterDebounceTimer);
+        filterDebounceTimer = setTimeout(() => {
+            if (currentScopeId) getScopeTargets(currentScopeId, 1, currentLimit);
+        }, 500);
+    }
 
+    function escapeAttrValue(str) {
+        return (str || '').replace(/"/g, '&quot;');
+    }
+    
+    function applyFilters() {
+        currentFilters = {
+            protocol: document.getElementById('filter-protocol')?.value.trim() || '',
+            ip: document.getElementById('filter-ip')?.value.trim() || '',
+            domain: document.getElementById('filter-domain')?.value.trim() || '',
+            port: document.getElementById('filter-port')?.value.trim() || ''
+        };
+        Object.keys(currentFilters).forEach(k => !currentFilters[k] && delete currentFilters[k]);
+        if (currentScopeId) getScopeTargets(currentScopeId, 1, currentLimit);
+    }
+
+    function resetFilters() {
+        currentFilters = {};
+        ['protocol','ip','domain','port'].forEach(f => {
+            const el = document.getElementById(`filter-${f}`);
+            if (el) el.value = '';
+        });
+        if (currentScopeId) getScopeTargets(currentScopeId, 1, currentLimit);
+    }
+    
     async function getScopeTargets(id, page = 1, limit = 10) {
         currentScopeId = id;
         currentPage = page;
@@ -319,15 +353,25 @@ Scopes
         
         try {
             const response = await axios.get(`/api/v1/scope/${id}/targets`, {
-                params: { page, limit }
+                params: { 
+                    page, 
+                    limit,
+                    protocol: currentFilters.protocol || undefined,
+                    ip: currentFilters.ip || undefined,
+                    domain: currentFilters.domain || undefined,
+                    port: currentFilters.port || undefined
+                }
             });
             
             const { data, total, total_pages, has_next, has_prev } = response.data;
             totalPages = total_pages;
+            const from = total === 0 ? 0 : (page - 1) * limit + 1;
+            const to = total === 0 ? 0 : Math.min(page * limit, total);
+            const hasActiveFilters = Object.values(currentFilters).some(val => val?.trim());
             
             let result = '';
             
-            if (data.length) {
+            if (data.length > 0 || hasActiveFilters) {
                 result = `
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                         <button class="btn btn-success mb-2" onclick="choosingMethodAddingTargets('${id}')">
@@ -342,7 +386,7 @@ Scopes
                     
                     <div class="table-responsive">
                         <table class="table table-bordered">
-                            <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
+                            <thead style="position: sticky; top: 0; background-color: #fff;">
                                 <tr>
                                     <th scope="col">${i18next.t('PROTOCOL')}</th>
                                     <th scope="col">${i18next.t('IP')}</th>
@@ -350,22 +394,40 @@ Scopes
                                     <th scope="col">${i18next.t('PORT')}</th>
                                     <th scope="col">${i18next.t('ACTION')}</th>
                                 </tr>
+                                <tr class="filter-row">
+                                    <th><input type="text" class="form-control" 
+                                        value="${escapeAttrValue(currentFilters.protocol)}" 
+                                        oninput="debounceFilter(this, 'protocol')"></th>
+                                    <th><input type="text" class="form-control" 
+                                        value="${escapeAttrValue(currentFilters.ip)}" 
+                                        oninput="debounceFilter(this, 'ip')"></th>
+                                    <th><input type="text" class="form-control" 
+                                        value="${escapeAttrValue(currentFilters.domain)}" 
+                                        oninput="debounceFilter(this, 'domain')"></th>
+                                    <th><input type="text" class="form-control" 
+                                        value="${escapeAttrValue(currentFilters.port)}" 
+                                        oninput="debounceFilter(this, 'port')"></th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>`;
-                
-                for (const target of data) {
-                    result += `<tr id="target-${target.id}">`;
-                    result += `<td><span class="editable" data-field="protocol">${sanitize_scope(target.protocol) || ''}</span></td>`;
-                    result += `<td><span class="editable" data-field="ip">${target.ip || ''}</span></td>`;
-                    result += `<td><span class="editable" data-field="domain">${sanitize_scope(target.domain) || ''}</span></td>`;
-                    result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
-                    result += `<td>
-                            <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
-                            <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">${i18next.t('Delete')}</button>
-                            <button class="btn btn-secondary cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">${i18next.t('Cancel')}</button>
-                            <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">${i18next.t('Confirm')}</button>
-                    </td>`;
-                    result += `</tr>`;
+                if (data.length > 0) {
+                    for (const target of data) {
+                        result += `<tr id="target-${target.id}">`;
+                        result += `<td><span class="editable" data-field="protocol">${sanitize_scope(target.protocol) || ''}</span></td>`;
+                        result += `<td><span class="editable" data-field="ip">${target.ip || ''}</span></td>`;
+                        result += `<td><span class="editable" data-field="domain">${sanitize_scope(target.domain) || ''}</span></td>`;
+                        result += `<td><span class="editable" data-field="port">${target.port || ''}</span></td>`;
+                        result += `<td>
+                                <button class="btn btn-primary edit-btn" onclick="editTarget('${target.id}')">${i18next.t('Edit')}</button>
+                                <button class="btn btn-danger delete-btn" onclick="deleteTarget('${target.scope_id}', '${target.id}')">${i18next.t('Delete')}</button>
+                                <button class="btn btn-secondary cancel-btn" onclick="cancelEdit('${target.id}')" style="display:none;">${i18next.t('Cancel')}</button>
+                                <button class="btn btn-success confirm-btn" onclick="confirmEdit('${target.scope_id}','${target.id}')" style="display:none;">${i18next.t('Confirm')}</button>
+                        </td>`;
+                        result += `</tr>`;
+                    }
+                } else {
+                    result += `<tr><td colspan="5" class="text-center py-3">${i18next.t('No targets found matching the filters')}</td></tr>`;
                 }
                 
                 result += `</tbody></table></div>`;
@@ -596,8 +658,8 @@ Scopes
         let modal_elem = document.getElementById("idModalForWritingTargets");
         modal_elem.innerHTML = `
         <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content" style="width: 60rem;">
+            <div class="modal-dialog" style="max-width: 60rem; margin: 1.75rem auto;">
+                <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title"> ${i18next.t('Enter targets for adding on scope')}</h5>
                     </div>
@@ -639,8 +701,8 @@ Scopes
         selectedTargetsFromTabs.clear();
         modal_elem.innerHTML = `
         <div class="modal fade" id="idModalForChoosingMethodAddingTargets2" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content" style="width: 60rem;">
+            <div class="modal-dialog" style="max-width: 60rem; margin: 1.75rem auto;">
+                <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title"> ${i18next.t('Enter targets for adding on scope')} </h5>
                     </div>

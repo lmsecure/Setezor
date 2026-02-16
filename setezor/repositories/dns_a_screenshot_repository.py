@@ -1,8 +1,8 @@
 from typing import List, Optional
 
-from sqlmodel import desc, func, select
+from sqlmodel import desc, func, select, or_
 
-from setezor.models import DNS, IP, DNS_A_Screenshot, Domain, Screenshot
+from setezor.models import DNS, IP, DNS_A_Screenshot, Domain
 from setezor.repositories import SQLAlchemyRepository
 
 
@@ -12,8 +12,8 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
     FIELD_MAPPING = {
         "domain": Domain.domain,
         "ip": IP.ip,
-        "screenshot_id": Screenshot.id,
-        "screenshot_path": Screenshot.id,
+        "screenshot_id": DNS_A_Screenshot.id,
+        "screenshot_path": DNS_A_Screenshot.screenshot_id,
         "created_at": DNS_A_Screenshot.created_at,
     }
 
@@ -25,9 +25,8 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
                 DNS_A_Screenshot.created_at,
                 Domain.domain,
                 IP.ip,
-                Screenshot.id.label("screenshot_path")
+                DNS_A_Screenshot.screenshot_id.label("screenshot_path")
             )
-            .join(Screenshot, DNS_A_Screenshot.screenshot_id == Screenshot.id)
             .join(DNS, DNS_A_Screenshot.dns_id == DNS.id)
             .join(Domain, DNS.target_domain_id == Domain.id)
             .join(IP, DNS.target_ip_id == IP.id)
@@ -52,14 +51,45 @@ class DNS_A_ScreenshotRepository(SQLAlchemyRepository[DNS_A_Screenshot]):
             type_filter = filter_param.get("type", "=")
             value = filter_param.get("value")
 
-            if field in self.FIELD_MAPPING and value is not None:
-                column = self.FIELD_MAPPING[field]
+            if field not in self.FIELD_MAPPING or value is None:
+                continue
+
+            column = self.FIELD_MAPPING[field]
+
+            if isinstance(value, list):
+                if not value:
+                    continue
+
                 if type_filter == "=":
+                    stmt = stmt.where(column.in_(value))
+                elif type_filter == "!=":
+                    stmt = stmt.where(~column.in_(value))
+                elif type_filter == "like":
+                    conditions = [
+                        column.like(f"%{v}%")
+                        for v in value
+                        if v is not None and v != ""
+                    ]
+                    if conditions:
+                        stmt = stmt.where(or_(*conditions))
+                else:
+                    for v in value:
+                        if type_filter == ">":
+                            stmt = stmt.where(column > v)
+                        elif type_filter == ">=":
+                            stmt = stmt.where(column >= v)
+                        elif type_filter == "<":
+                            stmt = stmt.where(column < v)
+                        elif type_filter == "<=":
+                            stmt = stmt.where(column <= v)
+            else:
+                if type_filter == "like":
+                    if value != "":
+                        stmt = stmt.where(column.like(f"%{value}%"))
+                elif type_filter == "=":
                     stmt = stmt.where(column == value)
                 elif type_filter == "!=":
                     stmt = stmt.where(column != value)
-                elif type_filter == "like":
-                    stmt = stmt.where(column.like(f"%{value}%"))
                 elif type_filter == ">":
                     stmt = stmt.where(column > value)
                 elif type_filter == ">=":

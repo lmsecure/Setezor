@@ -21,7 +21,14 @@ elif getattr(sys, 'frozen', False):     # Nuitka standalone (no onefile)
 else:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 PATH_PREFIX = os.path.join(os.path.expanduser('~'), '.local/share/setezor')
+
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev")
+HOST = os.environ.get("HOST", "0.0.0.0")
+SERVER_REST_URL = os.environ.get("SERVER_REST_URL")
+try:
+    PORT = int(SERVER_REST_URL.rsplit(":")[-1])
+except ValueError:
+    PORT = os.environ.get("PORT", 16661)
 ALGORITHM = "HS256"  # Алгоритм для подписи
 ACCESS_TOKEN_EXPIRE_TIME = datetime.timedelta(days=7)
 REFRESH_TOKEN_EXPIRE_TIME = datetime.timedelta(days=30)
@@ -30,6 +37,7 @@ COMMIT_STEP = 1000
 LOG_LEVEL = "INFO"
 if DEV.mode:
     LOG_LEVEL = "DEBUG"
+LOG_DIR_PATH = os.path.join(PATH_PREFIX, 'logs')
 TEMPLATES_DIR_PATH = os.path.join(BASE_PATH, 'pages/templates')
 STATIC_FILES_DIR_PATH = os.path.join(BASE_PATH, 'pages/static/')
 PROJECTS_DIR_PATH = os.path.abspath(os.path.join(PATH_PREFIX, 'projects'))
@@ -47,3 +55,6 @@ if not os.path.exists(PATH_PREFIX):
 
 if not os.path.exists(PROJECTS_DIR_PATH):
     os.makedirs(PROJECTS_DIR_PATH, exist_ok=True)
+
+if not os.path.exists(LOG_DIR_PATH):
+    os.makedirs(LOG_DIR_PATH, exist_ok=True)

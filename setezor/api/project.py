@@ -90,7 +90,7 @@ async def export_project_by_id(
     user_id: str = Depends(get_user_id),
 ) -> StreamingResponse:
     await check_role([Roles.owner], project_id, user_id)
-    project = await project_manager.export_project(project_id)
+    project = await project_manager.export_project(project_id, user_id)
     return StreamingResponse(
         project.data,
         media_type='application/octet-stream',

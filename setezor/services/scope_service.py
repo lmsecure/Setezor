@@ -58,13 +58,27 @@ class ScopeService(BaseService):
         async with self._uow:
             return await self._uow.target.for_scope(project_id=project_id, scope_id=id)
         
-    async def get_filtred_targets(self, project_id: str, id: str, page: int = 1, limit: int = 50):
+    async def get_filtred_targets(
+        self, 
+        project_id: str, 
+        id: str, 
+        page: int = 1, 
+        limit: int = 50,
+        protocol: str | None = None,
+        ip: str | None = None,
+        domain: str | None = None,
+        port: int | None = None
+    ):
         async with self._uow:
             return await self._uow.target.for_scope_filtred(
                 project_id=project_id, 
                 scope_id=id,
                 page=page,
-                limit=limit
+                limit=limit,
+                protocol_filter=protocol,
+                ip_filter=ip,
+                domain_filter=domain,
+                port_filter=port
             )
         
     async def delete_scope_by_id(self, id: str):

@@ -14,6 +14,7 @@
 	<script src="/static/js/libs/i18next.min.js"></script>
 	<script src="/static/js/libs/axios.min.js"></script>
 	<script src="/static/js/src/translate_i18n.js"></script>
+	<script src="/static/js/src/installMissingModule.js"></script>
 	<script src="/static/js/src/scripts.js"></script>
 	<script src="/static/js/src/toasts.js"></script>
 	<script src="/static/js/src/agents.js"></script>
@@ -22,37 +23,30 @@
 	<title>Setezor: {% block title required %}{% endblock %}</title>
 
 	{% block scripts %}{% endblock %}
-
-	{% import 'network/nmap.html' as nmap %}
-	{{ nmap.nmap_full_script_modal() }}
+	{% include 'modals/tools_modal_constructor.html' %}
+	{% include 'network/nmap.html' %}
+	{% include 'network/masscan.html' %}
+	{% include 'network/cert.html' %}
+	{% include 'network/web_grabber.html' %}
+	{% include 'network/lookup.html' %}
+	{% include 'network/whois.html' %}
+	{% include 'network/ip-info.html' %}
+	{% include 'network/brute.html' %}
 	{% import 'network/scapy.html' as scapy %}
 	{{ scapy.scapy_full_script_modal() }}
-	{% import 'network/masscan.html' as masscan%}
-	{{ masscan.masscan_full_modal('full_masscan') }}
-	{% import 'network/cert.html' as cert%}
-	{{ cert.cert_full_modal() }}
-	{% from 'network/whois.html' import whois_tool_modal %}
-	{{ whois_tool_modal() }}
-	{% from 'network/brute.html' import brute_tool_modal %}
-	{{ brute_tool_modal() }}
-	{% from 'network/ip-info.html' import ip_info_tool_modal %}
-	{{ ip_info_tool_modal() }}
-	{% from "network/recon.html" import recon_tool_modal %}
-	{{ recon_tool_modal() }}
-	{% from "network/resolve.html" import resolve_tool_modal %}
-	{{ resolve_tool_modal() }}
-	{% import 'network/dns_a_screenshot.html' as dns_a_screenshot%}
-	{{dns_a_screenshot.dns_a_screenshot_full_modal()}}   
-	{% import 'network/wappalyzer.html' as wappalyzer%}
-	{{wappalyzer.wappalyzer_full_script_modal()}}   
+	{{ scapy.startScapyWithPrefill() }}
 	{% import 'network/snmp.html' as snmp%}
 	{{snmp.snmp_full_script_modal()}}   
+	{{snmp.snmp_start_with_prefill()}}
+	{% import 'network/speed_test.html' as speed_test %}
+	{{speed_test.speed_test_full_script_modal()}}
+	{{speed_test.speed_test_start_with_prefill('')}}
+	{% import 'network/wappalyzer.html' as wappalyzer%}
+	{{wappalyzer.wappalyzer_full_script_modal()}}   
 	{% import 'network/cpe.html' as cpe%}
 	{{cpe.cpe_full_script_modal()}}   
 	{% import 'network/search_vulns.html' as search_vulns%}
 	{{search_vulns.search_vulns_full_script_modal()}}   
-	{% import 'network/speed_test.html' as speed_test %}
-	{{speed_test.speed_test_full_script_modal()}}
 </head>
 
 <body>
@@ -345,8 +339,8 @@
 								<span style="color: #54B49C;" data-i18n="Network"></span>
 							</a>
 							<ul class="collapse" id="tool-category-1">
-								<li><a href="#" onclick="nmap_full_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
-								<li><a href="#" onclick="masscan_full_modal_window('full_masscan')"><span style="color: #54B49C;">MASSCAN</span></a></li>
+								<li><a href="#" onclick="nmap_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
+								<li><a href="#" onclick="masscan_modal_window()"><span style="color: #54B49C;">MASSCAN</span></a></li>
 								<li><a href="#" onclick="scapy_full_modal_window()"><span style="color: #54B49C;">SCAPY</span></a></li>
 								<li><a href="#" onclick="snmp_full_modal_window()"><span style="color: #54B49C;">SNMP</span></a></li>
 								<li><a href="#" onclick="speed_test_modal_window()"><span style="color: #54B49C;">Speed Test</span></a></li>
@@ -361,8 +355,8 @@
 								<span style="color: #54B49C;" data-i18n="Web"></span>
 							</a>
 							<ul class="collapse" id="tool-category-2">
-								<li><a href="#" onclick="cert_full_modal_window()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
-								<li><a href="#" onclick="dns_a_screenshot_full_modal_window()"><span class="menu-tight" style="color: #54B49C;">SCREENSHOT</span></a></li>
+								<li><a href="#" onclick="cert_modal_window()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
+								<li><a href="#" onclick="webGrabber_modal_window()"><span class="menu-tight" style="color: #54B49C;">WEB GRABER</span></a></li>
 								<li><a href="#" onclick="wappalyzer_full_modal_window()"><span style="color: #54B49C;">WAPPALYZER</span></a></li>
 								<!-- <li><a href="#" onclick="screenshoter_full_modal_window()">SCREENSHOTER</a></li> -->
 							</ul>
@@ -376,11 +370,10 @@
 								<span style="color: #54B49C;" data-i18n="DNS"></span>
 							</a>
 							<ul class="collapse" id="tool-category-3">
-								<li><a href="#" onclick="show_resolveModalWindow()"><span style="color: #54B49C;">RESOLVE</span></a></li>
-								<li><a href="#" onclick="show_reconModalWindow()"><span style="color: #54B49C;">RECON</span></a></li>
-								<li><a href="#" onclick="show_bruteModalWindow()"><span class="menu-tight" style="color: #54B49C;">BRUTE</span></a></li>
+								<li><a href="#" onclick="show_lookupModalWindow()"><span style="color: #54B49C;">LOOKUP</span></a></li>
+								<!-- <li><a href="#" onclick="show_bruteModalWindow()"><span class="menu-tight" style="color: #54B49C;">BRUTE</span></a></li> -->
 								<li><a href="#" onclick="show_whoisModalWindow()"><span style="color: #54B49C;">WHOIS</span></a></li>
-								<li><a href="#" onclick="show_ipInfoModalWindow()"><span style="color: #54B49C;">IP-INFO</span></a></li>
+								<!-- <li><a href="#" onclick="show_ipInfoModalWindow()"><span style="color: #54B49C;">IP-INFO</span></a></li> -->
 							</ul>
 						</li>
 						<li>
@@ -515,7 +508,9 @@
 		</div>
 	  </div>
 
+
 	<script>
+
 		function sanitize(string) {
 			const map = {
 				'&': '&amp;',
@@ -621,19 +616,20 @@
 		createAgentBar("agent_nmap");
 		createAgentBar("agent_scapy");
 		createAgentBar("agent_masscan");
+		createAgentBar("agent_webgrabber");
 		createAgentBar("agent_snmp");
-		createAgentBar("agent_recon_");
+		createAgentBar("agent_recon");
 		createAgentBar("agent_cert");
-		createAgentBar("agent_whois_");
-		createAgentBar("agent_brute_");
-		createAgentBar("agent_ip_info_");
+		createAgentBar("agent_whois");
+		createAgentBar("agent_brute");
+		createAgentBar("agent_ipinfo");
 		createAgentBar("agent_acunetix");
 		createAgentBar("agent_screenshoter");
 		createAgentBar("agent_wappalyzer");
 		createAgentBar("agent_cpeguess");
 		createAgentBar("agent_searchvulns");
-		createAgentBar("agent_dns_a_screenshot");
-		createAgentBar("agent_resolve_");
+		createAgentBar("agent_web_grabber");
+		createAgentBar("agent_lookup");
 
 
 		createInterfaceBar("interface_tools");
@@ -641,18 +637,19 @@
 		createInterfaceBar("interface_nmap");
 		createInterfaceBar("interface_scapy");
 		createInterfaceBar("interface_masscan");
+		createInterfaceBar("interface_webgrabber");
 		createInterfaceBar("interface_snmp");
-		createInterfaceBar("interface_recon_");
+		createInterfaceBar("interface_recon");
 		createInterfaceBar("interface_cert");
-		createInterfaceBar("interface_whois_");
-		createInterfaceBar("interface_brute_");
-		createInterfaceBar("interface_ip_info_");
+		createInterfaceBar("interface_whois");
+		createInterfaceBar("interface_brute");
+		createInterfaceBar("interface_ipinfo");
 		createInterfaceBar("interface_acunetix");
 		createInterfaceBar("interface_screenshoter");
 		createInterfaceBar("interface_wappalyzer");
 		createInterfaceBar("interface_cpeguess");
 		createInterfaceBar("interface_searchvulns");
-		createInterfaceBar("interface_resolve_");
+		createInterfaceBar("interface_lookup");
 
 
 		interfaceData = null
@@ -664,19 +661,20 @@
 			fillAgentBar("agent_nmap");
 			fillAgentBar("agent_scapy");
 			fillAgentBar("agent_masscan");
+			fillAgentBar("agent_webgrabber");
 			fillAgentBar("agent_snmp");
-			fillAgentBar("agent_recon_");
+			fillAgentBar("agent_recon");
 			fillAgentBar("agent_cert");
-			fillAgentBar("agent_whois_");
-			fillAgentBar("agent_brute_");
-			fillAgentBar("agent_ip_info_");
+			fillAgentBar("agent_whois");
+			fillAgentBar("agent_brute");
+			fillAgentBar("agent_ipinfo");
 			fillAgentBar("agent_acunetix");
 			fillAgentBar("agent_screenshoter");
 			fillAgentBar("agent_wappalyzer");
 			fillAgentBar("agent_cpeguess");
 			fillAgentBar("agent_searchvulns");
-			fillAgentBar("agent_dns_a_screenshot");
-			fillAgentBar("agent_resolve_");
+			fillAgentBar("agent_web_grabber");
+			fillAgentBar("agent_lookup");
 			getInterfaceData(agentData.default_agent).then((data) => {
 				interfaceData = data
 				fillInterfaceBar("interface_tools");
@@ -684,25 +682,25 @@
 				fillInterfaceBar("interface_nmap");
 				fillInterfaceBar("interface_scapy");
 				fillInterfaceBar("interface_masscan");
+				fillInterfaceBar("interface_webgrabber");
 				fillInterfaceBar("interface_snmp");
-				fillInterfaceBar("interface_recon_");
+				fillInterfaceBar("interface_recon");
 				fillInterfaceBar("interface_cert");
-				fillInterfaceBar("interface_whois_");
-				fillInterfaceBar("interface_brute_");
-				fillInterfaceBar("interface_ip_info_");
+				fillInterfaceBar("interface_whois");
+				fillInterfaceBar("interface_brute");
+				fillInterfaceBar("interface_ipinfo");
 				fillInterfaceBar("interface_acunetix");
 				fillInterfaceBar("interface_screenshoter");
 				fillInterfaceBar("interface_wappalyzer");
 				fillInterfaceBar("interface_cpeguess");
 				fillInterfaceBar("interface_searchvulns");
-				fillInterfaceBar("interface_resolve_");
+				fillInterfaceBar("interface_lookup");
 
 			})
 		})
 		getScans().then((data) => {
 			scans = data;
 			getCurrentScan().then((currentScan) => {
-				// Передаем массив идентификаторов
 				redrawScanPickDropdown(scans, currentScan,
 					[
 						"scans_bar_tools",
@@ -710,21 +708,22 @@
 						"scans_bar_nmap",
 						"scans_bar_scapy",
 						"scans_bar_masscan",
+						"scans_bar_webgrabber",
 						"scans_bar_snmp",
-						"scans_barrecon_",
+						"scans_bar_recon",
 						"scans_bar_net_map",
 						"scans_bar_cert",
-						"scans_barwhois_",
-						"scans_barbrute_",
-						"scans_barresolve_",
-						"scans_barip_info_",
+						"scans_bar_whois",
+						"scans_bar_brute",
+						"scans_bar_lookup",
+						"scans_bar_ipinfo",
 						"scans_bar_acunetix",
 						"scans_bar_screenshoter",
 						"scans_bar_wappalyzer",
 						"scans_bar_cpeguess",
 						"scans_bar_searchvulns",
 						"scans_bar_speed_test",
-						"scans_bar_dns_a_screenshot",
+						"scans_bar_web_grabber",
 					]);
 			});
 		});
@@ -742,8 +741,6 @@
 					scan_id = currentScan.id
 					result += `<button type="button" class="btn btn-success btn-limit" disabled id="currentPickedScan">${currentScan.name}</button>`
 				}
-				result += "</div>"
-				el.innerHTML = result
 			}
 		}
 
@@ -810,21 +807,22 @@
 								"scans_bar_nmap",
 								"scans_bar_scapy",
 								"scans_bar_masscan",
+								"scans_bar_webgrabber",
 								"scans_bar_snmp",
-								"scans_barrecon_",
+								"scans_bar_recon",
 								"scans_bar_net_map",
 								"scans_bar_cert",
-								"scans_barwhois_",
-								"scans_barbrute_",
-								"scans_barresolve_",
-								"scans_barip_info_",
+								"scans_bar_whois",
+								"scans_bar_brute",
+								"scans_bar_lookup",
+								"scans_bar_ipinfo",
 								"scans_bar_acunetix",
 								"scans_bar_screenshoter",
 								"scans_bar_wappalyzer",
 								"scans_bar_cpeguess",
 								"scans_bar_searchvulns",
 								"scans_bar_speed_test",
-								"scans_bar_dns_a_screenshot",
+								"scans_bar_web_grabber",
 							])
 						let el = document.getElementById("closeAddScanModalButton")
 						el.click()
@@ -849,14 +847,15 @@
 								"scans_bar_nmap",
 								"scans_bar_scapy",
 								"scans_bar_masscan",
+								"scans_bar_webgrabber",
 								"scans_bar_snmp",
-								"scans_barrecon_",
+								"scans_bar_recon",
 								"scans_bar_net_map",
 								"scans_bar_cert",
-								"scans_barwhois_",
-								"scans_barbrute_",
-								"scans_barresolve_",
-								"scans_barip_info_",
+								"scans_bar_whois",
+								"scans_bar_brute",
+								"scans_bar_lookup",
+								"scans_bar_ipinfo",
 								"scans_bar_acunetix",
 								"scans_bar_screenshoter",
 								"scans_bar_wappalyzer",
@@ -930,6 +929,10 @@
 	});
 	</script>
 	<script defer src="static/js/src/update_language.js"></script>
+	{% include 'modals/module_install_modal.html' %}
+	<script src="/static/js/src/tool_task_executor.js"></script>
+	<script src="/static/js/src/module_installer.js"></script>
+	<script> var message_sock2 = create_websocket(`/api/v1/project/ws/users/` + '{{user_id}}', '{{ user_id }}')</script>
 </body>
 
 </html>

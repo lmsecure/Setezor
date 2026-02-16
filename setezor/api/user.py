@@ -14,3 +14,9 @@ async def list_user_in_application(
     user_id: str = Depends(get_user_id),
 ) -> list:
     return await users_service.list_users_in_application(user_id=user_id)
+
+@router.get("/me")
+async def my_user(
+    user_id: str = Depends(get_user_id),
+) -> str:
+    return user_id

@@ -30,3 +30,15 @@
     vertical-align: middle;
     border-right: 1px solid #dee2e6;
 }
+
+#config_interfaces_container .list-group-item[style*="cursor:pointer"],
+#config_modules_container .list-group-item[style*="cursor:pointer"],
+#config_interfaces_container .list-group-item[style*="cursor:pointer"] *,
+#config_modules_container .list-group-item[style*="cursor:pointer"] *,
+#config_modules_container > label.card.bg-light.shadow-sm,
+#config_modules_container > label.card.bg-light.shadow-sm *,
+.card.bg-light.shadow-sm[for="configSelectAll"],
+label[for="configSelectAll"],
+#configSelectAll {
+    cursor: pointer !important;
+}

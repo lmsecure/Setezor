@@ -3,6 +3,7 @@ import shutil
 import aiofiles
 
 
+
 class FileManager:
 
     def merge_dirs(self, path_from: str, path_to: str):
@@ -23,6 +24,7 @@ class FileManager:
                 if not os.path.exists(dst_file):
                     shutil.copy2(src_file, dst_file)
 
+
     def remove_dir(self, path: str):
 
         if not os.path.isdir(path) or not os.path.exists(path):
@@ -33,7 +35,7 @@ class FileManager:
     @classmethod
     def new_instance(cls):
         return cls()
-    
+
 
     async def save_file(self, file_path: list[str], data: bytes):
         full_path = os.path.join(*file_path)
@@ -42,3 +44,7 @@ class FileManager:
             os.makedirs(dirs_path, exist_ok=True)
         async with aiofiles.open(full_path, 'wb') as file:
             await file.write(data)
+
+
+    def include_dir(self, dir) -> set:
+        return set(os.listdir(dir))

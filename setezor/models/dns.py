@@ -22,3 +22,4 @@ class DNS(IDDependent, Base, table=True):
     value_domain: Optional["Domain"]      = Relationship(back_populates="dns_value",  sa_relationship_kwargs={"foreign_keys": "[DNS.value_domain_id]"})  # type: ignore
     softwares: List["L4Software"]         = Relationship(back_populates="dns")        # type: ignore
     screenshots: List["DNS_A_Screenshot"] = Relationship(back_populates="dns")        # type: ignore
+    web_archives: List["WebArchive"]      = Relationship(back_populates="dns")        # type: ignore

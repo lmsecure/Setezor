@@ -11,6 +11,7 @@ Project settings
 <link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
 <script src="/static/js/libs/tabulator.min.js"></script>
 <script src="/static/js/libs/jquery.inputmask.js"></script>
+<script src="/static/js/src/agent_manager.js"></script>
 
 
 <div class="d-flex flex-row justify-content-between">
@@ -24,9 +25,11 @@ Project settings
     </div>
 
     {% if role.name == "owner" or role.name == "executor" %}
+    <div class="d-flex flex-row">
     <div class="mt-3 ms-1" style="margin-right: 2rem;">
-        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-i18n-title="create agent"
-            onclick="fillPossibleAgents();   document.getElementById('agent-color').value = getRandomColor();" data-i18n="Connect agents" data-testid="connect-agents"></button>
+        <button type="button" class="btn btn-success" data-i18n-title="create agent"
+            onclick="agentManager.show();" data-i18n="Connect agents" data-testid="connect-agents"></button>
+    </div>
     </div>
     {% endif %}
 </div>
@@ -52,6 +55,47 @@ Project settings
 
 
 <!--Creation agent modal window-->
+<div class="modal fade" id="createAgentModal" tabindex="-1" aria-labelledby="agentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Create agent"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table style="margin: auto">
+                        <tbody>
+                            <tr>
+                                <td data-i18n="Agent name"></td>
+                                <td><input id="agent-name" name="agent-name" class="form-control" value="" required></td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="Agent description"></td>
+                                <td>
+                                    <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="Agent REST URL"></td>
+                                <td><input id="agent-rest-url" name="agent-rest-url" class="form-control" placeholder="https://0.0.0.0:0000"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <hr>
+                    <h5 data-i18n="Parent agents"></h5>
+                    <div class="modal-body" id="parentAgentsList">
+                    </div>
+    
+                </div>
+                <div class="modal-footer">
+                    <button id="close-create-agent" type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal" data-i18n="Close"></button>
+                    <button type="button" id="createAndConnectAgentButton" class="btn btn-primary" onclick="createAndConnectAgent()" data-i18n="Connect agent"></button>
+                </div>
+            </div>
+        </div>
+    </div>
 <div class="modal fade" id="agentModal" tabindex="-1" aria-labelledby="agentModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -70,54 +114,6 @@ Project settings
     </div>
 </div>
 
-
-<div class="modal fade" id="editAgentInterfaces" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="agentModalLabel" data-i18n="Add agent interfaces"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="interfaces_list_container">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="close-create-agent" type="button" class="btn btn-secondary"
-                    data-bs-dismiss="modal" data-i18n="Close"></button>
-                <button type="button" class="btn btn-primary" onclick="saveInterfaces()" data-i18n="Save changes"></button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="editAgentInterfacesWhichDoesNotExist" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form onsubmit="saveSynthInterface(event)" name="saveSynthInterfaceFormName">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="agentModalLabel" data-i18n="Agent is unreachable. You can create synthetic interface"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-2">
-                        <label for="synthAgentInterfaceName" class="form-label" data-i18n="Interface name"></label>
-                        <input class="form-control" type="text" id="synthAgentInterfaceName" required name="name">
-                    </div>
-                    <div class="mb-2">
-                        <label for="synthAgentInterfaceIP" class="form-label" data-i18n="Interface ip"></label>
-                        <input class="form-control" type="text" id="synthAgentInterfaceIP" required name="ip">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="close-create-agent" type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal" data-i18n="Close"></button>
-                    <button type="submit" class="btn btn-primary" data-i18n="Save changes"></button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 <div class="modal fade" id="inviteToProjectTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -162,22 +158,8 @@ Project settings
 }
 </style>
 <script>
-    var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
 
-    $(document).ready(function(){
-            $('#agent-rest-url').inputmask({
-                mask: 'https\\://9{1,3}.9{1,3}.9{1,3}.9{1,3}:9{1,5}',
-                definitions: {
-                    '9': {
-                        validator: '[0-9]',
-                        cardinality: 1
-                    }
-                },
-                placeholder: ' ',
-                clearIncomplete: true
-            });
-        });
-
+var message_sock = create_websocket(`/api/v1/project/ws`, '{{user_id}}')
     /* Agent create callback */
     async function fillPossibleAgents() {
         let resp = await fetch("/api/v1/agents_in_project/settings/possible_agents")
@@ -204,7 +186,8 @@ Project settings
             `
         }
         agents_container.innerHTML = result
-        let myModal = new bootstrap.Modal(document.getElementById('agentModal'));
+        const modalEl = document.getElementById('agentModal');
+        const myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         myModal.show();
     }
     async function addAgentsToProject() {
@@ -237,81 +220,6 @@ Project settings
             text = await resp.text()
             create_toast('Error on create agent', text, 'error')
         }
-    }
-    async function saveInterfaces(){
-        let el = document.getElementById("interfaces_list_container")
-        let result = []
-        for (const children of el.children){
-            for (const sub_child of children.children){
-                if (sub_child.tagName == "INPUT"){
-                    if (sub_child.checked){
-                        let new_interface = new Object()
-                        new_interface.mac = sub_child.attributes.mac.value
-                        new_interface.ip = sub_child.attributes.ip.value
-                        new_interface.name = sub_child.attributes.name.value
-                        result.push(new_interface)
-                    }
-                }
-            }
-        }
-        let resp = await fetch(`/api/v1/agents_in_project/${currentAgent}/interfaces`,
-        { method: 'PATCH',
-        headers: {"Content-Type": "application/json",},
-        body: JSON.stringify(result) 
-        }
-        )
-        getAgentData().then((data) => {
-            agentData = data
-            fillAgentBar("agent_tools");
-            fillAgentBar("agent_net_map");
-            fillAgentBar("agent_nmap");
-            fillAgentBar("agent_scapy");
-            fillAgentBar("agent_masscan");
-            fillAgentBar("agent_snmp");
-            fillAgentBar("agent_recon");
-            fillAgentBar("agent_cert");
-            fillAgentBar("agent_whois");
-            fillAgentBar("agent_acunetix");
-            fillAgentBar("agent_screenshoter");
-            fillAgentBar("agent_wappalyzer");
-            fillAgentBar("agent_cpeguess");
-            fillAgentBar("agent_searchvulns");
-            getInterfaceData(agentData.default_agent).then((data) => {
-                interfaceData = data
-                fillInterfaceBar("interface_tools");
-                fillInterfaceBar("interface_net_map");
-                fillInterfaceBar("interface_nmap");
-                fillInterfaceBar("interface_scapy");
-                fillInterfaceBar("interface_masscan");
-                fillInterfaceBar("interface_snmp");
-                fillInterfaceBar("interface_recon");
-                fillInterfaceBar("interface_cert");
-                fillInterfaceBar("interface_whois");
-                fillInterfaceBar("interface_acunetix");
-                fillInterfaceBar("interface_screenshoter");
-                fillInterfaceBar("interface_wappalyzer");
-                fillInterfaceBar("interface_cpeguess");
-                fillInterfaceBar("interface_searchvulns");
-            })
-        })
-        $('#editAgentInterfaces').modal('hide');
-    }
-    async function saveSynthInterface(event){
-        event.preventDefault()
-        let data = new FormData(event.target)
-        let new_interface = new Object()
-        data.forEach(function(value, key){
-            new_interface[key] = value;
-        });
-        new_interface.mac=''
-        let result = [new_interface]
-        let resp = await fetch(`/api/v1/agents/${currentAgent}/interfaces`,
-        { method: 'PATCH',
-        headers: {"Content-Type": "application/json",},
-        body: JSON.stringify(result) 
-        }
-        )
-        $('#editAgentInterfacesWhichDoesNotExist').modal('hide');
     }
 </script>
 
@@ -471,7 +379,7 @@ Project settings
         }
     }
 
-    let currentAgent = 0
+    
     function configureAgentFormatter(cell) {
         let agent_id = cell.getRow().getData().id
         if (cell.getRow().getData().parent_agent_name == ""){
@@ -483,48 +391,10 @@ Project settings
         if (cell.getRow().getData().rest_url == ""){
             return ''
         }
-        return `<div class="d-flex justify-content-start align-items-center">
-                    <div class="btn btn-primary btn-sm" onclick="currentAgent='${agent_id}';getAgentInterfaces(currentAgent)">
-                        ${i18next.t('Configure interfaces')}
-                    </div>
-                </div>`
-    }
-    let currentAgentInterfaces = []
-    async function getAgentInterfaces(id) {
-        currentAgentInterfaces = []
-        resp = await fetch(`/api/v1/agents_in_project/${id}/remote_interfaces`)
-        if (resp.ok) {
-            data = await resp.json()
-            if (data.length == 0){
-                $('#editAgentInterfacesWhichDoesNotExist').modal('show');
-            }else{
-                currentAgentInterfaces = data
-                fillInterfacesTable()
-                $('#editAgentInterfaces').modal('show');
-            }
-        }
-    }
-    async function requestAgentInterfaces(agent_id, object_id) {
-        let resp = await fetch(`/api/v1/task/interfaces_task`, { method: 'POST', body: JSON.stringify({ agent_id: agent_id }), headers: {
-                    'Content-Type': 'application/json',
-                }, })
+        return ``
     }
     async function connectAgent(id) {
         resp = await fetch(`/api/v1/agents/${id}/connect`, {method:"POST"})
-    }
-    function fillInterfacesTable(){
-        let el = document.getElementById("interfaces_list_container")
-        let result = ``
-        for (const [index, interface] of currentAgentInterfaces.entries()){
-            let checkboxId = `interface-checkbox-${index}`;
-            result += `
-                <div class="form-check" style="margin-bottom:-1rem">
-                    <input id="${checkboxId}" class="form-check-input" type="checkbox" mac="${interface.mac}" ip="${interface.ip}" name="${interface.name}">
-                    <label for="${checkboxId}"><pre style="font-size:1.05rem" class="form-check-label">${interface.ip != null ? interface.ip.padEnd(18):""}${interface.name}</pre></label>
-                </div>
-            `
-        }
-        el.innerHTML = result
     }
 
     /* delete row callback */
@@ -566,8 +436,6 @@ Project settings
             { title: 'PARENT_AGENT', field: 'parent_agent_name', headerMenu: headerMenu },
             { title: 'URL', field: 'rest_url', headerMenu: headerMenu },
             { title: 'COLOR', field: 'color', headerMenu: headerMenu, editor: true, formatter: formatColor },
-            { title: 'CONFIGURE', field: 'configure', headerMenu: headerMenu, formatter: configureAgentFormatter }
-
         ]
     }
     )
@@ -614,6 +482,13 @@ Project settings
         ]
     })
     {% endif %}
+            document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                    el.title = i18next.t(el.getAttribute('data-i18n-title'));
+                });
+            }, 1000);
+        });
 </script>
 
 {% endblock content %}

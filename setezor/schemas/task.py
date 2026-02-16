@@ -1,7 +1,7 @@
 
-from typing import Optional
+from typing import Any, Optional
 from enum import Enum
-from pydantic import BaseModel, HttpUrl, field_validator
+from pydantic import BaseModel, field_validator
 from urllib.parse import urlparse
 from pydantic.networks import IPv4Address, IPv4Network
 
@@ -37,7 +37,7 @@ class TaskSchemaEditStatus(BaseModel):
 
 class TaskPayload(BaseModel):
     task_id: str
-    project_id: str
+    project_id: Optional[str]
     agent_id: str
     job_params: dict
     job_name: str
@@ -93,6 +93,14 @@ class WHOISTaskPayload(TaskPayloadWithScopeID):
     target: str | None = None
     agent_id: str
 
+class WHOISShdwsTaskPayload(TaskPayloadWithScopeID):
+    target: str | None = None
+    agent_id: str
+
+class RDAPTaskPayload(TaskPayloadWithScopeID):
+    target: str | None = None
+    agent_id: str
+
 class MasscanScanTaskPayload(TaskPayloadWithScopeID):
     interface_ip_id: str
     interface: str
@@ -112,7 +120,6 @@ class MasscanLogTaskPayload(BaseModel):
     file: str
     interface_ip_id: str
     ip: IPv4Address
-    mac: str
 
 class NmapScanTaskPayload(TaskPayloadWithScopeID):
     targetIP: IPv4Network  | None = None #IPv4Address
@@ -134,9 +141,9 @@ class NmapParseTaskPayload(BaseModel):
     filename: str
     interface_ip_id: str
     ip: IPv4Address | None = None
-    mac: str
+    mac: str | None = None
 
-class CertInfoTaskPayload(BaseModel):
+class CertInfoTaskPayload(TaskPayloadWithScopeID):
     agent_id: str
     port: int | None = None
     target: str | None = None
@@ -200,3 +207,22 @@ class IPInfoTaskPayload(TaskPayloadWithScopeID):
         'reverse', 'currency', 'district', 'timezone',
         'continent', 'regionName', 'countryCode', 'continentCode'
     ]
+
+
+class ParseSiteTaskPayload(TaskPayloadWithScopeID):
+    agent_id: str
+    url: str | None = None
+    with_screenshot: bool
+    with_wappalyzer: bool
+    timeout: float
+
+
+class PushModuleTaskPayload(BaseModel):
+    agent_id: str
+    module_names: list[str]
+
+
+class TaskLog(BaseModel):
+    type: str
+    file_name: str
+    file_data: Any

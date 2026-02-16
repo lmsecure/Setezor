@@ -1,16 +1,13 @@
 import datetime
+import json
 from typing import List
 from Crypto.Random import get_random_bytes
+from fastapi import HTTPException
 from setezor.services.base_service import BaseService
-from setezor.tools.websocket_manager import WS_MANAGER
-from setezor.models import Agent, Object, MAC, IP, Network, ASN, DNS, Domain
+from setezor.models import Agent, AgentInProject
 from setezor.models.agent_parent_agent import AgentParentAgent
-from setezor.models.base import generate_unique_id
-from setezor.schemas.task import WebSocketMessage
 from setezor.tools.graph import find_all_paths
-from setezor.unit_of_work import UnitOfWork
-from setezor.schemas.agent import AgentAdd, AgentParents, InterfaceOfAgent
-from setezor.tools.ip_tools import get_network
+from setezor.schemas.agent import AgentParents, AgentUpdate
 
 
 class AgentService(BaseService):
@@ -18,10 +15,9 @@ class AgentService(BaseService):
         async with self._uow:
             return await self._uow.agent.find_one(name="Server", secret_key="")
 
-    async def list(self, project_id: str) -> list:
+    async def get_synthetic_agent(self):
         async with self._uow:
-            agents = await self._uow.agent.list(project_id=project_id)
-            return agents
+            return await self._uow.agent.find_one(name="Synthetic", secret_key="")
 
     async def get(self, id: str) -> Agent:
         async with self._uow:
@@ -104,6 +100,47 @@ class AgentService(BaseService):
             await self._uow.commit()
             return new_agent
 
+    async def update(self, agent: AgentUpdate, agent_id: str, user_id: str) -> Agent:
+        async with self._uow:
+            db_agent: Agent = await self._uow.agent.find_one(id=agent_id, user_id=user_id)
+            if not db_agent:
+                raise HTTPException(status_code=404, detail='Agent not found')
+            if db_agent.is_connected and agent.rest_url:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'Rest URL can not be changed on the connected agent. A'
+                           f'gent with ID {agent_id} already connected.'
+                )
+            if agent.rest_url:
+                db_agent.rest_url = agent.rest_url
+            if agent.name:
+                db_agent.name = agent.name
+            if agent.description:
+                db_agent.description = agent.description
+            await self._uow.commit()
+            return db_agent
+
+    async def get_all_heirs(self, user_id: str, agent_id: str) -> list[dict]:
+        async with self._uow:
+            agent = await self._uow.agent.find_one(user_id=user_id, id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404)
+        async with self._uow:
+            return [{"id" : id, "name" : name} for id, name in await self._uow.agent.get_all_heirs(user_id=user_id, agent_id=agent_id)]
+
+    async def delete(self, user_id: str, agent_ids: list[str]):
+        async with self._uow:
+            for agent_id in agent_ids:
+                agent = await self._uow.agent.find_one(user_id=user_id, id=agent_id)
+                if not agent:
+                    raise HTTPException(status_code=404)
+        async with self._uow:
+            for agent_id in agent_ids:
+                await self._uow.agent.edit_one(id=agent_id,
+                                               data={"secret_key" : None, "is_connected": False, "rest_url" : ''})
+                await self._uow.agent.delete(id=agent_id)
+                await self._uow.commit()
+
     async def get_agents_chain(self, agent_id: str, user_id: str):
         async with self._uow:
             neighbours = await self._uow.agent_parent_agent.get_graph(user_id=user_id)
@@ -141,3 +178,48 @@ class AgentService(BaseService):
         async with self._uow:
             await self._uow.agent.edit_one(id=id, data={"information": info})
             await self._uow.commit()
+
+    async def user_own_agent(self, agent_id: str, user_id: str) -> Agent:
+        async with self._uow:
+            agent = await self._uow.agent.find_one(id=agent_id, user_id=user_id)
+            if not agent:
+                agent_in_project: AgentInProject = await self._uow.agent_in_project.find_one(id=agent_id)
+                if agent_in_project.agent.user.id != user_id:
+                    raise HTTPException(status_code=403, detail="User does not own the agent")
+
+                agent = agent_in_project.agent
+
+        return agent
+
+    async def get_available_modules(self, agent_id: str, user_id: str) -> List[dict]:
+        async with self._uow:
+            agent = await self.user_own_agent(agent_id=agent_id, user_id=user_id)
+
+        if not agent.is_connected:
+            raise HTTPException(status_code=400, detail="Agent is not connected")
+        if not agent.information:
+            raise HTTPException(status_code=400, detail="Agent has not modules")
+        available_tasks = [task for task in json.loads(agent.information).get("tasks", {}).items() if task[0] not in ["SelfHostedAgentInterfaces", "PushModuleTask"]]
+        modules = dict()
+        for task_name, task_info in available_tasks:
+            if task_info.get("module_name") in modules:
+                continue
+            modules[task_info.get("module_name")] = {
+                "task_name": task_name,
+                "module_name": task_info.get("module_name"),
+                "module_is_installed": task_info.get("module_is_installed"),
+                "description": task_info.get("description")
+            }
+        return modules.values()
+
+    async def get_uninstalled_modules(self, agent_id: str, user_id: str, modules: List[str]) -> List[str]:
+        async with self._uow:
+            agent = await self.user_own_agent(agent_id=agent_id, user_id=user_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        if not agent.is_connected:
+            raise HTTPException(status_code=400, detail="Agent is not connected")
+        if not agent.information:
+            raise HTTPException(status_code=400, detail="Agent has not modules")
+        installed_modules = [task.get("module_name") for task in json.loads(agent.information).get("tasks", {}).values() if task.get("module_is_installed")]
+        return [module for module in modules if module and module not in installed_modules]

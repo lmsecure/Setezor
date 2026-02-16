@@ -1,13 +1,19 @@
 {% macro main_scapy(is_scapy_running) %}
 
         <div class="btn-group d-flex" role="group">
-            <button type="button" id="start_scapy" class="btn btn-primary w-50" onclick="fetch('/api/v1/task/scapy_sniff_task', {
-                method:'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({iface: getIface().name, 'agent_id': getAgent()})
-                });var myModal = bootstrap.Modal.getInstance(document.getElementById('scapyModalWindow'));
-        if (myModal) {
-            myModal.hide();
-        }" data-i18n="Start">
-                </button>
+            <button type="button" id="start_scapy" class="btn btn-primary w-50" data-i18n="Start"
+                onclick="(async () => {
+                    const payload = { iface: getIface().name, agent_id: getAgent() };
+                    const result = await window.executeToolTasks({
+                    tasks: [{ endpoint: '/api/v1/task/scapy_sniff_task', payload }],
+                    stopOnFirstFailure: true
+                    });
+                    if (result !== null && result.success) {
+                    var myModal = bootstrap.Modal.getInstance(document.getElementById('scapyModalWindow'));
+                    if (myModal) myModal.hide();
+                    }
+                })()">
+            </button>
         </div>
 
 {% endmacro %}
@@ -104,6 +110,28 @@
             }
         };
     });
+</script>
+{% endmacro %}
+
+{% macro startScapyWithPrefill() %}
+<script>
+function startScapyWithPrefill(agentId, ifaceName) {
+    const origGetAgent = window.getAgent;
+    const origGetIface = window.getIface;
+
+    window.getAgent = () => agentId;
+    window.getIface = () => ({ name: ifaceName });
+
+    scapy_full_modal_window();
+
+    const modalEl = document.getElementById('scapyModalWindow');
+    const handleHide = () => {
+        window.getAgent = origGetAgent;
+        window.getIface = origGetIface;
+        modalEl.removeEventListener('hidden.bs.modal', handleHide);
+    };
+    modalEl.addEventListener('hidden.bs.modal', handleHide);
+}
 </script>
 {% endmacro %}
 

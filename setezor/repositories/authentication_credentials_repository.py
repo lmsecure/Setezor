@@ -4,7 +4,7 @@ from sqlalchemy import func, collate
 from setezor.repositories import SQLAlchemyRepository
 from setezor.models import Authentication_Credentials, Port, IP, Domain, DNS
 
-from sqlmodel import select
+from sqlmodel import select, or_
 
 
 
@@ -56,26 +56,65 @@ class AuthenticationCredentialsRepository(SQLAlchemyRepository[Authentication_Cr
                 field = filter_item.get("field")
                 type_op = filter_item.get("type", "=")
                 value = filter_item.get("value")
-                if (field == 'port' or field == 'permissions'):
-                    value = int(value)
 
                 if field in field_mapping and value is not None:
+                    if field == "port" or field == "permissions":
+                        try:
+                            if isinstance(value, list):
+                                value = [int(v) for v in value]
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            continue
+
                     column = field_mapping[field]
-                    
-                    if type_op == "=":
-                        stmt = stmt.filter(column == value)
-                    elif type_op == "!=":
-                        stmt = stmt.filter(column != value)
-                    elif type_op == ">":
-                        stmt = stmt.filter(column > value)
-                    elif type_op == ">=":
-                        stmt = stmt.filter(column >= value)
-                    elif type_op == "<":
-                        stmt = stmt.filter(column < value)
-                    elif type_op == "<=":
-                        stmt = stmt.filter(column <= value)
-                    elif type_op == "like":
-                        stmt = stmt.filter(column.ilike(f"%{value}%"))
+
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            stmt = stmt.filter(column.in_(value))
+                        elif type_op == "!=":
+                            stmt = stmt.filter(~column.in_(value))
+                        elif type_op == "like":
+                            if field in ("port", "permissions"):
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                stmt = stmt.filter(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    stmt = stmt.filter(column > v)
+                                elif type_op == ">=":
+                                    stmt = stmt.filter(column >= v)
+                                elif type_op == "<":
+                                    stmt = stmt.filter(column < v)
+                                elif type_op == "<=":
+                                    stmt = stmt.filter(column <= v)
+                    else:
+                        if type_op == "like":
+                            if field in ("port", "permissions"):
+                                continue
+                            if value != "":
+                                stmt = stmt.filter(column.ilike(f"%{value}%"))
+                        elif type_op == "=":
+                            stmt = stmt.filter(column == value)
+                        elif type_op == "!=":
+                            stmt = stmt.filter(column != value)
+                        elif type_op == ">":
+                            stmt = stmt.filter(column > value)
+                        elif type_op == ">=":
+                            stmt = stmt.filter(column >= value)
+                        elif type_op == "<":
+                            stmt = stmt.filter(column < value)
+                        elif type_op == "<=":
+                            stmt = stmt.filter(column <= value)
         
         if sort_params:
             order_clauses = []

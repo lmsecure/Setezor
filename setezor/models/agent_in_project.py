@@ -14,4 +14,4 @@ class AgentInProject(IDDependent, TimeDependent, ProjectDependent, table=True):
     object_id: str                   = Field(foreign_key="object.id", sa_column_kwargs={"comment":"Идентификатор Object'a, который является агентом"})
 
     _object: "Object" = Relationship(back_populates="agents") # type: ignore
-    agent: "Agent" = Relationship(back_populates="projects") # type: ignore
+    agent: "Agent" = Relationship(back_populates="projects", sa_relationship_kwargs={"lazy": "selectin"}) # type: ignore

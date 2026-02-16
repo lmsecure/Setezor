@@ -1,10 +1,7 @@
 from scapy.layers.inet import TCP, UDP
 from scapy.packet import Packet
-# from setezor.exceptions.loggers import get_logger
 from .abstract_packet import AbstractPacket
 
-
-# logger = get_logger(__package__, handlers=[])
 
 
 class TCPPacket(AbstractPacket):

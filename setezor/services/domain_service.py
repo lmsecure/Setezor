@@ -5,7 +5,7 @@ from setezor.unit_of_work.unit_of_work import UnitOfWork
 
 
 class DomainsService(BaseService):
-    async def create(self, domain: Domain) -> int:
+    async def create(self, domain: Domain) -> Domain:
         async with self._uow:
             domain = self._uow.domain.add(domain.model_dump())
             await self._uow.commit()

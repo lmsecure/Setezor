@@ -43,14 +43,22 @@ async def get_scope_targets(
     id: str,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
+    protocol: str | None = Query(None),
+    ip: str | None = Query(None),
+    domain: str | None = Query(None),
+    port: int | None = Query(None, ge=1, le=65535),
     project_id: str = Depends(get_current_project)
 ) -> PaginatedResponse:
-        result = await scope_service.get_filtred_targets(
-        project_id=project_id, 
+    return await scope_service.get_filtred_targets(
+        project_id=project_id,
         id=id,
         page=page,
-        limit=limit)
-        return result
+        limit=limit,
+        protocol=protocol,
+        ip=ip,
+        domain=domain,
+        port=port
+    )
 
 
 @router.delete("/{id}", status_code=204, dependencies=[Depends(get_current_project)])
