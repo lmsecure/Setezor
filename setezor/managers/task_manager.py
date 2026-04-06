@@ -2,13 +2,15 @@ import base64
 import copy
 import datetime
 import json
-import traceback
 
 import orjson
 from typing import Annotated, Callable
 from fastapi import Depends, HTTPException
 from setezor.models.agent import Agent
 from setezor.schemas.agent import BackWardData
+from setezor.schemas.signal import SignalEnum
+from setezor.schemas.task import TaskNotify
+from setezor.signals.signal_strategy import signal_strategy
 from setezor.tools.cipher_manager import Cryptor
 from setezor.tools.file_manager import FileManager
 from setezor.tools.scheduler_manager import SchedulerManager
@@ -43,14 +45,27 @@ class TaskParams:
     def __iter__(self):
         return iter(self.params)
 
+    def get_unique_targets(self, targets: list[Target]) -> list[Target]:
+        unique_targets = set()
+        result_targets = []
+        for target in targets:
+            domain_target = f'{target.protocol}{target.domain}{target.port}'
+            ip_target = f'{target.protocol}{target.ip}{target.port}'
+            if domain_target in unique_targets and ip_target in unique_targets:
+                continue
+            unique_targets.add(domain_target)
+            unique_targets.add(ip_target)
+            result_targets.append(target)
+        return result_targets
+
     async def scope_proceeder(self):
         if not self.scope_id:
             self.params = [self.kwargs]
             return
         scope_targets = await self.task_manager.scope_service.get_targets(project_id=self.project_id,
                                                                           id=self.scope_id)
-        self.params = self.job.generate_params_from_scope(targets=scope_targets, **self.kwargs)
-        self.params = [dict(d) for d in{frozenset(d.items()) for d in self.params}]
+        targets = self.get_unique_targets(scope_targets)
+        self.params = self.job.generate_params_from_scope(targets=targets, **self.kwargs)
 
 
 class TaskParamsPreparer:
@@ -107,13 +122,16 @@ class TaskManager:
     def file_manager(self):
         return self.__file_manager
 
-    async def notify_by_websocket(self, message: WebSocketMessage, task: Task = None, project_id: str = None):
+    async def notify_by_websocket(self, message: WebSocketMessage, task: Task | None = None, project_id: str | None = None) -> None:
         if not task and not project_id:
             raise Exception('Task or project_id is required')
-        if task and task.project_id or project_id:
-            await WS_MANAGER.send_message(entity_id=project_id or task.project_id, message=message)
-        else:
+        entity_id = task.project_id if task and task.project_id else project_id
+        if entity_id:
+            await WS_MANAGER.send_message(entity_id=entity_id, message=message)
+        elif task and task.user_id:
             await WS_USER_MANAGER.send_message(entity_id=task.user_id, message=message)
+        else:
+            logger.warning("There is no one to notify, both user_id and project_id are missing")
 
     # метод сервера на создание локальной задачи
     async def create_local_job(self,
@@ -153,9 +171,9 @@ class TaskManager:
                 file_path=[PROJECTS_DIR_PATH, task.project_id, task.scan_id, task_class.logs_folder, f"{filename}{extension}"],
                 data=data
             )
-
-        message = WebSocketMessage(
-            title="Task status", text=f"Task {task.id = } {TaskStatus.created}", type="info")
+        message = WebSocketMessage(title="Task status",
+                                   text=TaskNotify(id=task.id, name=task.created_by, status=task.status, traceback=task.traceback).to_str(),
+                                   type="info")
         await self.notify_by_websocket(message, task)
         logger.debug(f"CREATED TASK {job.__qualname__} {task.id} {safe_params}")
         scheduler = self.create_new_scheduler(job)
@@ -226,15 +244,17 @@ class TaskManager:
                         text=f"The selected agent {agent.name} is not able to perform this task {job.__name__}.",
                         type="error")
             module_name = json.loads(agent.information).get("tasks", {}).get(job.__name__).get("module_name")
+            description = json.loads(agent.information).get("tasks", {}).get(job.__name__).get("description")
+            display_name = json.loads(description).get("name")
             if module_name:
                 message = WebSocketMessage(title="no title",
                             command="install_module",
-                            text=json.dumps({"agent_id": agent.id, "module_name": module_name, "project_id": project_id}),
+                            text=json.dumps({"agent_id": agent.id, "module_name": module_name, "project_id": project_id, "description": description}),
                             type="no type")
             await self.notify_by_websocket(message, project_id=project_id)
             raise HTTPException(
                 status_code=406,
-                detail="The selected agent is not able to perform this task" + f" Module name: {module_name}" if module_name else "",
+                detail="The selected agent is not able to perform this task" + f" Module name: {module_name}" if module_name else "" + f" Display name: {display_name}" if display_name else "",
             )
         self.clean_payload(job=job, agent=agent, payload=kwargs)
 
@@ -248,7 +268,7 @@ class TaskManager:
                                                        created_by=job.__name__)
 
         message = WebSocketMessage(title="Task status",
-                                   text=f"Task {task.id} {TaskStatus.created}",
+                                   text=TaskNotify(id=task.id, name=task.created_by, status=task.status, traceback=task.traceback).to_str(),
                                    type="info")
         await self.notify_by_websocket(message, task)
 
@@ -330,8 +350,8 @@ class TaskManager:
         self.schedulers[job] = new_scheduler
         return new_scheduler
 
-    async def task_status_changer_for_local_job(self, data: dict, agent_id: str):
-        await self.proceed_signal(dict_data=data, agent_id=agent_id)
+    async def task_status_changer_for_local_job(self, data: dict):
+        await self.proceed_signal(dict_data=data)
         if data.get("signal") == "task_status" and data.get("status") == TaskStatus.failed:
             self.delete_task(task_id=data.get("task_id"))
 
@@ -345,12 +365,13 @@ class TaskManager:
                                                        scan_id=scan_id)
         await self.__tasks_service.set_status(id=task_id,
                                               status=TaskStatus.finished)
+        task: Task | None = await self.__tasks_service.get_by_id(id=task_id)
         message = WebSocketMessage(
             title="Task status",
-            text=f"Task with {task_id = } {TaskStatus.finished}",
-            type="info"
+            text=TaskNotify(id=task.id, name=task.created_by, status=TaskStatus.finished, traceback=task.traceback).to_str(),
+            type="success"
         )
-        logger.info(f'FINISHED {task_id = }')
+        logger.info(f'FINISHED TASK task_id = {task_id}')
         await self.notify_by_websocket(message, project_id=project_id)
         self.delete_task(task_id=task_id)
 
@@ -379,19 +400,6 @@ class TaskManager:
             file_manager=file_manager
         )
 
-    async def autostart_speed_test_client(self, task_id: str):
-        task = await self.__tasks_service.get_by_id(id=task_id)
-        task_class = BaseJob.get_task_by_class_name(task.created_by)
-        if not (task_class is SpeedTestServerTask):
-            return
-        task_params = json.loads(task.params)
-        task_params["agent_id"] = task_params.get("agent_id_from")
-        await self.create_job(job=SpeedTestClientTask,
-                              user_id=task.user_id,
-                              project_id=task.project_id,
-                              scan_id=task.scan_id,
-                              **task_params)
-
     async def decipher_data_from_project_agent(self, data: BackWardData):
         unknown_agent = await self.__agent_in_project_service.get_agent_in_project(id=data.sender)
         if unknown_agent:
@@ -405,7 +413,7 @@ class TaskManager:
                     data.data, key=agent.secret_key)
             except ValueError:
                 return
-            await self.proceed_signal(dict_data=dict_data, agent_id=agent.id)
+            await self.proceed_signal(dict_data=dict_data)
 
     def _decipher_payload(self, payload: str, key: str) -> dict:
         ciphered_payload = payload.encode()
@@ -413,111 +421,40 @@ class TaskManager:
         deciphered_payload = Cryptor.decrypt(data=b64decoded, key=key)
         return orjson.loads(deciphered_payload)
 
-    async def proceed_signal(self, dict_data: dict, agent_id: str):
-        copy_of_dict = copy.deepcopy(dict_data)
-        signal = copy_of_dict.pop("signal", None)
-        if (task_id := copy_of_dict.get("task_id")):
-            task: Task = await self.__tasks_service.get_by_id(id=task_id)
-        match signal:
-            case "notify":
-                message = WebSocketMessage(**copy_of_dict)
-                await self.notify_by_websocket(message, task)
-            case "job_status":
-                message = WebSocketMessage(
-                    title="Job status",
-                    text=f"Task with task_id = {task_id} {
-                        copy_of_dict["status"]} {copy_of_dict["traceback"]}",
-                    type=copy_of_dict["type"]
-                )
-                await self.__tasks_service.set_status(id=task_id,
-                                                      status=copy_of_dict["status"],
-                                                      traceback=copy_of_dict["traceback"])
-                await self.notify_by_websocket(message, task)
-            case "task_status":
-                await self.__tasks_service.set_status(id=task_id,
-                                                      status=copy_of_dict["status"],
-                                                      traceback=copy_of_dict["traceback"])
-                message = WebSocketMessage(
-                    title="Task status",
-                    text=f"Task with task_id = {task_id} {
-                        copy_of_dict["status"]} {copy_of_dict["traceback"]}",
-                    type=copy_of_dict["type"]
-                )
-                await self.notify_by_websocket(message, task)
-                ##################################
-                if copy_of_dict["status"] == TaskStatus.started:
-                    await self.autostart_speed_test_client(task_id=task_id)
-                ##################################
-
-            case "result_entities":
-                try:
-                    task_data = copy_of_dict["result"]
-                    if (raw_result := task_data.get("raw_result")) and (extension := copy_of_dict.get("raw_result_extension")):
-                        await self.write_raw_result(task_id=task_id,
-                                                    data=raw_result,
-                                                    extension=extension)
-                    await self.write_result(task_id=task_id,
-                                            data=task_data)
-                    await self.__tasks_service.set_status(id=task_id, status=TaskStatus.finished)
-                    logger.info(f'FINISHED TASK {task_id}')
-                    message = WebSocketMessage(
-                        title="Task status",
-                        text=f"Task with {task_id = } {TaskStatus.finished}",
-                        type="info"
-                    )
-                    await self.notify_by_websocket(message, task)
-                    if task.created_by == 'PushModuleTask':
-                        module_name = json.loads(task.params)['module_name']
-                        message = WebSocketMessage(
-                            title="Install module",
-                            text=f"Module {module_name} successfully installed",
-                            type="info"
-                        )
-                        await WS_USER_MANAGER.send_message(entity_id=task.user_id, message=message)
-                except Exception:
-                    logger.error(f'FAILED TASK {task_id}', exc_info=False)
-                    traceback_str = traceback.format_exc()
-                    await self.__tasks_service.set_status(id=task_id, status=TaskStatus.failed, traceback=traceback_str[-1000:])
-                    message = WebSocketMessage(
-                        title=f"Task {task.created_by}",
-                        text=f"Unexpected error: {traceback_str[-200:]}",
-                        type="error"
-                    )
-                    await WS_USER_MANAGER.send_message(entity_id=task.user_id, message=message)
-
-            case "information":
-                await self.__agent_service.set_info(id=agent_id, info=json.dumps(copy_of_dict))
-            case _:
-                logger.error(f'Unknown signal: {signal}', exc_info=False)
-
-    async def write_result(self, task_id: str, data: dict):
-        task: Task = await self.__tasks_service.get_by_id(id=task_id)
-        task_class = BaseJob.get_task_by_class_name(task.created_by)
-        project_id = task.project_id
-        scan_id = task.scan_id
-        # data["agent_id"] = task.agent_id      # TODO: может упасть
-        data["project_id"] = project_id
-        data["scan_id"] = scan_id
-        data["task_id"] = task_id
-        if not task_class.restructor:
-            logger.debug(f"Task {task.created_by} {task_id} does not have restructor")
+    async def proceed_signal(self, dict_data: dict):
+        signal = dict_data.get("signal", None)
+        if signal not in signal_strategy:
+            logger.error(f'Unknown signal: {signal}', exc_info=False)
             return
-        entities = await task_class.restructor.restruct(**data)
-        await self.__data_structure_service.make_magic(project_id=project_id,
-                                                       scan_id=scan_id,
-                                                       result=entities)
 
-    # метод сервера на запись сырых данных результата на сервере
-    async def write_raw_result(self,
-                               task_id: str,
-                               data: str,
-                               extension: str):
-        task: Task = await self.__tasks_service.get_by_id(id=task_id)
+        task = None
+        if task_id := dict_data.get("task_id"):
+            task: Task | None = await self.__tasks_service.get_by_id(id=task_id)
+
+        await signal_strategy[signal](
+            tasks_service=self.__tasks_service,
+            agent_service=self.__agent_service,
+            data_structure_service=self.__data_structure_service,
+            file_manager=self.__file_manager,
+            notify_by_websocket=self.notify_by_websocket,
+        )(
+            data=dict_data,
+            task=task,
+            agent_id=dict_data.get('agent_id'),
+        )
+
+        if signal == SignalEnum.task_status and dict_data["status"] == TaskStatus.processing_on_agent:
+            await self.autostart_speed_test_client(task_id=task.id)
+
+    async def autostart_speed_test_client(self, task_id: str):
+        task = await self.tasks_service.get_by_id(id=task_id)
         task_class = BaseJob.get_task_by_class_name(task.created_by)
-        if not task_class.restructor:
-            logger.debug(f"Task {task.created_by} {task_id} does not have restructor")
+        if not (task_class is SpeedTestServerTask):
             return
-        data = task_class.restructor.get_raw_result(data)
-        filename = f"{str(datetime.datetime.now())}_{task.created_by}_{task_id}"
-        await self.__file_manager.save_file(file_path=[PROJECTS_DIR_PATH, task.project_id, task.scan_id,
-                                                               task_class.logs_folder, f"{filename}.{extension}"], data=data)
+        task_params = json.loads(task.params)
+        task_params["agent_id"] = task_params.get("agent_id_from")
+        await self.create_job(job=SpeedTestClientTask,
+                              user_id=task.user_id,
+                              project_id=task.project_id,
+                              scan_id=task.scan_id,
+                              **task_params)

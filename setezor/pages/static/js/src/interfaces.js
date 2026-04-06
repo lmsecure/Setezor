@@ -68,7 +68,20 @@ function fillInterfaceBar(barSelector) {
         createInterfaceElement(iface.id, iface.name, iface.ip)
     ).join("\n");
     
-    list.innerHTML = html;
+    const configureItem = agentData?.default_agent ? `
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <a class="dropdown-item text-primary" href="#" 
+               onclick="event.preventDefault(); 
+                        if(window.agentManager) {
+                            window.agentManager.showForInterfaceConfig('${agentData.default_agent}');
+                        }">
+                <i class="bi bi-gear me-2"></i>${i18next.t('Configure interfaces')}
+            </a>
+        </li>
+    ` : '';
+    
+    list.innerHTML = html + configureItem;
 
     if (interfaceData.default_interface != undefined){
         const defaultInterface = interfaceData.interfaces.find(
@@ -88,12 +101,10 @@ function fillInterfaceBar(barSelector) {
         button.removeAttribute("data-bs-toggle");
 
         button.onclick = function() {
-            if (typeof agentData !== 'undefined' && agentData.default_agent) {
-                currentAgent=agentData.default_agent
-                getAgentInterfaces(agentData.default_agent);
-            } else {
-                console.warn("agentData не определен или нет default_agent");
-                if (typeof getAgentInterfaces === 'function') currentAgent=agentData.default_agent; getAgentInterfaces();
+            if (agentData?.default_agent && window.agentManager) {
+                window.agentManager.showForInterfaceConfig(agentData.default_agent);
+            } else if (typeof getAgentInterfaces === 'function') {
+                getAgentInterfaces(agentData?.default_agent);
             }
         };
     }
@@ -160,7 +171,7 @@ let originalInstalledModules = [];
 
 async function getAgentInterfaces(id) {
     currentAgentInterfaces = []
-    resp = await fetch(`/api/v1/agents/${id}/remote_interfaces`)
+    resp = await fetch(`/api/v1/agents/${id}/interfaces`)
     if (resp.ok) {
         data = await resp.json()
         if (data.length == 0){
@@ -265,3 +276,13 @@ async function saveInterfaces(){
     })
     $('#editAgentInterfaces').modal('hide');
 }
+
+document.addEventListener('change', (e) => {
+    if (e.target.id?.startsWith('interface_select_')) {
+        Object.values(ToolModalBuilder.instances || {}).forEach(instance => {
+            if (instance?.state?.overrides) {
+                delete instance.state.overrides.interface_id;
+            }
+        });
+    }
+});

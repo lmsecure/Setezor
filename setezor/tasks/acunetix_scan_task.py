@@ -85,7 +85,7 @@ class AcunetixScanTask(BaseJob):
             new_dns = DNS(target_ip=new_ip, target_domain=new_domain, dns_type_id=DNSTypes.A.value)
             result.append(new_dns)
 
-        new_port = Port(port=data.get("port"), ip=new_ip)
+        new_port = Port(port=data.get("port"), service_name=data.get("service_name"), ip=new_ip)
         result.append(new_port)
 
         new_software = Software()

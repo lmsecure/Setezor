@@ -665,6 +665,50 @@ class AnalyticsService(BaseService):
         ]
         return total, tabulator
 
+    @classmethod
+    def get_tabs_config(cls) -> list:
+        return [
+            {
+                'name': 'ip_info',
+                'base_url': '/api/v1/analytics/ip_info',
+                'columns': cls.get_ip_info_columns_tabulator_data()
+            },
+            {
+                'name': 'domain_info',
+                'base_url': '/api/v1/analytics/domain_info',
+                'columns': cls.get_domain_info_columns_tabulator_data()
+            },
+            {
+                'name': 'open_ports',
+                'base_url': '/api/v1/analytics/software',
+                'columns': cls.get_open_ports_columns_tabulator_data()
+            },
+            {
+                'name': 'ip_domain',
+                'base_url': '/api/v1/analytics/domain_ip',
+                'columns': cls.get_ip_domain_columns_tabulator_data()
+            },
+            {
+                'name': 'web',
+                'base_url': '/api/v1/analytics/web_tabulator',
+                'columns': cls.get_web_columns_tabulator_data()
+            },
+            {
+                'name': 'web_screenshot',
+                'base_url': '/api/v1/analytics/dns_a_screenshot',
+                'columns': cls.get_web_screenshot_columns_tabulator_data()
+            },
+            {
+                'name': 'cve',
+                'base_url': '/api/v1/analytics/cve_tabulator',
+                'columns': cls.get_cve_columns_tabulator_data()
+            },
+            {
+                'name': 'auth_credentials',
+                'base_url': '/api/v1/analytics/auth_credentials',
+                'columns': cls.get_auth_credentials_tabulator_data()
+            },
+        ]
         
     @classmethod
     def get_l4_software_columns_tabulator_data(cls) -> list:

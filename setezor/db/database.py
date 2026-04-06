@@ -184,8 +184,8 @@ async def reset_db():
             await conn.execute(text('CREATE SCHEMA public'))
         else:
             await conn.run_sync(SQLModel.metadata.drop_all)
-        await conn.run_sync(SQLModel.metadata.create_all)
-        await create_triggers(conn)
+    await init_db()
+    await init_triggers()
 
 
 async def init_triggers():

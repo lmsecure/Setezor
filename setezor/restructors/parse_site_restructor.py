@@ -21,7 +21,7 @@ class ParseSiteTaskRestructor:
             return "0.0.0.0"
 
     @classmethod
-    async def restruct(cls, url: str, har: Base64, screenshot: Base64, wappalyzer_data: list[dict], **kwargs):
+    async def restruct(cls, project_id: str, scan_id: str, agent_id: str, url: str, har: Base64, screenshot: Base64, wappalyzer_data: list[dict], **kwargs):
         url_data = parse_url(url)
         if url_data.get('domain', None) is not None and url_data.get('ip', None) is None:
             domain = url_data.get('domain')
@@ -34,22 +34,22 @@ class ParseSiteTaskRestructor:
         domain_obj = Domain(domain=domain)
         ip_obj = IP(ip=ip)
         dns_obj = DNS(target_domain=domain_obj, dns_type_id=DNSTypes.A.value, target_ip=ip_obj)
-        port_obj = Port(ip=ip_obj, port=url_data['port'], state='open', protocol='tcp', service_name='http')
+        port_obj = Port(ip=ip_obj, port=url_data['port'], state='open', protocol='tcp', service_name=url_data.get("service_name"))
         entities += [domain_obj, ip_obj, dns_obj, port_obj]
-        web_archive_parsed_data = await WebArchiveModule.parse(har, **kwargs)
+        web_archive_parsed_data = await WebArchiveModule.parse(har=har, project_id=project_id, scan_id=scan_id, agent_id=agent_id, **kwargs)
         entities += await WebArchiveModule.restruct_result(url, dns_obj=dns_obj, name=web_archive_parsed_data['name'])
         if screenshot:
-            screenshot_parsed_data = await ScreenshotModule.parse(screenshot, **kwargs)
+            screenshot_parsed_data = await ScreenshotModule.parse(screenshot, project_id=project_id, scan_id=scan_id, agent_id=agent_id, **kwargs)
             screenshot_entities = await ScreenshotModule.restruct_result(screenshot_parsed_data['screenshot_id'], dns_obj=dns_obj)
             entities += screenshot_entities
         if wappalyzer_data:
             wappalyzer_data = WappalyzerModule.prepare_wappalyzer_data(wappalyzer_data, url)
-            WappalyzerModule.save(wappalyzer_data, **kwargs)
+            WappalyzerModule.save(wappalyzer_data, project_id=project_id, scan_id=scan_id, **kwargs)
             wappalyzer_parsed_data = WappalyzerParser.parse_json(
                 wappalyzer_data, groups=WappalyzerParser.groups.keys()
             )
             wappalyzer_entities = await WappalyzerParser.restruct_result(
-                wappalyzer_parsed_data, domain_obj=domain_obj, dns_obj=dns_obj, port_obj=port_obj
+                project_id=project_id, scan_id=scan_id, agent_id=agent_id, data=wappalyzer_parsed_data, domain_obj=domain_obj, dns_obj=dns_obj, port_obj=port_obj
             )
             entities += wappalyzer_entities
 

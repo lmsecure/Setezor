@@ -15,9 +15,10 @@ class UserProjectService(BaseService):
             return user_project
 
     async def get_user_projects(self, user_id: str) -> Project:
+        projects = []
         async with self._uow:
             projects = await self._uow.user_project.all_projects(user_id=user_id)
-            return projects
+        return projects
         
 
     async def get_user_project(self, user_id: str, project_id: str) -> Project:
@@ -49,3 +50,25 @@ class UserProjectService(BaseService):
             await self._uow.user_project.edit_one(id=users_in_project.id, data={"role_id": change_user_role_form.role_id})
             await self._uow.commit()
 
+
+    async def get_project_statistic(self, user_id: str, project_ids: list[str]) -> dict[str, list]:
+        result: dict = dict()
+        if not project_ids:
+            return result
+        async with self._uow:
+            projects_statistic = await self._uow.project.get_statistic(user_id=user_id, project_ids=project_ids)
+        if not projects_statistic:
+            return result
+        for project_id, scan_name, count_ip, count_port, count_comment, count_vuln in projects_statistic:
+            scan_statistic = {
+                "scan_name": scan_name,
+                "count_ip": count_ip,
+                "count_port": count_port,
+                "count_comment": count_comment,
+                "count_vuln": count_vuln
+            }
+            if not (project := result.get(project_id)):
+                result[project_id] = [scan_statistic]
+            else:
+                result[project_id].append(scan_statistic)
+        return result

@@ -11,7 +11,9 @@
 <link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
 <link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
 <link href="/static/css/src/admin_settings.css" rel="stylesheet">
+<link href="/static/css/src/task_notification.css" rel="stylesheet">
 <script src="/static/js/src/toasts.js"></script>
+<script src="/static/js/src/task-notifications.js"></script>
 <script src="/static/js/libs/bootstrap.bundle.min.js"></script>
 <script src="/static/js/libs/jquery-3.3.1.min.js"></script>
 <script src="/static/js/libs/tabulator.min.js"></script>
@@ -483,6 +485,7 @@
             const form = document.getElementById('openRegSettingsForm');
             const formData = new FormData(form);
             let settings = Object.fromEntries(formData.entries());
+            const promises = [];
 
             document.querySelectorAll('#openRegSettingsForm input').forEach(input => {
                 let settingId = input.id;
@@ -496,13 +499,21 @@
                 if (input.type === "checkbox" && !(input.name in settings)) {
                     payload.value = false;
                 }
-
-                sendPatchRequest(settingId, payload);
+                promises.push(sendPatchRequest(settingId, payload));
             });
+
+            try {
+                await Promise.all(promises);
+                create_toast(i18next.t('Success'), i18next.t('Settings saved'), 'success');
+            } catch (error) {
+                console.error(error);
+                create_toast(i18next.t('Error'), i18next.t('Failed to save settings'), 'error');
+            }
         }
 
         async function sendPatchRequest(settingId, payload) {
                 let response = await axios.patch(`/api/v1/settings/admin/${settingId}`, payload);
+                return response;
         }
 
         function sanitize(string) {
@@ -918,6 +929,18 @@
     function fillConfigModules(modules) {
         const el = document.getElementById("config_modules_container");
         
+        const getDisplayName = (m) => {
+            if (m.description) {
+                try {
+                    const parsed = typeof m.description === 'string' 
+                        ? JSON.parse(m.description) 
+                        : m.description;
+                    if (parsed?.name) return parsed.name;
+                } catch (e) {}
+            }
+            return m.task_name || m.module_name || 'Unknown';
+        };
+        
         const cardHTML = `
             <label class="card bg-light mb-3 shadow-sm">
             <div class="card-body py-2">
@@ -935,6 +958,8 @@
             const checked = m.module_is_installed ? "checked" : "";
             const badge = m.module_is_installed ? 
             `<span class="badge bg-primary ms-2" data-i18n="Installed"></span>` : "";
+
+            const displayName = getDisplayName(m);
             
             listHTML += `
             <div class="list-group-item py-2" ${!disabled ? 'style="cursor:pointer;"' : ''}>
@@ -944,7 +969,7 @@
                     ${checked} ${disabled}>
                 <label class="form-check-label flex-grow-1 mb-0">
                     <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-medium">${m.module_name}</span>
+                    <span class="fw-medium">${displayName}</span>
                     ${badge}
                     </div>
                 </label>
@@ -991,7 +1016,7 @@
     async function openAgentInterfaces(agentId) {
         currentAgent = agentId;
         originalActiveInterfaces = [];
-        const ifaceResp = await fetch(`/api/v1/agents/${agentId}/remote_interfaces`);
+        const ifaceResp = await fetch(`/api/v1/agents/${agentId}/interfaces`);
         if (ifaceResp.ok) {
             currentAgentInterfaces = await ifaceResp.json();
             originalActiveInterfaces = currentAgentInterfaces

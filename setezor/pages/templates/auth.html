@@ -35,11 +35,11 @@
     <div class="wrapper">
       <h2 style="margin-bottom: 2rem;" data-i18n="Authorization"></h2>
       <div class="input-field">
-        <input type="text" name="username" required>
+        <input type="text" name="username" required minlength="1" maxlength="64">
         <label data-i18n="Login"></label>
       </div>
       <div class="input-field">
-        <input type="password" name="password" id="password" required>
+        <input type="password" name="password" id="password" required minlength="6" maxlength="128">
         <label data-i18n="Password"></label>
         <span class="toggle-password" onclick="togglePasswordVisibility()">
           <i class="bi bi-eye"></i>
@@ -69,6 +69,25 @@
   <script>
     async function auth(event) {
       event.preventDefault();
+      const form = event.target;
+      const username = form.username.value.trim();
+      const password = form.password.value;
+
+      if (username.length < 1 || username.length > 64) {
+        create_toast("Error", "Invalid username size", 'error');
+        return;
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        create_toast("Error", "Invalid username characters", 'error');
+        return;
+      }
+
+      if (password.length < 6 || password.length > 128) {
+        create_toast("Error", "Invalid password size", 'error');
+        return;
+      }
+
       let formData = new FormData(event.target)
       let response = await fetch("/api/v1/auth/login", {
         method: 'post',

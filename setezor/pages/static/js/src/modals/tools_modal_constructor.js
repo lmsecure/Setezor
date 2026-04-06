@@ -1,0 +1,1743 @@
+function createModal(modalId, modalTitle, helpUrl = '') {
+  if (document.getElementById(modalId)) return;
+
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.className = 'modal fade';
+  modal.tabIndex = -1;
+  modal.setAttribute('aria-hidden', 'true');
+  modal.setAttribute('data-bs-backdrop', 'static');
+  modal.setAttribute('data-bs-keyboard', 'false');
+
+  modal.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">${modalTitle}</h5>
+          ${helpUrl ? `
+            <a href="${helpUrl}" target="_blank" style="margin-left: 0.2rem">
+              <i class="bi bi-question-circle fs-4"></i>
+            </a>` : ''}
+          <button type="button" class="btn-close" id="${modalId}_closeBtn"></button>
+        </div>
+        <div class="modal-body" id="${modalId}_body">
+          <!-- Content -->
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const modalEl = document.getElementById(modalId);
+
+  document.getElementById(`${modalId}_closeBtn`).addEventListener('click', () => {
+    destroyModal(modalId);
+  });
+
+  window[`show_${modalId}`] = async function () {
+    const instance = ToolModalBuilder.instances[modalId];
+    if (instance?.refreshGlobalBars) await instance.refreshGlobalBars();
+    let bsModal = bootstrap.Modal.getInstance(modalEl);
+    if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+  };
+
+  window[`close_${modalId}`] = function () {
+    destroyModal(modalId);
+  };
+}
+
+function destroyModal(modalId) {
+  const modalEl = document.getElementById(modalId);
+  if (!modalEl) return;
+
+  const instance = ToolModalBuilder.instances[modalId];
+  if (instance) {
+    if (instance.state?.overrides) {
+      delete instance.state.overrides.agent_id;
+      delete instance.state.overrides.interface_id;
+      delete instance.state.overrides.interface_obj;
+    }
+    instance.reset();
+  }
+
+  const bsModal = bootstrap.Modal.getInstance(modalEl);
+  if (bsModal) {
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      delete window[`show_${modalId}`];
+      delete window[`close_${modalId}`];
+      delete ToolModalBuilder.instances[modalId];
+      modalEl.remove();
+    }, { once: true });
+    bsModal.hide();
+  } else {
+    delete window[`show_${modalId}`];
+    delete window[`close_${modalId}`];
+    delete ToolModalBuilder.instances[modalId];
+    modalEl.remove();
+  }
+}
+  const FormHelpers = {
+    linkSwitchToInput(switchEl, inputEl, onToggle = null) {
+      if (!switchEl || !inputEl) return;
+      switchEl.addEventListener("change", (e) => {
+        inputEl.disabled = !e.target.checked;
+        if (!e.target.checked) inputEl.value = "";
+        if (onToggle) onToggle(e.target.checked);
+      });
+    },
+    makeRadiosToggleable(radios) {
+      radios.forEach((radio) => {
+        radio.addEventListener("click", function () {
+          const wasChecked = this.dataset.wasChecked === "true";
+          if (wasChecked) {
+            this.checked = false;
+            this.dataset.wasChecked = "false";
+          } else {
+            document
+              .querySelectorAll(`input[name="${this.name}"]`)
+              .forEach((r) => (r.dataset.wasChecked = "false"));
+            this.dataset.wasChecked = "true";
+          }
+        });
+      });
+    },
+    async selectAndReadFiles(accept, multiple = false) {
+      return new Promise((resolve, reject) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = accept;
+        input.multiple = multiple;
+        input.addEventListener("change", async (e) => {
+          try {
+            const files = Array.from(e.target.files);
+            const results = await Promise.all(
+              files.map((file) => this.readFileAsDataURL(file)),
+            );
+            resolve(results);
+          } catch (error) {
+            reject(error);
+          }
+        });
+        input.click();
+      });
+    },
+    readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) =>
+          resolve({
+            content: e.target.result,
+            filename: file.name,
+          });
+        reader.onerror = () =>
+          reject(new Error(`Failed to read file: ${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    },
+    readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) =>
+          resolve({
+            content: e.target.result,
+            filename: file.name,
+          });
+        reader.onerror = () =>
+          reject(new Error(`Failed to read file: ${file.name}`));
+        reader.readAsText(file);
+      });
+    },
+  };
+
+  const TargetParser = {
+    parseTarget(line) {
+      const s = line.trim();
+      let host = s;
+      let port = "";
+
+      const type = typeof TextareaValidator !== 'undefined'
+        ? TextareaValidator._detectType(s)
+        : 'unknown';
+
+      if (type === 'ip' || type === 'network' || type === 'domain') {
+        // no port
+        host = s;
+        port = "";
+      } else if (type === 'ip_ports' || type === 'network_ports' || type === 'domain_ports') {
+        // host:port(s) — split on last colon
+        const lastColon = s.lastIndexOf(':');
+        host = s.slice(0, lastColon);
+        port = s.slice(lastColon + 1);
+      } else if (type === 'url') {
+        try {
+          const url = new URL(s);
+          host = url.hostname.replace(/^\[|\]$/g, "");
+          port = url.port || "";
+        } catch {
+          host = s;
+        }
+      } else {
+        // unknown — best-effort fallback
+        try {
+          const url = new URL(s.includes("://") ? s : `http://${s}`);
+          host = url.hostname.replace(/^\[|\]$/g, "");
+          if (url.port && s.includes("://")) port = url.port;
+        } catch {
+          if (s.includes(":")) {
+            const parts = s.split(":");
+            port = parts.pop();
+            host = parts.join(":");
+          }
+        }
+      }
+
+      const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}(\/\d+)?$/.test(host);
+      const isIPv6 = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/.test(host);
+      const isIP   = isIPv4 || isIPv6;
+      return {
+        ip:     isIP ? host : "",
+        domain: !isIP ? host : "",
+        target: host,
+        port:   port,
+      };
+    },
+    parseTargets(lines) {
+      return lines
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => this.parseTarget(line));
+    },
+  };
+
+  const TextareaValidator = {
+
+    _isIP(s) {
+      return ipaddr.IPv4.isValidFourPartDecimal(s);
+    },
+
+    _isPort(s) {
+      const n = Number(s);
+      return Number.isInteger(n) && n >= 1 && n <= 65535;
+    },
+
+    _isPorts(s) {
+      const parts = s.split(',');
+      return parts.length >= 1 && parts.every(p => this._isPort(p.trim()));
+    },
+
+    _isNetwork(s) {
+      try {
+        return ipaddr.parseCIDR(s)[0].kind() === 'ipv4';
+      } catch {
+        return false;
+      }
+    },
+
+    _isDomain(s) {
+      if (s.includes('://') || s.includes(':')) return false;
+      if (!s.includes('.')) return false;
+      if (ipaddr.IPv4.isValidFourPartDecimal(s)) return false;
+      const p = new URLParse('http://' + s);
+      return p.hostname === s && p.pathname === '/';
+    },
+
+    _isURL(s) {
+      if (!s.includes('://')) return false;
+      const p = new URLParse(s);
+      return /^(https?|ftp):$/.test(p.protocol) && p.hostname !== '';
+    },
+
+    _isIPPorts(s) {
+      if (s.includes('://')) return false;
+      const lastColon = s.lastIndexOf(':');
+      if (lastColon === -1) return false;
+      return this._isPorts(s.slice(lastColon + 1)) &&
+             ipaddr.IPv4.isValidFourPartDecimal(s.slice(0, lastColon));
+    },
+
+    _isNetworkPorts(s) {
+      if (s.includes('://')) return false;
+      const lastColon = s.lastIndexOf(':');
+      if (lastColon === -1) return false;
+      return this._isPorts(s.slice(lastColon + 1)) &&
+             this._isNetwork(s.slice(0, lastColon));
+    },
+
+    _isDomainPorts(s) {
+      if (s.includes('://')) return false;
+      const lastColon = s.lastIndexOf(':');
+      if (lastColon === -1) return false;
+      const host  = s.slice(0, lastColon);
+      const ports = s.slice(lastColon + 1);
+      if (!this._isPorts(ports)) return false;
+      if (!host.includes('.') || ipaddr.IPv4.isValidFourPartDecimal(host)) return false;
+      const p = new URLParse('http://' + host);
+      return p.hostname === host && p.pathname === '/';
+    },
+
+
+    _detectType(s) {
+      if (this._isIP(s))            return 'ip';
+      if (this._isNetwork(s))       return 'network';
+      if (this._isIPPorts(s))       return 'ip_ports';
+      if (this._isNetworkPorts(s))  return 'network_ports';
+      if (this._isURL(s))           return 'url';
+      if (this._isDomainPorts(s))   return 'domain_ports';
+      if (this._isDomain(s))        return 'domain';
+      return 'unknown';
+    },
+
+
+    validateLine(line, allowed = null) {
+      const trimmed = line.trim();
+      if (!trimmed) return { valid: true, type: 'empty' };
+      const type = this._detectType(trimmed);
+      if (type === 'unknown') return { valid: false, type: 'unknown' };
+      if (!allowed || allowed.length === 0) return { valid: true, type };
+      return { valid: allowed.includes(type), type };
+    },
+
+    buildHighlightedLines(rawText, allowed = null) {
+      return rawText.split('\n').map(line => ({
+        text: line,
+        ...this.validateLine(line, allowed),
+      }));
+    },
+
+    countInvalid(rawText, allowed = null) {
+      return rawText.split('\n').filter(l => !this.validateLine(l, allowed).valid).length;
+    },
+
+    isAllValid(rawText, allowed = null) {
+      return this.countInvalid(rawText, allowed) === 0;
+    },
+  };
+
+  window.TextareaValidator = TextareaValidator;
+
+  function buildValidatedTextareaHTML(prefix, placeholder = 'Enter targets, one per line...', validTypes = null) {
+    const typesAttr = (validTypes && validTypes.length)
+      ? `data-valid-types="${validTypes.join(',')}"`
+      : '';
+
+    return `
+      <div class="mt-2" id="${prefix}textareaContainer">
+        <div style="position: relative;">
+          <textarea class="form-control" id="${prefix}textareaInput"
+                    rows="10" placeholder="${placeholder}"
+                    spellcheck="false"
+                    ${typesAttr}
+                    style="resize: vertical; transition: all 0.2s ease;"></textarea>
+
+                    <div id="${prefix}textareaGutter"
+                         aria-hidden="true"
+                         style="
+                           position: absolute;
+                           top: 0; left: 0;
+                           width: 4px; height: 100%;
+                           pointer-events: none;
+                           overflow: hidden;
+                           border-radius: 0.375rem 0 0 0.375rem;
+                           z-index: 3;
+                         "></div>
+
+          <div id="${prefix}textareaOverlay"
+               class="d-none d-flex align-items-center justify-content-center"
+               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                      background: rgba(13,110,253,0.05); border: 2px dashed #0d6efd;
+                      border-radius: 0.375rem; pointer-events: none; z-index: 10;">
+            <div class="bg-white px-3 py-2 rounded shadow-sm border border-primary text-primary">
+              <i class="bi bi-file-earmark-arrow-down fs-4 me-2"></i>
+              <strong id="${prefix}textareaDropLabel"></strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="${prefix}textareaValidationBadge"
+             style="display:none; margin-top:4px; font-size:0.75rem; padding:2px 8px;
+                    border-radius:1rem; font-weight:600;"></div>
+
+        <small class="form-text text-muted d-block" id="${prefix}textareaHint"></small>
+      </div>
+    `;
+  }
+
+  window.buildValidatedTextareaHTML = buildValidatedTextareaHTML;
+
+  const DatabaseTargetProcessors = {
+    ipOnlyWithPort(row) {
+      const ip = row.ipaddr || "";
+      const port = row.port || "";
+      if (!ip) return "";
+      if (port && port !== "null" && port !== "undefined") {
+        return `${ip}:${port}`;
+      }
+      return ip;
+    },
+    domainOrIpPort(row) {
+      const ip = row.ipaddr || "";
+      const domain = row.domain || "";
+      const port = row.port || "";
+      if (ip) {
+        if (port && port !== "null" && port !== "undefined") {
+          return `${ip}:${port}`;
+        }
+        return ip;
+      }
+      if (domain) {
+        if (port && port !== "null" && port !== "undefined") {
+          return `${domain}:${port}`;
+        }
+        return domain;
+      }
+      return "";
+    },
+    domainOnly(row) {
+      const domain = row.domain || "";
+      return domain;
+    },
+    domainOrIp(row) {
+      const domain = row.domain || "";
+      const ip = row.ipaddr || "";
+      if (domain) return domain;
+      if (ip) return ip;
+      return "";
+    },
+    ipOnly(row) {
+      const ip = row.ipaddr || "";
+      return ip;
+    },
+    
+    getProcessedTargets(selectedDatabaseTargets, processor) {
+      return Object.values(selectedDatabaseTargets || {})
+        .map((item) => {
+          const ports = Array.from(item.ports || []);
+          
+          if (ports.length > 0) {
+            const portsString = ports.join(',');
+            return processor({
+              ipaddr: item.ip,
+              domain: item.domain || "",
+              port: portsString,
+            });
+          } else {
+            return processor({
+              ipaddr: item.ip,
+              domain: item.domain || "",
+              port: "",
+            });
+          }
+        })
+        .filter((target) => target && target.trim() !== "");
+    },
+    
+    getTargetsAsObjects(selectedDatabaseTargets, processor) {
+      return Object.values(selectedDatabaseTargets || {})
+        .map((item) => {
+          const ports = Array.from(item.ports || []);
+          
+          if (ports.length > 0) {
+            const portsString = ports.join(',');
+            const target = processor({
+              ipaddr: item.ip,
+              domain: item.domain || "",
+              port: portsString,
+            });
+            return {
+              ip: item.ip,
+              domain: item.domain || "",
+              port: portsString,
+              ports: ports,
+              target: target,
+            };
+          } else {
+            const target = processor({
+              ipaddr: item.ip,
+              domain: item.domain || "",
+              port: "",
+            });
+            return {
+              ip: item.ip,
+              domain: item.domain || "",
+              port: "",
+              ports: [],
+              target: target,
+            };
+          }
+        })
+        .filter((obj) => obj.target && obj.target.trim() !== "");
+    },
+  };
+
+  window.DatabaseTargetProcessors = DatabaseTargetProcessors;
+
+  class ToolModalBuilder {
+    constructor(modalId, config) {
+      this.modalId = modalId;
+      this.config = config;
+      this.prefix = config.prefix || `${modalId}_`;
+      this.toolName = this.prefix.replace(/_$/, "").replace(/_/g, "");
+      this.state = {
+        selectedScopeId: null,
+        selectedDatabaseTargets: {},
+        overrides: {},
+        selectedRowsState: {}
+      };
+      this.init();
+    }
+
+    init() {
+      const bodyEl = document.getElementById(`${this.modalId}_body`);
+      if (!bodyEl) return;
+      bodyEl.innerHTML = this.buildModalContent();
+      this.initGlobalBars();
+      this.initComponents();
+      this.createGlobalFunctions();
+    }
+
+    initGlobalBars() {
+    const tool = this.toolName;
+    if (typeof window.createAgentBar === "function") 
+        window.createAgentBar(`agent_${tool}`);
+    if (!this.config.hideInterfaceBar && typeof window.createInterfaceBar === "function") 
+        window.createInterfaceBar(`interface_${tool}`);
+    }
+
+    buildModalContent() {
+      return `
+            ${this.buildToolsHeader()}
+            ${this.buildTabs()}
+            ${this.buildToolSpecificParams()}
+            ${this.buildActionButtons()}
+        `;
+    }
+
+    buildToolsHeader() {
+      if (this.config.hideInterfaceBar) {
+        return `
+            <div class="d-flex mb-2" id="agent_interface_bar_${this.toolName}">
+                <div data-agent-bar="agent_${this.toolName}"></div>
+                <div id="scans_bar_${this.toolName}" class="ms-3"></div>
+            </div>
+        `;
+      }
+      return `
+            <div class="d-flex mb-2" id="agent_interface_bar_${this.toolName}">
+                <div data-agent-bar="agent_${this.toolName}"></div>
+                <div data-interface-bar="interface_${this.toolName}" class="ms-3"></div>
+                <div id="scans_bar_${this.toolName}" class="ms-3"></div>
+            </div>
+        `;
+    }
+
+    buildTabs() {
+      const tabs = this.config.tabs || [];
+      if (tabs.length === 0) return "";
+      const tabButtons = tabs
+        .map(
+          (tab, idx) => `
+                <button class="nav-link ${idx === 0 ? "active" : ""}"
+                        id="${this.prefix}${tab.id}-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#${this.prefix}${tab.id}-mode"
+                        type="button"
+                        role="tab">
+                    ${tab.label}
+                </button>
+            `,
+        )
+        .join("");
+
+      const tabPanes = tabs
+        .map(
+          (tab, idx) => `
+                <div class="tab-pane fade ${idx === 0 ? "show active" : ""}"
+                     id="${this.prefix}${tab.id}-mode"
+                     role="tabpanel">
+                    ${this.buildTabContent(tab)}
+                </div>
+            `,
+        )
+        .join("");
+
+      return `
+            <div class="tab-content w-100" id="${this.prefix}tab-content" style="padding-top: 7px;">
+                <div class="nav nav-tabs me-3 mb-3" id="${this.prefix}tabs" role="tablist">
+                    ${tabButtons}
+                </div>
+                ${tabPanes}
+            </div>
+        `;
+    }
+
+    buildTabContent(tab) {
+      const builders = {
+        target: () => this.buildTargetTab(tab.targetType || "ip_port"),
+        scope: () => this.buildScopeTab(),
+        database: () => this.buildDatabaseTab(),
+        textarea: () => this.buildTextareaTab(tab.placeholder, tab.textareaValidTypes),
+      };
+      const builder = builders[tab.id];
+      return builder ? builder() : "";
+    }
+
+    buildTargetTab(type) {
+      const builders = {
+        ip_port: () => this.buildIPPort(),
+        ip_only: () => this.buildIPOnly(),
+        domain_port: () => this.buildDomainPort(),
+        domain_only: () => this.buildDomainOnly(),
+        url: () => this.buildURL(),
+        target_port: () => this.buildTargetPort(),
+      };
+      return builders[type] ? builders[type]() : "";
+    }
+
+    buildTargetPort() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}targetInput">
+                <span class="input-group-text">Target</span>
+                <input type="text" class="form-control target" id="${this.prefix}inputTarget"
+                       placeholder="Domain name or IP" required>
+                <span class="input-group-text">Port</span>
+                <input type="text" class="form-control port" id="${this.prefix}inputPort"
+                       placeholder="443" value="443">
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('target_port')">+</button>
+            </div>
+        `;
+    }
+
+    buildIPPort() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}ipTarget">
+                <span class="input-group-text">IP</span>
+                <input type="text" class="form-control ip" id="${this.prefix}inputIP"
+                       placeholder="IP address" required>
+                <span class="input-group-text">PORT</span>
+                <input type="text" class="form-control port" id="${this.prefix}inputPort"
+                       placeholder="Port">
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('ip_port')">+</button>
+            </div>
+        `;
+    }
+
+    buildIPOnly() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}ipTarget">
+                <span class="input-group-text">IP</span>
+                <input type="text" class="form-control ip" id="${this.prefix}inputIP"
+                       placeholder="IP address" required>
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('ip_only')">+</button>
+            </div>
+        `;
+    }
+
+    buildDomainPort() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}domainTarget">
+                <span class="input-group-text">Domain</span>
+                <input type="text" class="form-control domain" id="${this.prefix}inputDomain"
+                       placeholder="example.com" required>
+                <span class="input-group-text">PORT</span>
+                <input type="text" class="form-control port" id="${this.prefix}inputPort"
+                       placeholder="Port">
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('domain_port')">+</button>
+            </div>
+        `;
+    }
+
+    buildDomainOnly() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}domainTarget">
+                <span class="input-group-text">Domain</span>
+                <input type="text" class="form-control domain" id="${this.prefix}inputDomain"
+                       placeholder="example.com" required>
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('domain_only')">+</button>
+            </div>
+        `;
+    }
+
+    buildURL() {
+      return `
+            <div id="${this.prefix}InputContainer"></div>
+            <div class="input-group" style="padding-top: 7px;" id="${this.prefix}urlTarget">
+                <span class="input-group-text">URL</span>
+                <input type="url" class="form-control url" id="${this.prefix}inputURL"
+                       placeholder="https://example.com" required>
+                <button type="button" class="btn btn-success" style="width: 3rem"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].addInputField('url')">+</button>
+            </div>
+        `;
+    }
+
+    buildScopeTab() {
+      return `
+            <div class="dropdown w-100 mt-2">
+                <button class="btn btn dropdown-toggle w-100" style="--bs-btn-border-color:#d4d9de;"
+                        type="button" id="${this.prefix}ScopeDropdown" data-bs-toggle="dropdown">
+                    Select scope
+                </button>
+                <ul class="dropdown-menu w-100" id="${this.prefix}dropdownMenuForScopeData"></ul>
+            </div>
+        `;
+    }
+
+    buildDatabaseTab() {
+      return `
+            <div class="database-tab-content">
+                <div class="targets-selection-area mb-3"
+                     style="border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 10px;">
+                    <div id="${this.prefix}DatabaseTargetsTable"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    buildTextareaTab(placeholder = "Enter targets, one per line...", validTypes = null) {
+      const typesAttr = (validTypes && validTypes.length)
+        ? `data-valid-types="${validTypes.join(',')}"`
+        : '';
+
+      return `
+            <div class="mt-2" id="${this.prefix}textareaContainer">
+
+                <div style="position: relative;">
+
+                    <textarea class="form-control" id="${this.prefix}textareaInput"
+                              rows="10" placeholder="${placeholder}"
+                              spellcheck="false"
+                              ${typesAttr}
+                              style="resize: vertical; transition: all 0.2s ease;"></textarea>
+
+                    <div id="${this.prefix}textareaGutter"
+                         aria-hidden="true"
+                         style="
+                           position: absolute;
+                           top: 0; left: 0;
+                           width: 4px;
+                           height: 100%;
+                           pointer-events: none;
+                           overflow: hidden;
+                           border-radius: 0.375rem 0 0 0.375rem;
+                           z-index: 3;
+                         "></div>
+
+                    <div id="${this.prefix}textareaOverlay"
+                         class="d-none d-flex align-items-center justify-content-center"
+                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                background: rgba(13, 110, 253, 0.05); border: 2px dashed #0d6efd;
+                                border-radius: 0.375rem; pointer-events: none; z-index: 10;">
+                        <div class="bg-white px-3 py-2 rounded shadow-sm border border-primary text-primary">
+                            <i class="bi bi-file-earmark-arrow-down fs-4 me-2"></i>
+                            <strong id="${this.prefix}textareaDropLabel"></strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="${this.prefix}textareaValidationBadge"
+                     style="display:none; margin-top: 4px; font-size: 0.75rem; padding: 2px 8px;
+                            border-radius: 1rem; font-weight: 600;"></div>
+
+                <small class="form-text text-muted d-block" id="${this.prefix}textareaHint"></small>
+            </div>
+        `;
+    }
+
+    buildToolSpecificParams() {
+      if (!this.config.toolParams) return "";
+      const params =
+        typeof this.config.toolParams === "function"
+          ? this.config.toolParams(this.prefix)
+          : this.config.toolParams;
+      return `
+            <div class="tool-specific-params mt-3">
+                ${params}
+            </div>
+        `;
+    }
+
+    buildActionButtons() {
+      if (this.config.hideActionButtons) return "";
+      return `
+            <div class="btn-group d-flex my-2">
+                <button type="button" class="btn btn-outline-secondary w-50"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].reset()">
+                    ${this.config.resetText || "Reset Params"}
+                </button>
+                <button type="button" class="btn btn-primary w-50"
+                        onclick="ToolModalBuilder.instances['${this.modalId}'].start()">
+                    ${this.config.startText || "Start scan"}
+                </button>
+            </div>
+        `;
+    }
+
+    initComponents() {
+      this.initScopeDropdown();
+      this.initTextareaDragDrop();
+      if (this.config.onInit) {
+        this.config.onInit(this);
+      }
+
+      const dbTabTrigger = document.getElementById(`${this.prefix}database-tab`);
+      if (dbTabTrigger) {
+        dbTabTrigger.addEventListener('shown.bs.tab', (e) => {
+          if (!this.databaseTable) { 
+            this.initDatabaseTable();
+          }
+        });
+      }
+    }
+
+    initScopeDropdown() {
+      const dropdown = document.getElementById(
+        `${this.prefix}dropdownMenuForScopeData`,
+      );
+      if (!dropdown) return;
+      axios
+        .get("/api/v1/scope")
+        .then((resp) => {
+          dropdown.innerHTML = "";
+          resp.data.forEach((item) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.classList.add("dropdown-item");
+            if (this.state.selectedScopeId === item.id) {
+                a.classList.add("active", "fw-medium");
+            }
+            a.href = "#";
+            a.textContent = item.name;
+            a.addEventListener("click", (e) => {
+              e.preventDefault();
+              dropdown.querySelectorAll(".dropdown-item").forEach(el => {
+                  el.classList.remove("active", "fw-medium");
+              });
+              a.classList.add("active", "fw-medium");
+              
+              document.getElementById(`${this.prefix}ScopeDropdown`).textContent = item.name;
+              this.state.selectedScopeId = item.id;
+            });
+            li.appendChild(a);
+            dropdown.appendChild(li);
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to load scopes:", err);
+        });
+    }
+
+    initDatabaseTable() {
+      const container = document.getElementById(`${this.prefix}DatabaseTargetsTable`);
+      if (!container) return;
+
+      const tableConfig = this.config.getDatabaseTableConfig 
+          ? this.config.getDatabaseTableConfig(this.prefix)
+          : this.getDefaultDatabaseTableConfig();
+
+      try {
+        this.databaseTable = new Tabulator(container, {
+          layout: "fitColumns",
+          ajaxURL: "/api/v1/target/get_all_data",
+          ajaxParams: {
+            scans: window.selectedScans || [],
+          },
+          ajaxURLGenerator: (url, config, params) => {
+            const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+            const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+            const page = params.page || 1;
+            const size = params.size || 10;
+            const scansParam = (window.selectedScans || [])
+              .map((scan) => `scans=${encodeURIComponent(scan)}`)
+              .join("&");
+            return `${url}?page=${page}&size=${size}&sort=${sort}&filter=${filter}${scansParam ? `&${scansParam}` : ""}`;
+          },
+          selectable: true,
+          sortMode: "remote",
+          filterMode: "remote",
+          pagination: true,
+          paginationMode: "remote",
+          paginationSize: 10,
+          paginationSizeSelector: [10, 25, 50, 100, 500],
+          columns: tableConfig.columns,
+          initialSort: [
+              { column: "ipaddr", dir: "asc" }
+          ],
+          ajaxResponse: (url, params, response) => {
+              setTimeout(() => {
+                  this.databaseTable.getRows().forEach(row => {
+                      const data = row.getData();
+                      const key = `${data.ipaddr}:${data.port}:${data.domain}:${data.protocol}`;
+                      if (this.state.selectedRowsState[key]) {
+                          row.select();
+                      } else {
+                          row.deselect();
+                      }
+                  });
+              }, 0);
+              return response;
+          },
+        });
+
+        this.databaseTable.on("rowSelected", (row) => {
+            const data = row.getData();
+            const key = `${data.ipaddr}:${data.port}:${data.domain}:${data.protocol}`;
+            this.state.selectedRowsState[key] = data;
+
+            const targetKey = data.ipaddr || data.domain;
+            if (!targetKey) return;
+            if (!this.state.selectedDatabaseTargets[targetKey]) {
+                this.state.selectedDatabaseTargets[targetKey] = {
+                    ip: data.ipaddr || "",
+                    domain: data.domain || "",
+                    ports: []
+                };
+            }
+            const ports = data.port && data.port !== "null" && data.port !== "undefined" 
+                ? [data.port.toString()] 
+                : [];
+            const currentPorts = new Set(this.state.selectedDatabaseTargets[targetKey].ports);
+            ports.forEach(p => currentPorts.add(p));
+            this.state.selectedDatabaseTargets[targetKey].ports = Array.from(currentPorts);
+        });
+
+        this.databaseTable.on("rowDeselected", (row) => {
+            const data = row.getData();
+            const key = `${data.ipaddr}:${data.port}:${data.domain}:${data.protocol}`;
+            delete this.state.selectedRowsState[key];
+
+            const targetKey = data.ipaddr || data.domain;
+            if (!targetKey || !this.state.selectedDatabaseTargets[targetKey]) return;
+            
+            const portToRemove = data.port && data.port !== "null" && data.port !== "undefined" 
+                ? data.port.toString() 
+                : null;
+            
+            if (portToRemove) {
+                const portsSet = new Set(this.state.selectedDatabaseTargets[targetKey].ports);
+                portsSet.delete(portToRemove);
+                this.state.selectedDatabaseTargets[targetKey].ports = Array.from(portsSet);
+                if (this.state.selectedDatabaseTargets[targetKey].ports.length === 0) {
+                    delete this.state.selectedDatabaseTargets[targetKey];
+                }
+            }
+        });
+
+        const globalTableName = `${this.prefix}DatabaseTable`;
+        window[globalTableName] = this.databaseTable;
+      } catch (error) {
+        console.error(`Error initializing database table for ${this.prefix}:`, error);
+      }
+    }
+
+    getDefaultDatabaseTableConfig() {
+      return {
+        filter: [],
+        columns: [
+          { title: "IP", field: "ipaddr", sorter: "string" },
+          { title: "Domain", field: "domain", sorter: "string" },
+          { title: "Port", field: "port", sorter: "number" }
+        ]
+      };
+    }
+
+    reloadDatabaseTable() {
+      if (this.databaseTable) {
+        this.databaseTable.setData();
+      }
+    }
+
+    deselectDatabaseRows() {
+      if (
+        this.databaseTable &&
+        typeof this.databaseTable.deselectRow === "function"
+      ) {
+        this.databaseTable.deselectRow();
+        this.state.selectedDatabaseTargets = {};
+        this.state.selectedRowsState = {};
+      }
+    }
+
+    syncDatabaseTargetsFromTable() {
+      if (!this.databaseTable) return;
+
+      const selectedRows = this.databaseTable.getSelectedRows();
+      const ipMap = new Map();
+
+      selectedRows.forEach((row) => {
+        const rowData = row.getData();
+        const ip = rowData.ipaddr;
+        const port = rowData.port;
+        const domain = rowData.domain;
+
+        const key = ip || domain;
+        if (!key) return;
+
+        if (ipMap.has(key)) {
+          const existing = ipMap.get(key);
+          if (port && port !== "null" && port !== "undefined") {
+            existing.ports.add(port.toString());
+          }
+        } else {
+          const portsSet = new Set();
+          if (port && port !== "null" && port !== "undefined") {
+            portsSet.add(port.toString());
+          }
+          ipMap.set(key, {
+            ip: ip || "",
+            domain: domain || "",
+            ports: portsSet,
+          });
+        }
+      });
+
+      this.state.selectedDatabaseTargets = {};
+      ipMap.forEach((value, key) => {
+        const portsArray = Array.from(value.ports);
+        this.state.selectedDatabaseTargets[key] = {
+          ip: value.ip,
+          domain: value.domain,
+          ports: portsArray,
+          portsString: portsArray.join(', ')
+        };
+      });
+
+      return this.state.selectedDatabaseTargets;
+    }
+
+    getDatabaseTableInfo() {
+      if (!this.databaseTable) return null;
+      const selectedRows = this.databaseTable.getSelectedRows();
+      const allData = this.databaseTable.getData();
+      return {
+        tableExists: !!this.databaseTable,
+        totalRows: allData.length,
+        selectedRowsCount: selectedRows.length,
+        selectedRowsData: selectedRows.map((row) => row.getData()),
+        stateTargets: this.state.selectedDatabaseTargets,
+        stateTargetsCount: Object.keys(this.state.selectedDatabaseTargets).length,
+      };
+    }
+
+    selectDatabaseRows(indices) {
+      if (!this.databaseTable) return;
+      this.databaseTable.selectRow(indices);
+    }
+
+    initTextareaDragDrop() {
+      const container = document.getElementById(
+        `${this.prefix}textareaContainer`,
+      );
+      const textarea = document.getElementById(`${this.prefix}textareaInput`);
+      const overlay  = document.getElementById(`${this.prefix}textareaOverlay`);
+      if (!container || !textarea || !overlay) return;
+
+      ["dragenter", "dragover"].forEach((eventName) => {
+        container.addEventListener(
+          eventName,
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            overlay.classList.remove("d-none");
+          },
+          false,
+        );
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        container.addEventListener(
+          eventName,
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            overlay.classList.add("d-none");
+          },
+          false,
+        );
+      });
+
+      container.addEventListener(
+        "drop",
+        (e) => {
+          const file = e.dataTransfer.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              textarea.value = event.target.result;
+              textarea.dispatchEvent(new Event("input"));
+            };
+            reader.onerror = () => {
+              console.error("Failed to read dropped file");
+            };
+            reader.readAsText(file);
+          }
+        },
+        false,
+      );
+
+      this._initTextareaValidator(textarea, container);
+    }
+
+    _initTextareaValidator(textarea, container, prefixOverride = null) {
+      const pfx    = prefixOverride || this.prefix;
+      const gutter = document.getElementById(`${pfx}textareaGutter`);
+      const badge  = document.getElementById(`${pfx}textareaValidationBadge`);
+      if (!gutter) return;
+
+      const rawTypes     = textarea.dataset.validTypes || '';
+      const allowedTypes = rawTypes
+        ? rawTypes.split(',').map(s => s.trim()).filter(Boolean)
+        : null;
+
+      const renderI18n = () => {
+        const typeLabels = {
+          ip:             'IP',
+          ip_ports:       'IP:Port(s)',
+          network:        'Network/CIDR',
+          network_ports:  'Network:Port(s)',
+          domain:         'Domain',
+          domain_ports:   'Domain:Port(s)',
+          url:            'URL',
+        };
+
+        const hint = document.getElementById(`${pfx}textareaHint`);
+        if (hint) {
+          const formatsLine = (allowedTypes && allowedTypes.length)
+            ? `${i18next.t('Accepted formats')}: <b>${allowedTypes.map(t => typeLabels[t] || t).join('</b>, <b>')}</b>. `
+            : `${i18next.t('All formats accepted (IP, IP:Port(s), Network/CIDR, Domain, Domain:Port(s), URL).')} `;
+
+          hint.innerHTML = formatsLine
+            + `${i18next.t('Enter targets manually or')} <b>${i18next.t('drag and drop a .txt file')}</b> ${i18next.t('here')}. `
+            + `${i18next.t('Invalid lines are marked with a')} <span style="color:#dc3545;font-weight:600;">${i18next.t('red')}</span> ${i18next.t('bar on the left')}.`;
+        }
+
+        const dropLabel = document.getElementById(`${pfx}textareaDropLabel`);
+        if (dropLabel) {
+          dropLabel.textContent = i18next.t('Drop file to import');
+        }
+      };
+
+      const syncGutter = () => {
+        const raw = textarea.value;
+
+        if (!raw) {
+          gutter.innerHTML = '';
+          if (badge) badge.style.display = 'none';
+          return;
+        }
+
+        const cs = window.getComputedStyle(textarea);
+        let lineHeight = parseFloat(cs.lineHeight);
+        if (!lineHeight || isNaN(lineHeight) || lineHeight < 1) {
+          lineHeight = Math.round(parseFloat(cs.fontSize) * 1.5);
+        }
+        const paddingTop = parseFloat(cs.paddingTop) || 6;
+        const scrollTop  = textarea.scrollTop;
+
+        const lines = TextareaValidator.buildHighlightedLines(raw, allowedTypes);
+
+        let html = `<div style="position:relative; transform: translateY(-${scrollTop}px);">`;
+        lines.forEach(({ valid, type }, idx) => {
+          if (type === 'empty' || valid) return;
+          const top = paddingTop + idx * lineHeight;
+          html += `<div style="
+            position: absolute;
+            top: ${top}px;
+            left: 0;
+            width: 4px;
+            height: ${lineHeight}px;
+            background: #dc3545;
+          "></div>`;
+        });
+        html += '</div>';
+
+        gutter.innerHTML = html;
+
+        // Badge
+        if (badge) {
+          const invalidCount = TextareaValidator.countInvalid(raw, allowedTypes);
+          if (invalidCount > 0) {
+            badge.textContent      = `${invalidCount} invalid line${invalidCount > 1 ? 's' : ''}`;
+            badge.style.display    = 'inline-block';
+            badge.style.background = 'rgba(220,53,69,0.12)';
+            badge.style.color      = '#dc3545';
+            badge.style.border     = '1px solid rgba(220,53,69,0.35)';
+          } else {
+            badge.style.display = 'none';
+          }
+
+          // Disable/enable Start button based on textarea validation
+          const textareaTabPane = document.getElementById(`${pfx}textarea-mode`);
+          const isTextareaTabActive = textareaTabPane && textareaTabPane.classList.contains('active');
+          if (isTextareaTabActive) {
+            const modalEl = textarea.closest('.modal');
+            if (modalEl) {
+              const startBtn = modalEl.querySelector('.btn-group .btn-primary');
+              if (startBtn) {
+                startBtn.disabled = invalidCount > 0;
+              }
+            }
+          }
+        }
+      };
+
+      textarea.addEventListener('input',  syncGutter);
+      textarea.addEventListener('scroll', syncGutter);
+
+      // Re-sync when switching to textarea tab (restore button state)
+      const textareaTabTrigger = document.getElementById(`${pfx}textarea-tab`);
+      if (textareaTabTrigger) {
+        textareaTabTrigger.addEventListener('shown.bs.tab', syncGutter);
+      }
+
+      // Re-enable Start button when leaving textarea tab
+      const modalBodyEl = textarea.closest('.modal');
+      if (modalBodyEl) {
+        modalBodyEl.addEventListener('shown.bs.tab', (e) => {
+          const targetPane = e.target.getAttribute('data-bs-target');
+          if (targetPane && !targetPane.includes('textarea')) {
+            const startBtn = modalBodyEl.querySelector('.btn-group .btn-primary');
+            if (startBtn) startBtn.disabled = false;
+          }
+        });
+      }
+
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(syncGutter).observe(textarea);
+      }
+
+      const modalEl = textarea.closest('.modal');
+      if (modalEl) {
+        modalEl.addEventListener('shown.bs.modal', () => {
+          renderI18n();
+          syncGutter();
+        }, { once: false });
+      }
+
+      requestAnimationFrame(() => {
+        renderI18n();
+        syncGutter();
+      });
+    }
+
+addInputField(type, flag = false) {
+    const container = document.getElementById(`${this.prefix}InputContainer`);
+    const typeToId = {
+        ip_port: "ipTarget",
+        ip_only: "ipTarget",
+        domain_port: "domainTarget",
+        domain_only: "domainTarget",
+        url: "urlTarget",
+        target_port: "targetInput",
+    };
+    const originalId = `${this.prefix}${typeToId[type] || "ipTarget"}`;
+    const original = document.getElementById(originalId);
+    if (!container || !original) return;
+
+    const clone = original.cloneNode(true);
+    const timestamp = Date.now();
+    clone.removeAttribute("id");
+    
+    const originalInputs = original.querySelectorAll("input");
+    const cloneInputs = clone.querySelectorAll("input");
+
+    cloneInputs.forEach((cloneInp, index) => {
+        const orgInp = originalInputs[index];
+        if (orgInp && orgInp.id) {
+            cloneInp.id = `${orgInp.id}_${timestamp}`;
+            
+            cloneInp.value = orgInp.value;
+            if (!flag) orgInp.value = "";
+
+        
+        if (type === "target_port" && cloneInp.classList.contains("port")) {
+            cloneInp.value = "443";
+        }
+}});
+
+    const addButton = clone.querySelector(".btn-success");
+    if (addButton) {
+        addButton.remove();
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "-";
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-danger";
+    removeBtn.style.width = "3rem";
+    removeBtn.onclick = () => clone.remove();
+    clone.appendChild(removeBtn);
+
+    container.appendChild(clone);
+
+}
+
+
+    getActiveTab() {
+      const activeTab = document.querySelector(
+        `#${this.prefix}tabs .nav-link.active`,
+      );
+      if (!activeTab) return null;
+      return activeTab.id.replace(this.prefix, "").replace("-tab", "");
+    }
+
+    getTargets() {
+      const tabId = this.getActiveTab();
+      if (!tabId) return [];
+
+      const handlers = {
+        target: () => this.getTargetsFromInputs(),
+        scope: () => ({ scope_id: this.state.selectedScopeId }),
+        database: () => {
+
+          const processorType = this.config.databaseProcessor || "ipOnlyWithPort";
+          const targets = [];
+          
+          Object.values(this.state.selectedDatabaseTargets).forEach((item) => {
+            const portsArray = item.ports || [];
+            
+            if (portsArray.length > 0) {
+              const portsString = portsArray.join(',');
+              
+              if (this.config.databaseOutputFormat === "array") {
+                const target = DatabaseTargetProcessors[processorType]({
+                  ipaddr: item.ip,
+                  domain: item.domain || "",
+                  port: portsString,
+                });
+                if (target) targets.push(target);
+              } else {
+                const target = DatabaseTargetProcessors[processorType]({
+                  ipaddr: item.ip,
+                  domain: item.domain || "",
+                  port: portsString,
+                });
+                if (target) {
+                  targets.push({
+                    ip: item.ip,
+                    domain: item.domain || "",
+                    port: portsString,
+                    ports: portsArray,
+                    target: target,
+                  });
+                }
+              }
+            } else {
+              if (this.config.databaseOutputFormat === "array") {
+                const target = DatabaseTargetProcessors[processorType]({
+                  ipaddr: item.ip,
+                  domain: item.domain || "",
+                  port: "",
+                });
+                if (target) targets.push(target);
+              } else {
+                const target = DatabaseTargetProcessors[processorType]({
+                  ipaddr: item.ip,
+                  domain: item.domain || "",
+                  port: "",
+                });
+                if (target) {
+                  targets.push({
+                    ip: item.ip,
+                    domain: item.domain || "",
+                    port: "",
+                    ports: [],
+                    target: target,
+                  });
+                }
+              }
+            }
+          });
+          
+          return targets;
+        },
+        textarea: () => this.getTargetsFromTextarea(),
+      };
+
+      const handler = handlers[tabId];
+      if (!handler) return [];
+      return handler();
+    }
+
+    getTargetsFromInputs() {
+      const targets = [];
+      const getValue = (selector) => {
+        const el = document.querySelector(selector);
+        return el ? el.value.trim() : "";
+      };
+
+      const ip = getValue(`#${this.prefix}inputIP`);
+      const domain = getValue(`#${this.prefix}inputDomain`);
+      const url = getValue(`#${this.prefix}inputURL`);
+      const target = getValue(`#${this.prefix}inputTarget`);
+      const port = getValue(`#${this.prefix}inputPort`);
+
+      if (ip || domain || url || target) {
+        targets.push({ ip, domain, url, target, port });
+      }
+
+      const containerInputs = document.querySelectorAll(
+        `#${this.prefix}InputContainer .input-group`,
+      );
+      containerInputs.forEach((group) => {
+        const ipEl = group.querySelector(".ip");
+        const domainEl = group.querySelector(".domain");
+        const urlEl = group.querySelector(".url");
+        const targetEl = group.querySelector(".target");
+        const portEl = group.querySelector(".port");
+        const targetObj = {
+          ip: ipEl ? ipEl.value.trim() : "",
+          domain: domainEl ? domainEl.value.trim() : "",
+          url: urlEl ? urlEl.value.trim() : "",
+          target: targetEl ? targetEl.value.trim() : "",
+          port: portEl ? portEl.value.trim() : "",
+        };
+        if (
+          targetObj.ip ||
+          targetObj.domain ||
+          targetObj.url ||
+          targetObj.target
+        ) {
+          targets.push(targetObj);
+        }
+      });
+      return targets;
+    }
+
+    getTargetsFromTextarea() {
+      const textarea = document.getElementById(`${this.prefix}textareaInput`);
+      if (!textarea || !textarea.value) return [];
+
+      const lines = textarea.value.split("\n");
+      return TargetParser.parseTargets(lines);
+    }
+
+    async refreshGlobalBars() {
+      const tool = this.toolName;
+      try {
+          if (typeof window.getAgentData === 'function') {
+              const newAgentData = await window.getAgentData();
+              if (newAgentData) {
+                  if (this.state.overrides?.agent_id) {
+                    newAgentData.default_agent = this.state.overrides.agent_id; 
+                  }
+                  window.agentData = newAgentData;
+                  if (typeof window.fillAgentBar === 'function') {
+                      window.fillAgentBar(`agent_${tool}`);
+                  }
+              }
+          }
+
+          if (!this.config.hideInterfaceBar && window.agentData?.default_agent && typeof window.getInterfaceData === 'function') {
+              const ifaceData = await window.getInterfaceData(window.agentData.default_agent);
+              if (ifaceData) {
+                  window.interfaceData = ifaceData;
+                  if (typeof window.fillInterfaceBar === 'function') {
+                      window.fillInterfaceBar(`interface_${tool}`);
+                  }
+                  if (this.state.overrides?.interface_id) {
+                    setTimeout(() => {
+                      const bar = document.querySelector(`[data-interface-bar="interface_${tool}"]`);
+                      if (bar) {
+                        const link = bar.querySelector(`a[data-interface-id="${this.state.overrides.interface_id}"]`);
+                        if (link) {
+                          link.click();
+                        }
+                      }
+                    }, 100);
+                  }
+              }
+          }
+
+          await this.refreshScopeDropdown();
+
+          if (typeof window.getScans === 'function' && typeof window.redrawScanPickDropdown === 'function') {
+              const scans = await window.getScans();
+              const currentScan = await window.getCurrentScan();
+              window.redrawScanPickDropdown(scans, currentScan, [`scans_bar_${tool}`]);
+          }
+      } catch (err) {
+          console.error(`Failed to refresh bars for ${tool}:`, err);
+          if (typeof create_toast === 'function') {
+              create_toast("Warning", "Failed to load latest agent/interface data", "warning");
+          }
+      }
+    }
+
+    async refreshScopeDropdown() {
+      const dropdownMenu = document.getElementById(`${this.prefix}dropdownMenuForScopeData`);
+      const scopeBtn = document.getElementById(`${this.prefix}ScopeDropdown`);
+      if (!dropdownMenu || !scopeBtn) return;
+      
+      try {
+          scopeBtn.textContent = "Select scope";
+          dropdownMenu.innerHTML = '<li class="dropdown-item disabled"><div class="spinner-border spinner-border-sm" role="status"></div></li>';
+          
+          const resp = await axios.get("/api/v1/scope");
+          dropdownMenu.innerHTML = "";
+          
+          if (resp.data.length === 0) {
+              const empty = document.createElement("li");
+              empty.innerHTML = `<span class="dropdown-item text-muted">No scopes available</span>`;
+              dropdownMenu.appendChild(empty);
+              return;
+          }
+          
+          resp.data.forEach((item) => {
+              const li = document.createElement("li");
+              const a = document.createElement("a");
+              a.className = "dropdown-item";
+              if (this.state.selectedScopeId === item.id) {
+                a.classList.add("active", "fw-medium");
+              }
+              a.href = "#";
+              a.textContent = item.name;
+              a.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  dropdownMenu.querySelectorAll(".dropdown-item").forEach(el => {
+                    el.classList.remove("active", "fw-medium");
+                  });
+                  a.classList.add("active", "fw-medium");
+                  scopeBtn.textContent = item.name;
+                  this.state.selectedScopeId = item.id;
+              });
+              li.appendChild(a);
+              dropdownMenu.appendChild(li);
+          });
+      } catch (err) {
+          console.error("Failed to load scopes:", err);
+          dropdownMenu.innerHTML = '<li class="dropdown-item text-danger">Error loading scopes</li>';
+          if (typeof create_toast === "function") {
+              create_toast("Warning", "Failed to load scopes", "warning");
+          }
+      }
+    }
+
+    reset() {
+      document
+        .querySelectorAll(
+          `#${this.modalId}_body input[type="text"], ` +
+            `#${this.modalId}_body input[type="url"], ` +
+            `#${this.modalId}_body input[type="number"], ` +
+            `#${this.modalId}_body textarea`,
+        )
+        .forEach((el) => {
+          el.value = "";
+        });
+
+      document
+        .querySelectorAll(
+          `#${this.modalId}_body input[type="checkbox"], ` +
+            `#${this.modalId}_body input[type="radio"]`,
+        )
+        .forEach((el) => {
+          el.checked = false;
+          if (el.dataset) {
+            el.dataset.wasChecked = "false";
+          }
+        });
+
+      const container = document.getElementById(`${this.prefix}InputContainer`);
+      if (container) {
+        container.innerHTML = "";
+      }
+
+      this.state.selectedScopeId = null;
+      this.state.selectedDatabaseTargets = {};
+      this.state.selectedRowsState = {};
+      this.deselectDatabaseRows();
+      if (this.config.onReset) {
+        this.config.onReset(this);
+      }
+    }
+
+    async start() {
+      const targets = this.getTargets();
+      let hasTargets = false;
+      if (Array.isArray(targets)) {
+        hasTargets = targets.length > 0;
+      } else if (typeof targets === "object" && targets !== null) {
+        hasTargets =
+          Object.keys(targets).length > 0 &&
+          Object.values(targets).some((v) => v != null && v !== "");
+      }
+
+      if (!hasTargets) {
+        create_toast("Error", "Please enter at least one target", 'error')
+        return;
+      }
+
+      if (this.config.onStart) {
+        await this.config.onStart(this);
+      }
+    }
+
+    createGlobalFunctions() {
+      const baseName = this.modalId
+        .replace("ModalWindow", "")
+        .replace("Modal", "");
+      window[`${baseName}_modal_window`] = () => {
+        this.reset();
+        window[`show_${this.modalId}`]();
+      };
+      window[`reset_${baseName}_form`] = () => this.reset();
+      window[`start_${baseName}_scan`] = () => this.start();
+    }
+
+    static instances = {};
+    static register(modalId, config) {
+      const init = () => {
+        ToolModalBuilder.instances[modalId] = new ToolModalBuilder(
+          modalId,
+          config,
+        );
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    }
+  }
+
+  window.getSelectedAgentId = function (toolName) {
+    const btn = document.querySelector(
+      `[data-agent-bar="agent_${toolName}"] .btn`,
+    );
+    return btn?.getAttribute("data-agent-id") || "";
+  };
+
+  window.getSelectedInterface = function (toolName) {
+    const ifaceSelect = document.getElementById(`interface_select_${toolName}`);
+    if (!ifaceSelect || !ifaceSelect.value) return null;
+    const selectedOption = ifaceSelect.options[ifaceSelect.selectedIndex];
+    return {
+      id: ifaceSelect.value,
+      name: selectedOption?.text || "",
+      ip: selectedOption?.getAttribute("data-ip") || "",
+    };
+  };
+
+  window.getSelectedScanId = function (toolName) {
+    const select = document.querySelector(`#scans_bar_${toolName} select`);
+    return select?.value || "";
+  };
+
+  window.initDatabaseTable = function (
+    tableId,
+    selectedTargetsVar,
+    countElementId,
+    tableConfig = {
+      columns: [
+        { title: "IP", field: "ipaddr", sorter: "string" },
+        { title: "Domain", field: "domain", sorter: "string" },
+        { title: "Port", field: "port", sorter: "number" }
+      ]
+    }
+  ) {
+    const container = document.getElementById(tableId);
+    if (!container) {
+      console.error("Table container not found:", tableId);
+      return null;
+    }
+    try {
+      const table = new Tabulator(container, {
+        layout: "fitColumns",
+        ajaxURL: "/api/v1/target/get_all_data",
+        ajaxParams: {
+          scans: window.selectedScans || [],
+        },
+        ajaxURLGenerator: function (url, config, params) {
+          const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+          const filter = encodeURIComponent(
+            JSON.stringify(params.filter || []),
+          );
+          const page = params.page || 1;
+          const size = params.size || 10;
+          const scansParam = (window.selectedScans || [])
+            .map((scan) => `scans=${encodeURIComponent(scan)}`)
+            .join("&");
+          return `${url}?page=${page}&size=${size}&sort=${sort}&filter=${filter}${scansParam ? `&${scansParam}` : ""}`;
+        },
+        selectable: true,
+        sortMode: "remote",
+        filterMode: "remote",
+        pagination: true,
+        paginationMode: "remote",
+        paginationSize: 10,
+        paginationSizeSelector: [10, 25, 50, 100, 500],
+        columns: tableConfig.columns,
+        rowSelectionChanged: function (data, rows) {
+          window[selectedTargetsVar] = {};
+          const ipMap = new Map();
+          
+          rows.forEach((row) => {
+            const rowData = row.getData();
+            const ip = rowData.ipaddr;
+            const port = rowData.port;
+            const domain = rowData.domain;
+            
+            const key = ip || domain;
+            if (!key) return;
+
+            if (ipMap.has(key)) {
+              const existing = ipMap.get(key);
+              if (port && port !== "null" && port !== "undefined") {
+                existing.ports.add(port.toString());
+              }
+            } else {
+              const portsSet = new Set();
+              if (port && port !== "null" && port !== "undefined") {
+                portsSet.add(port.toString());
+              }
+              ipMap.set(key, {
+                ip: ip || "",
+                domain: domain || "",
+                ports: portsSet,
+              });
+            }
+          });
+          
+          ipMap.forEach((value, key) => {
+            window[selectedTargetsVar][key] = {
+              ip: value.ip,
+              domain: value.domain,
+              ports: Array.from(value.ports)
+            };
+          });
+
+          if (countElementId) {
+            const countElement = document.getElementById(countElementId);
+            if (countElement) {
+              const uniqueTargetsCount = Object.keys(window[selectedTargetsVar]).length;
+              countElement.textContent = `${uniqueTargetsCount} unique target(s) selected`;
+            }
+          }
+        },
+      });
+      return table;
+    } catch (error) {
+      console.error("Error initializing database table:", error);
+      return null;
+    }
+  };
+
+  window.loadDatabaseTargets = function (tableId) {
+    const table = window[tableId];
+    if (table && typeof table.setData === "function") {
+      table.setData();
+    } else {
+      console.error("Table not found or invalid:", tableId);
+    }
+  };

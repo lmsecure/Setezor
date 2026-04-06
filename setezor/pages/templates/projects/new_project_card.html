@@ -1,191 +1,77 @@
 {% macro show() %}
-{% import 'projects/donut_card.html' as charts %}
-<script>
-
-    function createDashboardChar(elementId, values, labels, text_inside = '') {
-        let data;
-
-        if (values.length === 0 || labels.length === 0) {
-            data = [{
-                values: [1],
-                labels: ['No Data'],
-                type: 'pie',
-                textinfo: "label",
-                textposition: "inside",
-                hole: 0.4,
-                marker: { colors: ['#ddd'] }
-            }];
-        } else {
-            data = [{
-                values: values,
-                labels: labels,
-                type: 'pie',
-                textinfo: "label",
-                textposition: "inside",
-                hole: 0.4,
-            }];
-        }
-
-        layout = {
-            margin: { "t": 5, "b": 5, "l": 5, "r": 5 },
-            showlegend: false,
-
-            annotations: [{ text: text_inside, showarrow: false }]
-        };
-
-        const sizeInRem = 12;
-        layout.height = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
-        layout.width = sizeInRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
-
-        Plotly.newPlot(elementId, data, layout, { displayModeBar: false });
-
-        return chart;
-    }
-</script>
 <div class="col h-100">
-    <div class="card mb-3" style="height: calc(50% - 1rem);">
-        <h6 class="card-header"
-            style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
-            <label class="form-check-label me-2" style="flex-grow: 1;">
 
-            </label>
-            <div class="dropdown">
-                <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
-                    aria-expanded="false">
-                </i>
-            </div>
-        </h6>
-        <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height: 0 !important; margin-top: 20px">
-            <h5 class="card-title" data-i18n="New Project"></h5>
-            <div class="pb-2 w-100">
-                <input id="new_project_name" name="project_name" type="text" class="form-control" maxlength="50"
-                data-i18n-placeholder="Project name" required onkeydown="preventEnter(event)">
-            </div>
-            <button class="btn btn-success w-100" id="createProjectButton" onclick="createProject()" data-i18n="Create"></button>
-            <button class="btn btn-success w-100" id="importProjectButton" onclick="importProject()" data-i18n="Import" style="margin: 5px 0 20px 0"></button>
-            <input type="file" id="projectFileInput" style="display: none" accept=".zip">
-        </div>
+  {# ── Карточка: создать / импортировать проект ── #}
+  <div class="card mb-3" style="height: calc(50% - 1rem);">
+    <h6 class="card-header"
+        style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+      <label class="form-check-label me-2" style="flex-grow: 1;"></label>
+      <div class="dropdown">
+        <i class="bi bi-three-dots" type="button"
+           id="dropdownMenuButton"
+           data-bs-toggle="dropdown" aria-expanded="false"></i>
+      </div>
+    </h6>
+    <div class="card-body d-flex flex-column align-items-center justify-content-center"
+         style="min-height: 0 !important; margin-top: 20px">
+      <h5 class="card-title" data-i18n="New Project"></h5>
+      <div class="pb-2 w-100">
+        <input id="new_project_name"
+               name="project_name"
+               type="text"
+               class="form-control"
+               maxlength="64"
+               data-i18n-placeholder="Project name"
+               required
+               onkeydown="preventEnter(event)">
+      </div>
+      <button class="btn btn-success w-100"
+              id="createProjectButton"
+              onclick="createProject()"
+              data-i18n="Create"></button>
+      <button class="btn btn-success w-100"
+              id="importProjectButton"
+              onclick="importProject()"
+              data-i18n="Import"
+              style="margin: 5px 0 20px 0"></button>
+      <input type="file" id="projectFileInput" style="display: none" accept=".zip">
     </div>
-    <div class="card h-50">
-        <h6 class="card-header"
-            style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
-            <label class="form-check-label me-2" style="flex-grow: 1;">
+  </div>
 
-            </label>
-            <div class="dropdown">
-                <i class="bi bi-three-dots" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
-                    aria-expanded="false">
-                </i>
-            </div>
-        </h6>
-        <div class="card-body d-flex flex-column justify-content-center" style="height: 100%; padding-top: 0;">
-            <div>
-                <h4 class="card-title">
-                    <div class="d-flex flex-column align-items-center">
-                        <h5 data-i18n="Enter By Token"></h5>
-                    </div>
-                </h4>
-                <div class="pb-2">
-                    <input id="invite_token_enter" name="invite_token_enter" type="text" class="form-control" maxlength="64"
-                           data-i18n-placeholder="Invite Token">
-                </div>
-                <button class="btn btn-success w-100" id="enterByTokenButton" onclick="enterByToken()" data-i18n="Enter"></button>
-            </div>
+  {# ── Карточка: войти по токену ── #}
+  <div class="card h-50">
+    <h6 class="card-header"
+        style="display: flex; align-items: center; word-break: break-word; overflow-wrap: break-word;">
+      <label class="form-check-label me-2" style="flex-grow: 1;"></label>
+      <div class="dropdown">
+        <i class="bi bi-three-dots" type="button"
+           id="dropdownMenuButtonToken"
+           data-bs-toggle="dropdown" aria-expanded="false"></i>
+      </div>
+    </h6>
+    <div class="card-body d-flex flex-column justify-content-center"
+         style="height: 100%; padding-top: 0;">
+      <div>
+        <h4 class="card-title">
+          <div class="d-flex flex-column align-items-center">
+            <h5 data-i18n="Enter By Token"></h5>
+          </div>
+        </h4>
+        <div class="pb-2">
+          <input id="invite_token_enter"
+                 name="invite_token_enter"
+                 type="text"
+                 class="form-control"
+                 maxlength="64"
+                 data-i18n-placeholder="Invite Token">
         </div>
+        <button class="btn btn-success w-100"
+                id="enterByTokenButton"
+                onclick="enterByToken()"
+                data-i18n="Enter"></button>
+      </div>
     </div>
+  </div>
+
 </div>
-
-<script>
-    function getQueryParam(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
-  }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const token = getQueryParam('token');
-        if (token) {
-            const tokenField = document.querySelector('input[name="invite_token_enter"]');
-            if (tokenField) {
-                tokenField.value = token;
-                document.getElementById("enterByTokenButton").click();
-            }
-        }
-    });
-    function preventEnter(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            document.getElementById("createProjectButton").click();
-        }
-    }
-
-    function createProject() {
-        if (document.getElementById('new_project_name').value.trim() === "") {
-            document.getElementById('new_project_name').classList.add('was-validated');
-            return false;
-        }
-
-        fetch('/api/v1/project', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: document.getElementById('new_project_name').value
-            })
-        })
-            .catch(function (err) {
-                console.log(err)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = '/projects_dashboard'
-                }
-            })
-    }
-
-    function importProject() {
-        const fileInput = document.getElementById('projectFileInput')
-        const handler = (e) => {
-            
-            try {
-                const file = e.target.files[0]
-                let formData = new FormData()
-                formData.append('zip_file', file)
-                fetch('/api/v1/project/import', {
-                  method: 'POST',
-                  body: formData
-                })
-                .then((response) => {
-                    if (response.ok) {create_toast("Info", "Import project has started, please wait a few minutes", "info")}
-                    if (response.status === 400) {return response.json()}
-                })
-                .then(data => {
-                    if (data) {window.alert(data.detail)}
-                })
-            } catch (err) {
-                console.error('Ошибка при отправке файла проекта', err)
-            }
-            fileInput.removeEventListener('change', handler);
-        }
-        fileInput.addEventListener('change', handler);
-        fileInput.click()
-    }
-
-    async function enterByToken() {
-        let el = document.getElementById('invite_token_enter')
-        let resp = await fetch('/api/v1/project/enter_by_token', {
-            method: "POST",
-            body: JSON.stringify({ token: el.value }),
-            headers: { "Content-type": "application/json" }
-        })
-        let data = await resp.json()
-        if (data == true) {
-            window.location = '/projects_dashboard'
-            return
-        }
-        create_toast("Error", data.detail, 'error')
-    }
-
-</script>
-
 {% endmacro %}

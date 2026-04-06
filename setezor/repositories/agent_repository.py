@@ -1,6 +1,6 @@
-from setezor.models import Agent, AgentParentAgent
+from setezor.models import Agent, AgentParentAgent, AgentInProject
 from setezor.repositories import SQLAlchemyRepository
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, select, or_
 from sqlalchemy.engine.result import ScalarResult
 from sqlalchemy.orm import aliased
 
@@ -10,6 +10,14 @@ class AgentRepository(SQLAlchemyRepository[Agent]):
 
     async def exists(self, dns_obj: SQLModel):
         return False
+
+    async def get_agent_by_agent_id_or_agent_in_project_id(self, user_id: str, agent_id: str) -> Agent | None:
+        stmt = select(Agent)\
+                .join(AgentInProject, AgentInProject.agent_id == Agent.id, isouter=True)\
+                .filter(or_(AgentInProject.id == agent_id, Agent.id == agent_id), Agent.user_id == user_id)
+        result: ScalarResult = await self._session.exec(stmt)
+        result_obj = result.first()
+        return result_obj
 
     async def list(self, user_id: str):
         stmt = select(Agent).filter(self.model.user_id == user_id)

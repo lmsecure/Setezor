@@ -34,16 +34,19 @@ async def projects_page(
 
     owned_projects = []
     shared_projects = []
-    for project_obj, role, owner_login in projects:
-        scans = await scans_service.list(project_obj.id)
+    for project in projects:
+        project_id = project.get("project_id")
+        role = project.get("role")
+        owner_login = project.get("owner_login")
+        scans = await scans_service.list(project_id)
         scan_ids = [scan.id for scan in scans]
         analytics = {
-            "top_ports": await analytics_service.get_top_ports(project_obj.id, scan_ids),
-            "top_protocols": await analytics_service.get_top_protocols(project_obj.id, scan_ids),
-            "top_products": await analytics_service.get_top_products(project_obj.id, scan_ids),
-            "device_types": await analytics_service.get_device_types(scan_ids, project_obj.id),
-            "ip_count" : await analytics_service.get_ip_count(scan_ids, project_obj.id),
-            "port_count" : await analytics_service.get_port_count(scan_ids, project_obj.id)
+            "top_ports": await analytics_service.get_top_ports(project_id, scan_ids),
+            "top_protocols": await analytics_service.get_top_protocols(project_id, scan_ids),
+            "top_products": await analytics_service.get_top_products(project_id, scan_ids),
+            "device_types": await analytics_service.get_device_types(scan_ids, project_id),
+            "ip_count" : await analytics_service.get_ip_count(scan_ids, project_id),
+            "port_count" : await analytics_service.get_port_count(scan_ids, project_id)
         }
 
         analytics['top_ports'] = {
@@ -59,7 +62,7 @@ async def projects_page(
             'data': [i[1] for i in analytics["top_products"]],
         }
         item = {
-            "project": project_obj,
+            "project": project_id,
             "role": role,
             "owner_login": owner_login,
             "analytics": analytics

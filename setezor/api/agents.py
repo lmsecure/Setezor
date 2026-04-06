@@ -92,13 +92,13 @@ async def set_agent_parents(
     agent = await agent_service.set_parents_for_agent(agent_id=id, parents=parents, user_id=user_id)
     return agent
 
-@router.get("/{agent_id}/remote_interfaces")
-async def get_remote_agent_interfaces(
+@router.get("/{agent_id}/interfaces")
+async def get_agent_interfaces(
     agent_manager: Annotated[AgentManager, Depends(AgentManager.new_instance)],
     agent_id: str,
     user_id: str = Depends(get_user_id)
 ) -> list[InterfaceStruct]:
-    return await agent_manager.get_interfaces_on_agent(user_id=user_id, agent_id=agent_id)
+    return await agent_manager.get_interfaces(user_id=user_id, agent_id=agent_id)
 
 @router.patch("/{agent_id}/interfaces")
 async def save_agent_interfaces(

@@ -1,7 +1,14 @@
+import json
 import ssl
 import OpenSSL.crypto
 from datetime import datetime
-from typing import Dict
+
+from setezor.models import Cert, IP, Port, Network
+from setezor.modules.osint.dns_info.dns_info import DNS
+from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
+
+from setezor.tools.ip_tools import get_network
+
 
 
 class CertInfo:
@@ -25,7 +32,7 @@ class CertInfo:
             # return None
 
     @classmethod
-    def parse_cert(cls, cert: bytes) -> Dict[str, str]:
+    def parse_cert(cls, cert: bytes) -> dict[str, str]:
         cert: OpenSSL.crypto.X509 = OpenSSL.crypto.load_certificate(
             OpenSSL.crypto.FILETYPE_PEM, cert)
         cert_data = {
@@ -51,7 +58,7 @@ class CertInfo:
         return cert_data
 
     @classmethod
-    def get_cert_and_parse(cls, resource:dict):
+    def get_cert_and_parse(cls, resource: dict):
         port = resource.get("port")
         host = resource.get("domain") if resource.get("domain") else resource.get("ip")
         cert = cls.get_cert(host=host, port=port)
@@ -59,3 +66,38 @@ class CertInfo:
             return []
         return cert
 
+    @classmethod
+    async def restruct(cls, project_id: str, scan_id: str, agent_id: str,
+                 data: dict, cert_data: dict):
+        result = []
+        data_for_cert_model: dict = {
+            'data': json.dumps(cert_data),
+            'not_before_date': datetime.fromtimestamp(float(cert_data['not-before'])),
+            'not_after_date': datetime.fromtimestamp(float(cert_data['not-after'])),
+            'is_expired': cert_data['has-expired'],
+            'alt_name': cert_data.get('subjectAltName', "")
+        }
+        port = data.get("port")
+        if ip_addr := data.get("ip"):
+            start_ip, broadcast = get_network(ip=ip_addr, mask=24)
+            network_obj = Network(start_ip=start_ip, mask=24)
+            ip_obj = IP(ip=ip_addr, network=network_obj)
+            result.append(ip_obj)
+            port_obj = Port(port=port, ip=ip_obj)
+            result.append(port_obj)
+            cert_obj = Cert(ip=ip_obj, **data_for_cert_model)
+            result.append(cert_obj)
+        else:
+            domain = data.get("domain")
+            responses = [await DNS.resolve_domain(domain, "A")]
+            domains = DNS.proceed_records(responses)
+            domain_obj, network_obj, ip_obj, *dns_obj = await DNS_Scan_Task_Restructor.restruct(project_id=project_id, scan_id=scan_id, agent_id=agent_id, raw_result=domains, domain_name=domain) #TODO написать проверки
+            result.append(domain_obj)
+            result.append(network_obj)
+            result.append(ip_obj)
+            result.extend(dns_obj)
+            port_obj = Port(port=port,ip=ip_obj)
+            result.append(port_obj)
+            cert_obj = Cert(ip=ip_obj, **data_for_cert_model)
+            result.append(cert_obj)
+        return result

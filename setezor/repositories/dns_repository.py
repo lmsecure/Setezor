@@ -1,9 +1,7 @@
-from typing import List
-from sqlmodel import func, literal, select
+from sqlmodel import select
 from sqlalchemy.orm import aliased
-from sqlalchemy import collate
 
-from setezor.models import DNS, IP, Domain, WhoIsDomain, WhoIsIP
+from setezor.models import DNS, IP, Domain
 from setezor.db.entities import DNSTypes
 from setezor.repositories import SQLAlchemyRepository
 
@@ -16,7 +14,8 @@ class DNSRepository(SQLAlchemyRepository[DNS]):
             return False
 
         conditions = [self.model.project_id == new_dns_obj.project_id,
-                      self.model.scan_id == new_dns_obj.scan_id]
+                      self.model.scan_id    == new_dns_obj.scan_id,
+                      self.model.dns_type   == new_dns_obj.dns_type]
         if new_dns_obj.dns_type_id == DNSTypes.TXT:
             conditions.append(self.model.extra_data == new_dns_obj.extra_data)
 

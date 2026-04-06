@@ -354,3 +354,10 @@ async def web_archive_data(
         filter=filter)
     last_page = (total + size - 1) // size
     return JSONResponse(content={"data": data, "last_page": last_page})
+
+@router.get('/tabs_config')
+async def get_tabs_config(
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+):
+    return analytics_service.get_tabs_config()

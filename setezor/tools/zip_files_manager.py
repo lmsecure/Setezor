@@ -28,7 +28,7 @@ class ZipFileManager:
         zip_buffer.seek(0)
         return zip_buffer
 
-    def add_file(self, zip_buffer: BytesIO, file_name: str, file) -> BytesIO:
+    def add_file(self, zip_buffer: BytesIO, file_name: str, file: bytes) -> BytesIO:
         zip_buffer.seek(0)
 
         with ZipFile(zip_buffer, 'a') as myzip:
@@ -42,7 +42,7 @@ class ZipFileManager:
         with ZipFile(zip_buffer, 'r') as zipf:
             zipf.extractall(path=path)
 
-    def get_file_by_name(self, zip_bytes, file_name: str) -> Optional[BytesIO]:
+    def get_file_by_name(self, zip_bytes: BytesIO, file_name: str) -> Optional[BytesIO]:
         with ZipFile(zip_bytes, 'r') as zipf:
             for file_name_in_zip in zipf.namelist():
                 if file_name_in_zip == file_name:

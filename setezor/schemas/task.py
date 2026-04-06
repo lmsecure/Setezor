@@ -1,22 +1,34 @@
-
 from typing import Any, Optional
-from enum import Enum
-from pydantic import BaseModel, field_validator
+from enum import Enum, StrEnum
+from pydantic import BaseModel, field_validator, conint
 from urllib.parse import urlparse
 from pydantic.networks import IPv4Address, IPv4Network
+from setezor.schemas.domain import DomainStr
+import json
 
-class TaskStatus:
-    pending = "PENDING"
-    started = "STARTED"
-    in_queue = "IN QUEUE"
+PortNumber = conint(ge=1, le=65535)
+
+class TaskStatus(StrEnum):
+    created = "CREATED"
+    registered = "REGISTERED"
+    processing_on_agent = "PROCESSING_ON_AGENT"
+    finished_on_agent = "FINISHED_ON_AGENT"
+    processing_on_server = "PROCESSING_ON_SERVER"
+    pre_canceled = "PRE_CANCELED"
+    canceled = "CANCELED"
+    soft_stopped = "SOFTSTOPPED"
     finished = "FINISHED"
     failed = "FAILED"
-    created = "CREATED"
-    pre_canceled = "PRE_CANCELED"
-    soft_stopped = "SOFTSTOPPED"
-    canceled = "CANCELED"
-    registered = "REGISTERED"
 
+
+class TaskNotify(BaseModel):
+    id: str
+    name: str
+    status: str
+    traceback: str | None
+
+    def to_str(self):
+        return json.dumps(self.model_dump())
 
 class TaskSchema(BaseModel):
     id: str
@@ -79,26 +91,22 @@ class DnsRecords(str, Enum):
 
 class DNSTaskPayload(TaskPayloadWithScopeID):
     agent_id: str
-    domain: str | None = None
+    domain: DomainStr | None = None
     records: list[DnsRecords] | None = list(DnsRecords)
     ns_servers: list[IPv4Address] | None = None
 
 class DomainTaskPayload(TaskPayloadWithScopeID):
     agent_id: str
-    domain: str | None = None
+    domain: DomainStr | None = None
     dict_file: str | None = None
     crt_sh: Optional[bool] = False
 
-class WHOISTaskPayload(TaskPayloadWithScopeID):
-    target: str | None = None
-    agent_id: str
-
 class WHOISShdwsTaskPayload(TaskPayloadWithScopeID):
-    target: str | None = None
+    target: IPv4Address | None = None
     agent_id: str
 
 class RDAPTaskPayload(TaskPayloadWithScopeID):
-    target: str | None = None
+    target: DomainStr | None = None
     agent_id: str
 
 class MasscanScanTaskPayload(TaskPayloadWithScopeID):
@@ -134,6 +142,18 @@ class NmapScanTaskPayload(TaskPayloadWithScopeID):
     scanTechniques: Optional[str]       # ["-sS", "-sT", "-sA", "-sW" "-sM" "-sU"]
     portsDiscovery: Optional[str]       # ["-PA", "-PS", "-PU", "-PY"]
     requestDiscovery: Optional[str]     # ["-PE", "-PP", "-PM"]
+    timingTemplate: str | None = None
+    minRtt: str | None = None
+    maxRtt: str | None = None
+    initialRtt: str | None = None
+    maxRetries: str | None = None
+    scanDelay: str | None = None
+    maxTcpDelay: str | None = None
+    maxUdpDelay: str | None = None
+    hostTimeout: str | None = None
+    minRate: str | None = None
+    maxRate: str | None = None
+    maxParallelism: str | None = None
 
 class NmapParseTaskPayload(BaseModel):
     agent_id: str
@@ -145,8 +165,8 @@ class NmapParseTaskPayload(BaseModel):
 
 class CertInfoTaskPayload(TaskPayloadWithScopeID):
     agent_id: str
-    port: int | None = None
-    target: str | None = None
+    port: PortNumber | None = None
+    target: DomainStr | IPv4Address | None = None
 
 class ScapySniffTaskPayload(BaseModel):
     agent_id: str
@@ -165,8 +185,8 @@ class WappalyzerParseTaskPayload(BaseModel):
 
 class SnmpBruteCommunityStringPayload(BaseModel):
     agent_id: str
-    target_ip: str | None = None
-    target_port: int | None = None
+    target_ip: IPv4Address | None = None
+    target_port: PortNumber | None = None
     community_strings_file: str
 
 class SpeedTestTaskPayload(BaseModel):
@@ -174,8 +194,8 @@ class SpeedTestTaskPayload(BaseModel):
     agent_id_from: str
     ip_id_from: str
     ip_id_to: str
-    target_ip: str
-    target_port: int
+    target_ip: IPv4Address
+    target_port: PortNumber
     duration: Optional[int] = 5
     packet_size: Optional[int] = 1400
     protocol: Optional[int] = 0
@@ -216,6 +236,16 @@ class ParseSiteTaskPayload(TaskPayloadWithScopeID):
     with_wappalyzer: bool
     timeout: float
 
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v):
+        """Валидация URL"""
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        parsed = urlparse(v)
+        if not parsed.netloc:
+            raise ValueError("URL must have a valid domain")
+        return v
 
 class PushModuleTaskPayload(BaseModel):
     agent_id: str

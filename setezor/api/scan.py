@@ -16,6 +16,7 @@ router = APIRouter(
 )
 
 
+
 @router.get("")
 async def get_scans(
     scan_service: Annotated[ScanService, Depends(ScanService.new_instance)],

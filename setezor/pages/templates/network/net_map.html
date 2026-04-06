@@ -4,7 +4,11 @@ union_netmask %} {{ union_netmask.show() }} {% import
 division_netmask.show() }} {% import
 'modals/change_node_on_interface_modal.html' as change_node_on_interface_modal
 %} {{change_node_on_interface_modal.change_node_on_interface_modal()}}
-
+{% block scripts %}
+<link href="/static/css/vendor/tabulator.min.css" rel="stylesheet">
+<link href="/static/css/vendor/tabulator_bootstrap4.min.css" rel="stylesheet">
+<script src="/static/js/libs/tabulator.min.js"></script>
+{% endblock %}
 <div class="d-flex flex-row">
   <div class="btn-group" role="group" style="padding-left: 0.47rem">
     <button
@@ -252,80 +256,49 @@ division_netmask.show() }} {% import
       ></a>
       <ul class="dropdown-menu">
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="nmap_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]))"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('nmap', network.getSelectedNodes()[0])">
             Nmap
           </a>
         </li>
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="masscan_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]), 'full_masscan')"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('masscan', network.getSelectedNodes()[0], ['full_masscan'])">
             Masscan
           </a>
         </li>
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="cert_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('cert', network.getSelectedNodes()[0], [], true, true)">
             Cert
           </a>
         </li>
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="window.whois_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('whois', network.getSelectedNodes()[0])">
             Whois
           </a>
         </li>
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="web_grabber_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('web_grabber', network.getSelectedNodes()[0], [], true, true)">
             Screenshot
           </a>
         </li>
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="brute_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('brute', network.getSelectedNodes()[0], [], true, true)">
             Brute
           </a>
         </li>
-        <!-- <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="ip_info_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
-            IP-Info
-          </a>
-        </li> -->
         <li>
-          <a
-            a
-            class="dropdown-item"
-            onclick="lookup_script_modal_to_node(networkData.nodes.get(network.getSelectedNodes()[0]).label)"
-          >
+          <a class="dropdown-item"
+            onclick="openToolWithNodeInfo('lookup', network.getSelectedNodes()[0], [], true, true)">
             Lookup
           </a>
         </li>
         <li>
-          <a
-            class="dropdown-item"
+          <a class="dropdown-item"
             data-bs-toggle="modal"
             data-bs-target="#addScan"
             onclick="document.getElementById('scanAddForm').reset();
@@ -1821,12 +1794,14 @@ async function decluster_by_netmask(clusterKey) {
                     <tr>
                         <td> ${i18next.t("network mask")} </td>
                         <td> ${json.network} </td>
-                        <td><button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button" onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = ''; document.getElementById('changeMaskButton').disabled = true;">${i18next.t(
-                          "Union"
-                        )}</button>
-                        <button class="btn btn-success h-50 w-100" type="button"  onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t(
-                          "Divide"
-                        )}</button></td>
+                        ${/* Временно скрыто, значек доллара и скобку удалить, когда возвращать будешь
+                            <td>
+                                <button class="btn btn-success h-50 w-100" style="margin-bottom: 0.5rem;" type="button"
+                                    onclick="union_netmask_modal_window(network_mask_data, ip); document.getElementById('networksMaskList').innerHTML = '';
+                                    document.getElementById('changeMaskButton').disabled = true;">${i18next.t("Union")}</button>
+                                <button class="btn btn-success h-50 w-100" type="button" onclick="division_netmask_modal_window(network_mask_data, ip);">${i18next.t("Divide")}</button>
+                            </td>
+                            */ ''}
                     </tr>`;
       }
 
@@ -2830,6 +2805,74 @@ async function decluster_by_netmask(clusterKey) {
     });
   }
   addTableNodesWithComments();
+
+  async function openToolWithNodeInfo(toolName, nodeId, extraArgs = [], useLabel = false, fillAllDomains = false) {
+    const toolConfig = {
+        nmap:        { open: openNmapModal,        fn: () => window.nmap_script_modal_to_node },
+        masscan:     { open: openMasscanModal,     fn: () => window.masscan_script_modal_to_node },
+        cert:        { open: openCertModal,        fn: () => window.cert_script_modal_to_node },
+        whois:       { open: openWhoisModal,       fn: () => window.whois_script_modal_to_node },
+        web_grabber: { open: openWebGrabberModal,  fn: () => window.web_grabber_script_modal_to_node },
+        brute:       { open: openBruteModal,       fn: () => window.brute_script_modal_to_node },
+        lookup:      { open: openLookupModal,      fn: () => window.lookup_script_modal_to_node },
+        snmp:        { open: openSnmpModal,        fn: () => window.snmp_script_modal_to_node },
+    };
+
+    const config = toolConfig[toolName];
+    if (!config) {
+        console.error(`Unknown tool: ${toolName}`);
+        return;
+    }
+
+    config.open();
+
+    const toolFn = config.fn();
+
+    try {
+        const resp = await fetch(`/api/v1/vis/node_info/${nodeId}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const info = await resp.json();
+
+        const baseNode = networkData.nodes.get(nodeId);
+
+        const domains = [...new Set(
+            (info.domain || [])
+                .filter(d => d && !d.deleted_at && d.domain)
+                .map(d => d.domain.trim())
+        )];
+
+        const ports = [...new Set(
+            (info.ports || [])
+                .filter(p => p && p.port)
+                .map(p => p.port)
+        )].map(port => ({ port }));
+
+        const enrichedNode = {
+            ...baseNode,
+            domains,
+            domain: domains[0] || '',
+            ports,
+            ip: baseNode.label || info.ip || ''
+        };
+
+        if (useLabel && typeof toolFn === 'function') {
+            if (fillAllDomains && domains.length > 0) {
+                return toolFn(enrichedNode, ...extraArgs);
+            } else {
+                const target = domains[0] || enrichedNode.ip;
+                return toolFn(target, ...extraArgs);
+            }
+        }
+        return toolFn(enrichedNode, ...extraArgs);
+    } catch (e) {
+        console.error('Failed to load node info:', e);
+        const fallback = networkData.nodes.get(nodeId);
+        if (useLabel && typeof toolFn === 'function') {
+            return toolFn(fallback.label, ...extraArgs);
+        }
+        return toolFn(fallback, ...extraArgs);
+    }
+}
 </script>
 
 {% endmacro %}

@@ -2,6 +2,8 @@ from sqlmodel import Field, Relationship
 from setezor.models import IDDependent, TimeDependent
 from typing import List
 
+from setezor.models import UserProject
+
 
 class Role(IDDependent, TimeDependent, table=True):
     __tablename__ = "user_role"
@@ -10,3 +12,5 @@ class Role(IDDependent, TimeDependent, table=True):
     }
     
     name: str = Field(sa_column_kwargs={"comment": "Название роли"})
+
+    users_in_project: List["UserProject"] = Relationship(back_populates="role")

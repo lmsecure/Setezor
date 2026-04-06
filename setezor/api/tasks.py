@@ -1,5 +1,6 @@
 from typing import Annotated, Literal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from starlette.responses import JSONResponse
 
 from setezor.dependencies.project import get_current_project, get_current_scan_id, role_required, get_user_id
 from setezor.models import Task
@@ -7,7 +8,7 @@ from setezor.schemas.task import DNSTaskPayload, \
     MasscanScanTaskPayload, \
     NmapParseTaskPayload, PushModuleTaskPayload, \
     ScapySniffTaskPayload, \
-    TaskLog, WHOISTaskPayload, \
+    TaskLog, \
     WHOISShdwsTaskPayload, \
     RDAPTaskPayload, \
     DomainTaskPayload, \
@@ -26,7 +27,6 @@ from setezor.services.project_service import ProjectService
 from setezor.services.software import SoftwareService
 from setezor.tasks.dns_task import DNSTask
 from setezor.tasks.parse_site_task import ParseSiteTask
-from setezor.tasks.whois_task import WhoisTask
 from setezor.tasks.whois_shdws_task import WhoisShdwsTask
 from setezor.tasks.rdap_task import RdapTask
 from setezor.tasks.domain_task import SdFindTask
@@ -56,14 +56,23 @@ async def list_tasks(
     tasks_service: Annotated[TasksService, Depends(TasksService.new_instance)],
     status: Literal["STARTED", "REGISTERED", "IN QUEUE", "FINISHED", "FAILED", "CREATED", "CANCELED"],
     project_id: str = Depends(get_current_project),
-    _: str | None = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
-) -> list[dict]:
-    if status == "CANCELED":
-        status = ["CANCELED", "PRE_CANCELED", "SOFTSTOPPED", "STOPPED"]
-    else:
-        status = [status]
-    tasks = await tasks_service.list(project_id=project_id, status=status)
-    return tasks
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+    total, data = await tasks_service.get_tasks_tabulator_data(
+        project_id=project_id,
+        user_id=user_id,
+        status=status,
+        page=page,
+        size=size,
+        sort=sort,
+        filter=filter)
+    last_page = (total + size - 1) // size
+
+    return JSONResponse(content={"data": data, "last_page": last_page, "total": total})
 
 
 @router.get("/raw_log/{task_id}")
@@ -86,7 +95,7 @@ async def soft_stop_task(
     id: str,
     project_id: str = Depends(get_current_project),
     user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
-) -> bool:
+):
     return await task_manager.soft_stop_task(id=id, project_id=project_id)
 
 @router.post("/{id}/cancel")
@@ -132,22 +141,6 @@ async def create_sd_find(
         **domain_task_payload.model_dump()
     )
 
-
-@router.post("/whois_task", status_code=201)
-async def create_whois_task(
-    task_manager: Annotated[TaskManager, Depends(TaskManager.new_instance)],
-    whois_task_payload: WHOISTaskPayload,
-    scan_id: str = Depends(get_current_scan_id),
-    project_id: str = Depends(get_current_project),
-    user_id: str | None = Depends(role_required([Roles.owner, Roles.executor]))
-) -> None:
-    await task_manager.create_job(
-        job=WhoisTask,
-        user_id=user_id,
-        project_id=project_id,
-        scan_id=scan_id,
-        **whois_task_payload.model_dump()
-    )
 
 @router.post("/whois_shdws_task", status_code=201)
 async def create_whois_shdws_task(

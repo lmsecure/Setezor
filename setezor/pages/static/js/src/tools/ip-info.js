@@ -1,0 +1,401 @@
+const IpInfoUI = {
+  getStyles() {
+    return `
+      <style>
+        .ipinfo-tool-section {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 15px;
+          border: 1px solid #e9ecef;
+        }
+      </style>
+    `;
+  },
+
+  buildParams(prefix) {
+    return this.getStyles();
+  }
+};
+
+const IpInfoHandlers = {
+  handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = node.label || '';
+    }
+    
+    window[`show_${instance.modalId}`]();
+  },
+
+  handlePrefill(instance, rows = [], prefillParams = {}) {
+    const prefix = instance.prefix;
+    
+    if (prefillParams?.agent_id) {
+      instance.state.overrides.agent_id = prefillParams.agent_id;
+    }
+    
+    instance.reset();
+    
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) {
+      const tab = new bootstrap.Tab(targetTab);
+      tab.show();
+    }
+    
+    // Get unique IPs from rows
+    const uniqueIPs = [...new Set(
+      rows
+        .map(row => (row.ipaddr || row.ip || '').trim())
+        .filter(Boolean)
+    )];
+
+    // Fill IP inputs
+    uniqueIPs.forEach((ip, index) => {
+      if (index === 0) {
+        const ipInput = document.getElementById(`${prefix}inputIP`);
+        if (ipInput) ipInput.value = ip;
+      } else {
+        instance.addInputField('ip_only');
+        
+        const container = document.getElementById(`${prefix}InputContainer`);
+        const lastGroup = container?.lastElementChild;
+        
+        if (lastGroup) {
+          const ipInput = lastGroup.querySelector('.ip');
+          if (ipInput) ipInput.value = ip;
+        }
+      }
+    });
+
+    // Set agent override if provided
+    if (prefillParams?.agent_id) {
+      instance.state.overrides.agent_id = prefillParams.agent_id;
+    }
+    
+    window[`show_${instance.modalId}`]();
+  }
+};
+
+class IpInfoScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
+
+  getBaseParams() {
+    const agentId = window.agentData?.default_agent;
+    const overrideAgent = this.instance?.state?.overrides?.agent_id;
+
+    const agent_id = overrideAgent || agentId;
+
+    if (!agent_id) {
+      throw new Error("Please select an Agent");
+    }
+
+    return {
+      agent_id: String(agent_id)
+    };
+  }
+
+  async infoTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const tasks = [];
+    const seen = new Set();
+
+    for (const target of targets) {
+      let targetValue = '';
+      
+      if (typeof target === 'string') {
+        targetValue = target;
+      } else {
+        // Проверяем все возможные поля, где может быть IP
+        targetValue = target.ip || target.target || target.domain || '';
+      }
+      
+      if (!targetValue) continue;
+      
+      const ip = String(targetValue).trim();
+      if (seen.has(ip)) continue;
+      seen.add(ip);
+      
+      const payload = {
+        ...baseParams,
+        target: ip
+      };
+
+      tasks.push({
+        endpoint: '/api/v1/task/ip_info_task',
+        payload
+      });
+    }
+
+    if (tasks.length === 0) return [];
+
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null; // handled by executeToolTasks
+      }
+      throw new Error(result.error?.message || 'Scan failed');
+    }
+
+    return result.responses;
+  }
+
+  async infoScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const payload = {
+      ...baseParams,
+      scope_id: String(scopeId)
+    };
+
+    const result = await window.executeToolTasks({
+      tasks: [{
+        endpoint: '/api/v1/task/ip_info_task',
+        payload
+      }],
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Scope scan failed');
+    }
+
+    return result.responses[0];
+  }
+}
+
+const ipInfoModalConfig = {
+  prefix: 'ip_info_',
+  hideInterfaceBar: true,
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'ip_only' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    { id: 'textarea', label: i18next.t('Textarea'), placeholder: '192.168.1.1\n192.168.1.2', textareaValidTypes: ['ip'] },
+  ],
+  
+  // Use IP only for database tab
+  databaseProcessor: 'ipOnly',
+  databaseOutputFormat: 'array',
+  
+  toolParams: (prefix) => IpInfoUI.buildParams(prefix),
+
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        }
+      ],
+      filter: [
+        { field: "ipaddr", type: "!=", value: "" }
+      ]
+    };
+  },
+
+  onInit(instance) {
+    const prefix = instance.prefix;
+
+    IpInfoScanner.prototype.instance = instance;
+
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          instance.initDatabaseTable();
+          tableInitialized = true;
+          
+          setTimeout(() => {
+            if (instance.databaseTable) {
+              instance.databaseTable.on("rowSelectionChanged", function(data, rows) {
+                const targets = {};
+                
+                rows.forEach((row) => {
+                  const rowData = row.getData();
+                  const ip = rowData.ipaddr;
+                  const domain = rowData.domain;
+                  
+                  if (!ip) return;
+                  
+                  targets[ip] = {
+                    ip: ip,
+                    domain: domain || ''
+                  };
+                });
+                
+                instance.state.selectedDatabaseTargets = targets;
+              });
+            }
+          }, 100);
+        }
+      });
+    }
+
+    window.ip_info_script_modal_to_node = (node) => {
+      IpInfoHandlers.handleNodeModal(instance, node);
+    };
+
+    window.ip_info_start_with_prefill = (rows, prefillParams) => {
+      IpInfoHandlers.handlePrefill(instance, rows, prefillParams);
+    };
+
+    window.ip_info_script_modal_to_info_tabs = async (rows) => {
+      IpInfoHandlers.handlePrefill(instance, rows);
+    };
+
+    window.ip_info_script_modal_to_database = async (rows) => {
+      const prefix = instance.prefix;
+      
+      instance.reset();
+      
+      const databaseTab = document.getElementById(`${prefix}database-tab`);
+      if (databaseTab) {
+        databaseTab.click();
+        
+        setTimeout(() => {
+          if (instance.databaseTable) {
+            instance.databaseTable.setData().then(() => {
+              setTimeout(() => {
+                const rowsToSelect = [];
+                const tableData = instance.databaseTable.getData();
+                
+                rows.forEach(row => {
+                  const match = tableData.find(tableRow => 
+                    tableRow.ipaddr === (row.ip || row.ipaddr)
+                  );
+                  if (match) rowsToSelect.push(match);
+                });
+                
+                if (rowsToSelect.length > 0) {
+                  instance.databaseTable.selectRow(rowsToSelect);
+                }
+              }, 200);
+            });
+          }
+        }, 300);
+      }
+      
+      window[`show_${instance.modalId}`]();
+    };
+  },
+
+  onReset(instance) {
+    const prefix = instance.prefix;
+
+    const container = document.getElementById(`${prefix}InputContainer`);
+    if (container) {
+      container.innerHTML = '';
+    }
+    
+    const ipInput = document.getElementById(`${prefix}inputIP`);
+    if (ipInput) {
+      ipInput.value = '';
+    }
+
+    instance.state.selectedDatabaseTargets = {};
+  },
+
+  getTargets() {
+    const tabId = this.getActiveTab();
+    if (!tabId) return [];
+
+    if (tabId === 'scope') {
+      return { scope_id: this.state.selectedScopeId };
+    }
+
+    if (tabId === 'database') {
+      const targets = [];
+      
+      Object.values(this.state.selectedDatabaseTargets || {}).forEach(item => {
+        if (item.ip) {
+          targets.push({
+            ip: item.ip,
+            domain: item.domain || '',
+            target: item.ip
+          });
+        }
+      });
+      
+      return targets;
+    }
+
+    if (tabId === 'target') {
+      return this.getTargetsFromInputs();
+    }
+
+    if (tabId === 'textarea') {
+      return this.getTargetsFromTextarea();
+    }
+
+    return [];
+  },
+
+  async onStart(instance) {
+    const scanner = new IpInfoScanner(instance.prefix);
+    scanner.instance = instance;
+
+    try {
+      const tabId = instance.getActiveTab();
+      let result;
+
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          create_toast('Warning', i18next.t('Please select a scope'), 'warning');
+          return;
+        }
+        result = await scanner.infoScope(instance.state.selectedScopeId);
+      } else {
+        const targets = instance.getTargets();
+        if (!targets.length) {
+          create_toast('Warning', i18next.t('No targets found'), 'warning');
+          return;
+        }
+        result = await scanner.infoTargets(targets);
+      }
+
+      if (result !== null) {
+        window[`close_${instance.modalId}`]();
+      }
+    } catch (error) {
+      console.error('Failed to start IP info scan:', error);
+      create_toast('Error', error.message || i18next.t('Failed to start scan'), 'error');
+    }
+  }
+};
+
+window.openIpInfoModal = function () {
+  if (document.getElementById('ipInfoModalWindow')) {
+    show_ipInfoModalWindow();
+    return;
+  }
+  createModal('ipInfoModalWindow', 'Ip Info Tool', 'https://help.setezor.net/%D0%98%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B.html#ip-info');
+  ToolModalBuilder.register('ipInfoModalWindow', ipInfoModalConfig);
+  show_ipInfoModalWindow();
+};

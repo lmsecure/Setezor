@@ -17,12 +17,20 @@ function create_websocket(endpoint, user_id) {
             return;
         }
         if (data.command == "notify_user" && data.user_id && data.user_id == user_id){
-            create_toast(data.title, data.text, data.type)
+            if (window.TaskNotifier?.isTaskNotification(data.title, data.text)) {
+                window.TaskNotifier.notify(data.title, data.text, data.type);
+            } else {
+                create_toast(data.title, data.text, data.type);
+            }
             if (data.title === 'Import project' && window.location.pathname === '/projects') {location.reload()}
             return;
         }
         if (data.command === "notify"){
-            create_toast(data.title, data.text, data.type)
+            if (window.TaskNotifier?.isTaskNotification(data.title, data.text)) {
+                window.TaskNotifier.notify(data.title, data.text, data.type);
+            } else {
+                create_toast(data.title, data.text, data.type);
+            }
             return;
         }
     };

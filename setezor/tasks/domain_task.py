@@ -17,8 +17,12 @@ class SdFindTask(BaseJob):
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
         result_params = []
+        seen = set()
         for target in targets:
             if not target.domain:
                 continue
-            result_params.append({**base_kwargs} | {"domain" : target.domain})
+            domain = target.domain.strip()
+            if domain not in seen:
+                seen.add(domain)
+                result_params.append({**base_kwargs} | {"domain": domain})
         return result_params

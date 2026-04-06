@@ -1,16 +1,20 @@
+from typing import Any
+
 import xmltodict
 
+
+
 class XMLParser:
-    
+
     @classmethod
     def parse_xml(cls, data: str):
         return xmltodict.parse(data)
-    
+
+
     @classmethod
-    def pop_params(cls, data: dict):
-        
+    def pop_params(cls, data: dict[str, Any]) -> dict[str, Any]:
         params_key = [i for i in data.keys() if i.startswith('@')]
-        result = {}
+        result: dict[str, Any] = {}
         for key in params_key:
             value = data.pop(key)
             result[key[1:]] = value

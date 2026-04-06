@@ -9,6 +9,7 @@ class CertTask(BaseJob):
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
         params = []
+        seen = set()
         for t in targets:
             addresses = []
             if t.ip:
@@ -18,10 +19,13 @@ class CertTask(BaseJob):
             
             for addr in addresses:
                 port = int(t.port) if t.port else 443
+                key = (addr, port)
                 
-                params.append({
-                    **base_kwargs,
-                    "target": addr,
-                    "port": port
-                })
+                if key not in seen:
+                    seen.add(key)
+                    params.append({
+                        **base_kwargs,
+                        "target": addr,
+                        "port": port
+                    })
         return params

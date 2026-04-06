@@ -11,7 +11,11 @@ class WhoisShdwsTask(BaseJob):
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
         result_params = []
+        seen = set()
         for target in targets:
             if target.ip:
-                result_params.append({**base_kwargs} | {"target" : target.ip.partition('/')[0]})
+                ip = target.ip.partition('/')[0].strip()
+                if ip not in seen:
+                    seen.add(ip)
+                    result_params.append({**base_kwargs} | {"target": ip})
         return result_params

@@ -1,15 +1,17 @@
 import socket
 import ipaddress
 
-def is_ip_address(address):
-        try:
-            socket.inet_aton(address)
-            return True
-        except OSError:
-            return False
 
 
-def get_network(ip: str, mask: int) -> tuple[str:, str]:
+def is_ip_address(address: str) -> bool:
+    try:
+        socket.inet_aton(address)
+        return True
+    except OSError:
+        return False
+
+
+def get_network(ip: str, mask: int) -> tuple[str, str]:
     """ Функция получения инвормации о подсети по ip и маске
 
     Returns:

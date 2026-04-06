@@ -37,7 +37,7 @@ class SQLAlchemyRepository(Generic[T]):
         for data in data_list:
             await self.add_with_exists(data.model_dump())
 
-    async def edit_one(self, id: int, data: dict):
+    async def edit_one(self, id: str, data: dict):
         stmt = update(self.model).values(
             **data).filter_by(id=id).returning(self.model.id)
         res: ScalarResult = await self._session.exec(stmt)

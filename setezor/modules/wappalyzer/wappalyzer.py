@@ -1,10 +1,7 @@
 import re
 from cpeguess.cpeguess import CPEGuess
-from setezor.models import IP, Port, DNS, Domain, Software, Vendor, L4Software
-from setezor.models.d_software_type import SoftwareType
-from setezor.models.d_software_version import SoftwareVersion
+from setezor.models import IP, Port, DNS, Domain, Software, Vendor, L4Software, SoftwareType, SoftwareVersion
 from setezor.network_structures import SoftwareStruct
-# from setezor.modules.osint.dns_info.dns_info import DNS
 from setezor.modules.osint.dns_info.dns_info import DNS as DNSModule
 from setezor.restructors.dns_scan_task_restructor import DNS_Scan_Task_Restructor
 from setezor.tools.url_parser import parse_url
@@ -109,6 +106,9 @@ class WappalyzerParser:
     @classmethod
     async def restruct_result(
         cls,
+        project_id: str, 
+        scan_id: str, 
+        agent_id: str,
         data: dict,
         domain_obj: Domain = None,
         dns_obj: DNS = None,
@@ -120,6 +120,7 @@ class WappalyzerParser:
         result = []
         if not domain_obj:
             port = data.get("port")
+            service_name = data.get("service_name")
             domain = data.get("domain")
             ip = data.get("ip")
 
@@ -130,10 +131,10 @@ class WappalyzerParser:
                 try:
                     responses = [await DNSModule.resolve_domain(domain, "A")]
                     domains = DNSModule.proceed_records(responses)
-                    new_domain, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(domains, domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
+                    new_domain, network, new_ip, *dns = await DNS_Scan_Task_Restructor.restruct(project_id=project_id, scan_id=scan_id, agent_id=agent_id, raw_result=domains, domain_name=domain) # TODO FixMe если на qwerty.com послать, то вернётся много A записей
                     if dns:
                         dns_obj = dns[0]
-                    result.extend([new_domain, new_ip, *dns])
+                    result.extend([new_domain, network, new_ip, *dns])
                 except:
                     result.append(new_domain)
             else:
@@ -150,7 +151,7 @@ class WappalyzerParser:
                 if not dns_obj:
                     dns_obj = new_dns
                 result.append(new_dns)
-            port_obj = Port(port=port, ip=new_ip)
+            port_obj = Port(port=port, ip=new_ip, service_name=service_name)
             result.append(port_obj)
 
         vendors = {}
@@ -179,7 +180,7 @@ class WappalyzerParser:
                 if vendor_name:
                     vendors[vendor_name] = vendor_obj
                 result.append(vendor_obj)
-                     
+
             if software_hash_string in softwares:
                 software_obj = softwares[software_hash_string]
             else:

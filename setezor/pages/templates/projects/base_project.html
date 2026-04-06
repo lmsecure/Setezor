@@ -1,4 +1,3 @@
-
 {% block content %}
 <!DOCTYPE html>
 <html>
@@ -10,177 +9,177 @@
 <link href="/static/css/vendor/bootstrap.min.css" rel="stylesheet">
 <link href="/static/css/vendor/bootstrap-icons.css" rel="stylesheet">
 <link href="/static/css/src/particles.css" rel="stylesheet">
-<script src="/static/js/libs/bootstrap.bundle.min.js"></script>
-<script src="/static/js/libs/plotly-2.29.1.min.js.js"></script>
-<script src="/static/js/libs/particles.min.js"></script>
-<script src="/static/js/libs/jquery-3.3.1.min.js"></script>
-<script src="/static/js/libs/i18next.min.js"></script>
-<script src="../../static/js/src/translate_i18n.js"></script>
-<script src="../../static/js/src/donut.js"></script>
-<script src="../../static/js/src/scripts.js"></script>
-<script src="../../static/js/src/toasts.js"></script>
+<link href="/static/css/src/task_notification.css" rel="stylesheet">
+<script defer src="/static/js/libs/bootstrap.bundle.min.js"></script>
+<script defer src="/static/js/libs/particles.min.js"></script>
+<script defer src="/static/js/libs/jquery-3.3.1.min.js"></script>
+<script defer src="/static/js/libs/i18next.min.js"></script>
+<script defer src="/static/js/src/translate_i18n.js"></script>
+<script defer src="/static/js/src/toasts.js"></script>
+<script defer src="/static/js/src/task-notifications.js"></script>
+<script src="/static/js/src/scripts.js"></script>
+<script defer src="/static/js/src/lazy_analytics.js"></script>
 </head>
 <body>
+
+{# ── Navbar ── #}
 <header id="myHeader" class="sticky-top">
   <nav class="navbar navbar-dark navbar-expand-lg bg-dark shadow-sm">
-			<div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem;">
-				<div class="bd-highlight" style="margin-left: 40px;">
-					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-						<li class="nav-item d-inline">
-							<a class="navbar-brand"  href="/projects">
-								<img src="/static/assets/logo.png" width="120px" height="auto"
-									style="margin-left: 0.5rem; margin-bottom:0.2rem" />
-							</a>
-						</li>
-					</ul>
-				</div>
-				<div class="d-flex align-items-center gap-2 ">
-					{% if is_superuser %}
-          <button class="btn btn-success" data-bs-toggle="modal" 
-          onclick='document.getElementById("inviteToSetezorToken").value=""; document.getElementById("inviteToSetezorURL").value = "";'
-          data-bs-target="#inviteToSetezorTokenModal" data-i18n="Invite to Setezor">
+    <div class="container-fluid d-flex justify-content-between" style="--bs-gutter-x: 0.5rem;">
+      <div class="bd-highlight" style="margin-left: 40px;">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item d-inline">
+            <a class="navbar-brand" href="/projects">
+              <img src="/static/assets/logo.png" width="120px" height="auto"
+                   style="margin-left: 0.5rem; margin-bottom: 0.2rem"/>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        {% if is_superuser %}
+        <button class="btn btn-success"
+                data-bs-toggle="modal"
+                data-bs-target="#inviteToSetezorTokenModal"
+                data-i18n="Invite to Setezor"
+                id="inviteToSetezorBtn">
+        </button>
+        {% endif %}
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                  id="languageDropdown"
+                  style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-translate"></i>
+            <span id="currentLanguage">EN</span>
           </button>
-            {% endif %}
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
-                data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-translate"></i>
-              <span id="currentLanguage">EN</span>
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-              <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
-              <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
-            </ul>
-          </div>
-          <a type="button" class="btn btn-outline-primary ms-auto" href="/admin_settings"
-            style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;">
-            <i class="bi bi-gear" data-i18n-title="Admin settings"></i>
-          </a>
-					<a type="button" class="btn btn-outline-primary ms-auto" href="https://help.setezor.net/?utm_source=public"
-						target="_blank" style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
-						data-testid="wiki_help">
-						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
-					</a>
-					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
-						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
-						data-testid="about_project">
-						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
-            data-i18n-title="About project"></i>
-					</button>
+          <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+            <li><a class="dropdown-item language-option" href="#" data-value="en">English</a></li>
+            <li><a class="dropdown-item language-option" href="#" data-value="ru">Русский</a></li>
+          </ul>
+        </div>
+        <a type="button" class="btn btn-outline-primary ms-auto" href="/admin_settings"
+           style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;">
+          <i class="bi bi-gear" data-i18n-title="Admin settings"></i>
+        </a>
+        <a type="button" class="btn btn-outline-primary ms-auto"
+           href="https://help.setezor.net/?utm_source=public" target="_blank"
+           style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C;"
+           data-testid="wiki_help">
+          <i class="bi bi-book" data-i18n-title="Wiki"></i>
+        </a>
+        <button type="button" class="btn btn-outline-warning"
+                data-bs-toggle="modal" data-bs-target="#aboutModal"
+                style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
+                data-testid="about_project">
+          <i class="bi bi-question-circle" data-i18n-title="About project"></i>
+        </button>
+        <button class="btn btn-outline-danger" type="button" id="logoutBtn"
+                style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
+          <i class="bi bi-box-arrow-right" data-i18n-title="Logout"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+</header>
 
-					<button class="btn btn-outline-danger" type="submit" onclick="logoutFromProfile()"
-					style="margin-right: 0.5rem; --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C">
-					<i class="bi bi-box-arrow-right" style="font-family: 'Times New Roman', Times, serif;"
-						data-i18n-title="Logout"></i>
-				</button>
-				</div>
-			</div>
-			</div>
-		</nav>
-
-		<script>
-			const logoutFromProfile = async () => {
-				await fetch('/api/v1/auth/logout_from_profile', { method: 'POST' }).then(response => {
-					window.location.href = "/login"
-				})
-			}
-		</script>
-	</header>
+{# ── Модалка: пригласить в Setezor ── #}
 <div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel" data-i18n="Registration token"></h1>
+        <h1 class="modal-title fs-5" data-i18n="Registration token"></h1>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form onsubmit="generateRegisterToken(event)" name="generateRegisterTokenFormName">
+      <form id="generateRegisterTokenForm" name="generateRegisterTokenFormName">
         <div class="modal-body">
           <div class="mb-3">
             <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
-            <input type="number" id="inviteToSetezorCount" min="1" value="1" class="form-control" name="count">
+            <input type="number" id="inviteToSetezorCount" min="1" value="1"
+                   class="form-control" name="count">
             <label for="inviteToSetezorToken" class="col-form-label" data-i18n="Token"></label>
-            <input type="text" class="form-control" name="invite_to_setezor_token" disabled id="inviteToSetezorToken">
+            <input type="text" class="form-control" name="invite_to_setezor_token"
+                   disabled id="inviteToSetezorToken">
             <label for="inviteToSetezorURL" class="col-form-label" data-i18n="Registration link"></label>
             <div class="input-group mb-3">
-              <input type="text" class="form-control" name="invite_to_setezor_url" id="inviteToSetezorURL" readonly>
-              <button class="btn btn-outline-secondary" type="button" id="copyLinkBtn" data-i18n="Copy"></button>
+              <input type="text" class="form-control" name="invite_to_setezor_url"
+                     id="inviteToSetezorURL" readonly>
+              <button class="btn btn-outline-secondary" type="button"
+                      id="copyLinkBtn" data-i18n="Copy"></button>
             </div>
-            <!-- <div class="mt-2">
-                            <a href="#" id="inviteToSetezorURLLink" target="_blank">Open registration page</a>
-                        </div> -->
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
+          <button type="button" class="btn btn-secondary"
+                  data-bs-dismiss="modal" data-i18n="Close"></button>
           <button type="submit" class="btn btn-success" data-i18n="Create"></button>
         </div>
       </form>
     </div>
   </div>
 </div>
-<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-<div class="modal-dialog">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h4 data-i18n="About project"></h4>
-    </div>
-    <div class="modal-body">
-      <div data-i18n="About Setezor text">
+
+{# ── Модалка: о сетезоре ── #}
+<div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 data-i18n="About project"></h4>
       </div>
-      <div class="list-group">
-        <a href="https://setezor.ru"
-          class="list-group-item list-group-item-action list-group-item-success"
-          target="_blank">Site</a>
-        <a href="https://t.me/lmsecurity"
-          class="list-group-item list-group-item-action list-group-item-primary"
-          target="_blank">Telegram</a>
-        <a href="https://github.com/lmsecure/Setezor"
-          class="list-group-item list-group-item-action list-group-item-secondary"
-          target="_blank">GitHub</a>
-        <a href="https://hub.docker.com/r/lmsecure/setezor"
-          class="list-group-item list-group-item-action list-group-item-danger"
-          target="_blank">DockerHub</a>
-      </div>
-      <hr>
-      <div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
-      </div>
-      <div class="list-group">
-        <span>Bitcoin: </span>
+      <div class="modal-body">
+        <div data-i18n="About Setezor text"></div>
+        <div class="list-group">
+          <a href="https://setezor.ru" class="list-group-item list-group-item-action list-group-item-success" target="_blank">Site</a>
+          <a href="https://t.me/lmsecurity" class="list-group-item list-group-item-action list-group-item-primary" target="_blank">Telegram</a>
+          <a href="https://github.com/lmsecure/Setezor" class="list-group-item list-group-item-action list-group-item-secondary" target="_blank">GitHub</a>
+          <a href="https://hub.docker.com/r/lmsecure/setezor" class="list-group-item list-group-item-action list-group-item-danger" target="_blank">DockerHub</a>
+        </div>
+        <hr>
+        <div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;"></div>
+        <div class="list-group">
+          <span>Bitcoin: </span>
           <div class="input-group mb-3">
-            <input type="text" class="form-control" name="Bitcoin" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
-            <button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
-            </div>
-        <span>Dash: </span>
+            <input type="text" class="form-control"
+                   value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
+            <button class="btn btn-outline-secondary" type="button"
+                    id="copyBitcoinBtn" data-i18n="Copy"></button>
+          </div>
+          <span>Dash: </span>
           <div class="input-group mb-3">
-            <input type="text" class="form-control" name="Dash" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
-            <button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
-            </div>
+            <input type="text" class="form-control"
+                   value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
+            <button class="btn btn-outline-secondary" type="button"
+                    id="copyDashBtn" data-i18n="Copy"></button>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-      <h6 data-i18n="SetezorVersion"></h6>
-      <button type="button" class="btn btn-secondary"
-        data-bs-dismiss="modal" data-i18n="Close"></button>
+      <div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
+        <h6 data-i18n="SetezorVersion"></h6>
+        <button type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal" data-i18n="Close"></button>
+      </div>
     </div>
   </div>
 </div>
-</div>
+
+{# ── Уведомления ── #}
 <div id="particles-js" class="h-100"></div>
 <div class="position-fixed top-0 end-0 pe-1" id="toastHolderParent" style="margin-top: 5px;">
   <div id="toast_holder"></div>
 </div>
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNotifications"
-aria-labelledby="offcanvasNotificationsLabel">
-<div class="offcanvas-header">
-  <h5 class="offcanvas-title" id="offcanvasNotificationsLabel" data-i18n="Notifications"></h5>
-  <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+     aria-labelledby="offcanvasNotificationsLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" data-i18n="Notifications"></h5>
+    <button type="button" class="btn-close text-reset"
+            data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body" id="notifications_body"></div>
 </div>
-<div class="offcanvas-body" id="notifications_body">
-</div>
-</div>
+
+{# ── Новый проект и импорт ── #}
 <div class="mt-2 px-4">
   <div class="row g-4">
-    
     <div class="col-12 col-lg-auto order-1 order-lg-1 ps-0 pe-2 ms-4" id="projects-column">
       <div class="sidebar-sticky d-flex justify-content-center" style="max-width: 200px; min-height: 400px;">
         <div class="row mb-0">
@@ -191,115 +190,25 @@ aria-labelledby="offcanvasNotificationsLabel">
         </div>
       </div>
     </div>
-
-    <div class="col-12 col-lg-9 order-2 order-lg-2 ms-4">
-      {% if owned_projects %}
-      <details open class="mb-4 mt-1">
-        <summary class="h4 form-label mb-3 d-flex align-items-center gap-2" style="cursor: pointer; list-style: none;">
-          <i class="bi bi-chevron-down" aria-hidden="true"></i>
-          <span data-i18n="My projects"></span>
-        </summary>
-        <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-5 row-cols-xl-6">
-          {% for items in owned_projects %}
-          <div class="col mb-3" style="min-width: 200px;">
-            {% import 'projects/project_card.html' as project_cards with context %}
-            {{ project_cards.show(items.project, items.analytics, items.role, items.owner_login) }}
-          </div>
-          {% endfor %}
-        </div>
-      </details>
-      {% endif %}
-
-      {% if shared_projects %}
-      <details open class="mb-4">
-        <summary class="h4 form-label mb-3 d-flex align-items-center gap-2" style="cursor: pointer; list-style: none;">
-          <i class="bi bi-chevron-down" aria-hidden="true"></i>
-          <span data-i18n="Shared projects"></span>
-        </summary>
-        <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-5 row-cols-xl-6">
-          {% for items in shared_projects %}
-          <div class="col mb-3">
-            {% import 'projects/project_card.html' as project_cards with context %}
-            {{ project_cards.show(items.project, items.analytics, items.role, items.owner_login) }}
-          </div>
-          {% endfor %}
-        </div>
-      </details>
-      {% endif %}
-    </div>
+{# ── Вся инфа о созданных проектах в диве ниже ── #}
+    <div class="col-12 col-lg-9 order-2 order-lg-2 ms-4" id="projects-container"></div>
   </div>
 </div>
 
-<script>
-async function generateRegisterToken(event) {
-    event.preventDefault();
-    let formdata = new FormData(event.target);
-    
-    try {
-        let resp = await fetch("/api/v1/auth/generate_register_token", {
-            method: "POST",
-            body: JSON.stringify(Object.fromEntries(formdata)),
-            headers: { "Content-type": "application/json" },
-        });
-        
-        if (!resp.ok) throw new Error("Network response was not ok");
-        
-        let data = await resp.json();
-        let tokenEl = document.getElementById("inviteToSetezorToken");
-        let urlInput = document.getElementById("inviteToSetezorURL");
-        // let urlLink = document.getElementById("inviteToSetezorURLLink");
-        
-        tokenEl.value = data.token;
-        
-        const baseUrl = window.location.origin;
-        const registrationLink = `${baseUrl}/registration?token=${data.token}`;
-        
-        urlInput.value = registrationLink;
-        // urlLink.href = registrationLink;
-        
-        document.getElementById("copyLinkBtn").addEventListener("click", function() {
-            urlInput.select();
-            document.execCommand("copy");
-            this.classList.remove('btn-outline-secondary');
-            this.classList.add('btn-outline-success');
-        });
-        
-    } catch (error) {
-        console.error("Error:", error);
-        alert("Error generating token: " + error.message);
-    }
-}
-document.addEventListener('DOMContentLoaded', function() {
-    function handleCopy(event) {
-        const button = event.target;
-        const input = button.closest('.input-group').querySelector('input');
-        
-        navigator.clipboard.writeText(input.value)
-            .then(() => {
-                button.classList.remove('btn-outline-secondary');
-                button.classList.add('btn-success');
-                button.textContent = i18next.t('Copied!');
-                
-                setTimeout(() => {
-                    button.classList.remove('btn-success');
-                    button.classList.add('btn-outline-secondary');
-                    button.textContent = i18next.t('Copy');
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Ошибка при копировании: ', err);
-            });
-    }
-    
-    document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
-    document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
-});
-</script>
+
+<script type="module" src="/static/js/pages/projects/projects.js"></script>
+<script type="module" src="/static/js/pages/projects/project_actions.js"></script>
+<script type="module" src="/static/js/pages/projects/project_form.js"></script>
+
 <script defer src="/static/js/src/particles.js"></script>
-<script defer src="static/js/src/update_language.js"></script>
+<script defer src="/static/js/src/update_language.js"></script>
 <script>
-  var message_sock = create_websocket(`/api/v1/project/ws/users/` + '{{user_id}}', '{{ user_id }}')
+  var message_sock = create_websocket(
+    `/api/v1/project/ws/users/{{ user_id }}`,
+    "{{ user_id }}"
+  );
 </script>
+
 </body>
 </html>
 {% endblock content %}

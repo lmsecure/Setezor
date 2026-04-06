@@ -1,6 +1,6 @@
 import asyncio
-from typing import List
-from aiojobs import Job, Scheduler
+from typing import Any, Type
+from aiojobs import Scheduler
 from setezor.tasks.base_job import BaseJob
 from setezor.tasks.nmap_scan_task import NmapScanTask
 from setezor.tasks.nmap_parse_task import NmapParseTask
@@ -9,20 +9,19 @@ from setezor.tasks.scapy_scan_task import ScapySniffTask
 from setezor.tasks.wappalyzer_logs_task import WappalyzerLogsTask
 from setezor.tasks.snmp_brute_community_string_task import SnmpBruteCommunityStringTask
 from setezor.tasks.ip_info_task import IpInfoTask
-from setezor.interfaces.observer import Observable, Observer
-from setezor.unit_of_work.unit_of_work import UnitOfWork
+
 
 
 class CustomScheduler(Scheduler):
-    def __init__(self, *args, **kwrags):
-        super().__init__(*args, **kwrags)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
-    async def spawn_job(self, job: BaseJob) -> Job:
+    async def spawn_job(self, job: BaseJob) -> BaseJob:
         if self._closed:
             raise RuntimeError("Scheduling a new job after closing")
         should_start = self._limit is None or self.active_count < self._limit
         if should_start:
-            job._start()
+            job._start() # type: ignore
         else:
             try:
                 await self._pending.put(job)
@@ -38,7 +37,7 @@ class CustomScheduler(Scheduler):
 
 
 class SchedulerManager:
-    settings = {
+    settings: dict[Type[BaseJob], dict[str, float | int]] = {
         NmapScanTask: {
             "close_timeout": 0.1,
             "wait_timeout": 60,
@@ -84,7 +83,7 @@ class SchedulerManager:
     }
 
     @classmethod
-    def for_job(cls, job: BaseJob):
+    def for_job(cls, job: Type[BaseJob]):
         if job in cls.settings:
             return CustomScheduler(**cls.settings[job])
         return CustomScheduler()

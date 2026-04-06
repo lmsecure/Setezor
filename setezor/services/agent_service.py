@@ -27,6 +27,10 @@ class AgentService(BaseService):
         async with self._uow:
             return await self._uow.agent.find_one(id=id)
 
+    async def get_agent_by_agent_id_or_agent_in_project_id(self, user_id: str, agent_id: str) -> Agent | None:
+        async with self._uow:
+            return await self._uow.agent.get_agent_by_agent_id_or_agent_in_project_id(user_id=user_id, agent_id=agent_id)
+
     async def settings_page(self, user_id: str) -> list:
         async with self._uow:
             server_agent = await self.get_server_agent()
@@ -134,7 +138,7 @@ class AgentService(BaseService):
         async with self._uow:
             for agent_id in agent_ids:
                 agent = await self._uow.agent.find_one(user_id=user_id, id=agent_id)
-                if not agent:
+                if not agent or agent.name == "Server" and not agent.secret_key:
                     raise HTTPException(status_code=404)
         async with self._uow:
             for agent_id in agent_ids:

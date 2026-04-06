@@ -1,5 +1,4 @@
-let filterPanelCounter = 0;
-
+const filterPanelConfigs = new Map();
 const NUMERIC_FIELDS = new Set(['port']);
 
 function getOperatorSelectHtml(field) {
@@ -33,12 +32,16 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
         return;
     }
 
+    const config = { tableId, tableVar, fields, containerId, allowMultipleFilters, counter: 1 };
+    filterPanelConfigs.set(tableId, config);
+
     const valuePlaceholder = allowMultipleFilters
         ? i18next.t('value1, value2')
         : i18next.t('value');
 
     const addFilterButton = allowMultipleFilters
-        ? `<button class="btn btn-outline-success btn" id="add-filter-panel-${tableId}">
+        ? `<button class="btn btn-outline-success btn" id="add-filter-panel-${tableId}" 
+              data-i18n="Add filter" style="height: 34px !important;">
               <i class="bi bi-plus-lg"></i> ${i18next.t('Add filter')}
            </button>`
         : '';
@@ -48,25 +51,25 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
         <div class="d-flex flex-wrap align-items-start gap-2 w-100" id="main-filter-row-${tableId}">
             <!-- Первая панель -->
             <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-0">
-                <select class="form-select form-select" style="width: auto;" id="filter-field-${tableId}-0">
+                <select class="form-select form-select" style="width: auto; height: 34px !important;" id="filter-field-${tableId}-0">
                     ${fields.map(({ field, title }) => `<option value="${field}">${i18next.t(title)}</option>`).join('')}
                 </select>
-                <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-0">
+                <select class="form-select form-select" style="width: auto; height: 34px !important;" id="filter-type-${tableId}-0">
                     ${getOperatorSelectHtml(initialField)}
                 </select>
-                <input id="filter-value-${tableId}-0" class="form-control form-control" type="text" placeholder="${valuePlaceholder}" style="width: 15rem;"/>
+                <input id="filter-value-${tableId}-0" class="form-control form-control" type="text" placeholder="${valuePlaceholder}" style="width: 15rem; height: 34px !important;"/>
             </div>
 
             <!-- Кнопки управления справа -->
             <div class="d-flex flex-wrap align-items-center gap-1 flex-grow-1">
                 ${addFilterButton}
-                <button class="btn btn-primary btn" id="apply-all-filters-${tableId}">
+                <button class="btn btn-primary btn" id="apply-all-filters-${tableId}" data-i18n="Search" style="height: 34px !important;">
                     ${i18next.t('Search')}
                 </button>
-                <button class="btn btn-danger btn" id="clear-all-filters-${tableId}">
+                <button class="btn btn-danger btn" id="clear-all-filters-${tableId}" data-i18n="Clear" style="height: 34px !important;">
                     ${i18next.t('Clear')}
                 </button>
-                <button class="btn btn-primary btn" id="${tableId}-reload-data">
+                <button class="btn btn-primary btn" id="${tableId}-reload-data" title="${i18next.t('Reload')}" style="height: 34px !important;">
                     <i class="bi bi-arrow-clockwise"></i>
                 </button>
             </div>
@@ -89,7 +92,7 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
 
     if (allowMultipleFilters) {
         document.getElementById(`add-filter-panel-${tableId}`)?.addEventListener('click', () => {
-            addExtraFilterPanel(extraWrapper, tableId, fields, filterPanelCounter++);
+            addExtraFilterPanel(extraWrapper, config, config.counter++);
         });
     }
 
@@ -104,12 +107,16 @@ function initFilterPanelContainer({ tableId, tableVar, fields, containerId, allo
     document.getElementById(`${tableId}-reload-data`).addEventListener('click', () => {
         tableVar?.dataLoader?.reloadData?.();
     });
-
-    filterPanelCounter = 1;
 }
 
-function addExtraFilterPanel(wrapper, tableId, fields, index) {
+function addExtraFilterPanel(wrapper, config, index) {
+    const { tableId, fields, allowMultipleFilters } = config;
     const initialField = fields.length > 0 ? fields[0].field : '';
+    
+    const valuePlaceholder = allowMultipleFilters
+        ? i18next.t('value1, value2')
+        : i18next.t('value');
+
     const panelHTML = `
         <div class="d-flex flex-wrap align-items-center gap-1" id="${tableId}-filter-panel-${index}">
             <span class="and-label px-1 text-nowrap"
@@ -122,9 +129,11 @@ function addExtraFilterPanel(wrapper, tableId, fields, index) {
             <select class="form-select form-select" style="width: auto;" id="filter-type-${tableId}-${index}">
                 ${getOperatorSelectHtml(initialField)}
             </select>
-            <input id="filter-value-${tableId}-${index}" class="form-control form-control" type="text" placeholder="${i18next.t('value1, value2')}" style="width: 15rem;"/>
-            <button type="button" class="btn btn btn-outline-danger" title="${i18next.t('Remove filter')}" 
-                    onclick="removeFilterPanel('${tableId}', ${index})">
+            <input id="filter-value-${tableId}-${index}" class="form-control form-control" type="text" 
+                placeholder="${valuePlaceholder}" style="width: 15rem;"/>
+            <button type="button" class="btn btn btn-outline-danger" 
+                data-i18n-title="Remove filter" title="${i18next.t('Remove filter')}" 
+                onclick="removeFilterPanel('${tableId}', ${index})">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
@@ -174,13 +183,6 @@ function applyAllFilters(tableId, tableVar) {
     tableVar.setFilter(allFilters);
 }
 
-function removeFilterPanel(tableId, index) {
-    const panel = document.getElementById(`${tableId}-filter-panel-${index}`);
-    if (panel) {
-        panel.remove();
-    }
-}
-
 function clearAllFilters(tableId, tableVar) {
     document.querySelectorAll(`[id^="filter-value-${tableId}-"]`).forEach(input => {
         input.value = '';
@@ -188,28 +190,38 @@ function clearAllFilters(tableId, tableVar) {
     tableVar.clearFilter();
 }
 
-/*fetch('/api/v1/scan')
-    .then(res => res.json())
-    .then(scans => {
-        const el = document.getElementById(`${tableId}_scansContainer`);
-        if (!el) return;
-
-        el.innerHTML = scans.map(scan => `
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="${scan.id}" id="${tableId}_scan_${scan.id}">
-                <label class="form-check-label" for="${tableId}_scan_${scan.id}">
-                    ${scan.name} - ${scan.created_at}
-                </label>
-            </div>
-        `).join('');
+function updateFilterPanelTranslations() {
+    filterPanelConfigs.forEach(config => {
+        const { tableId, fields, allowMultipleFilters } = config;
+        
+        document.querySelectorAll(`[data-i18n]`).forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (key) el.textContent = el.textContent.replace(i18next.t(key), i18next.t(key));
+        });
+        
+        document.querySelectorAll(`[data-i18n-title]`).forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (key) el.title = i18next.t(key);
+        });
+        
+        document.querySelectorAll(`[id^="filter-value-${tableId}-"]`).forEach((input, idx) => {
+            const placeholder = allowMultipleFilters
+                ? i18next.t('value1, value2')
+                : i18next.t('value');
+            input.placeholder = placeholder;
+        });
+        
+        const fieldSelects = document.querySelectorAll(`[id^="filter-field-${tableId}-"]`);
+        fieldSelects.forEach(select => {
+            Array.from(select.options).forEach((opt, i) => {
+                if (fields[i]) {
+                    opt.textContent = i18next.t(fields[i].title);
+                }
+            });
+        });
     });
+}
 
-document.querySelector(`form[name="showInformationForScansForm_${tableId}"]`)?.addEventListener("submit", function (e) {
-    e.preventDefault();
-    const selectedScans = Array.from(this.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(checkbox => checkbox.value);
-
-    console.log(`[${tableId}] Selected scans:`, selectedScans);
-
-    tableVar.setData(tableVar.getAjaxUrl(), {}, "GET");
-});*/
+i18next.on('languageChanged', () => {
+    updateFilterPanelTranslations();
+});

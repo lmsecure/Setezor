@@ -1,6 +1,16 @@
 {% macro show() %}
 <script>
     const taskTables = {};
+    const userRole = "{{ role.name }}";
+    const selectedTasksState = {
+        CREATED: {},
+        STARTED: {},
+        REGISTERED: {},
+        FINISHED: {},
+        FAILED: {},
+        CANCELED: {},
+    };
+    let taskTableTotals = {};
     async function openTasksModal() {
         const tasksModal = new bootstrap.Modal(document.getElementById("tasksListManager"));
         tasksModal.show();
@@ -35,8 +45,14 @@
                     status = 'CANCELED';
                 }
                 
+                const oldActiveTab = activeTab;
+
                 if (activeTab !== status) {
                     activeTab = status;
+                    if (oldActiveTab) {
+                        const prevPill = document.querySelector(`#tasks_${oldActiveTab.toLowerCase()}_pill`);
+                        if (prevPill) prevPill.textContent = i18next.t(oldActiveTab);
+                    }
                     await initTaskTable(status);
                 }
             });
@@ -107,14 +123,14 @@
             div.className = "form-control";
             div.disabled = true;
             div.rows = 3;
-            div.style.resize = "none";
-            div.textContent = val;
+            div.style.resize = "vertical";
+            div.textContent = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
             return div;
         };
         const renderLogsButton = (cell) => {
             const task = cell.getRow().getData();
             if (task.is_log) {
-                return `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLogsMenu('${task.id}')">
+                return `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTaskLogsMenu('${task.task_id}')">
                     <span class="bi bi-list-ul"></span> ${i18next.t('Logs')}
                 </button>`;
             }
@@ -124,17 +140,17 @@
             const task = cell.getRow().getData();
             let html = '';
             if (status === "CREATED") {
-                html += `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+                html += `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.task_id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>`;
             }
             if (status === "STARTED") {
-                html += `<button type="button" class="btn btn-danger" onclick="stopTask('${task.id}')">
+                html += `<button type="button" class="btn btn-danger" onclick="stopTask('${task.task_id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>`;
             }
             if (status === "REGISTERED") {
-                html += `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.id}')">
+                html += `<button type="button" class="btn btn-danger" onclick="deleteTask('${task.task_id}')">
                     <span class="bi bi-stop-circle-fill"></span>
                 </button>`;
             }
@@ -144,9 +160,9 @@
                 .includes(task.created_by)) {
                 html += `<button type="button" class="btn btn-sm btn-outline-primary repeat-task-btn"
                     onclick="handleRepeatClick(this)"
-                    data-task-id="${task.id}"
+                    data-task-id="${task.task_id}"
                     data-tool-name="${task.created_by}"
-                    data-params="${encodeURIComponent(task.params)}">
+                    data-params="${encodeURIComponent(JSON.stringify(task.params))}">
                     <span class="bi bi-arrow-clockwise"></span> ${i18next.t('Repeat')}
                 </button>`;
             }
@@ -154,8 +170,8 @@
         };
         const renderCheckbox = (cell) => {
             const task = cell.getRow().getData();
-            return `<input type="checkbox" class="task-checkbox" value="${task.id}"
-                onclick="toggleTaskSelection('${task.id}', this, event)">`;
+            return `<input type="checkbox" class="task-checkbox" value="${task.task_id}"
+                onclick="toggleTaskSelection('${task.task_id}', this, event)">`;
         };
         const columns = [
             ...(status == "STARTED" || status == "REGISTERED" || status == "CREATED" ? [{
@@ -165,7 +181,8 @@
                 width: 40,
                 headerSort: false,
                 headerClick: function(e, column){
-                    const checked = e.target.checked;
+                    const checkbox = column.getElement().querySelector('.header-task-checkbox');
+                    const checked = checkbox ? checkbox.checked : false;
                     const table = column.getTable();
                     if(checked) table.selectRow();
                     else table.deselectRow();
@@ -175,9 +192,11 @@
                     });
                 }
             }] : []),
-            { title: "ID", field: "id", width: 300 },
+            { title: "ID", field: "task_id", width: 280 },
+            ...(userRole === 'owner' ? [{ title: i18next.t('User id'), field: "user_id" }]: []),
             { title: i18next.t('Created By'), field: "created_by", width: 150 },
             { title: i18next.t('Created At'), field: "created_at", formatter: (cell) => formatDateTime(cell.getValue()), width: 140 },
+            { title: i18next.t('Agent id'), field: "agent_id", width: 150 },
             ...(status == "FINISHED" ? [{ title: i18next.t('Finished At'), field: "updated_at", formatter: (cell) => formatDateTime(cell.getValue()), width: 140 }] : []),
             { title: i18next.t('Params'), field: "params", formatter: renderParams, headerSort: false },
             ...(status === "FAILED" ? [{ title: i18next.t('Error'), field: "error", formatter: renderParams, headerSort: false }] : []),
@@ -185,10 +204,41 @@
             { title: i18next.t('Actions'), field: "actions", formatter: renderActions, width: 140, headerSort: false }
         ];
         const table = new Tabulator(container, {
+            index: "task_id",
             layout: "fitColumns",
-            pagination: "remote",
+            pagination: true,
+            paginationMode: "remote",
+            filterMode: "remote",
+            sortMode: "remote",
+            paginationDataSrc: "data",
             ajaxURL: url,
             ajaxConfig: "GET",
+            ajaxResponse: function(url, params, response) {
+                taskTableTotals[status] = response.total || 0;
+                setTimeout(() => {
+                    table.getRows().forEach(row => {
+                        const data = row.getData();
+                        if (selectedTasksState[status][data.task_id]) {
+                            row.select();
+                        } else {
+                            row.deselect();
+                        }
+                    });
+                    const headerCb = container.querySelector('.header-task-checkbox');
+                    if (headerCb) {
+                        const allRows = table.getRows();
+                        const selectedRows = table.getSelectedRows();
+                        headerCb.checked = allRows.length > 0 && allRows.length === selectedRows.length;
+                    }
+                }, 0);
+                return response;
+            },
+            ajaxURLGenerator: function (url, config, params) {
+                const sort = encodeURIComponent(JSON.stringify(params.sort || []));
+                const filter = encodeURIComponent(JSON.stringify(params.filter || []));
+                const finalUrl = `${url}&page=${params.page}&size=${params.size}&sort=${sort}&filter=${filter}`;
+                return finalUrl;
+            },
             paginationSize: 10,
             paginationInitialPage: 1,
             paginationSizeSelector: [5, 10, 25, 50, 100],
@@ -199,6 +249,24 @@
         taskTables[status] = table;
 
         table.on("tableBuilt", function() {
+            const filterContainerId = `filter-panel-container-${status.toLowerCase()}`;
+    
+            if (!document.getElementById(filterContainerId)) {
+                const filterContainer = document.createElement('div');
+                filterContainer.id = filterContainerId;
+                filterContainer.className = 'ml-2 mt-2 mb-2';
+                container.prepend(filterContainer);
+            }
+            
+            initFilterPanelContainer({
+                tableId: containerId,
+                tableVar: table,
+                fields: columns
+                    .filter(c => c.field !== "error" && c.field !== "is_log" && c.field !== "params" && c.field !== "actions" && !c.formatter?.toString().includes("task-checkbox"))
+                    .map(c => ({ field: c.field, title: c.title })),
+                containerId: filterContainerId,
+                allowMultipleFilters: true
+            });
             if (status == "STARTED" || status == "REGISTERED" || status == "CREATED") {
                 const footer = container.querySelector('.tabulator-footer');
                 if (footer && !footer.querySelector('.bulk-action-btn')) {
@@ -218,13 +286,18 @@
 
         table.on("dataLoaded", function(data) {
             if (pillButton) {
-                const total = table.getPageMax() * table.getPageSize();
-                const count = data.length > 0 ? total : data.length;
-                pillButton.textContent = `${i18next.t(status)} (${count})`;
+                const total = taskTableTotals[status] || 0;
+                if (status === activeTab) {
+                    pillButton.textContent = `${i18next.t(status)} (${total})`;
+                } else {
+                    pillButton.textContent = `${i18next.t(status)}`;
+                }
             }
         });
         const headerCheckbox = container.querySelector('.header-task-checkbox');
         table.on("rowSelected", function(row){
+            const data = row.getData();
+            selectedTasksState[activeTab][data.task_id] = data;
             const cb = row.getElement().querySelector('.task-checkbox');
             if(cb) cb.checked = true;
             if(headerCheckbox && table.getSelectedRows().length === table.getRows().length){
@@ -232,9 +305,13 @@
             }
         });
         table.on("rowDeselected", function(row){
+            const data = row.getData();
+            delete selectedTasksState[activeTab][data.task_id];
             const cb = row.getElement().querySelector('.task-checkbox');
             if(cb) cb.checked = false;
-            if(headerCheckbox) headerCheckbox.checked = false;
+            if(headerCheckbox && table.getSelectedRows().length === 0) {
+                headerCheckbox.checked = false;
+            }
         });
     }
 
@@ -261,17 +338,27 @@
                 }
             }
         )
+        if (selectedTasksState['STARTED'][id]) {
+            delete selectedTasksState['STARTED'][id];
+        }
+        if (selectedTasksState['REGISTERED'][id]) {
+            delete selectedTasksState['REGISTERED'][id];
+        }
+        if (selectedTasksState['CREATED'][id]) {
+            delete selectedTasksState['CREATED'][id];
+        }
         let data = await resp.json()
         
         if (!skipRefresh && !isProcessingBulkStop) {
             if(taskTables['STARTED']) taskTables['STARTED'].replaceData();
+            if(taskTables['REGISTERED']) taskTables['REGISTERED'].replaceData();
+            if(taskTables['CREATED']) taskTables['CREATED'].replaceData();
         }
     }
 
     async function stopSelectedTasks() {
         if (!activeTab || !taskTables[activeTab]) return;
-        const rows = taskTables[activeTab].getSelectedRows();
-        const taskIds = rows.map(r => r.getData().id);
+        const taskIds = Object.keys(selectedTasksState[activeTab]);
         if (taskIds.length === 0) {
             create_toast(i18next.t('Warning'), i18next.t('No tasks selected'), "warning");
             return;
@@ -284,6 +371,7 @@
         }
 
         isProcessingBulkStop = false;
+        Object.keys(selectedTasksState[activeTab]).forEach(id => delete selectedTasksState[activeTab][id]);
         taskTables[activeTab].replaceData();
     }
 
@@ -298,17 +386,27 @@
                 }
             }
         )
+        if (selectedTasksState['STARTED'][id]) {
+            delete selectedTasksState['STARTED'][id];
+        }
+        if (selectedTasksState['REGISTERED'][id]) {
+            delete selectedTasksState['REGISTERED'][id];
+        }
+        if (selectedTasksState['CREATED'][id]) {
+            delete selectedTasksState['CREATED'][id];
+        }
         let data = await resp.json()
         
         if (!skipRefresh && !isProcessingBulkDelete) {
+            if(taskTables['STARTED']) taskTables['STARTED'].replaceData();
             if(taskTables['REGISTERED']) taskTables['REGISTERED'].replaceData();
+            if(taskTables['CREATED']) taskTables['CREATED'].replaceData();
         }
     }
 
     async function deleteSelectedTasks() {
         if (!activeTab || !taskTables[activeTab]) return;
-        const rows = taskTables[activeTab].getSelectedRows();
-        const taskIds = rows.map(r => r.getData().id);
+        const taskIds = Object.keys(selectedTasksState[activeTab]); 
         if (taskIds.length === 0) {
             create_toast(i18next.t('Warning'), i18next.t('No tasks selected'), "warning");
             return;
@@ -321,6 +419,7 @@
         }
 
         isProcessingBulkDelete = false;
+        Object.keys(selectedTasksState[activeTab]).forEach(id => delete selectedTasksState[activeTab][id]);
         taskTables[activeTab].replaceData();
     }
 
@@ -443,40 +542,47 @@
 
             switch (toolName) {
                 case 'NmapScanTask':
-                    nmap_start_with_prefill(rows, params);
+                    openNmapModal();
+                    setTimeout(() => nmap_start_with_prefill(rows, params), 50);
                     break;
                 case 'MasscanScanTask':
-                    masscan_start_with_prefill(rows, params, 'full_masscan');
+                    openMasscanModal();
+                    setTimeout(() => masscan_start_with_prefill(rows, params, 'full_masscan'), 50);
                     break;
                 case 'ScapySniffTask':
                     startScapyWithPrefill(params.agent_id, params.iface);
                     break;
                 case 'SnmpBruteCommunityStringTask':
-                    snmp_start_with_prefill(rows, params);
+                    openSnmpModal();
+                    setTimeout(() => snmp_start_with_prefill(rows, params), 50);
                     break;
                 case 'SpeedTestServerTask':
-                    speed_test_start_with_prefill(params, '');
+                    setTimeout(() => speed_test_modal_window(params), 50);
                     break;
                 case 'CertTask':
-                    cert_start_with_prefill(rows, params);
+                    openCertModal();
+                    setTimeout(() => cert_start_with_prefill(rows, params), 50);
                     break;
                 case 'ParseSiteTask':
-                    web_grabber_start_with_prefill(rows, params);
+                    openWebGrabberModal();
+                    setTimeout(() => web_grabber_start_with_prefill(rows, params), 50);
                     break;
                 case 'DNSTask':
-                    lookup_start_with_prefill(rows, params);
+                    openLookupModal();
+                    setTimeout(() => lookup_start_with_prefill(rows, params), 50);
                     break;
                 case 'SdFindTask':
-                    brute_start_with_prefill(rows, params);
+                    openBruteModal();
+                    setTimeout(() => brute_start_with_prefill(rows, params), 50);
                     break;
                 case 'IpInfoTask':
-                    ip_info_start_with_prefill(rows, params);
+                    openIpInfoModal();
+                    setTimeout(() => ip_info_start_with_prefill(rows, params), 50);
                     break;
                 case 'RdapTask':
-                    whois_start_with_prefill(rows, params);
-                    break;   
                 case 'WhoisShdwsTask':
-                    whois_start_with_prefill(rows, params);
+                    openWhoisModal();
+                    setTimeout(() => whois_start_with_prefill(rows, params), 50);
                     break;
                 default:
                     create_toast("Error", `Unsupported task type: ${toolName}`, "error");
@@ -969,31 +1075,31 @@
     }
 </script>
 <style>
-    #tableTasksContainer thead tr th {
+    #tasksListManager #tableTasksContainer thead tr th {
         width: 1px;
     }
-    #image-container {
+    #tasksListManager #image-container {
         max-height: 80vh;
         overflow: auto;
     }
-    .tabulator .tabulator-tableHolder {
+    #tasksListManager .tabulator .tabulator-tableHolder {
         max-height: 500px;
         overflow-y: auto;
     }
-    .tabulator .tabulator-header {
+    #tasksListManager .tabulator .tabulator-header {
         font-size: 0.85rem;
     }
-    .tabulator .tabulator-row {
+    #tasksListManager .tabulator .tabulator-row {
         font-size: 0.85rem;
     }
-    .bulk-actions-container {
+    #tasksListManager .bulk-actions-container {
         padding: 10px;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 4px;
         margin-top: 10px;
     }
-    .bulk-actions-container .btn {
+    #tasksListManager .bulk-actions-container .btn {
         display: inline-flex;
         align-items: center;
         gap: 5px;

@@ -8,47 +8,48 @@
 	<link href="/static/css/vendor/bootstrap.min.css" rel="stylesheet">
 	<link href="/static/css/vendor/bootstrap-icons.css" rel="stylesheet">
 	<link href="/static/css/src/base.css" rel="stylesheet">
+	<link href="/static/css/src/task_notification.css" rel="stylesheet">
 	<link href="/static/css/src/particles.css" rel="stylesheet">
 	<script src="/static/js/libs/jquery-3.3.1.min.js"></script>
+	<script src="/static/js/libs/ip-address.min.js"></script>
+	<script src="/static/js/libs/url-parse.min.js"></script>
 	<script src="/static/js/libs/bootstrap.bundle.min.js"></script>
 	<script src="/static/js/libs/i18next.min.js"></script>
 	<script src="/static/js/libs/axios.min.js"></script>
 	<script src="/static/js/libs/x509.min.js"></script>
 	<script src="/static/js/src/translate_i18n.js"></script>
 	<script src="/static/js/src/installMissingModule.js"></script>
-	<script src="/static/js/src/scripts.js"></script>
 	<script src="/static/js/src/toasts.js"></script>
+	<script src="/static/js/src/task-notifications.js"></script>
+	<script src="/static/js/src/scripts.js"></script>
 	<script src="/static/js/src/agents.js"></script>
 	<script src="/static/js/src/agent_manager.js"></script>
 	<script src="/static/js/src/interfaces.js"></script>
-
+	<script src="/static/js/src/filterPanel.js"></script>
+	<script src="/static/js/src/modals/tools_modal_constructor.js"></script>
+	<script src="/static/js/src/modals/modal_manager.js"></script>
+	<script src="/static/js/src/modals/moduleInstallerModal.js"></script>
+	<script src="/static/js/src/handlers/copyHandler.js"></script>
+	<script src="/static/js/src/modals/inviteToSetezorModal.js"></script>
+	<script src="/static/js/src/modals/aboutModal.js"></script>
+	<script src="/static/js/src/modals/addScanModal.js"></script>
+	<script src="/static/js/src/tools/brute.js"></script>
+	<script src="/static/js/src/tools/nmap.js"></script>
+	<script src="/static/js/src/tools/cert.js"></script>
+	<script src="/static/js/src/tools/ip-info.js"></script>
+	<script src="/static/js/src/tools/lookup.js"></script>
+	<script src="/static/js/src/tools/masscan.js"></script>
+	<script src="/static/js/src/tools/snmp.js"></script>
+	<script src="/static/js/src/tools/web_grabber.js"></script>
+	<script src="/static/js/src/tools/scapy.js"></script>
+	<script src="/static/js/src/tools/whois.js"></script>
+	<script src="/static/js/src/tools/wappalyzer.js"></script>
+	<script src="/static/js/src/tools/cpeguess.js"></script>
+	<script src="/static/js/src/tools/search_vulns.js"></script>
+	<script src="/static/js/src/tools/speed_test.js"></script>
 	<title>Setezor: {% block title required %}{% endblock %}</title>
 
 	{% block scripts %}{% endblock %}
-	{% include 'modals/tools_modal_constructor.html' %}
-	{% include 'network/nmap.html' %}
-	{% include 'network/masscan.html' %}
-	{% include 'network/cert.html' %}
-	{% include 'network/web_grabber.html' %}
-	{% include 'network/lookup.html' %}
-	{% include 'network/whois.html' %}
-	{% include 'network/ip-info.html' %}
-	{% include 'network/brute.html' %}
-	{% import 'network/scapy.html' as scapy %}
-	{{ scapy.scapy_full_script_modal() }}
-	{{ scapy.startScapyWithPrefill() }}
-	{% import 'network/snmp.html' as snmp%}
-	{{snmp.snmp_full_script_modal()}}   
-	{{snmp.snmp_start_with_prefill()}}
-	{% import 'network/speed_test.html' as speed_test %}
-	{{speed_test.speed_test_full_script_modal()}}
-	{{speed_test.speed_test_start_with_prefill('')}}
-	{% import 'network/wappalyzer.html' as wappalyzer%}
-	{{wappalyzer.wappalyzer_full_script_modal()}}   
-	{% import 'network/cpe.html' as cpe%}
-	{{cpe.cpe_full_script_modal()}}   
-	{% import 'network/search_vulns.html' as search_vulns%}
-	{{search_vulns.search_vulns_full_script_modal()}}   
 </head>
 
 <body>
@@ -78,9 +79,8 @@
 				<div class="d-flex align-items-center gap-2 ">
 					{% if is_superuser %}
 						<button class="btn btn-success" 
-						data-bs-toggle="modal" 
-						onclick='document.getElementById("inviteToSetezorCount").value=1; document.getElementById("inviteToSetezorToken").value=""; document.getElementById("inviteToSetezorURL").value = "";'
-						data-bs-target="#inviteToSetezorTokenModal" data-i18n="Invite to Setezor"> 
+								onclick="InviteToSetezorModal.show()"
+								data-i18n="Invite to Setezor">
 						</button>
 					{% endif %}
 					
@@ -100,60 +100,13 @@
 						data-testid="wiki_help">
 						<i class="bi bi-book" style="font-family: 'Times New Roman', Times, serif" data-i18n-title="Wiki"></i>
 					</a>
-					<button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
-						data-bs-target="#aboutModal" style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
-						data-testid="about_project">
+					<button type="button" class="btn btn-outline-warning"
+							onclick="AboutModal.show()"
+							style="--bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
+							data-testid="about_project">
 						<i class="bi bi-question-circle" style="font-family: 'Times New Roman', Times, serif"
 						data-i18n-title="About project"></i>
 					</button>
-					<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="exampleModalLabel"
-						aria-hidden="true">
-						<div class="modal-dialog">
-							<div class="modal-content">
-								<div class="modal-header">
-									<h4 data-i18n="About project"></h4>
-								</div>
-								<div class="modal-body">
-									<div data-i18n="About Setezor text" style="margin-bottom: 0.5rem;">
-									</div>
-									<div class="list-group">
-										<a href="https://setezor.net"
-											class="list-group-item list-group-item-action list-group-item-success"
-											target="_blank">Site</a>
-										<a href="https://t.me/lmsecurity"
-											class="list-group-item list-group-item-action list-group-item-primary"
-											target="_blank">Telegram</a>
-										<a href="https://github.com/lmsecure/Setezor"
-											class="list-group-item list-group-item-action list-group-item-secondary"
-											target="_blank">GitHub</a>
-										<a href="https://hub.docker.com/r/lmsecure/setezor"
-											class="list-group-item list-group-item-action list-group-item-danger"
-											target="_blank">DockerHub</a>
-									</div>
-									<hr>
-									<div data-i18n="Donates" style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: large;">
-									</div>
-									<div class="list-group">
-										<span>Bitcoin: </span>
-											<div class="input-group mb-3">
-												<input type="text" class="form-control" name="bitcoin" value="bc1qa2evk7khm246lhvljy8ujqu7m9m88gt84am9rz" disabled>
-												<button class="btn btn-outline-secondary" type="button" id="copyBitcoinBtn" data-i18n="Copy"></button>
-											  </div>
-										<span>Dash: </span>
-											<div class="input-group mb-3">
-												<input type="text" class="form-control" name="dash" value="XoJ3pBDG6f5L6NwoqUqg7dpeT9MHKcNtwT" disabled>
-												<button class="btn btn-outline-secondary" type="button" id="copyDashBtn" data-i18n="Copy"></button>
-											  </div>
-									</div>
-								</div>
-								<div class="modal-footer flex-row justify-content-between bd-highlight mb-3">
-									<h6 data-i18n="SetezorVersion"></h6>
-									<button type="button" class="btn btn-secondary"
-										data-bs-dismiss="modal" data-i18n="Close"></button>
-								</div>
-							</div>
-						</div>
-					</div>
 
 					<button type="button" class="btn btn-outline-info" data-bs-toggle="offcanvas"
 						style=" --bs-btn-color: #54B49C; --bs-btn-border-color: #54B49C"
@@ -225,7 +178,7 @@
 					{% endif %}
 					<div class="modal fade" id="tasksListManager" tabindex="-1" aria-labelledby="exampleModalLabel"
 						aria-hidden="true">
-						<div class="modal-dialog modal-xl" style="--bs-modal-width: 1300px">
+						<div class="modal-dialog modal-xl" style="--bs-modal-width: 1700px">
 							<div class="modal-content">
 								<div class="modal-header" style="justify-content: left;">
 								<h4 data-i18n="Tasks list"></h4>
@@ -341,10 +294,10 @@
 								<span style="color: #54B49C;" data-i18n="Network"></span>
 							</a>
 							<ul class="collapse" id="tool-category-1">
-								<li><a href="#" onclick="nmap_modal_window()"><span style="color: #54B49C;">NMAP</span></a></li>
-								<li><a href="#" onclick="masscan_modal_window()"><span style="color: #54B49C;">MASSCAN</span></a></li>
-								<li><a href="#" onclick="scapy_full_modal_window()"><span style="color: #54B49C;">SCAPY</span></a></li>
-								<li><a href="#" onclick="snmp_full_modal_window()"><span style="color: #54B49C;">SNMP</span></a></li>
+								<li><a href="#" onclick="openNmapModal()"><span style="color: #54B49C;">NMAP</span></a></li>
+								<li><a href="#" onclick="openMasscanModal()"><span style="color: #54B49C;">MASSCAN</span></a></li>
+								<li><a href="#" onclick="openScapyModal()"><span style="color: #54B49C;">SCAPY</span></a></li>
+								<li><a href="#" onclick="openSnmpModal()"><span style="color: #54B49C;">SNMP</span></a></li>
 								<li><a href="#" onclick="speed_test_modal_window()"><span style="color: #54B49C;">Speed Test</span></a></li>
 							</ul>
 						</li>
@@ -357,9 +310,9 @@
 								<span style="color: #54B49C;" data-i18n="Web"></span>
 							</a>
 							<ul class="collapse" id="tool-category-2">
-								<li><a href="#" onclick="cert_modal_window()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
-								<li><a href="#" onclick="webGrabber_modal_window()"><span style="color: #54B49C;">WEB GRABER</span></a></li>
-								<li><a href="#" onclick="wappalyzer_full_modal_window()"><span style="color: #54B49C;">WAPPALYZER</span></a></li>
+								<li><a href="#" onclick="openCertModal()"><span style="color: #54B49C;">TLS/SSL CERT</span></a></li>
+								<li><a href="#" onclick="openWebGrabberModal()"><span style="color: #54B49C;">WEB GRABBER</span></a></li>
+								<li><a href="#" onclick="wappalyzerModalWindow.show()"><span style="color: #54B49C;">WAPPALYZER</span></a></li>
 								<!-- <li><a href="#" onclick="screenshoter_full_modal_window()">SCREENSHOTER</a></li> -->
 							</ul>
 						</li>
@@ -372,10 +325,10 @@
 								<span style="color: #54B49C;" data-i18n="DNS"></span>
 							</a>
 							<ul class="collapse" id="tool-category-3">
-								<li><a href="#" onclick="show_lookupModalWindow()"><span style="color: #54B49C;">LOOKUP</span></a></li>
-								<li><a href="#" onclick="show_bruteModalWindow()"><span style="color: #54B49C;">BRUTE</span></a></li>
-								<li><a href="#" onclick="show_whoisModalWindow()"><span style="color: #54B49C;">WHOIS</span></a></li>
-								<!-- <li><a href="#" onclick="show_ipInfoModalWindow()"><span style="color: #54B49C;">IP-INFO</span></a></li> -->
+								<li><a href="#" onclick="openLookupModal()"><span style="color: #54B49C;">LOOKUP</span></a></li>
+								<li><a href="#" onclick="openBruteModal()"><span style="color: #54B49C;">BRUTE</span></a></li>
+								<li><a href="#" onclick="openWhoisModal()"><span style="color: #54B49C;">WHOIS</span></a></li>
+								<!-- <li><a href="#" onclick="openIpInfoModal()"><span style="color: #54B49C;">IP-INFO</span></a></li> -->
 							</ul>
 						</li>
 						<li>
@@ -388,8 +341,8 @@
 							</a>
 							<ul class="collapse" id="tool-category-4">
 								<li><a href="/tools" onclick=""><span style="color: #54B49C;">ACUNETIX</span></a></li>
-								<li><a href="#" onclick="cpe_full_modal_window()"><span style="color: #54B49C;">CPEGuess</span></a></li>
-								<li><a href="#" onclick="search_vulns_full_modal_window()"><span style="color: #54B49C;">SearchVulns</span></a></li>
+								<li><a href="#" onclick="cpeModalWindow.show()"><span style="color: #54B49C;">CPEGuess</span></a></li>
+								<li><a href="#" onclick="searchVulnsModalWindow.show()"><span style="color: #54B49C;">SearchVulns</span></a></li>
 							</ul>
 						</li>
 					</ul>
@@ -447,69 +400,7 @@
 	</div>
 	<footer class="footer fixed-bottom">
 	</footer>
-	<div class="modal fade" id="addScanModal">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="exampleModalLabel" data-i18n="Adding scan"></h1>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<form onsubmit="addScan(event)" name="addScanFormName">
-					<div class="modal-body">
-						<div class="mb-3">
-							<label for="scanNameID" class="col-form-label" data-i18n="Scan name"></label>
-							<input type="text" class="form-control" id="scanNameID" name="name" required>
-						</div>
-						<div class="mb-3">
-							<label for="scanDescriptionID" class="col-form-label" data-i18n="Description"></label>
-							<input type="text" class="form-control" id="scanDescriptionID" name="description">
-						</div>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-							id="closeAddScanModalButton" data-i18n="Close"></button>
-						<button type="submit" class="btn btn-primary" data-i18n="Add"></button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-	<div class="modal fade" id="inviteToSetezorTokenModal" data-bs-backdrop="static" data-bs-keyboard="false">
-		<div class="modal-dialog">
-		  <div class="modal-content">
-			<div class="modal-header">
-			  <h1 class="modal-title fs-5" id="inviteToSetezorTokenModalLabel" data-i18n="Registration token"></h1>
-			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<form onsubmit="generateRegisterToken(event)" name="generateRegisterTokenFormName">
-			  <div class="modal-body">
-				<div class="mb-3">
-				  <label for="inviteToSetezorCount" class="col-form-label" data-i18n="Person count"></label>
-				  <input type="number" id="inviteToSetezorCount" min="1" class="form-control" name="count">
-				  <label for="inviteToSetezorToken" class="col-form-label" data-i18n="Token"></label>
-				  <div class="input-group mb-3">
-					<input type="text" class="form-control" name="invite_to_setezor_token" disabled id="inviteToSetezorToken">
-					<button class="btn btn-outline-secondary" type="button" id="copyRegisterTokenBtn" data-i18n="Copy"></button>
-				  </div>
-				  <label for="inviteToSetezorURL" class="col-form-label" data-i18n="Registration link"></label>
-				  <div class="input-group mb-3">
-					<input type="text" class="form-control" name="invite_to_setezor_url" id="inviteToSetezorURL" readonly>
-					<button class="btn btn-outline-secondary" type="button" id="copyLinkBtn" data-i18n="Copy"></button>
-				  </div>
-				  <!-- <div class="mt-2">
-								  <a href="#" id="inviteToSetezorURLLink" target="_blank">Open registration page</a>
-							  </div> -->
-				</div>
-			  </div>
-			  <div class="modal-footer">
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="Close"></button>
-				<button type="submit" class="btn btn-success" data-i18n="Create"></button>
-			  </div>
-			</form>
-		  </div>
-		</div>
-	  </div>
-
+	
 
 	<script>
 
@@ -613,120 +504,48 @@
 		{% if role and (role.name == "owner" or role.name == "executor") %}
 		let currentAcunetixName = "";
 
-		createAgentBar("agent_tools");
-		createAgentBar("agent_net_map");
-		createAgentBar("agent_nmap");
-		createAgentBar("agent_scapy");
-		createAgentBar("agent_masscan");
-		createAgentBar("agent_webgrabber");
-		createAgentBar("agent_snmp");
-		createAgentBar("agent_recon");
-		createAgentBar("agent_cert");
-		createAgentBar("agent_whois");
-		createAgentBar("agent_brute");
-		createAgentBar("agent_ipinfo");
-		createAgentBar("agent_acunetix");
-		createAgentBar("agent_screenshoter");
-		createAgentBar("agent_wappalyzer");
-		createAgentBar("agent_cpeguess");
-		createAgentBar("agent_searchvulns");
-		createAgentBar("agent_web_grabber");
-		createAgentBar("agent_lookup");
+		const AGENT_BAR_IDS = [
+			"agent_tools", "agent_net_map", "agent_nmap", "agent_scapy",
+			"agent_masscan", "agent_webgrabber", "agent_snmp", "agent_recon",
+			"agent_cert", "agent_whois", "agent_brute", "agent_ipinfo",
+			"agent_acunetix", "agent_screenshoter", "agent_wappalyzer",
+			"agent_cpeguess", "agent_searchvulns", "agent_web_grabber", "agent_lookup",
+		];
 
+		const INTERFACE_BAR_IDS = [
+			"interface_tools", "interface_net_map", "interface_nmap", "interface_scapy",
+			"interface_masscan", "interface_webgrabber", "interface_snmp", "interface_recon",
+			"interface_cert", "interface_whois", "interface_brute", "interface_ipinfo",
+			"interface_acunetix", "interface_screenshoter", "interface_wappalyzer",
+			"interface_cpeguess", "interface_searchvulns", "interface_lookup",
+		];
 
-		createInterfaceBar("interface_tools");
-		createInterfaceBar("interface_net_map");
-		createInterfaceBar("interface_nmap");
-		createInterfaceBar("interface_scapy");
-		createInterfaceBar("interface_masscan");
-		createInterfaceBar("interface_webgrabber");
-		createInterfaceBar("interface_snmp");
-		createInterfaceBar("interface_recon");
-		createInterfaceBar("interface_cert");
-		createInterfaceBar("interface_whois");
-		createInterfaceBar("interface_brute");
-		createInterfaceBar("interface_ipinfo");
-		createInterfaceBar("interface_acunetix");
-		createInterfaceBar("interface_screenshoter");
-		createInterfaceBar("interface_wappalyzer");
-		createInterfaceBar("interface_cpeguess");
-		createInterfaceBar("interface_searchvulns");
-		createInterfaceBar("interface_lookup");
+		window.SCAN_BAR_IDS = [
+			"scans_bar_tools", "scans_bar_net_map", "scans_bar_nmap", "scans_bar_scapy",
+			"scans_bar_masscan", "scans_bar_webgrabber", "scans_bar_snmp", "scans_bar_recon",
+			"scans_bar_cert", "scans_bar_whois", "scans_bar_brute", "scans_bar_lookup",
+			"scans_bar_ipinfo", "scans_bar_acunetix", "scans_bar_screenshoter",
+			"scans_bar_wappalyzer", "scans_bar_cpeguess", "scans_bar_searchvulns",
+			"scans_bar_speed_test", "scans_bar_web_grabber",
+		];
 
+		AGENT_BAR_IDS.forEach(createAgentBar);
+		INTERFACE_BAR_IDS.forEach(createInterfaceBar);
 
 		interfaceData = null
 
 		getAgentData().then((data) => {
 			agentData = data
-			fillAgentBar("agent_tools");
-			fillAgentBar("agent_net_map");
-			fillAgentBar("agent_nmap");
-			fillAgentBar("agent_scapy");
-			fillAgentBar("agent_masscan");
-			fillAgentBar("agent_webgrabber");
-			fillAgentBar("agent_snmp");
-			fillAgentBar("agent_recon");
-			fillAgentBar("agent_cert");
-			fillAgentBar("agent_whois");
-			fillAgentBar("agent_brute");
-			fillAgentBar("agent_ipinfo");
-			fillAgentBar("agent_acunetix");
-			fillAgentBar("agent_screenshoter");
-			fillAgentBar("agent_wappalyzer");
-			fillAgentBar("agent_cpeguess");
-			fillAgentBar("agent_searchvulns");
-			fillAgentBar("agent_web_grabber");
-			fillAgentBar("agent_lookup");
+			AGENT_BAR_IDS.forEach(fillAgentBar);
 			getInterfaceData(agentData.default_agent).then((data) => {
 				interfaceData = data
-				fillInterfaceBar("interface_tools");
-				fillInterfaceBar("interface_net_map");
-				fillInterfaceBar("interface_nmap");
-				fillInterfaceBar("interface_scapy");
-				fillInterfaceBar("interface_masscan");
-				fillInterfaceBar("interface_webgrabber");
-				fillInterfaceBar("interface_snmp");
-				fillInterfaceBar("interface_recon");
-				fillInterfaceBar("interface_cert");
-				fillInterfaceBar("interface_whois");
-				fillInterfaceBar("interface_brute");
-				fillInterfaceBar("interface_ipinfo");
-				fillInterfaceBar("interface_acunetix");
-				fillInterfaceBar("interface_screenshoter");
-				fillInterfaceBar("interface_wappalyzer");
-				fillInterfaceBar("interface_cpeguess");
-				fillInterfaceBar("interface_searchvulns");
-				fillInterfaceBar("interface_lookup");
-
+				INTERFACE_BAR_IDS.forEach(fillInterfaceBar);
 			})
 		})
 		getScans().then((data) => {
 			scans = data;
 			getCurrentScan().then((currentScan) => {
-				redrawScanPickDropdown(scans, currentScan,
-					[
-						"scans_bar_tools",
-						"scans_bar_net_map",
-						"scans_bar_nmap",
-						"scans_bar_scapy",
-						"scans_bar_masscan",
-						"scans_bar_webgrabber",
-						"scans_bar_snmp",
-						"scans_bar_recon",
-						"scans_bar_net_map",
-						"scans_bar_cert",
-						"scans_bar_whois",
-						"scans_bar_brute",
-						"scans_bar_lookup",
-						"scans_bar_ipinfo",
-						"scans_bar_acunetix",
-						"scans_bar_screenshoter",
-						"scans_bar_wappalyzer",
-						"scans_bar_cpeguess",
-						"scans_bar_searchvulns",
-						"scans_bar_speed_test",
-						"scans_bar_web_grabber",
-					]);
+				redrawScanPickDropdown(scans, currentScan, window.SCAN_BAR_IDS);
 			});
 		});
 		function redrawScanPickDropdown(scans, currentScan, scansDivIds) {
@@ -743,197 +562,28 @@
 					scan_id = currentScan.id
 					result += `<button type="button" class="btn btn-success btn-limit" disabled id="currentPickedScan">${currentScan.name}</button>`
 				}
+				result += "</div>"
+				el.innerHTML = result
 			}
 		}
 
-		function openAddScanModal() {
-			const openModals = document.querySelectorAll('.modal.show');
-			let previousModal = null;
 
-			if (openModals.length > 0) {
-				previousModal = openModals[openModals.length - 1];
-
-				if (!previousModal.querySelector('[data-dim-overlay]')) {
-					const overlay = document.createElement('div');
-					overlay.setAttribute('data-dim-overlay', 'true');
-
-					Object.assign(overlay.style, {
-						position: 'absolute',
-						top: '0',
-						left: '0',
-						width: '100%',
-						height: '100%',
-						backgroundColor: 'rgba(0, 0, 0, 0.5)',
-						zIndex: '1060',
-						pointerEvents: 'none'
-					});
-
-					previousModal.appendChild(overlay);
-				}
-			}
-
-			const modalEl = document.getElementById('addScanModal');
-			const modal = new bootstrap.Modal(modalEl, {
-				backdrop: false,
-				keyboard: false
-			});
-			modalEl.style.zIndex = '1500';
-			modal.show();
-
-			document.getElementById('addScanModal').addEventListener('hidden.bs.modal', () => {
-				const openModals = document.querySelectorAll('.modal.show');
-				for (const modal of openModals) {
-					const overlay = modal.querySelector('[data-dim-overlay]');
-					if (overlay) overlay.remove();
-				}
-			});
-		}
-
-
-		async function addScan(event) {
-			event.preventDefault()
-			let formdata = new FormData(event.target)
-			let resp = await fetch("/api/v1/scan", {
-				method: "POST",
-				headers: { "Content-type": "application/json" },
-				body: JSON.stringify(Object.fromEntries(formdata))
-			})
-			if (resp.ok) {
-				getScans().then((data) => {
-					scans = data
-					getCurrentScan().then((currentScan) => {
-						redrawScanPickDropdown(scans, currentScan,
-							[
-								"scans_bar_tools",
-								"scans_bar_net_map",
-								"scans_bar_nmap",
-								"scans_bar_scapy",
-								"scans_bar_masscan",
-								"scans_bar_webgrabber",
-								"scans_bar_snmp",
-								"scans_bar_recon",
-								"scans_bar_net_map",
-								"scans_bar_cert",
-								"scans_bar_whois",
-								"scans_bar_brute",
-								"scans_bar_lookup",
-								"scans_bar_ipinfo",
-								"scans_bar_acunetix",
-								"scans_bar_screenshoter",
-								"scans_bar_wappalyzer",
-								"scans_bar_cpeguess",
-								"scans_bar_searchvulns",
-								"scans_bar_speed_test",
-								"scans_bar_web_grabber",
-							])
-						let el = document.getElementById("closeAddScanModalButton")
-						el.click()
-					})
-				})
-			}
-		}
 		async function setCurrentScan(scanID) {
-			let resp = await fetch("/api/v1/scan/set_current", {
+			const resp = await fetch("/api/v1/scan/set_current", {
 				method: "POST",
 				headers: { "Content-type": "application/json" },
 				body: JSON.stringify({ scan_id: scanID })
-			})
+			});
 			if (resp.ok) {
-				getScans().then((data) => {
-					scans = data
-					getCurrentScan().then((currentScan) => {
-						redrawScanPickDropdown(scans, currentScan,
-							[
-								"scans_bar_tools",
-								"scans_bar_net_map",
-								"scans_bar_nmap",
-								"scans_bar_scapy",
-								"scans_bar_masscan",
-								"scans_bar_webgrabber",
-								"scans_bar_snmp",
-								"scans_bar_recon",
-								"scans_bar_net_map",
-								"scans_bar_cert",
-								"scans_bar_whois",
-								"scans_bar_brute",
-								"scans_bar_lookup",
-								"scans_bar_ipinfo",
-								"scans_bar_acunetix",
-								"scans_bar_screenshoter",
-								"scans_bar_wappalyzer",
-								"scans_bar_cpeguess",
-								"scans_bar_searchvulns",
-								"scans_bar_speed_test",
-							])
-						let el = document.getElementById("closeAddScanModalButton")
-						el.click();
-						get_snmp_ip_port_list();
-					})
-				})
+				const [scans, currentScan] = await Promise.all([getScans(), getCurrentScan()]);
+				redrawScanPickDropdown(scans, currentScan, window.SCAN_BAR_IDS);
+				get_snmp_ip_port_list();
 			}
 		}
 		{% endif %}
-	async function generateRegisterToken(event) {
-		event.preventDefault();
-		let formdata = new FormData(event.target);
-		
-		try {
-			let resp = await fetch("/api/v1/auth/generate_register_token", {
-				method: "POST",
-				body: JSON.stringify(Object.fromEntries(formdata)),
-				headers: { "Content-type": "application/json" },
-			});
-			
-			if (!resp.ok) throw new Error("Network response was not ok");
-			
-			let data = await resp.json();
-			let tokenEl = document.getElementById("inviteToSetezorToken");
-			let urlInput = document.getElementById("inviteToSetezorURL");
-			
-			tokenEl.value = data.token;
-			
-			const baseUrl = window.location.origin;
-			const registrationLink = `${baseUrl}/registration?token=${data.token}`;
-			
-			urlInput.value = registrationLink;
-			
-		} catch (error) {
-			console.error("Error:", error);
-			alert("Error generating token: " + error.message);
-		}
-	}
-	document.addEventListener('DOMContentLoaded', function() {
-		function handleCopy(event) {
-			const button = event.target;
-			const input = button.closest('.input-group').querySelector('input');
-			
-			navigator.clipboard.writeText(input.value)
-				.then(() => {
-					button.classList.remove('btn-outline-secondary');
-					button.classList.add('btn-success');
-					button.textContent = i18next.t('Copied!');
-					
-					setTimeout(() => {
-						button.classList.remove('btn-success');
-						button.classList.add('btn-outline-secondary');
-						button.textContent = i18next.t('Copy');
-					}, 2000);
-				})
-				.catch(err => {
-					console.error('Ошибка при копировании: ', err);
-				});
-		}
-		
-			document.getElementById('copyBitcoinBtn').addEventListener('click', handleCopy);
-			document.getElementById('copyDashBtn').addEventListener('click', handleCopy);
-			document.getElementById('copyRegisterTokenBtn').addEventListener('click', handleCopy);
-			document.getElementById('copyLinkBtn').addEventListener('click', handleCopy);
-	});
 	</script>
 	<script defer src="static/js/src/update_language.js"></script>
-	{% include 'modals/module_install_modal.html' %}
-	<script src="/static/js/src/tool_task_executor.js"></script>
-	<script src="/static/js/src/module_installer.js"></script>
+	<script defer src="/static/js/src/tool_task_executor.js"></script>
 	<script> var message_sock2 = create_websocket(`/api/v1/project/ws/users/` + '{{user_id}}', '{{ user_id }}')</script>
 </body>
 

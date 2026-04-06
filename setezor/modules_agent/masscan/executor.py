@@ -5,7 +5,7 @@ from setezor.tools.shell_tools import create_async_shell_subprocess
 from asyncio.subprocess import PIPE as asyncPIPE
 
 class SubrocessError(Exception):
-    
+
     def __init__(self, result: str, error: str, code: int) -> None:
         self.result = result
         self.error = error
@@ -18,15 +18,6 @@ class SubrocessError(Exception):
 def create_shell_subprocess(command: list):
     return Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf8', errors='backslashreplace')
 
-async def create_async_shell(command: list):
-    execute_command = ' '.join(command)
-    bad_symbols = set(";|&$>#")
-    index_bad_symbol = next((i for i, c in enumerate(execute_command) if c in bad_symbols), -1)
-    if index_bad_symbol != -1:
-        raise ValueError("Invalid character in command")
-    return await create_async_shell_subprocess(command)
-
-
 
 @dataclass
 class ConsoleArgument:
@@ -37,7 +28,7 @@ class ConsoleArgument:
     delimiter: str
     is_required: bool
     only_value: bool
-    
+
     def __init__(self, argument: str, value: str, default_value: str=None, is_flag: bool=False, delimiter: str=" ",
                  is_required: bool=False, only_value: bool=False):
         # FixMe is_flag and only_value dont be used together
@@ -48,7 +39,7 @@ class ConsoleArgument:
         self.delimiter = delimiter
         self.is_required = is_required  # FixMe unused
         self.only_value = only_value
-      
+
     def __str__(self):
         if  self.value is None and self.default_value is None and not self.is_flag:
             raise Exception(f'Argument "{self.argument}" have no value or default value and there is not flag')
@@ -67,7 +58,7 @@ class ConsoleArgument:
 class ListConsoleArgument:
     def __init__(self,):
         self.list_args: List[Type[ConsoleArgument]] = []
-    
+
     def append(self, console_arg: ConsoleArgument, update_policy: str='nothing'):
         if not self.exists(console_arg):
             self.list_args.append(console_arg)
@@ -76,10 +67,10 @@ class ListConsoleArgument:
                 self.update(console_arg)
             else:
                 return False
-        
+
     def exists(self, arg: ConsoleArgument) -> List[Type[ConsoleArgument]]:
         return [i for i in self.list_args if arg.argument == i.argument]
-    
+
     def clear_empty_args(self,) -> None:
         to_delete = []
         for i in self.list_args:
@@ -89,10 +80,10 @@ class ListConsoleArgument:
                 to_delete.append(i)
         for i in to_delete:
             self.list_args.remove(i)
-    
+
     def prepare_command(self, command: str) -> List[Type[str]]:
         return f'{command } {" ".join([str(i) for i in self.list_args])}'.split()
-    
+
     def update(self, console_arg: ConsoleArgument) -> None:
         exists = self.exists(console_arg)
         if exists:
@@ -102,23 +93,22 @@ class ListConsoleArgument:
 class ConsoleCommandExecutor:
     arguments: ListConsoleArgument
     command: str
-    # logger: Logger
-    
-    
+
+
     def __init__(self) -> None:
         self.arguments = ListConsoleArgument()
-    
+
     def prepare_command(self):
         if len(self.arguments):
             pass
         else:
             raise Exception(f'Command "{self.command}" have no arguments')
-    
-    
+
+
     async def async_execute(self, log_path: str=None, extension: str='log'):
         self.arguments.clear_empty_args()
         execution_command = self.arguments.prepare_command(self.command)
-        process = await create_async_shell(execution_command)
+        process = await create_async_shell_subprocess(execution_command)
         if self.task:
             self.task.pid = process.pid
         result, error = await process.communicate()
@@ -129,13 +119,12 @@ class ConsoleCommandExecutor:
 
 
 class MasscanScanner(ConsoleCommandExecutor):
-    
+
     command = 'masscan'
-    # logger = get_logger(__package__, handlers=[])
-    
+
     def __init__(self, target: List[Type[str]], interface_addr: str, task = None, ports: str=None, rate: int=None, source_port: int=None, timeout: int=None, interface: str=None, search_udp_port: bool=False,
                  only_open: bool=None, max_rate: int=None, ttl: int=None, retries: int=None, wait: int=10, ping: bool=False, format: str='oX') -> None:
-        
+
         self.arguments = ListConsoleArgument()
         self.task = task
         args = [{'argument': '--rate', 'value': rate},
@@ -159,7 +148,7 @@ class MasscanScanner(ConsoleCommandExecutor):
 
         for i in args:
             self.arguments.append(ConsoleArgument(**i))
-            
+
     async def async_execute(self, log_path: str = None) -> str:
         extentions = {'-oX': 'xml',
                       '-oL': 'list',
@@ -175,4 +164,3 @@ class MasscanScanner(ConsoleCommandExecutor):
             raise SubrocessError(res, err, code)
         # ToDo check errors
         return res
-    

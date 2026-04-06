@@ -111,6 +111,7 @@ class ParseSiteTask(BaseJob):
     @classmethod
     def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
         params = []
+        seen = set()
         for t in targets:
             addresses = []
             if t.ip:
@@ -122,12 +123,21 @@ class ParseSiteTask(BaseJob):
                 port_val = str(t.port).strip() if t.port else None
                 
                 if port_val == '80':
-                    params.append({**base_kwargs, "url": f"http://{addr}:80"})
+                    url = f"http://{addr}:80"
+                    if url not in seen:
+                        seen.add(url)
+                        params.append({**base_kwargs, "url": url})
                 elif port_val == '443':
-                    params.append({**base_kwargs, "url": f"https://{addr}:443"})
+                    url = f"https://{addr}:443"
+                    if url not in seen:
+                        seen.add(url)
+                        params.append({**base_kwargs, "url": url})
                 else:
                     http_port = port_val if port_val else '80'
                     https_port = port_val if port_val else '443'
-                    params.append({**base_kwargs, "url": f"http://{addr}:{http_port}"})
-                    params.append({**base_kwargs, "url": f"https://{addr}:{https_port}"})
+                    for scheme, port in [('http', http_port), ('https', https_port)]:
+                        url = f"{scheme}://{addr}:{port}"
+                        if url not in seen:
+                            seen.add(url)
+                            params.append({**base_kwargs, "url": url})
         return params

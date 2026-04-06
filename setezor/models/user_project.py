@@ -16,3 +16,4 @@ class UserProject(IDDependent, TimeDependent, table=True):
 
     user: List["User"] = Relationship(back_populates="projects") # type: ignore
     project: List["Project"] = Relationship(back_populates="users") # type: ignore
+    role: "Role" = Relationship(back_populates="users_in_project", sa_relationship_kwargs={"lazy": "selectin"})  # type: ignore

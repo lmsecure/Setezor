@@ -1,10 +1,12 @@
+from typing import Any
 from urllib.parse import urlparse
 from ipaddress import IPv4Address
 
 
-def parse_url(url:str) -> dict:
+def parse_url(url:str) -> dict[str, Any]:
     parsed_url = urlparse(url)
-    data = {}
+    data: dict[str, Any] = {}
+    data.update({"service_name": "https" if url.startswith("https") else "http"})
     if parsed_url.port:
         data.update({"port": parsed_url.port})
     else:

@@ -1,11 +1,9 @@
-import asyncio
 import json
 import xmltodict
 import re
 
 from setezor.tools.ip_tools import get_network
-from setezor.models import IP, Port, MAC, Network, DNS, Domain
-from setezor.db.entities import DNSTypes
+from setezor.models import IP, Port, Network
 
 
 class BaseMasscanParser:
@@ -20,7 +18,7 @@ class BaseMasscanParser:
             'oX': XMLParser,
             'json': JsonParser,
             'oJ': JsonParser,
-            'list': ListParser,            
+            'list': ListParser,
             'oL': ListParser,
         }
         parser = parsers.get(format)
@@ -35,15 +33,12 @@ class BaseMasscanParser:
                 start_ip, broadcast = get_network(ip = ip_target, mask = 24)
                 network_obj = Network(start_ip=start_ip, mask=24)
                 ip_obj = IP(ip=ip_target, network=network_obj)
-                domain_obj = Domain()
-                dns_obj = DNS(target_domain=domain_obj, target_ip=ip_obj, dns_type_id=DNSTypes.A.value)
                 ips_objs.update({ip_target : ip_obj})
-                result.extend([network_obj, ip_obj, domain_obj, dns_obj])
+                result.extend([network_obj, ip_obj])
                 for port in ports_target:
                     if port.get('port'):
                         port_obj = Port(ip=ip_obj, **port)
                         result.append(port_obj)
-
         return result
 
 

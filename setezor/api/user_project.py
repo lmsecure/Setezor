@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from setezor.dependencies.project import get_current_project, get_user_id, role_required
 from setezor.schemas.roles import Roles
@@ -19,6 +19,15 @@ async def list_user_in_project(
 ) -> list:
     return await user_project_service.list_users_in_project(user_id=user_id,
                                                           project_id=project_id)
+
+
+@router.get("/info")
+async def project_info(
+    user_project_service: Annotated[UserProjectService, Depends(UserProjectService.new_instance)],
+    projects: list[str] = Query([]),
+    user_id: str = Depends(get_user_id)
+) -> dict[str, list]:
+    return await user_project_service.get_project_statistic(user_id=user_id, project_ids=projects)
 
 
 @router.patch("/change_role")

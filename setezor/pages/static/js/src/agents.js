@@ -132,6 +132,13 @@ function setDefaultAgent(id) {
         fillAgentBar(bar.getAttribute("data-agent-bar"));
     });
 
+    Object.values(ToolModalBuilder.instances || {}).forEach(instance => {
+        if (instance?.state?.overrides) {
+            delete instance.state.overrides.agent_id;
+            delete instance.state.overrides.interface_id;
+        }
+    });
+
     // Загружаем интерфейсы для выбранного агента
     getInterfaceData(agentData.default_agent).then((data) => {
         interfaceData = data;

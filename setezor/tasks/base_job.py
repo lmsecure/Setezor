@@ -77,7 +77,7 @@ class BaseJob(Job):
             task_status_data = {
                 "signal": "task_status",
                 "task_id": task_id,
-                "status": TaskStatus.started,
+                "status": TaskStatus.processing_on_agent,
                 "type": "success",
                 "traceback": ""
             }
@@ -135,15 +135,14 @@ class BaseJob(Job):
             task_id = self.task_id
             scan_id = self.scan_id
             project_id = self.project_id
-            agent_id = self.agent_id
             task_status_data = {
                 "signal": "task_status",
                 "task_id": task_id,
-                "status": TaskStatus.started,
-                "type": "success",
+                "status": TaskStatus.processing_on_server,
+                "type": "info",
                 "traceback": ""
             }
-            await self.task_manager.task_status_changer_for_local_job(data=task_status_data, agent_id=agent_id)
+            await self.task_manager.task_status_changer_for_local_job(data=task_status_data)
             logger.debug(
                 f"STARTED TASK {func.__qualname__}. {task_status_data}")
             try:
@@ -152,7 +151,7 @@ class BaseJob(Job):
                 task_status_data["status"] = TaskStatus.failed
                 task_status_data["traceback"] = str(e)
                 task_status_data["type"] = "error"
-                await self.task_manager.task_status_changer_for_local_job(data=task_status_data, agent_id=agent_id)
+                await self.task_manager.task_status_changer_for_local_job(data=task_status_data)
                 logger.error(
                     f"TASK {func.__qualname__} FAILED. {traceback.format_exc()}")
                 return

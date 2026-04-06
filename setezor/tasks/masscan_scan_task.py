@@ -15,9 +15,9 @@ class MasscanScanTask(BaseJob):
             if not target.ip:
                 continue
             if not (target.ip in masscan_targets):
-                masscan_targets[target.ip] = []
+                masscan_targets[target.ip] = set()
             if target.port:
-                masscan_targets[target.ip].append(target.port)
+                masscan_targets[target.ip].add(target.port)
         for ip, ports in masscan_targets.items():
             if ports:  # если в скоупе указаны порты для таргета, то он их и подставит
                 result_params.append({**base_kwargs} | {"target": ip,

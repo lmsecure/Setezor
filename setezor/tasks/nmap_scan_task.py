@@ -15,9 +15,9 @@ class NmapScanTask(BaseJob):
             if not target.ip:
                 continue
             if not (target.ip in nmap_targets):
-                nmap_targets[target.ip] = []
+                nmap_targets[target.ip] = set()
             if target.port:
-                nmap_targets[target.ip].append(target.port)
+                nmap_targets[target.ip].add(target.port)
         for ip, ports in nmap_targets.items():
             if ports:  # если в скоупе указаны порты для таргета, то он их и подставит
                 result_params.append({**base_kwargs} | {"targetIP": ip,

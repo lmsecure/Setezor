@@ -58,6 +58,8 @@ from .agent_parent_agent import AgentParentAgent
 from .network_speed_test import NetworkSpeedTest
 from .dns_a_screenshot import DNS_A_Screenshot
 from .agent_network_interface import AgentInterface
+from .web_archive import WebArchive
+from .rdap_model import RdapDomain, RdapIpnetwork
 
 
 

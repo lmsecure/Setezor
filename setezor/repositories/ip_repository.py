@@ -252,7 +252,7 @@ class IPRepository(SQLAlchemyRepository[IP]):
         .filter(DNS.project_id == project_id,
                 DNS.scan_id.in_(scans),
                 DNS_Type.name != '',
-                Domain.domain != '',)\
+                TargetDomain.domain != '')\
 
         if filter_params:
             for filter_item in filter_params:
@@ -329,16 +329,10 @@ class IPRepository(SQLAlchemyRepository[IP]):
                 
                 if field in field_mapping:
                     column = field_mapping[field]                
-                    if field in numeric_fields:
-                        sorted_column = func.coalesce(column, 0)
-                    else:
-                        sorted_column = func.coalesce(column, "")
-                    if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
-                        sorted_column = collate(sorted_column, 'C')
                     if direction == "desc":
-                        order_clauses.append(sorted_column.desc())
+                        order_clauses.append(column.desc())
                     else:
-                        order_clauses.append(sorted_column.asc())
+                        order_clauses.append(column.asc())
             
             if order_clauses:
                 stmt = stmt.order_by(*order_clauses)

@@ -1,0 +1,499 @@
+const CertHandlers = {
+
+  async handlePrefill(instance, rows = [], prefillParams = {}) {
+    const prefix = instance.prefix;
+    
+    if (prefillParams?.agent_id) {
+      instance.state.overrides.agent_id = prefillParams.agent_id;
+    }
+    
+    instance.reset();
+
+    const targetTab = document.getElementById(`${prefix}target-tab`);
+    if (targetTab) new bootstrap.Tab(targetTab).show();
+
+    const hostMap = new Map();
+
+    const addHost = (host, port) => {
+      if (!host) return;
+      if (!hostMap.has(host)) hostMap.set(host, new Set());
+      hostMap.get(host).add(port);
+    };
+
+    rows.forEach(row => {
+      if (!row.port || row.state !== 'open') return;
+      const port = String(row.port || '').trim() || '443';
+      const ip = (row.ipaddr || row.ip || '').trim();
+      const domain = (row.domain || '').trim();
+
+      if (ip) addHost(ip, port);
+      if (domain) addHost(domain, port);
+    });
+
+    if (hostMap.size === 0 && prefillParams.target) {
+      const port = prefillParams.port || '443';
+      addHost(prefillParams.target, String(port));
+    }
+
+    const targets = Array.from(hostMap.entries()).map(([host, ports]) => ({
+      target: host,
+      port: Array.from(ports).join(',')
+    }));
+
+    if (targets.length === 0) {
+      if (Object.keys(prefillParams).length) {
+        this.applyPrefillParams(prefix, prefillParams);
+      }
+      window[`show_${instance.modalId}`]();
+      return;
+    }
+
+    const extraCount = targets.length - 1;
+    for (let i = 0; i < extraCount; i++) {
+      instance.addInputField('target_port');
+    }
+
+    const mainTarget = document.getElementById(`${prefix}inputTarget`);
+    const mainPort = document.getElementById(`${prefix}inputPort`);
+    if (mainTarget) mainTarget.value = targets[0].target;
+    if (mainPort) mainPort.value = targets[0].port;
+
+    const container = document.getElementById(`${prefix}InputContainer`);
+    if (container && extraCount > 0) {
+      const groups = container.querySelectorAll('.input-group');
+      groups.forEach((group, index) => {
+        const targetIdx = index + 1;
+        if (targets[targetIdx]) {
+          const t = group.querySelector('.target');
+          const p = group.querySelector('.port');
+          if (t) t.value = targets[targetIdx].target;
+          if (p) p.value = targets[targetIdx].port;
+        }
+      });
+    }
+
+    if (Object.keys(prefillParams).length) this.applyPrefillParams(prefix, prefillParams);
+    window[`show_${instance.modalId}`]();
+  },
+
+  applyPrefillParams(prefix, params) {
+    if (params.target) {
+      const targetInput = document.getElementById(`${prefix}inputTarget`);
+      if (targetInput) {
+        targetInput.value = params.target;
+      }
+    }
+
+    if (params.port !== undefined) {
+      const portInput = document.getElementById(`${prefix}inputPort`);
+      if (portInput) {
+        portInput.value = String(params.port);
+      }
+    }
+
+    if (params.agent_id) {
+      if (typeof window.setAgent === 'function') {
+        window.setAgent(params.agent_id);
+      }
+    }
+  },
+
+  async handleNodeModal(instance, node) {
+    const prefix = instance.prefix;
+    
+    instance.reset();
+    
+    const targetInput = document.getElementById(`${prefix}inputTarget`);
+    const portInput = document.getElementById(`${prefix}inputPort`);
+    
+    const target = node.domains?.[0] || node.domain || node.label || node.name || node.ip || '';
+    if (targetInput) targetInput.value = target;
+
+    if (node.ports && Array.isArray(node.ports) && node.ports.length > 0) {
+        if (portInput) {
+            const ports = [...new Set(node.ports.map(p => p.port || p))].join(',');
+            portInput.value = ports || '443';
+        }
+        window[`show_${instance.modalId}`]();
+        return;
+    }
+    
+    if (typeof node === 'object' && node !== null && node.id && node.id !== 'undefined') {
+        try {
+            const response = await fetch(`/api/v1/vis/node_info/${node.id}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (data.ports && Array.isArray(data.ports)) {
+                const ports = [...new Set(data.ports.map(p => p.port))].join(',');
+                if (portInput) portInput.value = ports || '443';
+            } else if (portInput) {
+                portInput.value = '443';
+            }
+        } catch (error) {
+            console.error('[Cert] Failed to load node ports:', error);
+            if (portInput) portInput.value = '443';
+        }
+    } else if (portInput) {
+        portInput.value = '443';
+    }
+    
+    window[`show_${instance.modalId}`]();
+  }
+};
+
+class CertScanner {
+  constructor(prefix) {
+    this.prefix = prefix;
+  }
+
+  getBaseParams() {
+    const agentId = 
+      this.instance?.state?.overrides?.agent_id || 
+      window.agentData?.default_agent;
+
+    if (!agentId) {
+      throw new Error("Please select an Agent");
+    }
+
+    return {
+      agent_id: String(agentId)
+    };
+  }
+
+  async scanScope(scopeId) {
+    const baseParams = this.getBaseParams();
+    const payload = { ...baseParams, scope_id: String(scopeId) };
+
+    const result = await window.executeToolTasks({
+      tasks: [{
+        endpoint: '/api/v1/task/cert_info_task',
+        payload
+      }],
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Certificate scope scan failed');
+    }
+
+    return result.responses[0];
+  }
+
+  async scanTargets(targets) {
+    const baseParams = this.getBaseParams();
+    const tasks = [];
+    const seen = new Set();
+    const uniqueTargets = [];
+
+    for (const target of targets) {
+      const targetValue = String(target.target || target.ip || target.domain || target.url || target).trim();
+
+      if (!targetValue) continue;
+
+      let ports = ['443'];
+      if (target.port && target.port.trim()) {
+        ports = target.port
+          .split(',')
+          .map(p => p.trim())
+          .filter(p => p && !['null', 'undefined', ''].includes(p));
+        if (ports.length === 0) ports = ['443'];
+      }
+
+      for (const port of ports) {
+        const key = `${targetValue}:${port || '443'}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueTargets.push({ target: targetValue, port: port || '443' });
+        }
+      }
+    }
+
+    for (const target of uniqueTargets) {
+      tasks.push({
+        endpoint: '/api/v1/task/cert_info_task',
+        payload: {
+          ...baseParams,
+          target: target.target,
+          port: target.port
+        }
+      });
+    }
+
+    if (tasks.length === 0) return [];
+
+    const result = await window.executeToolTasks({
+      tasks,
+      stopOnFirstFailure: true
+    });
+
+    if (!result.success) {
+      if (result.reason === 'module_install_requested') {
+        return null;
+      }
+      throw new Error(result.error?.message || 'Certificate targets scan failed');
+    }
+
+    return result.responses;
+  }
+}
+
+const certModalConfig = {
+  prefix: 'cert_',
+  hideInterfaceBar: true,
+  tabs: [
+    { id: 'target', label: i18next.t('Target'), targetType: 'target_port' },
+    { id: 'scope', label: i18next.t('Scope') },
+    { id: 'database', label: i18next.t('Database') },
+    { id: 'textarea', label: i18next.t('Textarea'), placeholder: 'example.com:443\n192.168.1.1:8443', textareaValidTypes: ['ip', 'ip_ports', 'domain', 'domain_ports'] },
+  ],
+  
+  getDatabaseTableConfig() {
+    return {
+      columns: [
+        { 
+          title: "Select", 
+          field: "selected", 
+          formatter: "rowSelection", 
+          titleFormatter: "rowSelection", 
+          hozAlign: "center", 
+          headerHozAlign: "center", 
+          headerSort: false,
+          width: 50
+        },
+        { 
+          title: "IP Address", 
+          field: "ipaddr", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search IP..." 
+        },
+        { 
+          title: "Domain", 
+          field: "domain", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search domain..." 
+        },
+        { 
+          title: "Port", 
+          field: "port", 
+          headerFilter: "input", 
+          headerFilterPlaceholder: "Search port..." 
+        }
+      ],
+      filter: [
+          { field: "port", type: ">", value: 0 }
+      ],
+      initialSort: [{ column: "ipaddr", dir: "asc" }]
+      // filter: [
+      //   { field: "is_ssl", type: "=", value: 1 },
+      // ]
+    };
+  },
+  
+  customDatabaseTargetsHandler(selectedTargets) {
+    return selectedTargets || [];
+  },
+  
+  onInit(instance) {
+    const prefix = instance.prefix;
+
+    if (instance.config.getTargets) {
+      instance.getTargets = instance.config.getTargets.bind(instance);
+    }
+
+    const portInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.port`);
+    portInputs.forEach(input => {
+      input.placeholder = '443';
+    });
+
+    const dbTabTrigger = document.getElementById(`${prefix}database-tab`);
+    if (dbTabTrigger) {
+      let tableInitialized = false;
+      
+      dbTabTrigger.addEventListener('shown.bs.tab', () => {
+        if (!tableInitialized) {
+          instance.initDatabaseTable();
+          tableInitialized = true;
+        }
+      });
+    }
+
+    window.cert_start_with_prefill = (rows = [], prefillParams = {}) => {
+      CertHandlers.handlePrefill(instance, rows, prefillParams);
+    };
+
+    window.cert_script_modal_to_node = (node) => {
+      CertHandlers.handleNodeModal(instance, node);
+    };
+
+    window.resetCertModal = () => {
+      instance.reset();
+    };
+
+    window.cert_full_modal_window = () => {
+      instance.reset();
+      window[`show_${instance.modalId}`]();
+    };
+  },
+
+  onReset(instance) {
+    const prefix = instance.prefix;
+
+    const portInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.port`);
+    portInputs.forEach(input => {
+      input.placeholder = '443';
+      if (input.id === `${prefix}inputPort`) {
+        input.value = '443';
+      }
+    });
+
+    const targetInputs = document.querySelectorAll(`#${instance.modalId}_body .form-control.target`);
+    targetInputs.forEach(input => {
+      input.value = '';
+    });
+    
+    instance.state.selectedDatabaseTargets = {};
+    instance.state.selectedRowsState = {};
+    
+    if (instance.databaseTable && typeof instance.databaseTable.deselectRow === 'function') {
+      instance.databaseTable.deselectRow();
+    }
+  },
+
+  getTargets() {
+    const tabId = this.getActiveTab();
+    if (!tabId) return [];
+
+    switch (tabId) {
+      case 'scope':
+        return { scope_id: this.state.selectedScopeId };
+        
+      case 'database': {
+        if (!this.databaseTable) return [];
+        
+        const targets = [];
+        Object.values(this.state.selectedDatabaseTargets).forEach((item) => {
+            const host = item.domain || item.ip;
+            if (!host) return;
+            const ports = item.ports || ['443'];
+            ports.forEach(port => {
+                targets.push({
+                    target: host,
+                    port: port || '443'
+                });
+            });
+        });
+        return targets;
+      }
+
+        
+      case 'target': {
+        const targets = [];
+        
+        const mainTarget = document.getElementById(`${this.prefix}inputTarget`);
+        const mainPort = document.getElementById(`${this.prefix}inputPort`);
+        
+        if (mainTarget && mainTarget.value) {
+          targets.push({
+            target: mainTarget.value.trim(),
+            port: mainPort ? mainPort.value.trim() || '443' : '443'
+          });
+        }
+        
+        const container = document.getElementById(`${this.prefix}InputContainer`);
+        if (container) {
+          const groups = container.querySelectorAll('.input-group');
+          groups.forEach(group => {
+            const targetInput = group.querySelector('.target');
+            const portInput = group.querySelector('.port');
+            if (targetInput && targetInput.value) {
+              targets.push({
+                target: targetInput.value.trim(),
+                port: portInput ? portInput.value.trim() || '443' : '443'
+              });
+            }
+          });
+        }
+        
+        return targets;
+      }
+        
+      case 'textarea': {
+        const textarea = document.getElementById(`${this.prefix}textareaInput`);
+        if (textarea && textarea.value) {
+          return textarea.value.split('\n')
+            .map(line => line.trim())
+            .filter(line => line)
+            .map(line => {
+              let target, port = '443';
+              if (line.includes(':')) {
+                [target, port] = line.split(':').map(s => s.trim());
+              } else {
+                target = line;
+              }
+              return {
+                target: target,
+                port: port
+              };
+            });
+        }
+        return [];
+      }
+        
+      default:
+        return [];
+    }
+  },
+
+  async onStart(instance) {
+    const scanner = new CertScanner(instance.prefix);
+    
+    try {
+      const tabId = instance.getActiveTab();
+      const targets = instance.getTargets();
+      
+      console.log('[Cert] Active tab:', tabId);
+      console.log('[Cert] Targets to process:', targets);
+      
+      if (tabId === 'scope') {
+        if (!instance.state.selectedScopeId) {
+          create_toast('Warning', i18next.t('Please select a scope'), 'warning');
+          return;
+        }
+        const result = await scanner.scanScope(instance.state.selectedScopeId);
+        if (result === null) return; 
+      } else {
+        const targets = instance.getTargets();
+        
+        if (!targets.length) {
+          create_toast('Warning', i18next.t('No targets found'), 'warning');
+          return;
+        }
+        const result = await scanner.scanTargets(targets);
+        if (result === null) return;
+      }
+      
+      window[`close_${instance.modalId}`]();
+      
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Scan started successfully', 'success');
+      }
+      
+    } catch (error) {
+      console.error('Failed to start Cert scan:', error);
+      create_toast('Error', error.message || i18next.t('Failed to start scan'), 'error');
+    }
+  }
+};
+
+window.openCertModal = function () {
+  if (document.getElementById('certModalWindow')) {
+    show_certModalWindow();
+    return;
+  }
+  createModal('certModalWindow', 'TLS/SSL CERT', 'https://help.setezor.net/Инструменты.html#tls-ssl-cert');
+  ToolModalBuilder.register('certModalWindow', certModalConfig);
+  show_certModalWindow();
+};

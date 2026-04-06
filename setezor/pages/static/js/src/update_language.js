@@ -23,6 +23,9 @@ document.querySelectorAll('.language-option').forEach(option => {
             if (window.location.pathname === '/network-map'){
                 addTableNodesWithComments()
             }
+            if (window.location.pathname === '/projects') {
+                window.__reloadProjects?.();
+            }
         });
     });
 });

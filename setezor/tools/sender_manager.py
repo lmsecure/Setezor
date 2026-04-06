@@ -1,20 +1,23 @@
+from typing import Any
+
 import aiohttp
 from abc import ABC, abstractmethod
 
 from setezor.logger import logger
 
 
+
 class SenderInterface(ABC):
 
     @classmethod
     @abstractmethod
-    async def send_json(cls, url: str, data: dict | list[dict], timeout: float = None):
+    async def send_json(cls, url: str, data: dict[Any, Any] | list[dict[Any, Any]], timeout: float | None = None) -> tuple[Any | None, int]:
         pass
 
 
 class HTTPManager(SenderInterface):
     @classmethod  # метод сервера и агента на отправку следующему звену
-    async def send_json(cls, url: str, data: dict | list[dict], timeout: float = None):
+    async def send_json(cls, url: str, data: dict[Any, Any] | list[dict[Any, Any]], timeout: float | None = None) -> tuple[Any | None, int]:
         timeout_config = aiohttp.ClientTimeout(total=timeout)
         async with aiohttp.ClientSession(timeout=timeout_config) as session:
             try:
@@ -27,9 +30,9 @@ class HTTPManager(SenderInterface):
                         logger.debug(f'Success to send json | url: {url}, data: {data}')
 
                     return resp_data, resp.status
-            except (aiohttp.client_exceptions.ClientConnectorError, 
-                    aiohttp.client_exceptions.ContentTypeError, 
-                    aiohttp.client_exceptions.InvalidUrlClientError,
+            except (aiohttp.ClientConnectorError,
+                    aiohttp.ContentTypeError,
+                    aiohttp.InvalidUrlClientError
                     ):
                 logger.error(f'Failed to send json | url: {url}, data: {data}', exc_info=False)
                 return None, 400

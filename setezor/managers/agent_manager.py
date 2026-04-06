@@ -52,8 +52,8 @@ class AgentManager:
             }
         return data
 
-    async def get_interfaces_on_agent(self, agent_id: str, user_id: str):
-        agent = await self.__agent_service.get_by_id(id=agent_id)
+    async def get_interfaces(self, agent_id: str, user_id: str) -> list[InterfaceStruct]:
+        agent = await self.__agent_service.get_agent_by_agent_id_or_agent_in_project_id(user_id=user_id, agent_id=agent_id)
         if not agent:
             raise HTTPException(
                 status_code=404, detail="Agent not found")
@@ -110,7 +110,7 @@ class AgentManager:
 
     async def save_interfaces(self, user_id: str, agent_id: str, interfaces: List[InterfaceOfAgent]):
         async with self.__agent_service._uow:
-            agent: Agent = await self.__agent_service._uow.agent.find_one(id=agent_id)
+            agent: Agent = await self.__agent_service.get_agent_by_agent_id_or_agent_in_project_id(user_id=user_id, agent_id=agent_id)
             if not agent:
                 raise HTTPException(
                     status_code=404, detail="Agent not found")
@@ -126,7 +126,7 @@ class AgentManager:
                     name = interface.name
                 )
                 self.__agent_service._uow.agent_interface.add(interface_obj.model_dump())
-                agents_in_projects = await self.__agent_service._uow.agent_in_project.filter(agent_id = agent_id)
+                agents_in_projects = await self.__agent_service._uow.agent_in_project.filter(agent_id = agent.id)
                 for agent_in_project in agents_in_projects:
                     new_obj = Object(id=generate_unique_id(), project_id=agent_in_project.project_id, agent_id=agent_in_project.id)
                     self.__agent_service._uow.object.add(new_obj.model_dump())

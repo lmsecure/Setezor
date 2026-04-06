@@ -93,13 +93,13 @@ class AcunetixService(BaseService):
 
 
             if port := data.get("port"):
-                new_port = Port(port=port, ip=new_ip)
+                new_port = Port(port=port, service_name=data.get("service_name"), ip=new_ip)
                 result.append(new_port)
             else:
                 if scheme == "https":
-                    new_port = Port(port=443, ip=new_ip)
+                    new_port = Port(port=443, service_name="https", ip=new_ip)
                 else:
-                    new_port = Port(port=80, ip=new_ip)
+                    new_port = Port(port=80, service_name="http", ip=new_ip)
                 result.append(new_port)
         return result
 
@@ -194,6 +194,8 @@ class AcunetixService(BaseService):
                                              }
         for target in targets:
             data = parse_url(url=target["address"])
+            if "service_name" in data:
+                service_name = data.pop("service_name")
             scheme = target["address"].split("://")[0]
             async with self._uow:
                 target_in_setezor = await self._uow.target.find_one(protocol=scheme, project_id=project_id, scope_id=scope_id, deleted_at=None, **data)
@@ -219,6 +221,8 @@ class AcunetixService(BaseService):
                 acunetix_target_id = target.in_acunetix_id
 
                 data = parse_url(url=target.address)
+                if "service_name" in data:
+                    service_name = data.pop("service_name")
                 scheme = target.address.split("://")[0]
 
                 if target.in_setezor_id:

@@ -16,7 +16,7 @@ except ImportError:
 
 from cpeguess.cpeguess import CPEGuess
 
-from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS, Domain
+from setezor.models import IP, Port, Software, L4Software, MAC, Vendor, Route, RouteList, Network, DNS, Domain, Object
 
 
 
@@ -311,7 +311,7 @@ class NmapParser:
                 result.traces.append(trace_data)
 
         return result, traceroute
-    
+
     @staticmethod
     def gen_arpa_address(ip_addr: str) -> str:
         reverse_ip = '.'.join(ip_addr.split('.')[::-1])
@@ -326,45 +326,47 @@ class NmapParser:
         softwares = {}
         software_types = {}
         softwares_versions = {}
-        empty_vendor = Vendor(name='')
         macs = {}
-        vendors[''] = empty_vendor
-        result.append(empty_vendor)
         for i in range(len(data.addresses)):
-            mac = data.addresses[i].get('mac', '')
-            if mac in macs:
+            mac = data.addresses[i].get("mac", "")
+            if mac != "" and mac in macs:
                 mac_obj = macs[mac]
-            else:
-                mac_obj = MAC(mac=mac, vendor=empty_vendor)
+            elif mac != "":
+                obj_obj = Object()
+                result.append(obj_obj)
+                vendor_obj = Vendor()
+                result.append(vendor_obj)
+                mac_obj = MAC(mac=mac, object=obj_obj, vendor=vendor_obj)
                 macs[mac] = mac_obj
                 result.append(mac_obj)
-            start_ip, broadcast = get_network(ip=data.addresses[0].get('ip'), mask=24)
+            else:
+                mac_obj = None
+            start_ip, broadcast = get_network(ip=data.addresses[0].get("ip"), mask=24)
             network_obj = Network(start_ip=start_ip, mask=24)
             result.append(network_obj)
-            ip_obj = IP(ip=data.addresses[i].get('ip'), mac=mac_obj, network=network_obj)
+            ip_obj = IP(ip=data.addresses[i].get("ip"), mac=mac_obj, network=network_obj)
+
             result.append(ip_obj)
-            domain_name = data.addresses[0].get('domain_name')
+            domain_name = data.addresses[0].get("domain_name")
             if domain_name:
                 domain_obj = Domain(domain=domain_name)
-                result.append(domain_obj)
-                dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.PTR.value)
-                result.append(dns_obj)
+                dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.A.value)
             else:
-                arpa_addr = cls.gen_arpa_address(data.addresses[i].get('ip'))
+                arpa_addr = cls.gen_arpa_address(data.addresses[i].get("ip"))
                 domain_obj = Domain(domain=arpa_addr)
-                result.append(domain_obj)
                 dns_obj = DNS(target_ip=ip_obj, target_domain=domain_obj, dns_type_id=DNSTypes.PTR.value)
-                result.append(dns_obj)
+            result.append(domain_obj)
+            result.append(dns_obj)
             address_in_traceses[ip_obj.ip] = ip_obj
-            ports = data.ports.get(data.addresses[i].get('ip'), [])
-            softs = data.softwares.get(data.addresses[i].get('ip'), [])
+            ports = data.ports.get(data.addresses[i].get("ip"), [])
+            softs = data.softwares.get(data.addresses[i].get("ip"), [])
             for port, soft in zip(ports, softs):
                 l4_obj = Port(ip=ip_obj, **port)
                 result.append(l4_obj)
-                soft.pop('port', None)
-                soft.pop('patch', None)
-                soft.pop('platform', None)
-                vendor_name = soft.pop('vendor', '') or ""
+                soft.pop("port", None)
+                soft.pop("patch", None)
+                soft.pop("platform", None)
+                vendor_name = soft.pop("vendor", "") or ""
                 if not any(soft.values()):
                     continue
                 soft_type_hash_string = soft.pop("type", "") or ""
@@ -375,38 +377,39 @@ class NmapParser:
                 cpe23 = soft.pop("cpe23", "") or ""
                 soft_version_hash_string = vendor_name + product + version + build + cpe23
 
-                if vendor_name in vendors:
-                    vendor_obj = vendors.get(vendor_name)
-                else:
-                    vendor_obj = Vendor(name=vendor_name)
-                    vendors[vendor_name] = vendor_obj
-                    result.append(vendor_obj)
-                
-                if soft_type_hash_string in software_types:
-                    software_type_obj = software_types[soft_type_hash_string]
-                else:
-                    software_type_obj = SoftwareType(name=soft_type_hash_string)
-                    software_types[soft_type_hash_string] = software_type_obj
-                    result.append(software_type_obj)
+                if soft_version_hash_string != "":
+                    if vendor_name != "" and vendor_name in vendors:
+                        vendor_obj = vendors.get(vendor_name)
+                    else:
+                        vendor_obj = Vendor(name=vendor_name)
+                        vendors[vendor_name] = vendor_obj
+                        result.append(vendor_obj)
+                    if soft_type_hash_string in software_types:
+                        software_type_obj = software_types[soft_type_hash_string]
+                    else:
+                        software_type_obj = SoftwareType(name=soft_type_hash_string)
+                        software_types[soft_type_hash_string] = software_type_obj
+                        result.append(software_type_obj)
 
-                
-                if software_hash_string in softwares:
-                    software_obj = softwares[software_hash_string]
-                else:
-                    software_obj = Software(product=product, vendor=vendor_obj, _type=software_type_obj)
-                    softwares[software_hash_string] = software_obj
-                    result.append(software_obj)
+                    if software_hash_string in softwares:
+                        software_obj = softwares[software_hash_string]
+                    else:
+                        software_obj = Software(product=product, vendor=vendor_obj, _type=software_type_obj)
+                        softwares[software_hash_string] = software_obj
+                        result.append(software_obj)
 
-                if soft_version_hash_string in softwares_versions:
-                    soft_version_obj = softwares_versions[soft_version_hash_string]
-                else:  
-                    soft_version_obj = SoftwareVersion(software=software_obj,
-                                                       version=version,
-                                                       build=build,
-                                                       cpe23=cpe23)
-                    softwares_versions[soft_version_hash_string] = soft_version_obj
-                    result.append(soft_version_obj)
-                L4Software_obj = L4Software(l4=l4_obj, software_version=soft_version_obj, dns=dns_obj)
+                    if soft_version_hash_string in softwares_versions:
+                        soft_version_obj = softwares_versions[soft_version_hash_string]
+                    else:
+                        soft_version_obj = SoftwareVersion(software=software_obj,
+                                                        version=version,
+                                                        build=build,
+                                                        cpe23=cpe23)
+                        softwares_versions[soft_version_hash_string] = soft_version_obj
+                        result.append(soft_version_obj)
+                    L4Software_obj = L4Software(l4=l4_obj, software_version=soft_version_obj, dns=dns_obj)
+                else:
+                    L4Software_obj = L4Software(l4=l4_obj, dns=dns_obj)
                 result.append(L4Software_obj)
 
         if traceroute:
@@ -423,7 +426,7 @@ class NmapParser:
                         address_in_traceses.update({str(r.address) : ip_obj_in_trace})
                     else:
                         froms_tos.append(str(r.address))
-                froms_tos.append(data.addresses[i].get('ip'))
+                froms_tos.append(data.addresses[i].get("ip"))
                 route_obj = Route(agent_id=data.traces[i].agent_id)
                 result.append(route_obj)
                 result.append(RouteList(ip_id_from=interface_ip_id, ip_to=address_in_traceses[froms_tos[0]], route=route_obj))
