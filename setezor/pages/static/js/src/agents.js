@@ -80,20 +80,19 @@ function fillAgentBar(barSelector) {
     const list = elem.querySelector("ul");
 
     const createItem = `
-        <li>
+        <div><hr class="dropdown-divider">
             <a class="dropdown-item text-success fw-medium" 
                href="#" 
                onclick="event.preventDefault(); agentManager.show({projectMode: true});">
                 <i class="bi bi-plus-circle me-2"></i>${i18next.t('Create new agent')}
             </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
+        </div>
     `;
 
-    const html = createItem + agentData.agents
+    const html = '<div style="max-height: 250px; overflow-y: auto;">' + agentData.agents
         .filter((agent) => !agent.is_server)
         .map((agent) => createAgentElement(agent.id, agent.name))
-        .join("\n");
+        .join("\n") + "</div>" + createItem;
 
     const defaultAgent = agentData.agents.find((agent) => agent.id === agentData.default_agent);
     if (defaultAgent != undefined){

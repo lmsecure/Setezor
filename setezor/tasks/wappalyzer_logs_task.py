@@ -38,4 +38,4 @@ class WappalyzerLogsTask(BaseJob):
     @BaseJob.local_task_notifier
     async def run(self):
         data = await self._task_func()
-        return await WappalyzerParser.restruct_result(data=data)
+        return await WappalyzerParser.restruct_result(project_id=self.project_id, scan_id=self.scan_id, agent_id=self.agent_id, data=data)

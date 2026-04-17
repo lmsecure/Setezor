@@ -35,6 +35,30 @@ async def analytics_l4_software(
     last_page = (total + size - 1) // size
     return JSONResponse(content={"data": data, "last_page": last_page})
 
+@router.get("/open_ports")
+async def analytics_open_ports(
+    analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],
+    project_id: str = Depends(get_current_project),
+    scans: list[str] = Query([]),
+    page: int = Query(1, alias="page"),
+    size: int = Query(10, alias="size"),
+    sort: str = Query("[]", alias="sort"),
+    filter: str = Query("[]", alias="filter"),
+
+    _: bool = Depends(role_required([Roles.owner, Roles.executor, Roles.viewer]))
+) -> JSONResponse:
+    total, data = await analytics_service.get_open_ports_tabulator_data(
+        project_id=project_id,
+        scans = scans,
+        page=page,
+        size=size,
+        sort=sort,
+        filter=filter
+    )
+    
+    last_page = (total + size - 1) // size
+    return JSONResponse(content={"data": data, "last_page": last_page})
+
 @router.get("/ip_mac_port")
 async def analytics_ip_mac_port(
     analytics_service: Annotated[AnalyticsService, Depends(AnalyticsService.new_instance)],

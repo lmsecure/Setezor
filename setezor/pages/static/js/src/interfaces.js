@@ -64,13 +64,13 @@ function fillInterfaceBar(barSelector) {
     const button = elem.querySelector("button");
     const list = elem.querySelector("ul");
 
-    const html = interfaceData.interfaces.map((iface) =>
-        createInterfaceElement(iface.id, iface.name, iface.ip)
-    ).join("\n");
+    const html = '<div style="max-height: 250px; overflow-y: auto;">' + 
+        interfaceData.interfaces.map((iface) =>
+            createInterfaceElement(iface.id, iface.name, iface.ip)
+        ).join("\n") + "</div>";
     
     const configureItem = agentData?.default_agent ? `
-        <li><hr class="dropdown-divider"></li>
-        <li>
+        <div><hr class="dropdown-divider">
             <a class="dropdown-item text-primary" href="#" 
                onclick="event.preventDefault(); 
                         if(window.agentManager) {
@@ -78,7 +78,7 @@ function fillInterfaceBar(barSelector) {
                         }">
                 <i class="bi bi-gear me-2"></i>${i18next.t('Configure interfaces')}
             </a>
-        </li>
+        </div>
     ` : '';
     
     list.innerHTML = html + configureItem;

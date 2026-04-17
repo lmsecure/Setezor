@@ -556,8 +556,8 @@
 				let scan_id = ''
 				if (currentScan == null) {
 					result += `
-                <button type="button" class="btn btn-success" disabled id="currentPickedScan">${i18next.t('No scan')}</button>
-            `
+				<button type="button" class="btn btn-success" disabled id="currentPickedScan">${i18next.t('No scan')}</button>
+			`
 				} else {
 					scan_id = currentScan.id
 					result += `<button type="button" class="btn btn-success btn-limit" disabled id="currentPickedScan">${currentScan.name}</button>`

@@ -196,6 +196,177 @@ class L4SoftwareRepository(SQLAlchemyRepository[L4Software]):
         
         return total, result.all()
 
+    async def get_open_ports_tabulator_data(
+        self, 
+        project_id: str, 
+        scans: List[str], 
+        page: int, 
+        size: int,
+        sort_params: list = None,
+        filter_params: list = None
+    ):
+        row_number_column = func.row_number().over(
+            order_by=func.count(IP.ip).desc()
+        ).label("id")
+
+        field_mapping = {
+            "ipaddr": IP.ip,
+            "port": Port.port,
+            "protocol": Port.protocol,
+            "state": Port.state,
+            "service_name": Port.service_name,
+            "vendor": Vendor.name,
+            "product": Software.product,
+            "type": SoftwareType.name,
+            "version": SoftwareVersion.version,
+            "build": SoftwareVersion.build,
+            "cpe23": SoftwareVersion.cpe23,
+        }
+
+        tabulator_dashboard_data = (
+            select(
+                row_number_column,
+                IP.ip,
+                Port.port,
+                Port.protocol,
+                Port.state,
+                Port.service_name,
+                Vendor.name,
+                Software.product,
+                SoftwareType.name,
+                SoftwareVersion.version,
+                SoftwareVersion.build,
+                SoftwareVersion.cpe23,
+                func.count(Port.port).label("port_count"),
+                func.count(Port.service_name).label("service_name_count"),
+            ).select_from(Port)
+            .join(IP, Port.ip_id == IP.id)
+            .join(L4Software, Port.id == L4Software.l4_id, isouter=True)
+            .join(SoftwareVersion, L4Software.software_version_id == SoftwareVersion.id, isouter=True)
+            .join(Software, SoftwareVersion.software_id == Software.id, isouter=True)
+            .join(SoftwareType, Software.type_id == SoftwareType.id, isouter=True)
+            .join(Vendor, Software.vendor_id == Vendor.id, isouter=True)
+            .filter(IP.project_id == project_id, IP.scan_id.in_(scans))
+            .filter(between(Port.port, 1, 65535))
+            .group_by(
+                Port.port,
+                Port.protocol,
+                IP.ip,
+                Port.state,
+                Port.service_name,
+                Software.product,
+                SoftwareType.name,
+                SoftwareVersion.version,
+                SoftwareVersion.build,
+                SoftwareVersion.cpe23,
+                Vendor.name,
+            )
+        )
+
+        if filter_params:
+            for filter_item in filter_params:
+                field = filter_item.get("field")
+                type_op = filter_item.get("type", "=")
+                value = filter_item.get("value")
+
+                if field in field_mapping and value is not None:
+                    if field == "port":
+                        try:
+                            if isinstance(value, list):
+                                value = [int(v) for v in value]
+                            else:
+                                value = int(value)
+                        except (ValueError, TypeError):
+                            continue
+
+                    column = field_mapping[field]
+                    
+                    if isinstance(value, list):
+                        if not value:
+                            continue
+
+                        if type_op == "=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column.in_(value))
+                        elif type_op == "!=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(~column.in_(value))
+                        elif type_op == "like":
+
+                            if field == "port":
+                                continue
+                            conditions = [
+                                column.ilike(f"%{v}%")
+                                for v in value
+                                if v is not None and v != ""
+                            ]
+                            if conditions:
+                                tabulator_dashboard_data = tabulator_dashboard_data.having(or_(*conditions))
+                        else:
+                            for v in value:
+                                if type_op == ">":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column > v)
+                                elif type_op == ">=":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column >= v)
+                                elif type_op == "<":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column < v)
+                                elif type_op == "<=":
+                                    tabulator_dashboard_data = tabulator_dashboard_data.having(column <= v)
+                        continue
+                    else:
+                        if type_op == "like" and field == "port":
+                            continue
+                        if type_op == "=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column == value)
+                        elif type_op == "!=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column != value)
+                        elif type_op == "like":
+                            if value != "":
+                                tabulator_dashboard_data = tabulator_dashboard_data.having(
+                                    column.ilike(f"%{value}%")
+                                )
+                        elif type_op == ">":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column > value)
+                        elif type_op == ">=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column >= value)
+                        elif type_op == "<":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column < value)
+                        elif type_op == "<=":
+                            tabulator_dashboard_data = tabulator_dashboard_data.having(column <= value)
+
+        if sort_params:
+            order_clauses = []
+            numeric_fields = {"port"}
+            for sort_item in sort_params:
+                field = sort_item.get("field")
+                direction = sort_item.get("dir", "asc")
+                
+                if field in field_mapping:
+                    column = field_mapping[field]
+                    if field in numeric_fields:
+                        sorted_column = func.coalesce(column, 0)
+                    else:
+                        sorted_column = func.coalesce(column, "")
+                        if field == "ipaddr" and self._session.bind.dialect.name == 'postgresql':
+                            sorted_column = collate(sorted_column, 'C')                
+                    if direction == "desc":
+                        order_clauses.append(sorted_column.desc())
+                    else:
+                        order_clauses.append(sorted_column.asc())
+            
+            if order_clauses:
+                tabulator_dashboard_data = tabulator_dashboard_data.order_by(*order_clauses)
+        else:
+            tabulator_dashboard_data = tabulator_dashboard_data.order_by(func.count(IP.ip).desc())
+
+        count_query = select(func.count()).select_from(tabulator_dashboard_data.alias())
+        
+        offset = (page - 1) * size
+        paginated_query = tabulator_dashboard_data.offset(offset).limit(size)
+
+        total = await self._session.scalar(count_query)
+        result = await self._session.exec(paginated_query)
+        
+        return total, result.all()
+
     async def get_soft_vuln_link_data(
         self,
         project_id: str,

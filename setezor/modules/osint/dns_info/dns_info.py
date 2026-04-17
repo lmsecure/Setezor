@@ -9,6 +9,16 @@ class DNS:
         responses = await cls.get_records(domain)
         return cls.proceed_records(responses)
 
+
+    @classmethod
+    async def get_ip_by_domain(cls, domain: str) -> list[str]:
+        responses = await DNS.resolve_domain(domain, 'A')
+        result_ips = []
+        for record in DNS.proceed_records([responses]):
+            result_ips.append(record.get("record_value"))
+        return result_ips
+
+
     @classmethod
     def proceed_records(cls, responses: List):
         domain_records = []

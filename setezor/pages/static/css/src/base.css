@@ -133,3 +133,17 @@ header {
 .tabulator .tabulator-row.in-scope-row .tabulator-cell {
     background-color: #9ed1ad !important;
 }
+
+#scans_bar_nmap .dropdown-menu {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+[data-agent-bar] .dropdown-item,
+[data-interface-bar] .dropdown-item {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 250px;
+    display: block;
+}

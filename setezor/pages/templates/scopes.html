@@ -88,6 +88,7 @@ Scopes
     let selectedScans = [];
     let currentFilters = { protocol: '', ip: '', domain: '', port: '' };
     let filterDebounceTimer = null;
+    let allScansIds = [];
 
     document.getElementById('scopeAddModal').addEventListener('hidden.bs.modal', function () {
         this.querySelector('form[name="addScopeFormName"]').reset();
@@ -264,6 +265,7 @@ Scopes
     }
 
     getScopes();
+    loadAllScansIds(); 
 
     async function addScope(event) {
         event.preventDefault();
@@ -297,6 +299,21 @@ Scopes
 				return ""
 			}
 		}
+    
+    async function loadAllScansIds() {
+        try {
+            const resp = await fetch("/api/v1/scan");
+            const scans = await resp.json();
+            allScansIds = scans.map(s => s.id).filter(id => id);
+        } catch (e) {
+            console.error('Failed to load scans:', e);
+            allScansIds = [];
+        }
+    }
+
+    function buildScansQueryParams() {
+        return allScansIds.map(id => `scans=${encodeURIComponent(id)}`).join('&');
+    }
     
     function debounceFilter(input, field) {
         currentFilters[field] = input.value.trim();
@@ -768,7 +785,7 @@ Scopes
         let modal = new bootstrap.Modal(modal_elem.children[0]);
         modal.show();
         initTable('ip_info', '/api/v1/analytics/ip_info', id);
-        initTable('open_ports', '/api/v1/analytics/software', id);
+        initTable('open_ports', '/api/v1/analytics/open_ports', id);
         initTable('ip_domain', '/api/v1/analytics/domain_ip', id);
         initTable('web', '/api/v1/analytics/web_tabulator', id);
         await loadScopeForHighlighting(id); 
@@ -951,14 +968,17 @@ Scopes
         const columns = [checkboxColumn, ...DISPLAY_COLUMNS];
 
         try {
+            const scansParams = buildScansQueryParams();
             const params = new URLSearchParams();
             params.append('page', '1');
             params.append('size', '10000');
             if (selectedScans && selectedScans.length) {
                 selectedScans.forEach(scan => params.append('scans', scan));
             }
-
-            const response = await axios.get(`${baseUrl}?${params.toString()}`);
+            const fullUrl = scansParams 
+                ? `${baseUrl}?${params.toString()}&${scansParams}`
+                : `${baseUrl}?${params.toString()}`;
+            const response = await axios.get(fullUrl);
             let fullData = [];
 
             if (response.data && Array.isArray(response.data)) {
@@ -1124,11 +1144,9 @@ Scopes
 
         const sortParam = encodeURIComponent(JSON.stringify(sorters));
         const filterParam = encodeURIComponent(JSON.stringify(filters));
-        const scansParam = (selectedScans || [])
-            .map(scan => `scans=${encodeURIComponent(scan)}`)
-            .join("&");
         
         const MAX_TARGETS = 10000;
+        const scansParams = buildScansQueryParams();
         // Запрашиваем ВСЕ данные (ограничим, например, 10000, чтобы не упасть на огромных данных)
         const allUrl = `/api/v1/target/get_all_data?page=1&size=${MAX_TARGETS}&sort=${sortParam}&filter=${filterParam}${scansParam ? `&${scansParam}` : ""}`;
 

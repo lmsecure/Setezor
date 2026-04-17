@@ -207,6 +207,55 @@ class AnalyticsService(BaseService):
             ]
             return total, tabulator_transform_dashboard_data
 
+    async def get_open_ports_tabulator_data(
+        self, 
+        project_id: str, 
+        scans: list[str],
+        page: int,
+        size: int, 
+        sort: str = "[]", 
+        filter: str = "[]"
+    ) -> tuple[int, list]:
+        try:
+            sort_params = json.loads(sort) if sort != "[]" else []
+            filter_params = json.loads(filter) if filter != "[]" else []
+        except json.JSONDecodeError:
+            sort_params = []
+            filter_params = []
+        async with self._uow:
+            if (not scans) and (last_scan := await self._uow.scan.last(project_id=project_id)):
+                scans.append(last_scan.id)
+            total, rows = await self._uow.l4_software.get_open_ports_tabulator_data(
+                project_id=project_id,
+                scans=scans,
+                page=page,
+                size=size,
+                sort_params=sort_params or [],
+                filter_params=filter_params or []
+            )
+            
+            keys = [
+                "id",
+                "ipaddr",
+                "port",
+                "protocol",
+                "state",
+                "service_name",
+                "vendor",
+                "product",
+                "type",
+                "version",
+                "build",
+                "patch",
+                "platform",
+                "cpe23"
+            ]
+
+            tabulator_transform_dashboard_data = [
+                dict(zip(keys, row)) for row in rows
+            ]
+            return total, tabulator_transform_dashboard_data
+
     async def get_ip_mac_port_tabulator_data(
         self, 
         project_id: str,
@@ -680,7 +729,7 @@ class AnalyticsService(BaseService):
             },
             {
                 'name': 'open_ports',
-                'base_url': '/api/v1/analytics/software',
+                'base_url': '/api/v1/analytics/open_ports',
                 'columns': cls.get_open_ports_columns_tabulator_data()
             },
             {
