@@ -17,7 +17,7 @@ class DNSTask(BaseJob):
 
 
     @classmethod
-    def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
+    async def generate_params_from_scope(cls, targets: list[Target], project_id: str, **base_kwargs):
         result_params = []
         seen = set()
         for target in targets:

@@ -3,9 +3,10 @@ from setezor.services.base_service import BaseService
 from setezor.models import Target
 from setezor.schemas.target import TargetCreate, TargetCreateForm
 from setezor.unit_of_work import UnitOfWork
-from typing import List, Dict
+from typing import List, Dict, Set, Union
 from setezor.repositories.ip_repository import IPRepository
 import json
+from collections import defaultdict
 
 
 class TargetService(BaseService):
@@ -71,3 +72,62 @@ class TargetService(BaseService):
 
             return total, tabulator_transform_dashboard_data
  
+    async def ip_port_filter(self, scope_targets: Dict[str, Dict[str, Union[List[int], bool]]], project_id: str) -> List[str]:
+        targets_from_db: Dict[str, Set[str]] = defaultdict(set)
+        async with self._uow:
+            for target, info in scope_targets.items():
+                ports_objects = await self._uow.port.get_ports_for_ip(
+                    ip=target,ports=info["ports"],project_id=project_id
+                )
+                for ports_obj in ports_objects:
+                    key = f"{target}:{ports_obj.port}"
+                    if ports_obj.is_ssl is not None:
+                        targets_from_db[key].add(["http", "https"][ports_obj.is_ssl])
+                    else:
+                        targets_from_db[key].update(["http", "https"])
+            
+        result = []
+        for target, info in scope_targets.items():
+            for port in info["ports"]:
+                key = f"{target}:{port}"
+                schemes = targets_from_db.get(key)
+                if schemes:
+                    result.extend(f"{s}://{key}" for s in schemes)
+                else:
+                    result.extend([f"http://{key}", f"https://{key}"])
+            if info["empty_port"]:
+                for p, s in [(80, "http"), (443, "https")]:
+                    key = f"{target}:{p}"
+                    if key not in targets_from_db:
+                        result.append(f"{s}://{key}")
+        return list(dict.fromkeys(result))
+
+    async def domain_port_filter(self, scope_targets: Dict[str, Dict[str, Union[List[int], bool]]], project_id: str) -> List[str]:
+        targets_from_db: Dict[str, Set[str]] = defaultdict(set)
+        async with self._uow:
+            for target, info in scope_targets.items():
+                ports_objects = await self._uow.port.get_ports_for_domain(
+                    domain=target,ports=info["ports"],project_id=project_id
+                )
+                for ports_obj in ports_objects:
+                    key = f"{target}:{ports_obj.port}"
+                    if ports_obj.is_ssl is not None:
+                        targets_from_db[key].add(["http", "https"][ports_obj.is_ssl])
+                    else:
+                        targets_from_db[key].update(["http", "https"])
+            
+        result = []
+        for target, info in scope_targets.items():
+            for port in info["ports"]:
+                key = f"{target}:{port}"
+                schemes = targets_from_db.get(key)
+                if schemes:
+                    result.extend(f"{s}://{key}" for s in schemes)
+                else:
+                    result.extend([f"http://{key}", f"https://{key}"])
+            if info["empty_port"]:
+                for p, s in [(80, "http"), (443, "https")]:
+                    key = f"{target}:{p}"
+                    if key not in targets_from_db:
+                        result.append(f"{s}://{target}")
+        return list(dict.fromkeys(result))

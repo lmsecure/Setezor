@@ -7,7 +7,7 @@ class CertTask(BaseJob):
     restructor = CertTaskRestructor
 
     @classmethod
-    def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
+    async def generate_params_from_scope(cls, targets: list[Target], project_id: str, **base_kwargs):
         params = []
         seen = set()
         for t in targets:

@@ -594,24 +594,26 @@ class NmapScanner {
     const serviceVer = document.getElementById(`${this.prefix}service`)?.checked;
     const stealth = document.getElementById(`${this.prefix}stealth`)?.checked;
 
-    const hasAnyPorts = (globalPorts !== '-sn') || 
-      targets.some(t => {
+    const isScopeMode = !Array.isArray(targets);
+    const hasAnyPorts = isScopeMode 
+    ? (globalPorts !== '-sn') 
+    : (globalPorts !== '-sn') || targets.some(t => {
         const p = String(t.port || '').trim();
         return p && p !== 'null' && p !== 'undefined';
       });
 
     // 1. Если нет портов НИГДЕ — разрешена только -sP
-    if (!hasAnyPorts && scanTech && scanTech !== '-sP') {
+    if (!isScopeMode && !hasAnyPorts && scanTech && scanTech !== '-sP') {
       errors.push('Port scan techniques require at least one target with ports specified');
     }
 
     // 2. Если выбрана -sP — нельзя указывать порты (ни глобально, ни в таргетах)
-    if (scanTech === '-sP' && hasAnyPorts) {
+    if (!isScopeMode && scanTech === '-sP' && hasAnyPorts) {
       errors.push('Ping scan (-sP) cannot be combined with port specifications');
     }
 
     // 3. -sV / -O без портов = ошибка
-    if (!hasAnyPorts && (serviceVer || stealth)) {
+    if (!isScopeMode && !hasAnyPorts && (serviceVer || stealth)) {
       errors.push('Service Version (-sV) and OS detection (-O) require ports on at least one target');
     }
 

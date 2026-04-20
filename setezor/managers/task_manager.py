@@ -65,7 +65,7 @@ class TaskParams:
         scope_targets = await self.task_manager.scope_service.get_targets(project_id=self.project_id,
                                                                           id=self.scope_id)
         targets = self.get_unique_targets(scope_targets)
-        self.params = self.job.generate_params_from_scope(targets=targets, **self.kwargs)
+        self.params = await self.job.generate_params_from_scope(targets=targets, project_id=self.project_id, **self.kwargs)
 
 
 class TaskParamsPreparer:

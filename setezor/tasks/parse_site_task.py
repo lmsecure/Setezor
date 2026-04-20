@@ -14,7 +14,7 @@ from setezor.schemas.task import TaskLog
 from setezor.settings import PATH_PREFIX
 from setezor.tasks.base_job import BaseJob
 from setezor.models.target import Target
-
+from setezor.services.target_service import TargetService
 
 class ParseSiteTask(BaseJob):
     restructor = ParseSiteTaskRestructor
@@ -109,35 +109,36 @@ class ParseSiteTask(BaseJob):
                 return browser['browserVersion']
             
     @classmethod
-    def generate_params_from_scope(cls, targets: list[Target], **base_kwargs):
+    async def generate_params_from_scope(cls, targets: list[Target], project_id: str, **base_kwargs):
         params = []
-        seen = set()
+        target_service = TargetService.new_instance()
+
+        ip_targets: dict[str, dict] = {}
+        domain_targets: dict[str, dict] = {}
+
         for t in targets:
-            addresses = []
             if t.ip:
-                addresses.append(t.ip.split('/')[0].strip())
-            if t.domain:
-                addresses.append(t.domain.strip())
-            
-            for addr in addresses:
-                port_val = str(t.port).strip() if t.port else None
-                
-                if port_val == '80':
-                    url = f"http://{addr}:80"
-                    if url not in seen:
-                        seen.add(url)
-                        params.append({**base_kwargs, "url": url})
-                elif port_val == '443':
-                    url = f"https://{addr}:443"
-                    if url not in seen:
-                        seen.add(url)
-                        params.append({**base_kwargs, "url": url})
+                ip = t.ip.split('/')[0].strip()
+                entry = ip_targets.setdefault(ip, {"ports": set(), "empty_port": False})
+                if t.port is not None:
+                    entry["ports"].add(t.port)
                 else:
-                    http_port = port_val if port_val else '80'
-                    https_port = port_val if port_val else '443'
-                    for scheme, port in [('http', http_port), ('https', https_port)]:
-                        url = f"{scheme}://{addr}:{port}"
-                        if url not in seen:
-                            seen.add(url)
-                            params.append({**base_kwargs, "url": url})
+                    entry["empty_port"] = True
+
+            if t.domain:
+                domain = t.domain.strip()
+                entry = domain_targets.setdefault(domain, {"ports": set(), "empty_port": False})
+                if t.port is not None:
+                    entry["ports"].add(t.port)
+                else:
+                    entry["empty_port"] = True
+
+        ip_schemas = await target_service.ip_port_filter(scope_targets=ip_targets, project_id=project_id)
+        for shemas in ip_schemas:
+            params.append({**base_kwargs, "url": shemas})
+
+        domain_schemas = await target_service.domain_port_filter(scope_targets=domain_targets, project_id=project_id)
+        for shemas in domain_schemas:
+            params.append({**base_kwargs, "url": shemas})
+
         return params

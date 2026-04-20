@@ -31,7 +31,7 @@ class BaseJob(Job):
 
     @classmethod
     @abstractmethod
-    def generate_params_from_scope(cls, targets: list, **base_kwargs):
+    async def generate_params_from_scope(cls, targets: list, project_id: str, **base_kwargs):
         pass
 
     @classmethod

@@ -5,6 +5,7 @@ from sqlalchemy import Select, case, desc
 from setezor.models import Port, IP, L4Software, L4SoftwareVulnerability, Vulnerability, SoftwareVersion, Software, SoftwareType, Vendor, DNS, Domain
 from setezor.repositories import SQLAlchemyRepository
 from sqlmodel import SQLModel, or_, select, func
+from setezor.db.entities import DNSTypes
 
 class PortRepository(SQLAlchemyRepository[Port]):
     model = Port
@@ -173,5 +174,27 @@ class PortRepository(SQLAlchemyRepository[Port]):
                 select_from(Port).\
                     join(IP, IP.id == Port.ip_id).\
                         filter(Port.project_id == project_id, Port.scan_id == scan_id, Port.service_name == "snmp", Port.protocol == "udp")
+        result = await self._session.exec(stmt)
+        return result.all()
+    
+    async def get_ports_for_ip(self, ip: str, ports: List[int], project_id: str):
+        addition = [Port.port == port for port in ports]
+        stmt = select(IP.ip, Port.port, Port.is_ssl, Port.service_name).\
+                select_from(Port).\
+                    join(IP, IP.id == Port.ip_id).\
+                        filter(Port.project_id == project_id, IP.ip == ip, Port.service_name.like('%http%'))
+        stmt = stmt.where(or_(*addition)) if addition else stmt
+        result = await self._session.exec(stmt)
+        return result.all()
+    
+    async def get_ports_for_domain(self, domain: str, ports: List[int], project_id: str):
+        addition = [Port.port == port for port in ports]
+        stmt = select(Domain.domain, Port.port, Port.is_ssl, Port.service_name).\
+                select_from(DNS).\
+                    join(L4Software, DNS.id == L4Software.dns_id).\
+                    join(Port, L4Software.l4_id == Port.id).\
+                    join(Domain, DNS.target_domain_id == Domain.id).\
+                        filter(Port.project_id == project_id, Domain.domain == domain, Port.service_name.like('%http%'), DNS.id == DNSTypes.A.value)
+        stmt = stmt.where(or_(*addition)) if addition else stmt
         result = await self._session.exec(stmt)
         return result.all()
